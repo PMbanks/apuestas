@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07080a">
+<title>Apuestas entre colegas</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="img/icon-192.png">
+<link rel="apple-touch-icon" href="img/icon-192.png">
+<link rel="stylesheet" href="app.css">
+<style id="phs"></style>
+</head>
+<body>
+<div class="login" id="login" hidden>
+  <form class="lg-box" id="login-form" autocomplete="on">
+    <span class="cn lg-coin"></span>
+    <h1>Apuestas</h1>
+    <p>Entre colegas. Dinero falso, piques de verdad.</p>
+    <label for="user">Usuario</label>
+    <input id="user" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    <label for="pass">Contraseña</label>
+    <input id="pass" name="password" type="password" autocomplete="current-password" required>
+    <button class="go" type="submit" id="login-go">Entrar</button>
+    <p class="lg-err" id="login-err" role="alert"></p>
+  </form>
+</div>
+<div class="app" id="app" hidden>
+  <aside class="rail">
+    <div class="brand"><span class="cn"></span>APUESTAS</div>
+    <nav class="nav" id="nav"></nav>
+    <div class="rail-me" id="me" style="cursor:pointer"></div>
+    <p class="rail-rule">Reglas fijas. Solo PM las cambia. Se actualiza sola para los tres.</p>
+  </aside>
+  <header class="top" id="top"></header>
+  <main class="scr" id="view"></main>
+</div>
+<div class="boot" id="boot"><span class="cn"></span></div>
+<div class="toast" id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

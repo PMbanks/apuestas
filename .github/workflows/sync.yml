@@ -1,0 +1,37 @@
+name: Sincronizar partidos
+# Cada 15 minutos: partidos, cuotas y resultados; paga las apuestas acabadas y la paga del lunes.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: sync
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node sync/sync.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
+          PANDASCORE_KEY: ${{ secrets.PANDASCORE_KEY }}
+      # GitHub apaga los horarios de un repo sin commits en 60 dias: uno vacio al mes lo mantiene vivo
+      - name: Mantener vivo el horario
+        if: github.event_name == 'schedule'
+        run: |
+          last=$(git log -1 --format=%ct)
+          if [ $(( $(date +%s) - last )) -gt $(( 40 * 86400 )) ]; then
+            git config user.name "apuestas-bot"
+            git config user.email "apuestas-bot@users.noreply.github.com"
+            git commit --allow-empty -m "Mantener vivo el sincronizador"
+            git push
+          fi
