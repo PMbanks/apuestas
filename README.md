@@ -1,4 +1,4 @@
-# Gambling Master
+# Gambling Addicts
 
 App de apuestas con dinero falso para PM y sus colegas: fútbol, Valorant y UFC, solo 1 X 2,
 +1.000 cada lunes que se acumulan, chat con fotos, perfiles, liga con gráficas.

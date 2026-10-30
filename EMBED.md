@@ -7,10 +7,10 @@ No la copies: enséñala dentro de tu programa. Así, cuando PM cambie algo, te 
 
 ## Qué hay que hacer
 
-Añade una pestaña o sección "Gambling Master" que muestre esa dirección dentro:
+Añade una pestaña o sección "Gambling Addicts" que muestre esa dirección dentro:
 
 - **Programa web o PWA:**
-  `<iframe src="https://pmbanks.github.io/apuestas/" title="Gambling Master" style="width:100%;height:100%;border:0" allow="clipboard-write"></iframe>`
+  `<iframe src="https://pmbanks.github.io/apuestas/" title="Gambling Addicts" style="width:100%;height:100%;border:0" allow="clipboard-write"></iframe>`
 - **Electron:** una `<webview>` o un `WebContentsView` con esa dirección.
 - **Tauri:** una ventana o webview con esa dirección.
 - **Si tu programa no puede enseñar una web dentro:** un botón que la abra en el navegador.
