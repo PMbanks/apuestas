@@ -35,18 +35,22 @@
 
   /* ---------- estado ---------- */
   // items: { m: partido, p: '1'|'X'|'2', st: importe, at, a, b, la, lb, s, o0: cuota al meterla, err }
-  const B = { items: [], comun: 50, abierto: false, sure: 0, vaciar: 0, busy: false, prog: '', res: null, fuera: [], k: '' };
+  const B = { items: [], comun: 50, abierto: false, sure: 0, vaciar: 0, busy: false, prog: '', res: null, fuera: [], k: '', modo: 'sueltas', cst: 50, cerr: '' };
+  // combinada (db/029, PM 30-10 noche): una sola apuesta con todos los partidos del boleto, cuotas multiplicadas, solo cobra si aciertas todos
+  const COMB_MAX = 8;
+  const comb = () => B.modo === 'comb' && B.items.length >= 2;
+  const cuotaComb = () => Math.min(1000, Math.round(B.items.reduce((t, it) => { const c = cuota(it); return t * (c.base ?? c.o ?? 1) }, 1) * 100) / 100);
   function carga() {
     try {
       const d = JSON.parse(localStorage.getItem(CLAVE) || 'null'); if (!d) return;
       const ahora = Date.now();
-      B.k = d.k || ''; B.comun = Math.max(1, +d.comun || 50);
+      B.k = d.k || ''; B.comun = Math.max(1, +d.comun || 50); B.modo = d.modo === 'comb' ? 'comb' : 'sueltas'; B.cst = Math.max(1, +d.cst || 50);
       B.items = (Array.isArray(d.items) ? d.items : []).filter((x) => x && x.m && ['1', 'X', '2'].includes(x.p) && Date.parse(x.at) > ahora)
         .map((x) => ({ m: x.m, p: x.p, st: Math.max(0, Math.floor(+x.st || 0)), at: x.at, a: x.a, b: x.b, la: x.la, lb: x.lb, s: x.s, o0: x.o0 ?? null, err: '' }));
     } catch {}
   }
   function guarda() {
-    try { localStorage.setItem(CLAVE, JSON.stringify({ k: B.k || yo(), comun: B.comun, items: B.items.map(({ err, ...x }) => x) })) } catch {}
+    try { localStorage.setItem(CLAVE, JSON.stringify({ k: B.k || yo(), comun: B.comun, modo: B.modo, cst: B.cst, items: B.items.map(({ err, ...x }) => x) })) } catch {}
   }
   carga();
 
@@ -153,6 +157,14 @@
   const totales = () => B.items.reduce((t, it) => { const c = cuota(it); t.st += it.st; t.co += c.o ? Math.round(it.st * c.o) : 0; return t }, { st: 0, co: 0 });
   function problemas() {
     const t = totales(), s = saldo(), out = [];
+    if (comb()) {
+      if (B.items.some((it) => cuota(it).o == null)) out.push('<p class="blt-av">Quita las que ya no tienen cuota</p>');
+      if (B.items.length > COMB_MAX) out.push(`<p class="blt-av">Una combinada lleva ${COMB_MAX} partidos como máximo</p>`);
+      if (B.cst < 1) out.push('<p class="blt-av">Pon un importe</p>');
+      else if (B.cst > s) out.push(`<p class="blt-av"><span>Te faltan</span> <b>${N(B.cst - s)}${coin()}</b> <span>para apostarlo</span></p>`);
+      if (B.cerr) out.push(`<p class="blt-av">${esc(B.cerr)}</p>`);
+      return out;
+    }
     if (B.items.some((it) => cuota(it).o == null)) out.push('<p class="blt-av">Quita las que ya no tienen cuota</p>');
     if (B.items.some((it) => it.st < 1)) out.push('<p class="blt-av">Pon un importe en cada una</p>');
     else if (t.st > s) out.push(`<p class="blt-av"><span>Te faltan</span> <b>${N(t.st - s)}${coin()}</b> <span>para apostarlo todo</span></p>`);
@@ -182,7 +194,15 @@
     const n = B.items.length, el = r.querySelector('.blt-comun');
     if (!n) { el.innerHTML = ''; return }
     const chip = (v, t, ti) => `<button type="button" class="chip ${chipOn(v) ? 'on' : ''}" data-blt="c" data-v="${v}"${ti ? ` title="${ti}"` : ''}>${t}</button>`;
-    el.innerHTML = `<span class="lab">${n > 1 ? 'Mismo importe para todas' : 'Importe'}</span>
+    const modo = n >= 2 ? `<div class="blt-modo" role="tablist"><button type="button" class="${comb() ? '' : 'on'}" data-blt="modo" data-v="sueltas"><b>Sueltas</b><small>cada una por su lado</small></button><button type="button" class="${comb() ? 'on' : ''}" data-blt="modo" data-v="comb"><b>Combinada</b><small>cuotas multiplicadas, aciertas todas</small></button></div>` : '';
+    if (comb()) {
+      const cc = (v, t, ti) => `<button type="button" class="chip ${B.cst === (v === 'mitad' ? Math.floor(saldo() / 2) : v === 'todo' ? saldo() : +v) ? 'on' : ''}" data-blt="c" data-v="${v}"${ti ? ` title="${ti}"` : ''}>${t}</button>`;
+      el.innerHTML = `${modo}<div class="blt-cq"><span class="lab">Cuota de la combinada</span><b>${O(cuotaComb())}</b></div><span class="lab">Importe de la combinada</span>
+      <div class="blt-cf"><label class="blt-in grande"><input type="text" inputmode="numeric" autocomplete="off" maxlength="7" data-blt-c value="${B.cst || ''}" placeholder="50" aria-label="Importe">${coin()}</label>
+      <span class="blt-chips">${cc(10, '10')}${cc(50, '50')}${cc(100, '100')}${cc('mitad', '1/2', 'La mitad de tu saldo')}${cc('todo', 'Todo', 'Todo tu saldo')}</span></div>`;
+      return;
+    }
+    el.innerHTML = `${modo}<span class="lab">${n > 1 ? 'Mismo importe para todas' : 'Importe'}</span>
       <div class="blt-cf"><label class="blt-in grande"><input type="text" inputmode="numeric" autocomplete="off" maxlength="7" data-blt-c value="${B.items.every((it) => it.st === B.items[0].st) ? B.items[0].st || '' : ''}" placeholder="${N(B.comun)}" aria-label="Importe">${coin()}</label>
       <span class="blt-chips">${chip(10, '10')}${chip(50, '50')}${chip(100, '100')}${chip('mitad', '1/2', 'La mitad de tu saldo, repartida')}${chip('todo', 'Todo', 'Todo tu saldo, repartido')}</span></div>`;
   }
@@ -205,6 +225,14 @@
   function pintaPie(r) {
     const el = r.querySelector('.blt-pie'), n = B.items.length;
     if (!n) { el.innerHTML = B.res ? '<button type="button" class="blt-listo" data-blt="cierra">Cerrar</button>' : ''; return }
+    if (comb()) {
+      const pr = problemas(), q = cuotaComb(), txt = B.busy ? B.prog : B.sure ? '¿Seguro? Toca otra vez' : `Apostar combinada de ${n}`;
+      el.innerHTML = `<div class="blt-tot"><span>Apuestas</span><b>${N(B.cst)}${coin()}</b></div>
+        <div class="blt-tot gana"><span>Cobrarías si aciertas las ${n}</span><b>${N(B.cst * q)}${coin()}</b></div>
+        ${pr.join('')}
+        <button type="button" class="go blt-go ${B.sure ? 'sure' : ''}" data-blt="apuesta" ${pr.length || B.busy ? 'disabled' : ''}>${esc(txt)}</button>`;
+      return;
+    }
     const t = totales(), pr = problemas(), mal = pr.length > 0 || !B.items.every(valida);
     const txt = B.busy ? B.prog : B.sure ? '¿Seguro? Toca otra vez' : n === 1 ? `Apostar ${N(t.st)}` : `Apostar las ${n}`;
     el.innerHTML = `<div class="blt-tot"><span>Total apostado</span><b>${N(t.st)}${coin()}</b></div>
@@ -225,6 +253,8 @@
       el.innerHTML = `<span class="blt-n ok">✓</span><span class="blt-bt"><b>${tt === 1 ? (ok ? 'Ha entrado' : 'No ha entrado') : ok === tt ? `Han entrado las ${tt}` : `Han entrado ${ok} de ${tt}`}</b></span><span></span>${CHEV}`;
       return;
     }
+    if (comb()) { el.innerHTML = `<span class="blt-n">${n}</span><span class="blt-bt"><b>Combinada</b><small>cuota ${O(cuotaComb())} · ${N(B.cst)}${coin()}</small></span>
+      <span class="blt-bc"><small>Cobrarías</small><b>${N(B.cst * cuotaComb())}${coin()}</b></span>${CHEV}`; return }
     el.innerHTML = `<span class="blt-n">${n}</span><span class="blt-bt"><b>Boleto</b><small>${N(t.st)}${coin()}</small></span>
       <span class="blt-bc"><small>Cobrarías</small><b>${N(t.co)}${coin()}</b></span>${CHEV}`;
   }
@@ -236,11 +266,11 @@
     if (r.hidden === ver) r.hidden = !ver;
     document.body.classList.toggle('blt-hay', ver);
     if (!ver) { if (B.abierto && !B.items.length) B.abierto = false; return }
-    r.classList.toggle('abierto', B.abierto);
+    r.classList.toggle('abierto', B.abierto); r.classList.toggle('comb', comb());
     const det = document.querySelector('.det.open');
     r.classList.toggle('sobre', !!det && getComputedStyle(det).position === 'fixed');
     const foco = document.activeElement && r.contains(document.activeElement) && document.activeElement.matches('input') ? document.activeElement : null;
-    const f = JSON.stringify([B.items.map((x) => [x.m, x.p, x.err, x.st, x.ok, cuota(x).o]), B.res && B.res.at, B.fuera.length, B.abierto, B.sure, B.vaciar, B.busy, B.prog, XB.t, saldo(), document.documentElement.lang]);
+    const f = JSON.stringify([B.items.map((x) => [x.m, x.p, x.err, x.st, x.ok, cuota(x).o]), B.res && B.res.at, B.fuera.length, B.abierto, B.sure, B.vaciar, B.busy, B.prog, XB.t, saldo(), document.documentElement.lang, B.modo, B.cst, B.cerr]);
     if (!todo && f === firma) return;
     firma = f;
     pintaBarra(r); pintaCab(r); pintaRes(r); pintaPie(r);
@@ -274,6 +304,9 @@
       const it = B.items.find((x) => x.m === t.dataset.bltI); if (!it) return;
       const v = entero(t.value); if (String(v || '') !== t.value) t.value = v || '';
       it.st = v; it.err = '';
+    } else if (t.matches('[data-blt-c]') && comb()) {
+      const v = entero(t.value); if (String(v || '') !== t.value) t.value = v || '';
+      B.cst = v; B.cerr = '';
     } else if (t.matches('[data-blt-c]')) {
       const v = entero(t.value); if (String(v || '') !== t.value) t.value = v || '';
       if (v >= 1) B.comun = v;
@@ -294,6 +327,10 @@
     if (k === 'vacia') {
       if (!B.vaciar || Date.now() - B.vaciar > 4000) { B.vaciar = Date.now(); pinta(true); setTimeout(() => { if (B.vaciar && Date.now() - B.vaciar >= 4000) { B.vaciar = 0; pinta(true) } }, 4100); return }
       return vacia();
+    }
+    if (k === 'modo') { B.modo = b.dataset.v === 'comb' ? 'comb' : 'sueltas'; B.sure = 0; B.cerr = ''; B.res = null; guarda(); return pinta(true) }
+    if (k === 'c' && comb()) {
+      const s = saldo(), v = b.dataset.v; B.cst = Math.max(0, v === 'mitad' ? Math.floor(s / 2) : v === 'todo' ? s : +v); B.sure = 0; B.cerr = ''; guarda(); return pinta(true);
     }
     if (k === 'c') {
       const n = B.items.length; if (!n) return;
@@ -333,6 +370,7 @@
       setTimeout(() => { if (B.sure && Date.now() - B.sure >= 5000) { B.sure = 0; pinta(true) } }, 5100);
       return;
     }
+    if (comb()) return apuestaComb(lista);
     B.sure = 0; B.busy = true; B.res = null; B.fuera = [];
     const res = [], r = monta();
     for (let i = 0; i < lista.length; i++) {
@@ -362,6 +400,21 @@
       const at = B.res.at;
       setTimeout(() => { if (B.res && B.res.at === at && !B.items.length) { B.res = null; B.abierto = false; pinta(true) } }, 7000);
     }
+  }
+
+  async function apuestaComb(lista) {
+    B.sure = 0; B.busy = true; B.res = null; B.fuera = []; B.cerr = ''; B.prog = 'Apostando la combinada…'; pinta(true);
+    try {
+      const { data, error } = await db.rpc('place_combo', { p_legs: lista.map((it) => ({ match: it.m, pick: it.p })), p_stake: B.cst });
+      if (error) throw error;
+      B.res = { at: Date.now(), list: [{ ok: true, m: 'comb', nom: `Combinada de ${lista.length}`, odds: Number(data && data.odds) || cuotaComb(), st: B.cst }] };
+      B.items = []; avisa('Ha entrado la combinada');
+      try { vuela(monta().querySelector('.blt-tot.gana .cn') || monta()) } catch {}
+    } catch (err) { B.cerr = motivo(err); avisa(esc(B.cerr)) }
+    B.busy = false; B.prog = ''; guarda(); marca(); pinta(true);
+    try { await refresh() } catch {}
+    window.dispatchEvent(new CustomEvent('gm:combo'));
+    if (!B.items.length && B.res) { const at = B.res.at; setTimeout(() => { if (B.res && B.res.at === at && !B.items.length) { B.res = null; B.abierto = false; pinta(true) } }, 7000) }
   }
 
   /* ---------- montaje: cada vez que la app repinta ---------- */
