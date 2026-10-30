@@ -9,6 +9,7 @@
 .cj .go b{font:500 18px var(--mono);letter-spacing:-.03em}
 .cj .go .cn{--s:18px;margin:0}
 .cj .go:disabled{filter:grayscale(1) brightness(.6);cursor:default}
+.cj .go.abriendo:disabled{filter:none;opacity:.85}
 .cj .go.ghost .cn{filter:none}
 .cj .chip{margin:0}
 .cj .av.md{width:34px;height:34px;font-size:11px}
@@ -44,8 +45,8 @@
 /* flex y no grid: una fila corta (las 5 de Lujo, la ultima suelta) queda centrada */
 .cj-cases{display:flex;flex-wrap:wrap;justify-content:center;gap:22px 10px}
 .cj-case{flex:0 0 176px;min-width:0}
-.cj-case{display:flex;flex-direction:column;align-items:center;padding:12px 8px 16px;border-radius:22px;text-align:center;transition:background .25s}
-.cj-case:hover{background:rgba(255,255,255,.028)}
+.cj-case{display:flex;flex-direction:column;align-items:center;padding:16px 10px 18px;border-radius:24px;text-align:center;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.012));transition:background .25s}
+.cj-case:hover{background:linear-gradient(180deg,rgba(242,193,78,.1),rgba(255,255,255,.02))}
 .cj-case-img{position:relative;display:grid;place-items:center;width:100%;aspect-ratio:4/3}
 .cj-case-img::before{content:"";position:absolute;inset:4% 8%;background:radial-gradient(closest-side,rgba(242,193,78,.2),transparent);opacity:0;transition:opacity .3s}
 .cj-case:hover .cj-case-img::before{opacity:1}
@@ -98,15 +99,17 @@
 .cj-spin.n4,.cj-spin.n5{--kh:112px;--kw:104px}
 .cj-spin-h{margin-bottom:8px;text-align:center}
 .cj-skip{align-self:center;margin-top:16px!important}
-.cj-strip{position:relative;height:var(--kh);overflow:hidden;border-radius:22px;background:var(--bg2);
+.cj-strip{position:relative;height:var(--kh);overflow:hidden;border-radius:22px;background:var(--bg2);transition:background .5s;
   -webkit-mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent)}
 .cj-track{position:relative;display:flex;gap:10px;height:100%;padding:12px 0;will-change:transform}
 .cj-k{position:relative;flex:none;display:grid;place-items:center;width:var(--kw);height:100%;border-radius:14px;
-  background:linear-gradient(180deg,rgba(255,255,255,.015) 30%,color-mix(in srgb,var(--c) 24%,transparent));box-shadow:inset 0 -3px 0 var(--c);transition:transform .35s var(--ease),box-shadow .35s}
+  background:linear-gradient(180deg,rgba(255,255,255,.015) 30%,color-mix(in srgb,var(--c) 24%,transparent));box-shadow:inset 0 -3px 0 var(--c);transition:transform .35s var(--ease),box-shadow .35s,opacity .45s}
 .cj-k img{width:84%;height:74%;object-fit:contain;filter:drop-shadow(0 8px 12px rgba(0,0,0,.5))}
 .cj-k img.foto{width:auto;height:76%;border-radius:10px}
 .cj-k.esp{--c:#e4ae39;background:radial-gradient(closest-side,rgba(228,174,57,.38),transparent)}
 .cj-k.esp span{font:800 58px/1 var(--disp);color:#ffd77a;text-shadow:0 0 26px rgba(228,174,57,.75)}
+.cj-strip.fin{background:radial-gradient(36% 140% at 50% 50%,color-mix(in srgb,var(--c) 32%,transparent),transparent 78%),var(--bg2)}
+.cj-strip.fin .cj-k:not(.gana){opacity:.28}
 .cj-k.gana{z-index:1;transform:scale(1.06);box-shadow:inset 0 -3px 0 var(--c),0 0 0 2px var(--c),0 0 34px color-mix(in srgb,var(--c) 55%,transparent)}
 .cj-mark{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--acc);box-shadow:0 0 14px rgba(242,193,78,.9);pointer-events:none}
 .cj-mark::before,.cj-mark::after{content:"";position:absolute;left:-6px;border:7px solid transparent}
@@ -140,7 +143,7 @@
 .cj-res.uno .cj-drop h3{font-size:clamp(34px,4.4vw,54px);line-height:.98}
 .cj-res.uno .cj-val{margin-top:18px;font-size:48px}
 .cj-res.uno .cj-val .cn{--s:34px;margin-left:12px}
-.cj-res-sum{display:flex;align-items:baseline;gap:10px;margin-top:40px}
+.cj-res-sum{display:flex;align-items:baseline;gap:10px;margin:0 0 34px}
 .cj-res-sum b{font:500 34px/1 var(--mono);letter-spacing:-.05em}
 .cj-res-sum .cn{--s:24px;align-self:center;margin:0}
 .cj-res-sum em{font:12px var(--mono);font-style:normal;color:var(--dim)}
@@ -161,21 +164,19 @@
 .cj-grid.esp{grid-template-columns:repeat(auto-fit,140px)}
 .cj-it{position:relative;display:flex;flex-direction:column;align-items:center;min-width:0;text-align:center}
 .cj-it-img{position:relative;display:grid;place-items:center;width:100%;aspect-ratio:4/3;border-radius:18px;
-  background:radial-gradient(closest-side,color-mix(in srgb,var(--c) 26%,transparent),transparent 96%);transition:background .2s}
-.cj-it-img::after{content:"";position:absolute;left:26%;right:26%;bottom:0;height:2px;border-radius:2px;background:var(--c);transition:left .2s,right .2s}
-.cj-it-img img{width:88%;filter:drop-shadow(0 10px 14px rgba(0,0,0,.45));transition:transform .25s var(--ease)}
-.cj-it-img img.foto{width:78%;border-radius:14px}
+  background:radial-gradient(85% 70% at 50% 100%,color-mix(in srgb,var(--c) 34%,transparent),transparent 72%),linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));
+  box-shadow:inset 0 -2px 0 var(--c);transition:background .2s,box-shadow .2s}
+.cj-it-img img{width:80%;filter:drop-shadow(0 10px 14px rgba(0,0,0,.45));transition:transform .25s var(--ease)}
+.cj-it-img img.foto{width:72%;border-radius:12px}
 .cj-it-t{display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;margin-top:12px}
 .cj-it .lab{max-width:100%;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cj-it b{max-width:100%;font:600 14px/1.25 var(--sans);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cj-it em{display:flex;flex-wrap:wrap;justify-content:center;gap:0 8px;font:11px var(--mono);font-style:normal;color:var(--dim)}
 .cj-it .v{display:flex;align-items:center;margin-top:3px;font:500 14px var(--mono);color:var(--soft)}
 .cj-it .v i{margin-right:6px;font:11px var(--mono);font-style:normal;color:var(--dim)}
-.cj-grid.esp .cj-it-img{background:radial-gradient(closest-side,rgba(228,174,57,.26),transparent 96%)}
 button.cj-it:hover .cj-it-img img{transform:translateY(-4px)}
-button.cj-it:hover .cj-it-img::after{left:16%;right:16%}
-.cj-it.on .cj-it-img{background:radial-gradient(closest-side,rgba(242,193,78,.42),transparent 96%)}
-.cj-it.on .cj-it-img::after{left:8%;right:8%;height:3px;background:var(--acc)}
+button.cj-it:hover .cj-it-img{box-shadow:inset 0 -3px 0 var(--c),0 12px 28px rgba(0,0,0,.28)}
+.cj-it.on .cj-it-img{background:radial-gradient(85% 70% at 50% 100%,rgba(242,193,78,.42),transparent 72%),rgba(242,193,78,.08);box-shadow:inset 0 -3px 0 var(--acc)}
 .cj-it.on::before{content:"";position:absolute;top:8px;right:10px;z-index:1;width:20px;height:20px;border-radius:50%;background:var(--acc) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 6.2 5 8.2 9 4' fill='none' stroke='%23141008' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat}
 
 /* lo ultimo que ha salido */
@@ -252,13 +253,14 @@ button.cj-it:hover .cj-it-img::after{left:16%;right:16%}
 .cj-bl-h h3{font:800 24px/1.1 var(--disp);letter-spacing:-.025em}
 .cj-bl-h .num{font:500 14px var(--mono);color:var(--dim)}
 .cj-bl>.hint{padding:0 14px}
-.cj-bts{display:flex;flex-direction:column;transition:opacity .2s}
+.cj-bts{display:flex;flex-direction:column;gap:8px;transition:opacity .2s}
 .cj-bts.espera{opacity:.45}
-.cj-bt{display:grid;grid-template-columns:76px minmax(0,1fr) 210px 112px 150px;grid-template-areas:"m vs cs wh act";align-items:center;gap:22px;width:100%;min-height:82px;padding:14px;border-radius:18px;text-align:left;transition:background .15s}
+.cj-bt{display:grid;grid-template-columns:76px minmax(0,1fr) 200px 104px minmax(150px,auto);grid-template-areas:"m vs cs wh act";align-items:center;gap:22px;width:100%;min-height:84px;padding:14px 22px;border-radius:22px;text-align:left;background:rgba(255,255,255,.03);transition:background .15s}
 .cj-bt{position:relative}
-.cj-bt+.cj-bt::before{content:"";position:absolute;left:14px;right:14px;top:0;height:1px;background:var(--hair);transition:opacity .15s}
-.cj-bt:hover::before,.cj-bt:hover+.cj-bt::before{opacity:0}
-button.cj-bt:hover,.cj-bt.open:hover{background:rgba(255,255,255,.03)}
+button.cj-bt:hover{background:rgba(255,255,255,.06)}
+.cj-bt.open{background:linear-gradient(90deg,rgba(242,193,78,.1),rgba(255,255,255,.03) 45%)}
+/* pidiendo confirmacion: la pregunta baja a una linea propia */
+.cj-bt.pide{grid-template-areas:"m vs cs wh wh" "act act act act act";background:linear-gradient(90deg,rgba(235,75,75,.12),rgba(255,255,255,.03) 55%)}
 .cj-bt-meta{display:contents}
 .cj-bt-m{grid-area:m;display:flex;flex-direction:column;gap:3px}
 .cj-bt-m b{font:500 22px/1 var(--mono);letter-spacing:-.04em}
@@ -283,14 +285,18 @@ button.cj-bt:hover .cj-ver{color:var(--ink)}
 .cj-vs{grid-area:vs;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:16px;min-width:0}
 .cj-vs>i{font:500 11px var(--mono);font-style:normal;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
 .cj-side{display:flex;align-items:center;gap:12px;min-width:0;transition:opacity .2s}
-.cj-side.s1{flex-direction:row-reverse}
 .cj-side.lose{opacity:.48}
 .cj-avs{flex:none;display:flex}
 .cj-avs>*+*{margin-left:-9px}
 .cj-avs .av{box-shadow:0 0 0 2px var(--bg)}
 .cj-side.win .cj-avs .av{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--acc)}
 .cj-side-n{flex:1;display:flex;align-items:center;gap:7px;min-width:0}
-.cj-side.s1 .cj-side-n{flex-direction:row-reverse}
+.cj-side.s0 .cj-side-n{order:0;justify-content:flex-end}
+.cj-side.s0 .cj-avs{order:1}
+.cj-side.s0>.num{order:2}
+.cj-side.s1>.num{order:0}
+.cj-side.s1 .cj-avs{order:1}
+.cj-side.s1 .cj-side-n{order:2}
 .cj-side-n b{min-width:0;font:600 14px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cj-side>.num{flex:none;font:500 21px/1 var(--mono);color:var(--soft)}
 .cj-side.win>.num{color:var(--acc)}
@@ -352,6 +358,34 @@ button.cj-seat:hover{background:rgba(242,193,78,.16);color:var(--acc)}
 .cj-new-sum em{font:12px var(--mono);font-style:normal;color:var(--dim)}
 .cj-new-go .go{min-width:280px;height:58px}
 
+
+/* ----- cancelar, salir y confirmar (PM 30-10: "el boton de cancelar lo quiero rojo y bonito") ----- */
+.cj-danger{display:inline-flex;align-items:center;justify-content:center;gap:9px;height:42px;padding:0 20px;border-radius:999px;background:rgba(235,75,75,.13);
+  font:700 12px var(--disp);letter-spacing:.14em;text-transform:uppercase;color:#ff8080;white-space:nowrap;transition:background .15s,color .15s,box-shadow .2s,transform .15s}
+.cj-danger:hover{background:rgba(235,75,75,.24);color:#ffb3b3}
+.cj-danger:active{transform:scale(.97)}
+.cj-danger>i{position:relative;width:10px;height:10px}
+.cj-danger>i::before,.cj-danger>i::after{content:"";position:absolute;left:-1px;right:-1px;top:4px;height:2px;border-radius:1px;background:currentColor;transform:rotate(45deg)}
+.cj-danger>i::after{transform:rotate(-45deg)}
+.cj-danger em{font:500 14px var(--mono);font-style:normal;letter-spacing:-.02em;text-transform:none}
+.cj-danger .cn{--s:15px;margin:0}
+/* armado: esperando el segundo toque (cancelar, salir, vender) */
+.cj .armado,.cj .cj-danger.armado{background:linear-gradient(180deg,#ff7373,#e04646)!important;color:#fff!important;box-shadow:0 10px 28px rgba(224,70,70,.35)!important;filter:none!important}
+.cj .go.armado::after{display:none}
+.cj-conf{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px 12px}
+.cj-conf-t{font:600 14px var(--sans);color:#ff9a9a}
+.cj-no{height:42px;padding:0 20px;border-radius:999px;background:rgba(255,255,255,.08);font:700 12px var(--disp);letter-spacing:.14em;text-transform:uppercase;color:var(--soft);transition:background .15s}
+.cj-no:hover{background:rgba(255,255,255,.14);color:var(--ink)}
+/* el boton de salir de la batalla abierta (vBat) y el de vender todo, del mismo rojo */
+.cj [data-cj=salir].chip,.cj .cj-todo{display:inline-flex;align-items:center;height:38px;padding:0 18px;border-radius:999px;background:rgba(235,75,75,.13);color:#ff8080;transition:background .15s,color .15s}
+.cj [data-cj=salir].chip:hover,.cj .cj-todo:hover{background:rgba(235,75,75,.24);color:#ffb3b3}
+.cj [data-cj=salir].chip::after,.cj .cj-todo::after{display:none}
+.cj .cj-todo{margin-left:0}
+/* el podio de batallas, con aire */
+.cj .cj-top{margin:0 0 60px}
+.cj .cj-top .lab{margin-bottom:30px}
+.cj .cj-top-r{gap:44px}
+
 /* movil */
 @media (max-width:860px){
   .cj{padding:20px 16px 90px}
@@ -362,13 +396,22 @@ button.cj-seat:hover{background:rgba(242,193,78,.16);color:var(--acc)}
   .cj-seg button{padding:0 16px}
   .cj-cases{gap:18px 8px}
   .cj-case{flex-basis:calc(50% - 4px)}
-  .cj-case{padding:8px 4px 12px}
+  .cj-case{padding:12px 6px 14px;border-radius:20px}
   .cj-case-n{font-size:13px}
   .cj .go{height:50px;padding:0 24px}
-  .cj-hero h2{margin-top:12px}
-  .cj-odds{gap:14px 0;margin-top:28px}
-  .cj-odds span{min-width:33%}
-  .cj-ctl{gap:16px 24px;margin:30px 0 22px}
+  /* la caja en el movil: compacta, para que Abrir se vea sin bajar */
+  .cj-hero-img{width:min(230px,62vw)}
+  .cj-hero h2{margin-top:8px;font-size:clamp(30px,9vw,40px)}
+  .cj-hero-p{margin-top:8px}
+  .cj-odds{flex-wrap:nowrap;gap:0;margin-top:20px;width:100%}
+  .cj-odds span{flex:1 1 0;min-width:0;gap:5px}
+  .cj-odds b{font-size:13px}
+  .cj-odds em{font-size:9.5px;line-height:1.2;white-space:normal;text-align:center}
+  .cj-ctl{gap:12px 22px;margin:22px 0 18px}
+  .cj-ns button{width:38px;height:38px}
+  .cj-ctl{flex-wrap:nowrap;justify-content:center}
+  .cj-ns .lab{display:none}
+  .cj-ns{gap:5px}
   .cj-hero .cj-go{width:100%;min-width:0}
   .cj-spin{--kh:150px;--kw:132px}
   .cj-spin.n2{--kh:132px;--kw:118px}
@@ -376,6 +419,15 @@ button.cj-seat:hover{background:rgba(242,193,78,.16);color:var(--acc)}
   .cj-strip{border-radius:18px}
   .cj-drops{grid-template-columns:repeat(2,minmax(0,1fr));gap:26px 14px}
   .cj-res.uno .cj-drops{grid-template-columns:minmax(0,1fr)}
+  /* varias en el movil: tarjetas bajas para que se vean todas y los botones */
+  .cj-res:not(.uno) .cj-drops{gap:18px 10px}
+  .cj-res:not(.uno) .cj-drop-img{aspect-ratio:16/10}
+  .cj-res:not(.uno) .cj-drop .lab{margin-top:6px}
+  .cj-res:not(.uno) .cj-meta{margin-top:6px;font-size:11px}
+  .cj-res:not(.uno) .cj-meta .cj-fl{display:none}
+  .cj-res:not(.uno) .cj-val{margin:8px 0 2px;font-size:20px}
+  .cj-res:not(.uno) .cj-drop .chip{padding:4px 0}
+  .cj-res-sum{margin-bottom:22px}
   .cj-drop h3{font-size:18px}
   .cj-val{font-size:22px}
   .cj-res.uno .cj-val{font-size:40px}
@@ -410,8 +462,12 @@ button.cj-seat:hover{background:rgba(242,193,78,.16);color:var(--acc)}
   .cj-bar .go{padding:0 18px;font-size:12px;letter-spacing:.08em}
   .cj-bl{margin-top:54px}
   .cj-bl-h,.cj-bl>.hint{padding:0 2px}
-  .cj-bt{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"vs vs" "meta act";gap:14px 12px;padding:16px 2px}
-  button.cj-bt:hover,.cj-bt.open:hover{background:none}
+  .cj-bt{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"vs vs" "meta act";gap:14px 12px;padding:16px 14px;border-radius:20px}
+  .cj-bt.pide{grid-template-areas:"vs vs" "meta meta" "act act"}
+  .cj-bt.pide .cj-bt-act{justify-content:center}
+  .cj-conf{justify-content:center}
+  .cj-conf-t{flex-basis:100%;text-align:center}
+  .cj-danger,.cj-no{height:40px;padding:0 16px}
   .cj-bt-meta{grid-area:meta;display:flex;align-items:center;gap:12px;min-width:0;overflow:hidden}
   .cj-bt-m{flex-direction:row;align-items:baseline}
   .cj-bt-m b{font-size:15px}
@@ -437,12 +493,18 @@ button.cj-seat:hover{background:rgba(242,193,78,.16);color:var(--acc)}
 }
 /* en una pantalla tactil el hover se queda pegado tras tocar: fuera */
 @media (hover:none){
-  .cj-case:hover,.cj-pk:hover,button.cj-bt:hover,.cj-bt.open:hover{background:none}
+  .cj-pk:hover{background:none}
+  .cj-case:hover{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.012))}
+  button.cj-bt:hover{background:rgba(255,255,255,.03)}
   .cj-pk.on:hover{background:rgba(242,193,78,.07)}
   .cj-case:hover img,.cj-pk:hover .cj-pk-img img,button.cj-it:hover .cj-it-img img{transform:none}
   .cj-case:hover .cj-case-img::before{opacity:0}
 }
-@media (prefers-reduced-motion:reduce){.cj.cj-in,.cj-drop,.cj-drop-img::after{animation:none!important}}
+@media (prefers-reduced-motion:reduce){
+  .cj .cj-k,.cj .bv-k{transition:transform .35s var(--ease),box-shadow .35s,opacity .45s!important}
+  .cj .cj-strip{transition:background .5s!important}
+  .cj .bv-it.nuevo{animation:bvEntra .45s cubic-bezier(.2,.9,.3,1.3)}
+}
 
 /* ---------- batalla nueva (PM, 30-10) ---------- */
 .bv{--kh:92px;margin-top:6px}

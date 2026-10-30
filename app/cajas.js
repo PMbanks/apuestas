@@ -45,7 +45,12 @@
   const pic = (p, s, cls = '', eager = false) => p ? `<img class="${cls}${/^https?:/.test(p) && !/steamstatic/.test(p) ? ' foto' : ''}" src="${esc(src(p, s))}" alt="" ${eager ? '' : 'loading="lazy" '}decoding="async" onerror="this.style.visibility='hidden'">` : '';
   const color = (r) => (RAR[r] || RAR.mil)[1];
   const espera = (ms) => new Promise((ok) => setTimeout(ok, anim && anim.saltar ? 0 : ms));
-  const quieto = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return false } };
+  // PM, 30-10: "no funcionan ni las animaciones". Con "quitar animaciones" en el sistema (en Android lo pone la escala de
+  // animacion a 0 de las opciones de desarrollador) el navegador pide movimiento reducido y las ruletas saltaban al final.
+  // Aqui la ruleta ES lo que se juega: gira siempre (tambien la de las batallas, que usa esto mismo).
+  const quieto = () => false;
+  // que clave de S.sure arma cada boton de confirmar
+  const ARMADO = { salir: (v) => 'salir' + v, venderRes: () => 'res', vender: () => 'inv', vendertodo: () => 'todo' };
   const flo = (f) => (f == null ? '' : Number(f).toFixed(4).replace('.', ','));
   const item = (id) => D.items.get(id) || { id, name: '·', rarity: 'mil' };
   // 'AK-47 | Redline' -> ['AK-47', 'Redline']; '★ Karambit' -> ['Karambit', 'Original']; 'Rolex Submariner' (lujo) -> ['Rolex Submariner']
@@ -183,6 +188,9 @@
     if (anim && !forzar) { pendiente = true; return }
     pendiente = false;
     root.innerHTML = vista();
+    // los botones que piden confirmacion (cancelar, salir, vender) se ponen en rojo mientras esperan el segundo toque,
+    // tambien el de la batalla abierta
+    root.querySelectorAll('[data-cj]').forEach((b) => { const f = ARMADO[b.dataset.cj]; if (f) b.classList.toggle('armado', S.sure === f(b.dataset.v)) });
     traduce(root);
     if (!anim && S.tab === 'batallas' && S.bat && !S.rep) {
       const b = D.bats.get(S.bat);
@@ -267,9 +275,10 @@
         ${uno ? (vendida ? '<span class="cj-sold">Vendida</span>' : '') : vendida ? '<span class="cj-sold">Vendida</span>' : `<button class="chip" data-cj="vender1" data-v="${i.id}">Vender</button>`}
       </div>`;
     }).join('');
+    // varias: primero el total (en el movil, si no, queda muy abajo) y debajo cada una
     return `<div class="cj-res ${uno ? 'uno' : ''}" style="--n:${it.length}">
-      <div class="cj-drops">${drops}</div>
       ${uno ? '' : `<div class="cj-res-sum"><span class="lab">Has sacado</span><b class="num">${N(todo)}</b>${coin()}<em>por ${N(total)}</em></div>`}
+      <div class="cj-drops">${drops}</div>
       <div class="cj-res-act">
         ${quedan.length ? `<button class="go" data-cj="abrirMia" data-v="${quedan[0].id}"><span>Abrir otra tuya</span>${quedan.length > 1 ? `<b>×${quedan.length}</b>` : ''}</button>` : ''}
         <button class="go ${quedan.length ? 'ghost' : ''}" data-cj="abrir" ${falta ? 'disabled' : ''}><span>${uno ? 'Otra por' : 'Otras ' + it.length + ' por'}</span><b>${N(total)}</b>${coin()}</button>
@@ -413,11 +422,16 @@
     // en el movil no cabe la hora: el precio va en el boton de unirse
     if (done) return `<button class="cj-bt done ${dentro ? 'mia' : ''}" data-cj="ver" data-v="${b.id}">${meta(`<span class="cj-bt-cs">${cs}</span>`)}${vs}
       <span class="cj-bt-act"><span class="cj-ver ${nueva ? 'nueva' : ''}">${nueva ? 'Ver el resultado' : 'Ver'}</span></span></button>`;
-    let act;
-    if (mio) act = `<button class="chip" data-cj="salir" data-v="${b.id}">${S.sure === 'salir' + b.id ? '¿Seguro? Toca otra vez' : 'Cancelar'}</button>`;
-    else if (dentro) act = `<button class="chip" data-cj="salir" data-v="${b.id}">${S.sure === 'salir' + b.id ? '¿Seguro? Toca otra vez' : 'Salir'}</button>`;
-    else act = ctx.saldo >= b.cost ? `<button class="go" data-cj="unir" data-v="${b.id}|"><span>Unirme</span><b>${N(b.cost)}</b>${coin()}</button>` : '<span class="hint">Sin saldo</span>';
-    return `<div class="cj-bt open">${meta(`<button class="cj-bt-cs" data-cj="ver" data-v="${b.id}" title="Ver">${cs}</button>`)}${vs}<span class="cj-bt-act">${act}</span></div>`;
+    // cancelar (la tuya) o salir: boton rojo; al tocarlo pregunta en claro y dice cuanto te devuelve
+    let act, pide = false;
+    if (mio || dentro) {
+      pide = S.sure === 'salir' + b.id;
+      act = pide ? `<span class="cj-conf"><span class="cj-conf-t">${mio ? '¿Cancelar la batalla?' : '¿Salir de la batalla?'}</span>
+          <button class="cj-no" data-cj="nosure">No</button>
+          <button class="cj-danger armado" data-cj="salir" data-v="${b.id}"><span>${mio ? 'Sí, cancelar' : 'Sí, salir'}</span><em>+${N(b.cost)}</em>${coin()}</button></span>`
+        : `<button class="cj-danger" data-cj="salir" data-v="${b.id}"><i></i><span>${mio ? 'Cancelar' : 'Salir'}</span></button>`;
+    } else act = ctx.saldo >= b.cost ? `<button class="go" data-cj="unir" data-v="${b.id}|"><span>Unirme</span><b>${N(b.cost)}</b>${coin()}</button>` : '<span class="hint">Sin saldo</span>';
+    return `<div class="cj-bt open ${pide ? 'pide' : ''}">${meta(`<button class="cj-bt-cs" data-cj="ver" data-v="${b.id}" title="Ver">${cs}</button>`)}${vs}<span class="cj-bt-act">${act}</span></div>`;
   }
   function pager(H) {
     if (H.pags <= 1) return '';
@@ -529,11 +543,13 @@
     for (let i = 0; i < 54; i++) cartas.push(i === G ? item(inv.item) : relleno(info));
     el.innerHTML = `<div class="cj-strip"><div class="cj-track">${cartas.map(carta).join('')}</div><i class="cj-mark"></i></div>`;
     const strip = el.firstElementChild, track = strip.firstElementChild, k = track.children[G], w = strip.clientWidth;
-    if (!el.isConnected || !w) { track.style.transform = 'none'; k.classList.add('gana'); return Promise.resolve() }
+    // al parar: la ganadora crece y brilla con el color de su rareza y el resto se apaga
+    const fin = () => { k.classList.add('gana'); strip.style.setProperty('--c', color(item(inv.item).rarity)); strip.classList.add('fin') };
+    if (!el.isConnected || !w) { track.style.transform = 'none'; fin(); return Promise.resolve() }
     const dx = k.offsetLeft + k.offsetWidth / 2 - w / 2 + (Math.random() - 0.5) * k.offsetWidth * 0.6;
     const a = track.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${-dx}px)` }], { duration: quieto() ? 0 : dur, easing: 'cubic-bezier(.08,.6,.12,1)', fill: 'forwards' });
     if (anim) anim.anims.push(a);
-    return a.finished.then(() => k.classList.add('gana'), () => k.classList.add('gana'));
+    return a.finished.then(fin, fin);
   }
   function para() { if (REP) return termina(); if (!anim) return; anim.saltar = true; for (const a of anim.anims) { try { a.finish() } catch {} } }
 
@@ -545,6 +561,9 @@
     if (!mia && c.price * n > ctx.saldo) return avisa('No tienes saldo suficiente');
     ocupado = true;
     root.querySelectorAll('[data-cj=abrir],[data-cj=abrirMia]').forEach((b) => { b.disabled = true });
+    // mientras contesta el servidor, el boton lo dice (si no, parece que no ha hecho nada)
+    const b0 = root.querySelector(mia ? `[data-cj=abrirMia][data-v="${mia}"]` : '.cj-go[data-cj=abrir], .cj-res-act [data-cj=abrir]');
+    if (b0) { b0.classList.add('abriendo'); b0.innerHTML = '<span>Abriendo…</span>'; traduce(b0) }
     let r;
     try { r = mia ? await rpc('cs_open_owned', { p_id: mia }) : await rpc('cs_open', { p_case: c.id, p_n: n }) } catch (e) { ocupado = false; pinta(); return avisa(esc(msgErr(e))) }
     ocupado = false;
@@ -605,10 +624,13 @@
   }
 
   /* ---------- acciones ---------- */
-  function seguro(clave) {
+  // la confirmacion se desarma sola; el token evita que el temporizador de una vez anterior la quite antes de tiempo
+  let sureT = 0;
+  function seguro(clave, ms = 3500) {
     if (S.sure === clave) { S.sure = null; return true }
     S.sure = clave; pinta();
-    setTimeout(() => { if (S.sure === clave) { S.sure = null; pinta() } }, 3500);
+    const tok = ++sureT;
+    setTimeout(() => { if (S.sure === clave && tok === sureT) { S.sure = null; pinta() } }, ms);
     return false;
   }
   async function hazlo(fn) {
@@ -714,8 +736,9 @@
         return cargar(true);
       }
       case 'unir': { const [id, s] = v.split('|'); return unir(+id, s === '' ? null : +s) }
+      case 'nosure': S.sure = null; return pinta();
       case 'salir': {
-        if (!seguro('salir' + v)) return;
+        if (!seguro('salir' + v, 7000)) return;
         const r = await hazlo(() => rpc('cs_battle_leave', { p_id: +v }));
         if (!r) return;
         avisa(`Te devuelvo <b>${N(r.devuelto)}</b>`);

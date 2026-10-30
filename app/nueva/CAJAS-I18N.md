@@ -14,6 +14,9 @@ Las horas de las batallas ("hace 2 h", "ayer", "28 oct") no pasan por el diccion
 'Toca una para elegirla': 'Tap one to select it', '1 objeto': '1 item', 'Cargando…': 'Loading…',
 'Tus cajas': 'Your boxes', 'Cajas sin abrir': 'Unopened boxes', 'Tuyas sin abrir': 'Yours, unopened',
 'Abrir la tuya': 'Open yours', 'Abrir una tuya': 'Open one of yours', 'Abrir otra tuya': 'Open another of yours',
+// tanda de la tarde (30-10): abrir y cancelar
+'Abriendo…': 'Opening…', '¿Cancelar la batalla?': 'Cancel the battle?', '¿Salir de la batalla?': 'Leave the battle?',
+'Sí, cancelar': 'Yes, cancel', 'Sí, salir': 'Yes, leave',
 ```
 
 ## En las reglas `R`
