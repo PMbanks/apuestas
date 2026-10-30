@@ -1,31 +1,50 @@
 name: Sincronizar partidos
-# Cada 10 minutos: partidos, cuotas y resultados; paga las apuestas acabadas y la paga del lunes.
+# Partidos, cuotas y resultados; paga las apuestas acabadas y la paga del lunes.
+# El horario de GitHub (cron) casi no salta en este repo: el 30-10 corrio una sola vez en 10 horas.
+# Por eso cada ejecucion se queda viva casi 6 horas pasando cada 5 minutos, y al acabar se relanza sola.
+# El cron horario queda de red por si la cadena se corta.
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '7 * * * *'
   workflow_dispatch:
 permissions:
   contents: write
+  actions: write
 concurrency:
   group: sync
   cancel-in-progress: false
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: node sync/sync.mjs
+      - name: Pasar cada 5 minutos durante 5 h 40 min
+        run: |
+          fin=$(( $(date +%s) + 340 * 60 ))
+          while [ $(date +%s) -lt $fin ]; do
+            t0=$(date +%s)
+            node sync/sync.mjs || echo "pasada con error, sigo"
+            espera=$(( 300 - ( $(date +%s) - t0 ) ))
+            [ $espera -gt 0 ] && sleep $espera
+          done
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
           PANDASCORE_KEY: ${{ secrets.PANDASCORE_KEY }}
+          # rondas de Valorant en directo apuntadas cada 25 s durante 4 min de cada pasada (predicciones rapidas, db/022)
+          PRED_WATCH_S: 240
           # opcional: sin este secreto no se manda nada a Discord (ver DISCORD-WEBHOOK.md)
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      - name: Relanzarse
+        if: success() || failure()
+        run: gh workflow run sync.yml -R ${{ github.repository }} --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}
       # GitHub apaga los horarios de un repo sin commits en 60 dias: uno vacio al mes lo mantiene vivo
       - name: Mantener vivo el horario
         if: github.event_name == 'schedule'
