@@ -456,6 +456,17 @@
     [/^¿Seguro\? Cobras$/, 'Sure? You get'], [/^, (pierdes|ganas) ([\d.]+)$/, (m, v, n) => `, you ${v === 'pierdes' ? 'lose' : 'win'} ${n}`],
     [/^Cancelar no disponible$/, 'Cancel not available'], [/^Cancelada: cobras$/, 'Cancelled: you get'], [/^· (pierdes|ganas) ([\d.]+)$/, (m, v, n) => `· you ${v === 'pierdes' ? 'lose' : 'win'} ${n}`],
     [/^Cancelada: te devuelvo$/, 'Cancelled: you get back'],
+    // combinadas (30-10 noche, db/029)
+    [/^Sueltas$/, 'Singles'], [/^cada una por su lado$/, 'each one on its own'], [/^Combinada$/, 'Parlay'], [/^cuotas multiplicadas, aciertas todas$/, 'odds multiplied, win them all'],
+    [/^Cuota de la combinada$/, 'Parlay odds'], [/^Importe de la combinada$/, 'Parlay stake'], [/^Apuestas$/, 'You bet'], [/^Cobrarías si aciertas las (\d+)$/, 'Payout if all $1 win'],
+    [/^Apostar combinada de (\d+)$/, 'Place parlay of $1'], [/^Apostando la combinada…$/, 'Placing the parlay…'], [/^Ha entrado la combinada$/, 'Parlay placed'],
+    [/^Una combinada lleva (\d+) partidos como máximo$/, 'A parlay takes $1 matches at most'], [/^Pon un importe$/, 'Enter an amount'], [/^para apostarlo$/, 'to bet it'],
+    [/^Combinada de (\d+)$/, 'Parlay of $1'], [/^cuota ([\d,]+) · ([\d.]+)$/, 'odds $1 · $2'], [/^Combinadas$/, 'Parlays'], [/^(\d+) de (\d+) acertados$/, '$1 of $2 won'],
+    [/^Acertado$/, 'Won'], [/^Fallado$/, 'Lost'], [/^Anulado: cuenta como 1$/, 'Void: counts as 1'], [/^Cancelar combinada$/, 'Cancel parlay'],
+    [/^COBRADA$/, 'PAID'], [/^PERDIDA$/, 'LOST'], [/^DEVUELTA$/, 'REFUNDED'], [/^Combinada cancelada: te devuelvo$/, 'Parlay cancelled: you get back'],
+    [/^Ninguna en juego\. En Partidos, mete 2 o más cuotas en el boleto y elige Combinada\.$/, 'None in play. In Matches, add 2 or more odds to the slip and choose Parlay.'],
+    [/^Toca 2 o más cuotas y en el boleto elige$/, 'Tap 2 or more odds and in the slip choose'], [/^: las cuotas se multiplican y cobras si aciertas todas\.$/, ': the odds multiply and you win if they all win.'],
+    [/^Combinada de (\d+) · cuota ([\d,]+)$/, 'Parlay of $1 · odds $2'], [/^Combinada · cuota ([\d,]+)$/, 'Parlay · odds $1'], [/^Combinada (cancelada|anulada)$/, (m, v) => `Parlay ${v === 'cancelada' ? 'cancelled' : 'void'}`],
     // decimales con punto en ingles (x1,25 a x1.25): esta va la ultima de la lista
     [/×(\d+),(\d\d)/g, '×$1.$2'],
   ];

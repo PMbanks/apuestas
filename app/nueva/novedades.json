@@ -2,6 +2,19 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "combinadas-0030",
+   "fecha": "2026-10-31",
+   "hora": "00:30",
+   "titulo": "Combinadas",
+   "texto": "Mete 2 o más cuotas en el boleto y elige Combinada: una sola apuesta, las cuotas se multiplican y cobras si aciertas todas. Un partido anulado cuenta como 1. Se puede cancelar hasta que empiece el primero.",
+   "img": [
+    "novedades/combinadas.webp"
+   ],
+   "ir": "partidos",
+   "titulo_en": "Parlays",
+   "texto_en": "Add 2 or more odds to the slip and choose Parlay: one bet, the odds multiply and you win if they all win. A void match counts as 1. You can cancel until the first one starts."
+  },
+  {
    "id": "cancelar-apuesta-2355",
    "fecha": "2026-10-30",
    "hora": "23:55",

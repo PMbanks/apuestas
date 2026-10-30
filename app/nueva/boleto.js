@@ -227,7 +227,7 @@
     if (!n) { el.innerHTML = B.res ? '<button type="button" class="blt-listo" data-blt="cierra">Cerrar</button>' : ''; return }
     if (comb()) {
       const pr = problemas(), q = cuotaComb(), txt = B.busy ? B.prog : B.sure ? '¿Seguro? Toca otra vez' : `Apostar combinada de ${n}`;
-      el.innerHTML = `<div class="blt-tot"><span>Apuestas</span><b>${N(B.cst)}${coin()}</b></div>
+      el.innerHTML = `<div class="blt-tot"><span>Importe</span><b>${N(B.cst)}${coin()}</b></div>
         <div class="blt-tot gana"><span>Cobrarías si aciertas las ${n}</span><b>${N(B.cst * q)}${coin()}</b></div>
         ${pr.join('')}
         <button type="button" class="go blt-go ${B.sure ? 'sure' : ''}" data-blt="apuesta" ${pr.length || B.busy ? 'disabled' : ''}>${esc(txt)}</button>`;

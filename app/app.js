@@ -801,7 +801,7 @@ function partidos() {
       <span class="lab"><img src="${esc(L[m.lg][1])}" alt=""><b>${WD(m.at)} ${HM(m.at)}</b> · ${isDaily(m) ? 'Apuesta del día' : esc(m.tag || L[m.lg][0])}</span>
       <span class="ft-v">${logo(m, 'a')}<i>vs</i>${logo(m, 'b')}</span><span class="ft-n">${esc(m.a)} · ${esc(m.b)}</span>
       <span class="ft-o">${picksOf(m).map((p) => `<span>${p} <b>${po(m, p) ? O(po(m, p)) : '·'}</b></span>`).join('')}</span></button>`).join('')}</div>` : ''}
-    <nav class="fil">${filt()}${jugChip()}</nav>${leagues()}`;
+    <nav class="fil">${filt()}${jugChip()}</nav>${leagues()}${S.soloJug ? '' : '<p class="cmb-hint"><i>+</i><span>Toca 2 o más cuotas y en el boleto elige <b>Combinada</b>: las cuotas se multiplican y cobras si aciertas todas.</span></p>'}`;
   if (!list.length && !S.soloJug) h += `<p class="hint" style="padding:30px 0">No hay partidos con este filtro en los próximos días.</p>`;
   const jugH = jugadosHtml();
   let ri = 0;
@@ -946,6 +946,7 @@ function apuestas() {
     </section>
     <div class="sec-h mb-h"><h2>En juego</h2><i>${open.length}</i></div>
     ${open.length ? `<div class="mb-cs">${open.map(mbCard).join('')}</div>` : '<p class="hint mb-vacio">Nada en juego. Ve a Partidos y toca una cuota.</p>'}
+    <div id="cmb-slot"></div>${'' /* combinadas.js pinta aqui tus combinadas (db/029) */}
     ${misRetos.length ? `<div class="sec-h mb-h"><h2>Tus retos</h2><i>${misRetos.length}</i></div>${retosHtml(misRetos.slice(0, 12), '')}` : ''}
     <div class="sec-h mb-h"><h2>Resueltas</h2><i>${set.length}</i></div>
     ${set.length ? `<nav class="mb-fil"><span class="mb-fg">${ests.map(([k, n]) => `<button class="chip ${bf === k ? 'on' : ''}" data-bf="${k}">${n} <i>${k === 'all' ? set.length : set.filter((b) => b.st === k).length}</i></button>`).join('')}</span>
