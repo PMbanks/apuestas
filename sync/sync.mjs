@@ -97,7 +97,7 @@ async function soccer() {
           score: status === 'live' || status === 'final' ? `${isFinite(sh) ? sh : 0}:${isFinite(sa) ? sa : 0}` : null,
           winner: status === 'final' ? (sh > sa ? '1' : sh < sa ? '2' : 'X') : null,
           details: {
-            espn: { sport: 'soccer', league: lg, event: e.id },
+            espn: { sport: 'soccer', league: lg, event: e.id, ids: { a: h.team.id, b: a.team.id } },
             tv: tvEspn(c),
             tape: [
               [formEs(h.form) ? 'F:' + formEs(h.form) : '', 'Forma', formEs(a.form) ? 'F:' + formEs(a.form) : ''],
@@ -147,7 +147,7 @@ async function ufc() {
         starts_at: new Date(Date.parse(c.date || e.date)).toISOString(), status,
         score: done ? (c.status?.result?.shortDisplayName || st.shortDetail || null) : null,
         winner: status === 'final' ? (x.winner ? '1' : '2') : null,
-        details: { espn: { sport: 'mma', league: 'ufc', event: e.id }, tv: tvEspn(c).length ? tvEspn(c) : tvEspn(e.competitions?.[comps.length - 1] || {}), tape: [[x.records?.[0]?.summary?.replace(/-/g, '·') || '', 'Récord', y.records?.[0]?.summary?.replace(/-/g, '·') || '']].filter((r) => r[0] || r[2]) },
+        details: { espn: { sport: 'mma', league: 'ufc', event: e.id, ids: { a: x.athlete.id, b: y.athlete.id } }, tv: tvEspn(c).length ? tvEspn(c) : tvEspn(e.competitions?.[comps.length - 1] || {}), tape: [[x.records?.[0]?.summary?.replace(/-/g, '·') || '', 'Récord', y.records?.[0]?.summary?.replace(/-/g, '·') || '']].filter((r) => r[0] || r[2]) },
       };
       if (status === 'scheduled') {
         const pct = (r) => (r ? (r.w + 1) / (r.w + r.l + r.d + 2) : 0.5);
@@ -158,6 +158,30 @@ async function ufc() {
     });
   }
   return out;
+}
+
+// caras oficiales de la UFC (ufc.com): la foto de su ficha. Una vez por hora como mucho; la base guarda la ultima buena
+const slugUfc = (n) => String(n).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+async function caraUfc(nombre) {
+  try {
+    const r = await fetch(`https://www.ufc.com/athlete/${slugUfc(nombre)}`, { headers: { 'user-agent': 'Mozilla/5.0 (apuestas-colegas)' } });
+    if (!r.ok) return null;
+    const html = await r.text();
+    const ap = String(nombre).normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(' ').pop().toUpperCase();
+    const urls = [...html.matchAll(/https:\/\/(?:www\.)?ufc\.com\/images\/[^"' )]+?\.png(?:\?itok=[\w-]+)?/g)].map((m) => m[0]);
+    return urls.find((u) => /athlete_bio_full_body|event_results_athlete_headshot/.test(u) && u.toUpperCase().includes(ap)) || urls.find((u) => u.toUpperCase().includes(ap)) || null;
+  } catch { return null; }
+}
+async function carasUfc(rows) {
+  if (!process.env.FORCE_FACES && new Date().getUTCMinutes() >= 10) return;
+  const vivos = rows.filter((r) => r.sport === 'u' && r.status === 'scheduled' && Date.parse(r.starts_at) < NOW + 42 * DAY);
+  for (const r of vivos) {
+    for (const k of ['home', 'away']) {
+      const u = await caraUfc(r[k]);
+      if (u) r[k + '_logo'] = u;
+      await new Promise((res) => setTimeout(res, 400));
+    }
+  }
 }
 
 // ---------- Valorant (PandaScore) ----------
@@ -177,9 +201,12 @@ async function valorant() {
     if (m.status !== 'finished' || !m.winner_id) continue;
     for (const o of m.opponents || []) {
       const id = o.opponent?.id; if (!id) continue;
-      const f = form.get(id) || { w: 0, g: 0, s: '' };
+      const f = form.get(id) || { w: 0, g: 0, s: '', ult: [] };
       const won = id === m.winner_id;
       f.g++; if (won) f.w++; f.s = (f.s + (won ? 'G' : 'P')).slice(-5);
+      const otro = (m.opponents || []).find((o) => o.opponent?.id !== id)?.opponent;
+      const sc = (x) => m.results?.find((r) => r.team_id === x)?.score ?? 0;
+      f.ult = [...f.ult, { vs: otro?.name || '?', logo: otro?.image_url || null, won, score: `${sc(id)}:${sc(otro?.id)}`, at: m.end_at || m.begin_at, t: m.tournament?.name || '' }].slice(-5);
       form.set(id, f);
     }
   }
@@ -203,7 +230,8 @@ async function valorant() {
       starts_at: new Date(t).toISOString(), status, bo: m.number_of_games || null,
       score: status === 'live' || status === 'final' ? `${sc(A.id)}:${sc(B.id)}` : null,
       winner: status === 'final' ? (m.winner_id === A.id ? '1' : '2') : null,
-      details: { tv: (m.streams_list || []).filter((x) => x.raw_url && /^(en|es)$/.test(x.language)).slice(0, 6)
+      details: { recent: { a: (fa?.ult || []).slice().reverse(), b: (fb?.ult || []).slice().reverse() }, ids: { a: A.id, b: B.id },
+        tv: (m.streams_list || []).filter((x) => x.raw_url && /^(en|es)$/.test(x.language)).slice(0, 6)
           .map((x) => ({ n: /twitch/.test(x.raw_url) ? 'Twitch' : /youtube/.test(x.raw_url) ? 'YouTube' : /kick\.com/.test(x.raw_url) ? 'Kick' : 'Stream', l: x.language, u: x.raw_url, main: !!x.main })),
         tape: [[m.number_of_games ? 'BO' + m.number_of_games : '', 'Formato', m.number_of_games ? 'BO' + m.number_of_games : ''],
         [fa ? 'F:' + fa.s : '', 'Forma', fb ? 'F:' + fb.s : '']].filter((r) => r[0] || r[2]) },
@@ -214,6 +242,13 @@ async function valorant() {
       row.odds_src = 'modelo';
     }
     out.push(row);
+  }
+  // los jugadores de cada equipo (una peticion para todos)
+  const ids = [...new Set(out.filter((r) => r.status !== 'final').flatMap((r) => [r.details.ids.a, r.details.ids.b]))].slice(0, 100);
+  if (ids.length) {
+    const teams = await getJson(`https://api.pandascore.co/valorant/teams?filter[id]=${ids.join(',')}&per_page=100`, H);
+    const pl = new Map((teams || []).map((t) => [t.id, (t.players || []).map((p) => ({ n: p.name, img: p.image_url || null, nat: p.nationality || null, role: p.role || null, nombre: [p.first_name, p.last_name].filter(Boolean).join(' ') || null }))]));
+    for (const r of out) r.details.players = { a: pl.get(r.details.ids.a) || [], b: pl.get(r.details.ids.b) || [] };
   }
   return [...new Map(out.map((r) => [r.id, r])).values()];
 }
@@ -232,6 +267,7 @@ async function main() {
   const t0 = Date.now();
   const [f, u, v] = await Promise.all([soccer(), ufc(), valorant()]);
   const rows = [...f, ...u, ...v];
+  await carasUfc(rows);
   console.log(`futbol ${f.length} · ufc ${u.length} · valorant ${v.length} · con cuotas reales ${rows.filter((r) => r.odds_src === 'draftkings').length}`);
   if (DRY) {
     if (process.env.DRY_OUT) (await import('node:fs')).writeFileSync(process.env.DRY_OUT, JSON.stringify(rows));
