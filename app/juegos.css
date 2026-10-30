@@ -207,7 +207,7 @@
   .jg-hand{min-height:108px;margin:8px 0}
   .jg-mid{min-height:120px}
 }
-@media (prefers-reduced-motion:reduce){.jg *{transition:none!important}.jg.jg-in{animation:none}}
+html.sin-anim .jg *{transition:none!important}html.sin-anim .jg.jg-in{animation:none}
 .jg .lab{display:block}
 .jg-gap{display:block}
 

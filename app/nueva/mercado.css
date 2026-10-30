@@ -190,4 +190,4 @@ button.mk-it:hover .mk-it-img{background:radial-gradient(circle at 50% 42%,color
   .mk-sheet-g{grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 10px}
   .mk-it.big{width:200px}
 }
-@media (prefers-reduced-motion:reduce){.mk-rev,.mk-sheet.in,.mk.mk-in{animation:none}}
+html.sin-anim .mk-rev,html.sin-anim .mk-sheet.in,html.sin-anim .mk.mk-in{animation:none}

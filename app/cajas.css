@@ -500,11 +500,7 @@ button.cj-seat:hover{background:rgba(242,193,78,.16);color:var(--acc)}
   .cj-case:hover img,.cj-pk:hover .cj-pk-img img,button.cj-it:hover .cj-it-img img{transform:none}
   .cj-case:hover .cj-case-img::before{opacity:0}
 }
-@media (prefers-reduced-motion:reduce){
-  .cj .cj-k,.cj .bv-k{transition:transform .35s var(--ease),box-shadow .35s,opacity .45s!important}
-  .cj .cj-strip{transition:background .5s!important}
-  .cj .bv-it.nuevo{animation:bvEntra .45s cubic-bezier(.2,.9,.3,1.3)}
-}
+html.sin-anim .cj .cj-k,html.sin-anim .cj .bv-k{transition:transform .35s var(--ease),box-shadow .35s,opacity .45s!important}html.sin-anim .cj .cj-strip{transition:background .5s!important}html.sin-anim .cj .bv-it.nuevo{animation:bvEntra .45s cubic-bezier(.2,.9,.3,1.3)}
 
 /* ---------- batalla nueva (PM, 30-10) ---------- */
 .bv{--kh:92px;margin-top:6px}
@@ -580,7 +576,7 @@ button.cj-seat:hover{background:rgba(242,193,78,.16);color:var(--acc)}
   .bv-tot .num{font-size:21px}
   .bv-vs{font-size:14px}
 }
-@media (prefers-reduced-motion:reduce){.bv-it.nuevo{animation:none}}
+html.sin-anim .bv-it.nuevo{animation:none}
 
 /* pestanas sin saltos: la raya de abajo crece en vez de aparecer de golpe (PM, 30-10) */
 .cj-tab::after{content:"";position:absolute;left:50%;width:28px;margin-left:-14px;bottom:0;height:3px;border-radius:2px;background:var(--acc);opacity:0;transform:scaleX(0);transition:transform .2s var(--ease),opacity .2s var(--ease)}

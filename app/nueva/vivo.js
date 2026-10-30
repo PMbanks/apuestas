@@ -484,6 +484,6 @@
 .row .t small.sc{font-size:12px;line-height:1.25;white-space:normal}
 @media (min-width:861px){#view:has(.row .t small.sc) .row{grid-template-columns:116px 30px minmax(0,1fr) 44px 72px 72px 72px}}
 @media (max-width:860px){#view:has(.row .t small.sc) .row{grid-template-columns:84px minmax(0,1fr) repeat(3,52px)}.row .t small.sc{font-size:11px}}
-@media (prefers-reduced-motion:reduce){.vv-live i,.pto{animation:none}.vv-bar u{transition:none}}`;
+html.sin-anim .vv-live i,html.sin-anim .pto{animation:none}html.sin-anim .vv-bar u{transition:none}`;
   document.head.appendChild(css);
 })();

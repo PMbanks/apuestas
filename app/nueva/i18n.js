@@ -1,6 +1,20 @@
 // Gambling Master en español o en inglés. La app escribe en español; con el inglés elegido se traduce lo pintado
 // con este diccionario (frases exactas) y estas reglas (frases con números o nombres). Lo que escriben los jugadores no se toca.
 'use strict';
+// Animaciones (PM, 30-10: quiere animaciones aunque el sistema diga "reducir movimiento"): las manda el interruptor
+// Animaciones del perfil (localStorage gm-anim, encendido por defecto), no prefers-reduced-motion. Va aqui porque este
+// fichero se carga antes que cajas.js, juegos.js, app.js y el resto: todos los matchMedia de movimiento le preguntan a esto.
+(function () {
+  const off = () => { try { return localStorage.getItem('gm-anim') === '0'; } catch (e) { return false; } };
+  document.documentElement.classList.toggle('sin-anim', off());
+  const mm = window.matchMedia ? window.matchMedia.bind(window) : null;
+  if (mm) window.matchMedia = function (q) {
+    if (/prefers-reduced-motion/.test(String(q))) { const red = off(), m = /no-preference/.test(String(q)) ? !red : red;
+      return { matches: m, media: String(q), onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return false; } }; }
+    return mm(q);
+  };
+  window.GM_ANIM = { on: () => !off(), set(on) { try { localStorage.setItem('gm-anim', on ? '1' : '0'); } catch (e) {} document.documentElement.classList.toggle('sin-anim', !on); } };
+})();
 (function () {
   const D = {
     // menú y cabeceras
@@ -114,9 +128,125 @@
     '★ tu apuesta': '★ your pick', 'mapas': 'maps', 'marcador': 'score', 'empieza en': 'starts in', 'La curva sale cuando tengas dos apuestas resueltas.': 'The curve shows once you have two settled bets.',
     // en linea y premios por tiempo (30-10)
     'Tiempo en la app': 'Time in the app', 'Hoy llevas': 'Today you have', '· cuenta mientras la tienes abierta y a la vista': '· counts while it is open and on screen', 'Quién más está': 'Who else is on',
+    // chat y feed (30-10)
+    'Feed': 'Feed', 'Ruleta semanal': 'Weekly wheel', 'Avisos': 'Notices', 'se ve al empezar': 'shown at kick-off', 'acierta con': 'wins with', 'falla con': 'loses with', 'gira la ruleta de la semana': 'spins the weekly wheel',
+    'abre una caja': 'opens a box', 'le sale': 'gets', 'gana la batalla a': 'wins the battle against', 'ganan la batalla a': 'win the battle against', 'Todavía no ha pasado nada por aquí.': 'Nothing has happened here yet.', 'Ver más': 'Show more', 'de CS2': 'CS2',
+    // novedades (30-10)
+    'Novedades': 'News', 'Nuevo': 'New', 'Todo lo nuevo de la app, con fotos': 'Everything new in the app', 'Ir a Partidos': 'Go to Matches', 'Ver mis apuestas': 'See my bets', 'Ver las apuestas de todos': 'See everyone\'s bets',
+    'Ir a la Liga': 'Go to the League', 'Ir al Chat': 'Go to Chat', 'Ir al Monedero': 'Go to Wallet', 'Ir a Juegos': 'Go to Games', 'Ver el directo': 'Watch live', 'Abrir Recompensas': 'Open Rewards', 'Todavía no hay novedades.': 'No news yet.',
+    // juegos (JUEGOS-INTEGRAR.md, las que faltaban)
+    'Crash': 'Crash', 'Blackjack': 'Blackjack', 'Contra': 'Against', 'cara': 'heads', 'cruz': 'tails', 'Máx': 'Max',
+    'Retar por': 'Challenge for', 'ti': 'you', 'Retirada automática': 'Auto cash out', 'Últimas rondas': 'Last rounds', 'Todavía nadie dentro': 'Nobody in yet', 'segundos': 'seconds',
+    'Haz tu apuesta': 'Place your bet', 'Repartir por': 'Deal for', 'Otra mano por': 'Another hand for', 'Hoy te quedan': 'Today you have', 'por arriesgar': 'left to risk', 'Hoy ya has perdido 100. Vuelve mañana': 'You have already lost 100 today. Come back tomorrow',
+    'Blackjack paga 3 a 2': 'Blackjack pays 3 to 2', 'Este juego está cerrado ahora mismo': 'This game is closed right now', 'La retirada automática va de ×1,01 a ×1000': 'Auto cash out goes from ×1.01 to ×1000', 'Tienes que entrar primero': 'You need to log in first', 'La apuesta mínima es 1': 'The minimum bet is 1', 'La apuesta máxima es 100.000': 'The maximum bet is 100,000',
+    'Elige cara o cruz': 'Pick heads or tails', 'Elige a un colega': 'Pick a friend', 'Ya tienes 5 retos abiertos: retira alguno': 'You already have 5 open challenges: withdraw one', 'Ese reto no existe': 'That challenge does not exist', 'Ese reto ya no está abierto': 'That challenge is no longer open', 'No puedes aceptar tu propio reto': 'You cannot accept your own challenge',
+    'Ese reto es para otro': 'That challenge is for someone else', 'Ese reto no es tuyo': 'That challenge is not yours', 'Ese reto ya no se puede retirar': 'That challenge can no longer be withdrawn', 'La ronda ya ha arrancado: espera a la siguiente': 'The round has already started: wait for the next one', 'Ya estás dentro de esta ronda': 'You are already in this round', 'No hay ninguna ronda': 'There is no round',
+    'No estás en esta ronda': 'You are not in this round', 'La ronda aún no ha arrancado': 'The round has not started yet', 'Ya tienes una mano en juego': 'You already have a hand in play', 'Esa mano no es tuya': 'That hand is not yours', 'Esa mano ya ha terminado': 'That hand has already ended', 'Solo puedes doblar con las dos primeras cartas': 'You can only double on your first two cards',
+    'Los juegos aún no están en la base: falta cargar db/010_juegos.sql': 'The games are not in the database yet: db/010_juegos.sql is missing',
+    // repaso del ingles en todas las pantallas (30-10)
+    'Paga de': 'Payday of', 'Te faltan': 'You need', '· se acumula': '· it adds up', 'Paga del lunes: +': 'Monday payday: +', 'para cada uno': 'for each of you', 'acertó con': 'won with', 'falló con': 'lost with',
+    'Cuota media de cada uno': 'Average odds of each one', 'Vender todo el inventario': 'Sell the whole inventory', 'Los que más han ganado en batallas': 'Top battle winners',
+    'Zapatillas': 'Sneakers', 'Tecnología': 'Tech', 'Moda y joyas': 'Fashion and jewellery', 'Relojes': 'Watches', 'Coches': 'Cars',
+    'Devolución de las cajas de prueba': 'Refund of the test boxes', 'Tu apodo': 'Your nickname', 'Tu frase': 'Your line', 'Blackjack paga 3 a 2': 'Blackjack pays 3 to 2',
+    'Marcador en directo': 'Live score', 'en propia': 'own goal', 'Aún no ha pasado nada.': 'Nothing has happened yet.', 'Paradas': 'Saves', 'Posesión': 'Possession', 'Tiros': 'Shots', 'A puerta': 'On target', 'Córners': 'Corners',
+    'EMPEZANDO': 'STARTING', 'acabado': 'finished', 'Ronda': 'Round', 'Otros idiomas': 'Other languages', 'Buscarlo': 'Search for it',
+    // repaso del ingles: notas del monedero y cajas nuevas (30-10)
+    'Relojes de calle': 'Street watches', 'Moda de calle': 'Streetwear', 'Motos y scooters': 'Motorbikes and scooters', 'Relojes de lujo': 'Luxury watches',
+    'Blackjack ¡blackjack!': 'Blackjack, blackjack!', 'Cara o cruz: nadie aceptó': 'Coin flip: nobody accepted', 'Cara o cruz: reto retirado': 'Coin flip: challenge withdrawn', 'Cara o cruz: reto abierto': 'Coin flip: open challenge',
+    'Mejor ratio de la semana': 'Best ratio of the week', 'Más dinero de la semana': 'Most money of the week', 'Reto sin contestar': 'Challenge unanswered', 'Reto sin ganador': 'Challenge without a winner', 'Predicción sin resultado, devuelta': 'Prediction without a result, refunded',
+    // rendimiento en el perfil (30-10)
+    'Rendimiento': 'Performance', 'Beneficio neto': 'Net profit', 'en apuestas resueltas': 'on settled bets', 'beneficio por cada 100 apostados': 'profit per 100 staked', 'Risk : reward': 'Risk : reward', 'arriesga 1 para ganar esto de media': 'risks 1 to win this on average',
+    'ganadas / perdidas': 'won / lost', 'Mayor acierto': 'Biggest win', 'Beneficio acumulado': 'Cumulative profit', 'Apuesta a apuesta: por encima de cero, ganando.': 'Bet by bet: above zero means winning.', 'Beneficio por deporte': 'Profit by sport',
+    'Lo ganado o perdido en cada deporte.': 'Won or lost in each sport.', 'En qué te lo gastas': 'Where your money goes', 'En qué se lo gasta': 'Where their money goes', 'V-Bucks puestos en cada cosa desde el principio.': 'V-Bucks put into each thing since the start.',
+    'Batallas': 'Battles', 'Bote': 'Pot', 'cargando': 'loading', 'Sale cuando tenga apuestas resueltas.': 'Shows once there are settled bets.', 'En total': 'In total', 'Cómo te va apostando': 'How your betting is going',
+    // panel de novedades y arreglos (30-10)
+    'Ver todas en grande': 'See them all big', 'Octavos': 'Round of 16', 'Dieciseisavos': 'Round of 32', 'Cuartos': 'Quarter-finals', 'Semis': 'Semi-finals',
+    // extras (EXTRAS-INTEGRAR.md: sonidos, stickers, cajas en directo) y lo que faltaba en el repaso (30-10)
+    'Silenciar sonidos': 'Mute sounds', 'Activar sonidos': 'Turn sounds on', 'Mandar un sticker': 'Send a sticker', 'está abriendo': 'is opening', 'ha abierto': 'opened', 'Se lleva': 'Takes', 'Stickers': 'Stickers',
+    'Ver partido ›': 'See match ›', 'Nadie ha apostado': 'Nobody has bet', 'Ganancia o pérdida por semana': 'Profit or loss by week', 'Zapatillas básicas': 'Basic sneakers', 'Tech básica': 'Basic tech', 'Zapatillas hype': 'Hype sneakers',
+    'Compensación por el fallo de las cajas': 'Compensation for the boxes bug',
+    // feed compacto (30-10)
+    'lo mejor:': 'best:', 'apuesta a': 'bets on', 'ha apostado': 'has bet',
+    // moneda al lado de cada cantidad (30-10)
+    'en total': 'overall',
+    // seguir equipos y partidos (30-10)
+    'Seguir': 'Follow', 'Siguiendo': 'Following', 'Seguir el partido': 'Follow the match', 'Ya no lo sigues': 'Unfollowed', 'Siguiendo: te aviso cuando empiece y cuando acabe': 'Following: you get a notice when it starts and when it ends', 'Empieza': 'Starts',
+    // ruleta Todos y apuestas en vivo (30-10)
+    'aún no ha girado': 'has not spun yet', '▲ Vas ganando': '▲ Winning', '▼ Vas perdiendo': '▼ Losing',
+    // vista del partido en vivo (30-10)
+    'Ver el stream aquí': 'Watch the stream here', 'Ocultar el stream': 'Hide the stream', 'o en': 'or on', 'Verlo en': 'Watch on', 'No hay una emisión que se pueda ver dentro de la app.': 'There is no stream that can play inside the app.', 'en vivo': 'live',
+    // animaciones (30-10)
+    'Animaciones': 'Animations', 'Animaciones encendidas': 'Animations on', 'Animaciones apagadas': 'Animations off',
+    // fichas: ver todos y todo sobre el equipo (30-10)
+    'Todo sobre el equipo': 'All about the team', 'Todo sobre el luchador': 'All about the fighter', 'Ver menos': 'Show less', 'Puesto': 'Position', 'Ganados': 'Won', 'Empatados': 'Drawn', 'Perdidos': 'Lost', 'Puntos': 'Points',
+    'Goles a favor': 'Goals for', 'Goles en contra': 'Goals against', 'Diferencia': 'Difference', 'Temporada': 'Season', 'Cuerpo técnico': 'Staff', 'Entrenador': 'Coach', 'Plantilla': 'Squad', 'Inactivos': 'Inactive', 'Torneos': 'Tournaments',
+    'Las fuentes gratis no dan más datos de este equipo.': 'The free sources give no more data on this team.', 'Resultados de esta temporada y la anterior: en la ficha, Ver todos.': 'This season and last season results: in the team page, See all.', 'Otros': 'Others',
+    // mercado (30-10)
+    'Intercambios': 'Trades', 'Mercado': 'Market', 'Contratos': 'Contracts', 'Mis cosméticos': 'My cosmetics',
+    'Proponer un trato': 'Propose a trade', 'Skins, marcos, fondos y objetos, y también V-Bucks. Lo que ofreces queda en depósito hasta que el otro responde.': 'Skins, frames, backgrounds and items, and V-Bucks too. What you offer is held in escrow until the other answers.',
+    'Tú das': 'You give', 'Pides a tu colega': 'You ask your friend for', 'Elegir piezas': 'Pick items', 'Cambiar piezas': 'Change items', 'Nada de momento': 'Nothing yet', 'Nada': 'Nothing',
+    'Un mensaje, si quieres': 'A message, if you like', 'Proponer trato': 'Propose trade', 'Te proponen': 'Offered to you', 'Tus propuestas': 'Your offers', 'Últimos tratos': 'Latest trades',
+    'Aún no hay tratos. Elige a un colega y propón el primero.': 'No trades yet. Pick a friend and make the first offer.',
+    'Das': 'You give', 'Te da': 'Gives you', 'Pides': 'You ask for', 'Te pide': 'Asks you for', 'Cancelar trato': 'Cancel trade', 'Rechazar': 'Decline', 'Aceptado': 'Accepted', 'Rechazado': 'Declined', 'Cancelado': 'Cancelled',
+    'Pon algo a la venta por el precio que quieras. El primero que lo compre se lo lleva y tú cobras al momento. Puedes retirarlo cuando quieras.': 'Put something up for sale at any price. The first to buy it takes it and you get paid at once. You can take it back any time.',
+    'Poner algo a la venta': 'Put something up for sale', 'Retirar de la venta': 'Take off sale', 'A la venta': 'For sale', 'Lo tuyo a la venta': 'Your items for sale', 'Vendido hace poco': 'Sold recently',
+    'Ahora mismo no hay nada a la venta.': 'Nothing is for sale right now.', 'Comprar': 'Buy', 'Qué pones a la venta': 'What are you selling', 'Poner a la venta': 'Put up for sale',
+    'Mete 10 piezas de la misma rareza y sale 1 de la rareza siguiente, al azar y de las mismas cajas. No se mezclan skins, lujo y cosméticos. Casi siempre sale algo que vale menos que lo que metes: a veces sale algo que vale mucho más.': 'Put in 10 items of the same rarity and 1 of the next rarity comes out, at random and from the same boxes. Skins, luxury and cosmetics are not mixed. It usually comes out worth less than what you put in: sometimes it is worth a lot more.',
+    'Elige 10 piezas de la misma rareza': 'Pick 10 items of the same rarity', 'Firmar contrato': 'Sign contract', 'Últimos contratos': 'Latest contracts', 'Tu contrato ha salido': 'Your contract came out', 'Valor': 'Value', 'Otro contrato': 'Another contract',
+    'Cada uno mete V-Bucks o piezas por su valor. Cuando entra la segunda persona empiezan 60 segundos; al acabar el servidor saca un boleto: cuanto más has metido, más grande es tu trozo. Quien gana se lo lleva todo.': 'Everyone puts in V-Bucks or items at their value. When the second person joins, 60 seconds start; when they end the server draws a ticket: the more you put in, the bigger your slice. The winner takes everything.',
+    'Falta alguien': 'Waiting for someone', 'Girando…': 'Spinning…', 'Sin ronda': 'No round', 'Tú metes': 'You put in', 'Y piezas, si quieres': 'And items, if you like', 'Retirar lo que metí': 'Take back what I put in', 'Nadie ha metido nada todavía.': 'Nobody has put anything in yet.',
+    'Un marco para tu foto y un fondo para la app. Se ven en todo lo que pintan los demás. Consíguelos en Cajas, en Cosméticos, o cómpralos y cámbialos aquí.': 'A frame for your photo and a background for the app. Everyone sees them. Get them in Boxes, under Cosmetics, or buy and swap them here.',
+    'Marco': 'Frame', 'Fondo': 'Background', 'Ninguno': 'None', 'Marcos': 'Frames', 'Fondos': 'Backgrounds', 'Objetos de colección': 'Collectibles', 'Ponerme': 'Wear it', 'Puesto · quitar': 'Worn · remove', 'Los colegas': 'The friends',
+    'Aún no tienes ningún marco. Salen en la Caja Aros, la Caja Neón y la Caja Oro.': 'You have no frames yet. They come in the Aros, Neón and Oro boxes.',
+    'Aún no tienes ningún fondo. Salen en la Caja Fondos y en la Caja Neón.': 'You have no backgrounds yet. They come in the Fondos and Neón boxes.',
+    'Aún no tienes objetos. Salen en la Caja Calle y en la Caja Oro.': 'You have no items yet. They come in the Calle and Oro boxes.',
+    'V-Bucks que das': 'V-Bucks you give', 'V-Bucks que pides': 'V-Bucks you ask for', 'Precio': 'Price', 'Lo que das': 'What you give', 'Piezas para el jackpot': 'Items for the jackpot', 'Listo': 'Done', 'No hay nada de esa rareza.': 'Nothing of that rarity.',
+    'Trato hecho': 'Trade done', 'Trato rechazado': 'Trade declined', 'Trato cancelado: te devuelvo lo que ofrecías': 'Trade cancelled: what you offered is back', 'Retirado de la venta': 'Taken off sale',
+    'Has retirado lo que metiste': 'You took back what you put in', 'La ronda acababa de cerrarse. Prueba otra vez': 'The round had just closed. Try again', 'Estás dentro del jackpot': 'You are in the jackpot',
+    // avisos de la base (db/020_mercado.sql)
+    'Un trato vacío no sirve': 'An empty trade is no use', 'Elige a un colega': 'Pick a friend', 'Esa cantidad de V-Bucks no vale': 'That V-Bucks amount is not valid', 'Ya tienes 6 tratos abiertos: cancela alguno': 'You already have 6 open trades: cancel one',
+    'Lo que pides ya no lo tiene': 'They no longer have what you ask for', 'Alguna de tus piezas ya no está libre': 'One of your items is no longer free', 'Ese trato no es tuyo': 'That trade is not yours', 'Ese trato ya está cerrado': 'That trade is already closed',
+    'Ese trato no es para ti': 'That trade is not for you', 'Lo que ofrecía ya no está disponible': 'What they offered is no longer available', 'Ya no tienes lo que te piden': 'You no longer have what they ask for',
+    'No se ha podido entregar lo ofrecido': 'The offered items could not be handed over', 'No se ha podido entregar lo pedido': 'The requested items could not be handed over', 'Elige qué poner a la venta': 'Pick what to sell',
+    'Pon un precio de 1 a 10.000.000': 'Set a price from 1 to 10,000,000', 'Ya tienes 12 cosas a la venta': 'You already have 12 things for sale', 'Eso no es tuyo o ya no está libre': 'That is not yours or no longer free', 'Eso no es tuyo': 'That is not yours',
+    'Eso ya no está a la venta': 'That is no longer for sale', 'Eso no existe': 'That does not exist', 'Eso ya se ha vendido o se ha retirado': 'That was already sold or taken back', 'Eso es tuyo: puedes retirarlo': 'That is yours: you can take it back',
+    'Esa pieza ya no está disponible': 'That item is no longer available', 'Un contrato son exactamente 10 piezas': 'A contract is exactly 10 items', 'Alguna de esas piezas no es tuya o ya no está libre': 'One of those items is not yours or no longer free',
+    'Tienen que ser las 10 de la misma rareza': 'All 10 must be the same rarity', 'Con lo especial no hay nada mejor': 'There is nothing better than special', 'No se mezclan skins, lujo y cosméticos': 'Skins, luxury and cosmetics are not mixed',
+    'No hay nada de la rareza siguiente para esas piezas': 'There is nothing of the next rarity for those items', 'Hay una pieza repetida': 'An item is repeated', 'Mete al menos 10 de valor': 'Put in at least 10 of value',
+    'Alguna de esas piezas ya no está libre': 'One of those items is no longer free', 'No estás dentro': 'You are not in', 'Ya hay más gente: no se puede salir': 'Others have joined: you cannot leave', 'Eso no es tuyo, o no se puede llevar': 'That is not yours or cannot be worn',
+    'Se lleva un marco o un fondo': 'You wear a frame or a background', 'Eso no es un marco': 'That is not a frame', 'Eso no es un fondo': 'That is not a background', 'Esa caja no existe': 'That box does not exist',
+    // extras 2 (30-10): cuota mejorada, predicción rápida, vitrina y trofeos
+    'CUOTA MEJORADA': 'BOOSTED ODDS', 'Predicción rápida': 'Quick prediction', 'Predicción acertada': 'Prediction won', 'Predicción devuelta': 'Prediction refunded',
+    'Predicción rápida: apostado': 'Quick prediction: bet placed',
+    '¿Habrá gol en los próximos 10 minutos?': 'Will there be a goal in the next 10 minutes?', 'Sí, habrá gol': 'Yes, there will be a goal', 'No, sin goles': 'No, no goals',
+    '¿Quién gana la siguiente ronda?': 'Who wins the next round?', 'Tus predicciones aquí': 'Your predictions here',
+    'Cuenta desde 1 minuto después de apostar, durante 10 minutos. Lo comprueba el servidor con la hora real de cada gol en ESPN.': 'Counts from 1 minute after you bet, for 10 minutes. The server checks it against the real time of each goal on ESPN.',
+    'La apuesta vale para esa ronda. El servidor la comprueba después con el historial ronda a ronda de vlr.gg.': 'The bet is for that round. The server checks it afterwards with the round by round history from vlr.gg.',
+    'Descanso: vuelve cuando ruede el balón.': 'Half time: come back when the ball rolls.', 'El partido no está en juego.': 'The match is not being played.',
+    'Las predicciones rápidas de este partido todavía no están disponibles.': 'Quick predictions are not available for this match yet.',
+    'No consigo los datos del partido ahora mismo.': 'I cannot get the match data right now.', 'No consigo los datos de vlr.gg ahora mismo.': 'I cannot get the vlr.gg data right now.',
+    'Queda muy poco partido para una ventana de 10 minutos.': 'Too little of the match is left for a 10 minute window.', 'Entre mapas: vuelve cuando empiece el siguiente.': 'Between maps: come back when the next one starts.',
+    'esperando': 'waiting', 'perdida': 'lost', 'devuelta': 'refunded',
+    'Vitrina': 'Showcase', 'Elegir skins': 'Choose skins', 'Vacío': 'Empty', 'Las 3 skins de tu inventario que enseñas a los demás.': 'The 3 skins from your inventory that you show to everyone.',
+    'Guardar vitrina': 'Save showcase', 'Vitrina guardada': 'Showcase saved', 'Cargando tu inventario…': 'Loading your inventory…', 'La vitrina tiene sitio para 3 skins': 'The showcase has room for 3 skins',
+    'No tienes skins todavía. Abre cajas en Cajas.': 'You have no skins yet. Open boxes in Boxes.',
+    'Sala de trofeos': 'Trophy room', 'Permanente: lo que se gana aquí no se borra.': 'Permanent: what you win here is never erased.', 'Mayor premio': 'Biggest win',
+    'Cuota más alta acertada': 'Highest odds hit', 'Todavía nadie': 'Nobody yet', 'Campeón de cada mes': 'Champion of each month', 'Bote y premios de la semana': 'Pot and prizes of the week',
+    'Aún no ha acabado ningún mes con ganador.': 'No month has ended with a winner yet.', 'Aún no se ha repartido ninguno.': 'None handed out yet.', 'Ver menos': 'Show less',
+    'Bote de la semana': 'Pot of the week', 'Más dinero de la semana': 'Most money of the week', 'Mejor ratio de la semana': 'Best ratio of the week',
+    // mercado y extras 2: frases de la app nueva
+    'Mercado': 'Market',
   };
   const DIAS = { LUN: 'MON', 'MIÉ': 'WED', JUE: 'THU', VIE: 'FRI', 'SÁB': 'SAT', DOM: 'SUN', HOY: 'TODAY', ENE: 'JAN', ABR: 'APR', AGO: 'AUG', DIC: 'DEC' };
   const R = [
+    // mercado (30-10)
+    [/^Pides a (.+)$/, 'You ask $1 for'], [/^Lo que pides a (.+)$/, 'What you ask $1 for'], [/^(.+) te propone$/, '$1 offers you a trade'], [/^Le propones a (.+)$/, 'You offer $1 a trade'], [/^Tú a (.+)$/, 'You to $1'], [/^(.+) a ti$/, '$1 to you'],
+    [/^Trato propuesto a (.+)$/, 'Trade offered to $1'], [/^A la venta por ([\d.]+)$/, 'For sale at $1'], [/^Comprado por ([\d.]+)$/, 'Bought for $1'],
+    [/^(.+) compró$/, '$1 bought'], [/^a (.+) por$/, 'from $1 for'],
+    [/^Todas · (\d+)$/, 'All · $1'], [/^(\d+) de (\d+) elegidas ·$/, '$1 of $2 selected ·'], [/^(\d+) de 10 ·$/, '$1 of 10 ·'], [/^· metes$/, '· you put in'], [/^(\d+) de 10 · (.+) →$/, (m, n, r) => `${n} of 10 · ${D[r] || r} →`],
+    [/^10 más baratas · (.+?)(?: \((.+)\))?$/, (m, r, f) => `10 cheapest · ${D[r] || r}${f ? ' (' + ({ 'skins de CS2': 'CS2 skins', 'objetos de lujo': 'luxury items', 'cosméticos': 'cosmetics' }[f] || f) + ')' : ''}`],
+    [/^Tú metes \(ya llevas ([\d.]+)\)$/, 'You put in (you already have $1)'], [/^Entrar con ([\d.]+)$/, 'Join with $1'], [/^(.+) gana$/, '$1 wins'], [/^(.+) se lleva ([\d.]+)$/, '$1 takes $2'],
+    [/^· te llevas ([\d.]+)$/, '· you take $1'], [/^Jackpot · (.+) se lleva ([\d.]+)$/, 'Jackpot · $1 takes $2'], [/^Como mucho (\d+) piezas$/, 'At most $1 items'], [/^frente a lo que metiste$/, 'compared with what you put in'], [/^Eso no es un (marco|fondo)$/, 'That is not a $1'],
     [/\b(LUN|MIÉ|JUE|VIE|SÁB|DOM|HOY|ENE|ABR|AGO|DIC)\b/g, (m) => DIAS[m]],
     [/\bMAR(?= \d)/g, 'TUE'],
     [/\b(lun|mar|mié|jue|vie|sáb|dom)\b(?= \d)/g, (m) => ({ lun: 'mon', mar: 'tue', 'mié': 'wed', jue: 'thu', vie: 'fri', 'sáb': 'sat', dom: 'sun' }[m])],
@@ -162,6 +292,74 @@
     [/^última · (\d+) apuestas$/, 'last · $1 bets'],
     // en linea y premios por tiempo (30-10)
     [/^En línea ahora · (\d+)$/, 'Online now · $1'], [/^faltan (\d.*)$/, '$1 to go'], [/ por tu tiempo en la app$/, ' for your time in the app'],
+    // chat y feed (30-10)
+    [/^apuesta ([\d.]+) a$/, 'bets $1 on'], [/^ha apostado ([\d.]+)$/, 'has bet $1'], [/^abre (\d+) cajas$/, 'opens $1 boxes'], [/^· ([\d.]+) · en total ([\d.]+)$/, '· $1 · $2 in total'],
+    [/^Batalla (1v1|2v2) · ([\d.]+) (?:contra|against) ([\d.]+) · (\d+) cajas?$/, 'Battle $1 · $2 vs $3 · $4 boxes'],
+    // juegos (JUEGOS-INTEGRAR.md, las que faltaban)
+    [/^Retirar ×([\d,]+)$/, 'Cash out ×$1'], [/^([\d.]+) dentro$/, '$1 in'], [/^sale en ×([\d,]+)$/, 'exits at ×$1'],
+    [/^Has cobrado ([\d.]+)$/, 'You cashed $1'], [/^Explotó en ×([\d,]+)/, 'Crashed at ×$1'], [/ · cobraste ([\d.]+)$/, ' · you cashed $1'],
+    [/ · perdiste ([\d.]+)$/, ' · you lost $1'], [/^Retirado a ×([\d,]+) · \+([\d.]+)$/, 'Cashed out at ×$1 · +$2'], [/^Tarde: explotó en ×([\d,]+)$/, 'Too late: it crashed at ×$1'],
+    [/^Reto lanzado por ([\d.]+)$/, 'Challenge sent for $1'], [/^Reto retirado: te devuelvo ([\d.]+)$/, 'Challenge withdrawn: your $1 is back'], [/^No tienes tanto: te quedan ([\d.]+)$/, 'You do not have that much: you have $1 left'],
+    [/^No tienes saldo suficiente: te quedan ([\d.]+)$/, 'Not enough balance: you have $1 left'], [/^Salió (cara|cruz)\. Ganas ([\d.]+)$/, 'It came up $1. You win $2'], [/^Salió (cara|cruz)\. Pierdes ([\d.]+)$/, 'It came up $1. You lose $2'],
+    [/^Salió (cara|cruz)\. (.+) aceptó y ganas ([\d.]+)$/, 'It came up $1. $2 accepted and you win $3'], [/^Salió (cara|cruz)\. (.+) aceptó y pierdes ([\d.]+)$/, 'It came up $1. $2 accepted and you lose $3'], [/^It came up cara/, 'It came up heads'],
+    [/^It came up cruz/, 'It came up tails'], [/^te reta, va a cara$/, 'challenges you, goes for heads'], [/^te reta, va a cruz$/, 'challenges you, goes for tails'],
+    [/^va a cara$/, 'goes for heads'], [/^va a cruz$/, 'goes for tails'], [/^le gana a (.+) · (cara|cruz)$/, 'beats $1 · $2'],
+    [/^le ganas a (.+) · (cara|cruz)$/, 'you beat $1 · $2'], [/^(beats|you beat) (.+) · cara$/, '$1 $2 · heads'], [/^(beats|you beat) (.+) · cruz$/, '$1 $2 · tails'],
+    [/^beats ti · /, 'beats you · '], [/^Ganas ▲ ([\d.]+)$/, 'You win ▲ $1'], [/^Te pasas · ▼ ([\d.]+)$/, 'Bust · ▼ $1'],
+    [/^Pierdes ▼ ([\d.]+)$/, 'You lose ▼ $1'], [/^Hoy solo puedes arriesgar ([\d.]+) más en el blackjack$/, 'Today you can only risk $1 more in blackjack'], [/^Hoy ya has perdido 100 en el blackjack\. Vuelve mañana$/, 'You have already lost 100 today in blackjack. Come back tomorrow'],
+    // repaso del ingles en todas las pantallas (30-10)
+    [/^Perfil de (.+)$/, "$1's profile"], [/^Apuesta del día: se cobra ×(.+)$/, 'Bet of the day: pays ×$1'], [/^Ronda of (\d+)$/, 'Round of $1'], [/^EN VIVO\b/, 'LIVE'],
+    [/ · sin resueltas$/, ' · none settled'], [/ · (\d+%) aciertos$/, ' · $1 hit rate'], [/^(\d+) apuestas? · (\d+) partidos?$/, (m, a, b) => `${a} bet${a === '1' ? '' : 's'} · ${b} match${b === '1' ? '' : 'es'}`],
+    [/ · (\d+) apuestas?$/, (m, n) => ` · ${n} bet${n === '1' ? '' : 's'}`], [/ · faltan (.+)$/, ' · $1 left'],
+    [/^a cada uno en (.+)$/, 'each, in $1'], [/^para alcanzar a (.+?) · le sacas$/, 'to catch $1 · you lead'], [/^para alcanzar a (.+)$/, 'to catch $1'],
+    [/^cada lunes ([\d.]+) cada uno · se lo lleva el que más gane$/, 'every Monday $1 each · the biggest winner takes it'],
+    [/^Empieza el lunes (.+?): ese día cada uno pone ([\d.]+) y el que más gane en la semana se lleva todo\.$/, 'Starts Monday $1: that day each of you puts in $2 and the biggest winner of the week takes it all.'],
+    [/ · semana (\d+) · /, ' · week $1 · '], [/^(.+) pone el (\d+)% de lo que apuesta en (.+)$/, (m, a, p, s) => `${a} puts ${p}% of their stakes on ${s === 'Fútbol' ? 'Football' : s}`],
+    [/^(\d+) batallas? ganadas?$/, (m, n) => `${n} battle${n === '1' ? '' : 's'} won`], [/^le gana a ti · (cara|cruz)$/, (m, c) => `beats you · ${c === 'cara' ? 'heads' : 'tails'}`],
+    [/^Explotó en (×[\d,]+) · cobraste ([\d.]+)$/, 'Crashed at $1 · you cashed $2'],
+    [/ challenges (quien quiera|.+?) a cara o cruz por ([\d.]+) \(él va a (cara|cruz)\)$/, (m, w, n, c) => ` challenges ${w === 'quien quiera' ? 'anyone' : w} to a coin flip for ${n} (they pick ${c === 'cara' ? 'heads' : 'tails'})`],
+    [/^Cara o cruz: salió (cara|cruz) y (.+) gana ([\d.]+) a (.+)$/, (m, c, a, n, b) => `Coin flip: it came up ${c === 'cara' ? 'heads' : 'tails'} and ${a} wins ${n} from ${b}`],
+    [/^(.+) ganó$/, '$1 won'], [/^en (blackjack|crash|plinko|moneda|ruleta) \((×[\d,]+)\)$/, 'at $1 ($2)'], [/^Bote de la semana: (.+) se lleva ([\d.]+)$/, 'Weekly pot: $1 takes $2'], [/^Premios de la semana: /, 'Weekly awards: '],
+    [/^Tiempo en la app: (\d+) min$/, 'Time in the app: $1 min'], [/^Batalla (1v1|2v2) #(\d+)$/, 'Battle $1 #$2'],
+    [/^de (\d+)$/, 'of $1'], [/^(\d+) de (\d+) · (\d+)%$/, '$1 of $2 · $3%'], [/^(\d)º$/, (m, n) => n + (n === '1' ? 'st' : n === '2' ? 'nd' : n === '3' ? 'rd' : 'th')],
+    [/^Marcador en directo · (.*)$/, 'Live score · $1'], [/ · cada (\d+) s$/, ' · every $1 s'], [/^Mapa (\d+) · (.+)$/, 'Map $1 · $2'],
+    [/^acabado · gana (.+?)( · |$)/, 'finished · $1 wins$2'], [/^EMPEZANDO\b/, 'STARTING'], [/^EN JUEGO · /, 'LIVE · '], [/^pendiente\b/, 'pending'], [/ · pick de (.+)$/, ' · picked by $1'],
+    [/ · ronda a ronda( \(acabado\))?$/, (m, f) => ' · round by round' + (f ? ' (finished)' : '')], [/^Ronda (\d+) · /, 'Round $1 · '], [/^queda (.+)$/, 'decider $1'], [/^En directo · (.+)$/, 'Live · $1'],
+    [/^por ([A-ZÁÉÍÓÚ].*)$/, 'for $1'], [/^asistencia de (.+)$/, 'assist by $1'],
+    [/ · (inglés|español|portugués|francés|alemán|ruso|chino|japonés|coreano|turco|polaco|italiano|árabe|tailandés|vietnamita)( ↗)?$/, (m, l, f) => ' · ' + ({ inglés: 'English', español: 'Spanish', portugués: 'Portuguese', francés: 'French', alemán: 'German', ruso: 'Russian', chino: 'Chinese', japonés: 'Japanese', coreano: 'Korean', turco: 'Turkish', polaco: 'Polish', italiano: 'Italian', árabe: 'Arabic', tailandés: 'Thai', vietnamita: 'Vietnamese' }[l]) + (f || '')],
+    // repaso del ingles: notas del monedero y cajas nuevas (30-10)
+    [/^(Blackjack|Crash): (apuesta|doblar|empate|ganas)$/, (m, g, r) => `${g}: ${{ apuesta: 'bet', doblar: 'double', empate: 'push', ganas: 'you win' }[r]}`], [/ \(retirada automática\)$/, ' (auto cash out)'],
+    [/^Cara o cruz contra (.+)$/, 'Coin flip against $1'], [/^Cara o cruz: ganas contra (.+)$/, 'Coin flip: you win against $1'], [/^Cara o cruz: reto a (.+)$/, 'Coin flip: challenge to $1'],
+    [/^Plinko: riesgo (.+)$/, 'Plinko: $1 risk'], [/^Ruleta: salió (.+)$/, 'Roulette: $1 came up'], [/^Ruleta: /, 'Roulette: '],
+    [/^Reto a (.+)$/, 'Challenge to $1'], [/^Reto de (.+)$/, 'Challenge from $1'], [/^Reto rechazado por (.+)$/, 'Challenge declined by $1'], [/^Sales de la batalla #(\d+)$/, 'You leave battle #$1'],
+    [/^Venta: /, 'Sale: '], [/^Compra: /, 'Purchase: '], [/^Predicción devuelta: /, 'Prediction refunded: '],
+    // rendimiento en el perfil (30-10)
+    [/^cobrado ([\d.]+)$/, 'collected $1'], [/^mejor: (\d+) seguidas$/, 'best: $1 in a row'], [/^(\d+)% de lo gastado$/, '$1% of the spending'], [/^solo lo ve (.+)$/, 'only $1 sees it'],
+    [/^Cómo te va apostando: (\d+) apuestas? resueltas?\.$/, (m, n) => `How your betting is going: ${n} settled bet${n === '1' ? '' : 's'}.`], [/^Cómo le va a (.+) apostando: (\d+) apuestas? resueltas?\.$/, (m, a, n) => `How ${a}'s betting is going: ${n} settled bet${n === '1' ? '' : 's'}.`], [/^ · los juegos y el bote solo los ve (.+)$/, ' · only $1 sees games and pot'], [/^(\d+) apuestas?$/, (m, n) => `${n} bet${n === '1' ? '' : 's'}`],
+    // panel de novedades y arreglos (30-10)
+    [/^· los juegos y el bote solo los ve (.+)$/, '· only $1 sees games and pot'],
+    // extras (EXTRAS-INTEGRAR.md: sonidos, stickers, cajas en directo) y lo que faltaba en el repaso (30-10)
+    [/^(\d+) cosas$/, '$1 items'], [/^(\d+) apuestas? · ([\d.]+)$/, (m, n, v) => `${n} bet${n === '1' ? '' : 's'} · ${v}`], [/MIÉ/g, 'WED'], [/ · Mapa (\d+) de (\d+)/, ' · Map $1 of $2'], [/^gana (.+)$/, '$1 wins'],
+    [/ · se actualiza cada (\d+) s$/, ' · updates every $1 s'], [/^Rondas ganadas, hasta (\d+)$/, 'Rounds won, first to $1'],
+    // moneda al lado de cada cantidad (30-10)
+    [/^(\d+) apuestas · (\d+) ganadas · (\d+) perdidas · (.) ([\d.]+)$/, '$1 bets · $2 won · $3 lost · $4 $5'], [/^en juego · (\d+) apuestas?$/, (m, n) => `in play · ${n} bet${n === '1' ? '' : 's'}`],
+    // ruleta Todos y apuestas en vivo (30-10)
+    [/^(\d+) de (\d+) han girado$/, '$1 of $2 have spun'],
+    // fichas: ver todos y todo sobre el equipo (30-10)
+    [/^Ver todos · (\d+)$/, 'See all · $1'], [/^Plantilla · (\d+)$/, 'Squad · $1'], [/^Resultados · (\d+)$/, 'Results · $1'], [/^Todas sus peleas · (\d+)$/, 'All fights · $1'],
+    // extras 2 (30-10)
+    [/^Sube un (\d+) % la cuota de (.+)$/, 'The odds for $2 go up $1 %'], [/^Sube un (\d+) % las tres cuotas$/, 'All three odds go up $1 %'],
+    [/^Hasta ([\d.]+) por jugador(.*)$/, 'Up to $1 per player$2'], [/^Te quedan ([\d.]+)$/, '$1 left'], [/ · te quedan ([\d.]+)$/, ' · $1 left'],
+    [/^Cuota mejorada, antes (.+)$/, 'Boosted odds, were $1'],
+    [/cuota fija · máximo ([\d.]+)$/, 'fixed odds · max $1'], [/^¿Quién gana la ronda (\d+) de (.+)\?$/, 'Who wins round $1 on $2?'],
+    [/^Has apostado (\d+) a la ronda (\d+)$/, 'You bet $1 on round $2'], [/^Has apostado (\d+) · cuenta hasta las (.+)$/, 'You bet $1 · counts until $2'],
+    [/^ganada \+([\d.]+)$/, 'won +$1'], [/^Gol en 10 min · (Sí|No)$/, (m, a) => `Goal in 10 min · ${a === 'Sí' ? 'Yes' : 'No'}`],
+    [/^Ronda (\d+) de (.+) · (local|visitante)$/, (m, n, mp, l) => `Round ${n} on ${mp} · ${l === 'local' ? 'home' : 'away'}`],
+    [/^Las 3 skins que (.+) enseña a los demás\.$/, 'The 3 skins $1 shows to everyone.'], [/^Elige hasta 3 · el orden es el de los números · (\d) de 3$/, 'Pick up to 3 · the order is the numbers · $1 of 3'],
+    [/^(\d+) mes$/, '$1 month'], [/^(\d+) meses$/, '$1 months'], [/^(\d+) bote$/, '$1 pot'], [/^(\d+) botes$/, '$1 pots'], [/^(\d+) premio$/, '$1 prize'], [/^(\d+) premios$/, '$1 prizes'],
+    [/, de momento: $/, ', so far: '], [/^Semana del (.+)$/, 'Week of $1'],
+    // decimales con punto en ingles (x1,25 a x1.25): esta va la ultima de la lista
+    [/×(\d+),(\d\d)/g, '×$1.$2'],
   ];
   const tr = (s) => {
     const t = s.trim();

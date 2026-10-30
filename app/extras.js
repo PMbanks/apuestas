@@ -529,6 +529,6 @@
   .xv-f .xv-fc{grid-column:1}.xv-f .xv-fx{grid-column:1;grid-row:2}.xv-f .xv-fj,.xv-f:not(:has(.xv-fx)) .xv-fj{grid-column:1;grid-row:3}.xv-f em{grid-column:2;grid-row:1 / span 3}
   .xv-rc>b{font-size:32px}
 }
-@media (prefers-reduced-motion:reduce){.xb-pill{animation:none}}`;
+html.sin-anim .xb-pill{animation:none}`;
   document.head.appendChild(css);
 })();

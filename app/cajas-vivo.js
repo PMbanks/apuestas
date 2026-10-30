@@ -124,7 +124,7 @@
 .cv-res .num{margin-left:auto;flex:none;display:inline-flex;align-items:center;font:500 16px var(--mono);color:var(--acc)}
 @keyframes cv-in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 @media (max-width:860px){.cv-dock{right:12px;left:12px;width:auto;bottom:calc(64px + env(safe-area-inset-bottom,0px) + 12px)}.cv-strip{height:76px}.cv-k{width:68px}}
-@media (prefers-reduced-motion:reduce){.cv-card,.cv-res{animation:none}}`;
+html.sin-anim .cv-card,html.sin-anim .cv-res{animation:none}`;
   document.head.appendChild(css);
 
   window.GM_CAJAS_VIVO = { recibe, estado: () => ({ canal: !!canal }) };

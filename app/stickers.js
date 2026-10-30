@@ -113,7 +113,7 @@
 .stk-i .st{--fs:21px;text-shadow:3px 0 #fff,-3px 0 #fff,0 3px #fff,0 -3px #fff,2px 2px #fff,-2px 2px #fff,2px -2px #fff,-2px -2px #fff,0 5px 0 var(--c2)}
 .stk-i:hover .st{transform:rotate(calc(var(--r) * -.6)) scale(1.1)}
 @keyframes stk-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.stk-p{animation:none}.st{transition:none}}`;
+html.sin-anim .stk-p{animation:none}html.sin-anim .st{transition:none}`;
   document.head.appendChild(css);
 
   window.GM_STICKERS = { lista: LISTA.map((s) => s[0]), manda };

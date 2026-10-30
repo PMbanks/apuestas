@@ -1,0 +1,33 @@
+{
+  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
+  "entradas": [
+    { "id": "juegos-1125", "fecha": "2026-10-30", "hora": "11:25", "titulo": "Crash, blackjack y cara o cruz", "texto": "Mesa de blackjack con cartas que vuelan y crash con cohete y explosión.", "img": ["novedades/crash.webp", "novedades/blackjack.webp"], "ir": "juegos",
+      "titulo_en": "Crash, blackjack and coin flip", "texto_en": "Blackjack table with flying cards and crash with a rocket and explosion." },
+    { "id": "lujo-1119", "fecha": "2026-10-30", "hora": "11:19", "titulo": "Cajas de Lujo", "texto": "10 cajas de 66 a 20.905: relojes, zapatillas, motos y coches de verdad.", "img": ["novedades/lujo.webp"], "ir": "cajas",
+      "titulo_en": "Luxury boxes", "texto_en": "10 boxes from 66 to 20,905: real watches, sneakers, motorbikes and cars." },
+    { "id": "recompensas-1110", "fecha": "2026-10-30", "hora": "11:10", "titulo": "Recompensas", "texto": "Ruleta de la semana, premio diario y premios por tu tiempo en la app.", "img": ["novedades/recompensas.webp"], "ir": "recompensas",
+      "titulo_en": "Rewards", "texto_en": "Weekly wheel, daily prize and prizes for your time in the app." },
+    { "id": "misapuestas-1110", "fecha": "2026-10-30", "hora": "11:10", "titulo": "Mis apuestas, nueva", "texto": "Boletos con escudos, sello EN VIVO y tu curva de beneficio.", "img": ["novedades/mis-apuestas.webp"], "ir": "apuestas",
+      "titulo_en": "My bets, new", "texto_en": "Tickets with crests, a LIVE stamp and your profit curve." },
+    { "id": "rendimiento-1110", "fecha": "2026-10-30", "hora": "11:10", "titulo": "Tu rendimiento", "texto": "En el perfil: beneficio, ROI, risk reward y en qué se lo gasta cada uno.", "img": ["novedades/rendimiento.webp"],
+      "titulo_en": "Your performance", "texto_en": "In the profile: profit, ROI, risk reward and where everyone spends." },
+    { "id": "feed-1110", "fecha": "2026-10-30", "hora": "11:10", "titulo": "Feed en el chat", "texto": "Lo que apuesta cada uno y lo que sale de las cajas, aparte de los mensajes.", "img": ["novedades/feed.webp"], "ir": "chat",
+      "titulo_en": "Feed in the chat", "texto_en": "What everyone bets and what comes out of the boxes, apart from messages." },
+    { "id": "enlinea-1110", "fecha": "2026-10-30", "hora": "11:10", "titulo": "Quién está en línea", "texto": "Arriba a la derecha, quién lleva más rato dentro y el resto.", "img": ["novedades/en-linea.webp"],
+      "titulo_en": "Who is online", "texto_en": "Top right: who has been in the longest, and everyone else." },
+    { "id": "nombre-1103", "fecha": "2026-10-30", "hora": "11:03", "titulo": "Gambling Addicts y V-Bucks", "texto": "Nombre nuevo y todo se paga y se cobra en V-Bucks.", "img": ["vbucks.webp"], "ir": "monedero",
+      "titulo_en": "Gambling Addicts and V-Bucks", "texto_en": "New name, and everything is paid and collected in V-Bucks." },
+    { "id": "directo-1047", "fecha": "2026-10-30", "hora": "10:47", "titulo": "Directo con marcador", "texto": "El partido dentro de la app, con el marcador ronda a ronda.", "img": ["novedades/directo.webp"], "ir": "directo",
+      "titulo_en": "Live with the score", "texto_en": "The match inside the app, with the score round by round." },
+    { "id": "brackets-1029", "fecha": "2026-10-30", "hora": "10:29", "titulo": "Brackets", "texto": "El cuadro entero de los torneos de Valorant y CS2.", "img": ["novedades/brackets.webp"], "ir": "partidos",
+      "titulo_en": "Brackets", "texto_en": "The full bracket of Valorant and CS2 tournaments." },
+    { "id": "batallas-1015", "fecha": "2026-10-30", "hora": "10:15", "titulo": "Batallas de cajas", "texto": "1 contra 1 o 2 contra 2: el lado que saca más se lo lleva todo.", "img": ["novedades/batallas.webp"], "ir": "cajas",
+      "titulo_en": "Box battles", "texto_en": "1 vs 1 or 2 vs 2: the side that gets the most takes it all." },
+    { "id": "cajas-0956", "fecha": "2026-10-30", "hora": "09:56", "titulo": "Cajas de CS2", "texto": "Cajas reales con sus skins: ábrelas, guárdalas o véndelas.", "img": ["novedades/cajas.webp"], "ir": "cajas",
+      "titulo_en": "CS2 boxes", "texto_en": "Real boxes with their skins: open them, keep them or sell them." },
+    { "id": "todos-0930", "fecha": "2026-10-30", "hora": "09:30", "titulo": "Apuestas de todos", "texto": "Cada partido con quién va con cada equipo y cuánto.", "img": ["novedades/apuestas-de-todos.webp"], "ir": "colegas",
+      "titulo_en": "All bets", "texto_en": "Every match with who backs each team and how much." },
+    { "id": "fichas-0911", "fecha": "2026-10-30", "hora": "09:11", "titulo": "Fichas de equipos", "texto": "Toca un equipo o un luchador: forma, resultados y plantilla.", "img": ["novedades/fichas.webp"], "ir": "partidos",
+      "titulo_en": "Team profiles", "texto_en": "Tap a team or a fighter: form, results and squad." }
+  ]
+}
