@@ -23,7 +23,7 @@ const cajasDe = new Map();
 for (const c of LUJO) for (const [id] of c.items) cajasDe.set(id, [...(cajasDe.get(id) || []), c.nombre]);
 const solo = process.env.SOLO ? new Set(process.env.SOLO.split(',')) : null;
 const filas = [], nuevos = [];
-for (const [id, [nombre, , foto]] of Object.entries(OBJETOS)) {
+for (const [id, [nombre, , foto, opc = {}]] of Object.entries(OBJETOS)) {
   const slug = id.replace(/^lujo-/, '');
   const orig = path.join(ORIG, slug + '.src'), dest = path.join(OUT, slug + '.webp');
   const u = 'https://commons.wikimedia.org/w/api.php?' + new URLSearchParams({ action: 'query', format: 'json', titles: 'File:' + foto, prop: 'imageinfo',
@@ -45,7 +45,7 @@ for (const [id, [nombre, , foto]] of Object.entries(OBJETOS)) {
       if (!ok) { console.error('No he podido bajar', foto); process.exitCode = 1; continue }
       await new Promise((res) => setTimeout(res, 400));
     }
-    nuevos.push(slug);
+    nuevos.push(slug + (opc.espejo ? '!espejo' : '') + (opc.mitad ? '!mitad-' + opc.mitad : ''));
   }
   filas.push({ id, nombre, foto, caja: (cajasDe.get(id) || ['(sin caja)']).join(', '), file: slug + '.webp', pagina: i.descriptionurl,
     autor: limpia(i.extmetadata?.Artist?.value || i.extmetadata?.Credit?.value) || 'desconocido', lic, licUrl: i.extmetadata?.LicenseUrl?.value || '' });
@@ -59,8 +59,9 @@ const L = ['# Fuentes de las fotos de las cajas de lujo', '',
   '| Foto | Objeto | Cajas | Pagina en Commons | Autor | Licencia |', '|---|---|---|---|---|---|'];
 for (const f of filas) L.push(`| ${f.file} | ${f.nombre} | ${f.caja} | [${f.foto.replace(/\|/g, '/')}](${f.pagina}) | ${f.autor.replace(/\|/g, '/').slice(0, 120)} | ${f.licUrl ? `[${f.lic}](${f.licUrl})` : f.lic} |`);
 fs.writeFileSync(path.join(OUT, 'FUENTES.md'), L.join('\n') + '\n');
-// la imagen de cada caja: una caja de CS2 recolorada con el medallon del objeto estrella
-const specs = LUJO.map((c) => `${c.id.replace(/^lujo-/, '')}:${c.color}:${c.emblema.replace(/^lujo-/, '')}:${/calle|basica/.test(c.id) ? 'plata' : 'oro'}`);
+// la imagen de cada caja: una caja de CS2 recolorada con tres de sus objetos en la cara de delante
+const sl = (id) => id.replace(/^lujo-/, '');
+const specs = LUJO.map((c) => `${sl(c.id)}:${c.color}:${[c.centro, ...c.lados].map(sl).join('+')}`);
 execFileSync('python', [path.join(AQUI, 'lujo-cajas.py'), OUT, ...specs], { stdio: 'inherit', env: process.env });
 const kb = fs.readdirSync(OUT).filter((f) => f.endsWith('.webp')).reduce((a, f) => a + fs.statSync(path.join(OUT, f)).size, 0) / 1024;
 console.log(`${filas.length}/${Object.keys(OBJETOS).length} fotos en ${OUT} (${kb.toFixed(0)} KB en total)`);

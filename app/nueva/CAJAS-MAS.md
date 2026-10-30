@@ -11,7 +11,7 @@ Cambiado: `sync/cajas-datos.mjs`. `cajas.js`, `cajas.css`, `app.js`, `app.css` e
 3. `db/012b_cajas_datos.sql`: 30 cajas de CS2, 10 de Lujo (1 euro = 1 V-Buck) y sus objetos. Sustituye a `007b_cajas_datos.sql`; si ya estaba cargado, se pone al dia encima
    (mismos ids). **No cargues 007b despues de 012b**: te devolveria los precios con margen y apagaria las cajas nuevas. Si el 012b anterior (5 cajas de Lujo) ya esta
    cargado, este lo actualiza: las cajas viejas conservan su id (`lujo-zapatillas`, `lujo-tecnologia`, `lujo-moda-joyas`, `lujo-relojes`, `lujo-coches`) y se les cambia nombre, imagen y precio;
-   `lujo-rtx-4090` desaparece de las cajas (ahora es `lujo-rtx-3090`) pero su fila sigue en la base por si alguien lo tiene en el inventario.
+   `lujo-rtx-4090` (ahora `lujo-rtx-3090`) y `lujo-apple-watch` (ahora `lujo-airpods-max`) salen de las cajas pero sus filas siguen en la base por si alguien las tiene en el inventario.
 4. `db/012_prueba.sql`: tiene que acabar en un error que dice **PRUEBA SUPERADA** (no guarda nada).
 
 Las imagenes se guardan en la base como URL absoluta `https://pmbanks.github.io/apuestas/img/lujo/...` (objetos) y `.../img/lujo/cajas/...` (cajas). Funcionan desde `app/` y desde
@@ -35,13 +35,16 @@ Falta, en `cajas.js`:
 
 ## 3. Como pintar lo de Lujo
 
-**Imagen de cada caja** (`cs_cases.image`): 460x480 con transparencia, ya dibujada con aura, rayos, destellos y el objeto estrella saliendo por la tapa de una caja 3D de CS2 recolorada
-(oro relojes, verde zapatillas, azul tecnologia, morado moda, rojo motos y coches). Es mas alta que las cajas de skins (4:3): en la rejilla ponle `object-fit: contain` en una celda
-de relacion 24:25 o deja que la caja de Lujo sea un poco mas alta que las de skins. No lleva fondo: sirve sobre el color oscuro de la tarjeta.
+**Imagen de cada caja** (`cs_cases.image`): 460x480 con transparencia. Es una caja 3D de CS2 recolorada (oro relojes, verde zapatillas, azul tecnologia, morado moda, rojo motos y coches)
+con un poco de aura de luz detras de la caja, y en el centro de la cara de delante, dentro de un marco con luz de su color, tres de los objetos que trae: el mas raro, grande, en medio y uno a cada lado.
+No hay sello ni estrella, y nada sale por encima de la tapa. La caja ocupa ~440 de ancho y ~330 de alto en el lienzo (arriba hay ~118 px y debajo ~30 de aura y sombra, sin fondo): en la rejilla ponle
+`object-fit: contain` en una celda de relacion 24:25, o recortala con `object-position` si la quieres mas apretada.
 
 **Objetos**: webp con transparencia (como las skins de CS2), recortados y encuadrados sin bordes, el lado largo a 512 px, asi que todos tienen un tamaño aparente parecido pero no la misma
-forma (un reloj es alto, un coche ancho). Nada de esquinas redondeadas ni `cover`: `object-fit: contain`, centrados sobre el color de la rareza. La clase `foto` ya no hace falta.
+forma (un reloj es alto, un coche ancho). Misma orientacion por categoria: coches y motos de lado mirando a la derecha (los que miraban a la izquierda estan volteados), zapatillas de lado con la
+punta a la derecha, relojes de frente con la esfera recta, tech de frente. Nada de esquinas redondeadas ni `cover`: `object-fit: contain`, centrados sobre el color de la rareza.
 Ni linea de desgaste, ni float, ni StatTrak. `name` es solo el nombre ("Rolex Submariner"), sin ` | `.
+Ojo: la mayoria de los coches y motos son vistas de lado o tres cuartos (en Commons casi no hay perfiles puros libres), y varias zapatillas son un par. Todos miran al mismo lado.
 
 Los numeros van de 15 V-Bucks (Casio F-91W) a 250.000 (Lamborghini); abrir 5 Coches a la vez son 104.525.
 
@@ -53,7 +56,7 @@ Probabilidades: 75,7 % grado militar, 18 % restringido, 4,5 % clasificado, 1,3 %
 |---|---|---|
 | Relojes de calle | 66 | 6: Casio F-91W y Swatch ... Tissot PRX |
 | Zapatillas básicas | 113 | 7: Converse y Superstar ... Air Jordan 11 |
-| Tech básica | 106 | 7: mando DualSense, Raspberry Pi, JBL ... Steam Deck |
+| Tech básica | 108 | 7: mando DualSense, Raspberry Pi, JBL ... Steam Deck |
 | Moda de calle | 195 | 7: mochila Eastpak, Lacoste ... bolso Chanel |
 | Zapatillas hype | 218 | 10: de Converse a las Yeezy Red October |
 | Tecnología | 490 | 10: de AirPods a una Leica M11 |
