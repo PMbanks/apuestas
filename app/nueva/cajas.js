@@ -362,9 +362,28 @@
     if (S.pag >= pags) S.pag = pags - 1;
     return { rows: all.slice(S.pag * POR_PAG, (S.pag + 1) * POR_PAG), total: all.length, pags };
   }
+  // PM, 30-10: "en battles una leaderboard del total ganado de cada uno, el top 3 que más ganaron"
+  let TOPB = null, topT = 0;
+  function topBat() {
+    if (!TOPB || Date.now() - topT > 60000) {
+      topT = Date.now();
+      ctx.db.from('cs_battles').select('mode,winner,totals,cs_battle_seats(seat,player)').eq('status', 'done').limit(1000).then(({ data }) => {
+        const t = {};
+        for (const b of data || []) {
+          const mitad = b.mode === '1v1' ? 1 : 2, bote = (b.totals || []).reduce((a, v) => a + (v || 0), 0);
+          const gan = (b.cs_battle_seats || []).filter((x) => Math.floor(x.seat / mitad) === b.winner);
+          for (const g of gan) { const o = t[g.player] || (t[g.player] = { won: 0, n: 0 }); o.won += bote / gan.length; o.n++ }
+        }
+        TOPB = Object.entries(t).sort((a, b) => b[1].won - a[1].won).slice(0, 3);
+        if (S.tab === 'batallas' && !S.bat) pinta();
+      });
+    }
+    if (!TOPB || !TOPB.length) return '';
+    return `<section class="cj-top"><span class="lab">Los que más han ganado en batallas</span><div class="cj-top-r">${TOPB.map(([u, o], i) => `<div class="cj-top-p p${i + 1}"><span class="pos">${i + 1}</span>${av(u, 'xl')}<b>${esc(jug(u).n)}</b><span class="v">${N(o.won)}${coin()}</span><small>${o.n} ${o.n === 1 ? 'batalla ganada' : 'batallas ganadas'}</small></div>`).join('')}</div></section>`;
+  }
   function vBatallas() {
     const abiertas = D.st.battles.filter((b) => b.status === 'open'), H = hechas();
-    return `<header class="cj-bh"><p class="cj-lead">Cada uno abre las mismas cajas. El lado que saque más valor se lleva todas las skins.</p>
+    return `${topBat()}<header class="cj-bh"><p class="cj-lead">Cada uno abre las mismas cajas. El lado que saque más valor se lleva todas las skins.</p>
         <button class="go" data-cj="nueva"><span>Crear batalla</span></button></header>
       <section class="cj-bl"><header class="cj-bl-h"><h3>Abiertas</h3>${abiertas.length ? `<span class="num">${abiertas.length}</span>` : ''}</header>
         ${abiertas.length ? `<div class="cj-bts">${abiertas.map(filaBat).join('')}</div>` : '<p class="hint">Ninguna abierta ahora mismo.</p>'}</section>

@@ -92,6 +92,32 @@
       ${filas ? `<div class="vv-sts">${filas}</div>` : ''}</div>`;
   }
 
+  /* ---------- el marcador en toda la app (PM: "sigue sin poner el match score in real time") ----------
+     Cada 20 s, para los partidos de Valorant en directo, pone en el partido de la app (M, global de app.js) los mapas
+     ganados y las rondas del mapa en juego, por ejemplo "1:0 (7-5)". Asi sale en Partidos, Mis apuestas y Directo. */
+  let globalT = 0;
+  async function marcadores() {
+    clearTimeout(globalT);
+    try {
+      const lista = typeof M !== 'undefined' ? M.filter((m) => m.live && m.s === 'v').slice(0, 6) : [];
+      let cambia = false;
+      for (const m of lista) {
+        const d = await valorant(m.a, m.b); if (!d) continue;
+        const rev = !parecido(d.teams?.[0]?.name, m.a), par = (x) => (rev ? [x[1], x[0]] : x);
+        const [ta, tb] = par(d.teams || [{}, {}]);
+        const vivoMap = (d.maps || []).find((x) => x.status === 'live');
+        let txt = `${ta.score ?? 0}:${tb.score ?? 0}`;
+        if (vivoMap) { const [x, y] = par(vivoMap.teams || [{}, {}]); if (x.score != null) txt += ` (${x.score}-${y.score})` }
+        if (m.score !== txt) { m.score = txt; m.vlr = true; cambia = true }
+      }
+      // que el siguiente load() no lo pise hasta que vuelva a pasar por aqui
+      if (cambia && typeof render === 'function' && !document.activeElement?.matches('input,textarea')) render();
+    } catch {}
+    globalT = setTimeout(marcadores, document.hidden ? 60000 : CADA);
+  }
+  setTimeout(marcadores, 3000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) marcadores() });
+
   /* ---------- montaje ---------- */
   async function tick() {
     clearTimeout(timer);

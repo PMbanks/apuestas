@@ -7,8 +7,8 @@ const TZ = 'Europe/Madrid', DAY = 864e5, DOMAIN = '@apuestas.app';
 const TOP = new Set(['esp.1', 'eng.1', 'ger.1', 'ita.1', 'fra.1', 'uefa.champions', 'uefa.europa', 'esp.copa_del_rey']);
 const SP = { f: ['Fútbol', '../img/futbol.svg'], v: ['Valorant', '../img/valorant.svg'], c: ['CS2', '../img/cs2.png'], u: ['UFC', '../img/ufc.png'] };
 const DEP = ['f', 'v', 'c', 'u'];
-const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', ruleta_semana: 'Ruleta de la semana', premio_semana: 'Premio de la semana', moneda: 'Cara o cruz', crash: 'Crash', ruleta: 'Ruleta', blackjack: 'Blackjack', plinko: 'Plinko' };
-let CLAIM = null, BOTE = null, REACT = new Map(), POLLS = new Map(), CAMPEON = null;
+const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', tiempo: 'Tiempo en la app', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', ruleta_semana: 'Ruleta de la semana', premio_semana: 'Premio de la semana', moneda: 'Cara o cruz', crash: 'Crash', ruleta: 'Ruleta', blackjack: 'Blackjack', plinko: 'Plinko' };
+let TIEMPO = null, CLAIM = null, BOTE = null, REACT = new Map(), POLLS = new Map(), CAMPEON = null;
 
 /* ---------- estado ---------- */
 let NOW = Date.now(), PAY = 0, WEEK0 = 0;
@@ -48,12 +48,13 @@ function nextMonday() {
 const COLS = 'id,sport,league,league_name,league_logo,stage,tag,venue,home,away,home_logo,away_logo,starts_at,status,score,winner,odds_1,odds_x,odds_2,odds_src,bo,details';
 async function load() {
   const from = new Date(Date.now() - 2 * DAY).toISOString(), to = new Date(Date.now() + 72 * DAY).toISOString();
-  const [st, ms, ch, ex, wh] = await Promise.all([
+  const [st, ms, ch, ex, wh, ti] = await Promise.all([
     db.rpc('get_state'),
     db.from('matches').select(COLS).gte('starts_at', from).lte('starts_at', to).neq('status', 'canceled').order('starts_at').limit(3000),
     db.from('chat').select('*').order('id', { ascending: false }).limit(150),
     db.rpc('get_extras'),
-    db.from('wheel_spins').select('player,week,prize,label').order('id', { ascending: false }).limit(40),
+    db.from('wheel_spins').select('player,week,prize,label,amount,created_at').order('id', { ascending: false }).limit(40),
+    db.rpc('time_status'),
   ]);
   if (st.error) throw st.error;
   if (ms.error) throw ms.error;
@@ -64,6 +65,7 @@ async function load() {
     if (!r.error) rows = rows.concat(r.data);
   }
   WHEEL = wh.error ? null : wh.data || [];
+  TIEMPO = ti.error ? null : ti.data || null;
   build(st.data, rows, (ch.data || []).reverse(), ex.error ? null : ex.data);
   avisos();
 }
@@ -544,12 +546,12 @@ function avisos() {
   SNAP = now;
 }
 function avisa(t, b) { try { if (window.Notification && Notification.permission === 'granted' && document.hidden) new Notification(t, { body: b, icon: '../img/icon-192.png', tag: t + b }) } catch {} }
-function confeti() {
+function confeti(ox, oy) {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const c = document.createElement('canvas'), x = c.getContext('2d'), W = (c.width = innerWidth), H = (c.height = innerHeight);
   c.className = 'confeti'; document.body.appendChild(c);
   const col = ['#f2c14e', '#ffdc85', '#cc6496', '#4d88e6', '#2bd47d', '#f4f2ec'];
-  const P = Array.from({ length: 140 }, () => ({ x: W / 2 + (Math.random() - 0.5) * 200, y: H * 0.35, vx: (Math.random() - 0.5) * 14, vy: -Math.random() * 13 - 4, r: Math.random() * 6 + 3, a: Math.random() * 6, va: (Math.random() - 0.5) * 0.4, c: col[(Math.random() * col.length) | 0] }));
+  const P = Array.from({ length: 140 }, () => ({ x: (ox ?? W / 2) + (Math.random() - 0.5) * 200, y: oy ?? H * 0.35, vx: (Math.random() - 0.5) * 14, vy: -Math.random() * 13 - 4, r: Math.random() * 6 + 3, a: Math.random() * 6, va: (Math.random() - 0.5) * 0.4, c: col[(Math.random() * col.length) | 0] }));
   const t0 = performance.now();
   (function f(t) {
     x.clearRect(0, 0, W, H);
@@ -656,35 +658,60 @@ function ficha(m) {
 }
 
 /* ---------- Mis apuestas ---------- */
-// PM, 30-10: "rework de My bets, se ve terrible": arriba lo que importa (en juego, cobrable, beneficio), lo abierto en
-// tarjetas grandes con los escudos y la cuenta atras, y lo resuelto abajo con filtros y paginas
+// PM, 30-10: "rework de My bets, se ve terrible" y luego "quiero que se vea mejor, un estilo NUEVO, se ve muy feo y simple":
+// estilo casa de apuestas. Arriba el balance y la curva de beneficio; lo abierto en boletos con muesca, codigo y escudos
+// con halo; lo resuelto en boletos pequenos con su sello (COBRADA verde, PERDIDA roja); entran con una animacion suave
 const neto = (b) => (b.st === 'won' ? b.pay - b.stake : b.st === 'lost' ? -b.stake : 0);
 const signo = (v) => `${v > 0 ? '▲' : v < 0 ? '▼' : ''} ${N(Math.abs(v))}`.trim();
-function mbCard(b) {
+const SPC = { f: '#2bd47d', v: '#ff4655', c: '#f5a524', u: '#e0464f' };
+const codigo = (b) => 'Nº ' + String(b.id).padStart(6, '0');
+function mbCard(b, i) {
   const m = byId(b.m); if (!m) return '';
-  const left = Date.parse(m.at) - NOW, fill = m.live ? 100 : Math.max(3, 100 - (left / (72 * 36e5)) * 100);
+  const t0 = Date.parse(b.at), t1 = Date.parse(m.at), fill = m.live ? 100 : Math.max(3, Math.min(100, ((NOW - t0) / Math.max(1, t1 - t0)) * 100));
   const lado = (s) => { const on = b.p === (s === 'a' ? '1' : '2');
-    return `<div class="mb-t ${on ? 'on' : ''}"><span class="mb-cr">${logo(m, s)}</span><b>${esc(s === 'a' ? m.a : m.b)}</b><em>${on ? 'tu apuesta' : ''}</em></div>` };
-  const mid = m.live ? `<span class="mb-sc">${esc(m.score || '0:0')}</span>` : b.p === 'X' ? '<span class="mb-x on">EMPATE<em>tu apuesta</em></span>' : '<span class="mb-x">vs</span>';
-  return `<article class="mb-c ${m.live ? 'live' : ''}" data-goto="${m.id}">
-    <header><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt="" loading="lazy"><span class="mb-lg">${esc(corto(L[m.lg]?.[0] || ''))}</span>${dailyTag(m)}
-      ${m.live ? '<span class="mb-live"><i></i>EN VIVO</span>' : `<span class="mb-cd"><b>${CD(m.at)}</b><small>${WD(m.at)} ${DD(m.at)} ${MO(m.at)} · ${HM(m.at)}</small></span>`}</header>
-    <div class="mb-vs">${lado('a')}${mid}${lado('b')}</div>
-    <div class="mb-n"><span><small>Cuota</small><b>${O(b.o)}</b></span><span><small>Apostado</small><b>${N(b.stake)}</b></span><span class="mb-co"><small>Cobrarías</small><b>${N(b.stake * b.o)}${coin()}</b></span>${canCancel(b) ? cancelBtn(b) : ''}</div>
-    <span class="mb-bar" title="${m.live ? 'en juego' : 'faltan ' + CD(m.at)}"><i style="width:${fill.toFixed(1)}%"></i></span>
+    return `<div class="bol-t ${on ? 'on' : ''}"><span class="bol-cr">${logo(m, s)}</span><b>${esc(s === 'a' ? m.a : m.b)}</b><em>${on ? '★ tu apuesta' : ''}</em></div>` };
+  const mid = m.live ? `<span class="bol-sc">${esc(m.score || '0:0')}<small>${m.s === 'v' || m.s === 'c' ? 'mapas' : 'marcador'}</small></span>` : b.p === 'X' ? '<span class="bol-x on">EMPATE<em>★ tu apuesta</em></span>' : '<span class="bol-x">VS</span>';
+  return `<article class="bol ${m.live ? 'live' : ''}" data-goto="${m.id}" style="--sc:${SPC[m.s]};--i:${i}">
+    <header><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt="" loading="lazy"><span class="bol-lg">${esc(corto(L[m.lg]?.[0] || ''))}</span>${dailyTag(m)}<span class="bol-no">${codigo(b)}</span></header>
+    ${m.live ? '<span class="bol-live"><i></i>EN VIVO</span>' : ''}
+    <div class="bol-vs">${lado('a')}${mid}${lado('b')}</div>
+    <div class="bol-cut"></div>
+    <div class="bol-n"><span><small>Cuota</small><b>${O(b.o)}</b></span><span><small>Apostado</small><b>${N(b.stake)}</b></span><span class="bol-co"><small>Cobrarías</small><b>${N(b.stake * b.o)}${coin()}</b></span>${canCancel(b) ? cancelBtn(b) : ''}</div>
+    <div class="bol-time"><span class="bol-bar"><i style="width:${fill.toFixed(1)}%"></i></span><span class="bol-cd"><span>${m.live ? '<b>en juego</b>' : `empieza en <b>${CD(m.at)}</b>`}</span><small>${WD(m.at)} ${DD(m.at)} ${MO(m.at)} · ${HM(m.at)}</small></span></div>
   </article>`;
 }
-function mbFila(b) {
+function mbFila(b, i) {
   const m = byId(b.m); if (!m) return '';
   const t = Date.parse(b.set || b.at), v = neto(b);
-  const cr = (s, p) => `<span class="mb-mc ${b.p === p ? 'on' : ''}">${logo(m, s)}</span>`;
-  return `<div class="mb-r ${b.st}" data-goto="${m.id}">
-    <span class="mb-d">${DD(t)} ${MO(t)}<small>${HM(t)}</small></span>
-    <span class="mb-sp"><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt="" loading="lazy" title="${esc(L[m.lg]?.[0] || '')}"></span>
-    <span class="mb-m"><span class="mb-mm">${cr('a', '1')}<b>${esc(m.a)}</b><i>${esc(m.score || 'vs')}</i><b>${esc(m.b)}</b>${cr('b', '2')}</span>
-      <small><img class="mb-spi" src="${SP[m.s][1]}" alt="">${esc(pn(m, b.p))} · ${O(b.o)} · ${N(b.stake)} apostados</small></span>
-    <span class="mb-res"><b>${b.st === 'void' ? N(b.stake) : signo(v)}</b><small>${b.st === 'won' ? 'cobradas ' + N(b.pay) : b.st === 'void' ? 'devueltas' : 'perdida'}</small></span>
-  </div>`;
+  const cr = (s, p) => `<span class="bor-cr ${b.p === p ? 'on' : ''}">${logo(m, s)}</span>`;
+  const sello = b.st === 'won' ? `COBRADA<b>▲ ${N(v)}</b>` : b.st === 'lost' ? `PERDIDA<b>▼ ${N(b.stake)}</b>` : `ANULADA<b>${N(b.stake)}</b>`;
+  return `<article class="bor ${b.st}" data-goto="${m.id}" style="--sc:${SPC[m.s]};--i:${i}">
+    <header><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt="" loading="lazy"><span>${DD(t)} ${MO(t)} · ${HM(t)}</span><span class="bol-no">${codigo(b)}</span></header>
+    <div class="bor-vs">${cr('a', '1')}<b>${esc(m.a)}</b><i>${esc(m.score || 'vs')}</i><b>${esc(m.b)}</b>${cr('b', '2')}</div>
+    <p class="bor-p"><img class="mb-spi" src="${SP[m.s][1]}" alt="">${esc(pn(m, b.p))} · ${O(b.o)} · ${N(b.stake)} apostados</p>
+    <span class="bor-sello">${sello}</span>
+  </article>`;
+}
+// la curva de beneficio: cada punto una apuesta resuelta, en orden; verde por encima de cero, rojo por debajo
+function mbCurva(res) {
+  const xs = [...res].sort((a, b) => Date.parse(a.set || a.at) - Date.parse(b.set || b.at));
+  if (xs.length < 2) return `<p class="hint mb2-nada">La curva sale cuando tengas dos apuestas resueltas.</p>`;
+  let acc = 0; const pts = [0, ...xs.map((b) => (acc += neto(b)))];
+  const mov = matchMedia('(max-width:860px)').matches, W = mov ? 360 : 640, H = mov ? 210 : 220, x0 = 46, x1 = W - (mov ? 54 : 40), yT = 22, yB = H - 34, mx = Math.max(10, ...pts), mn = Math.min(-10, ...pts), X = (i) => x0 + ((x1 - x0) * i) / (pts.length - 1), Y = (v) => yT + ((mx - v) * (yB - yT)) / (mx - mn), z = Y(0);
+  const line = pts.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' '), area = `${X(0)},${z} ${line} ${X(pts.length - 1)},${z}`;
+  const fin = pts[pts.length - 1], best = Math.max(...pts), worst = Math.min(...pts);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Beneficio acumulado"><defs>
+    <clipPath id="mb-up"><rect x="0" y="0" width="${W}" height="${z}"/></clipPath><clipPath id="mb-dn"><rect x="0" y="${z}" width="${W}" height="${H - z}"/></clipPath>
+    <linearGradient id="mb-gu" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2bd47d" stop-opacity=".4"/><stop offset="1" stop-color="#2bd47d" stop-opacity="0"/></linearGradient>
+    <linearGradient id="mb-gd" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#e0646f" stop-opacity=".4"/><stop offset="1" stop-color="#e0646f" stop-opacity="0"/></linearGradient></defs>`;
+  for (const v of [mx, mn]) if (Math.abs(Y(v) - z) > 18) s += `<line x1="${x0}" x2="${x1}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--hair)"/><text x="${x0 - 10}" y="${Y(v) + 4}" class="tx-d" font-size="11" text-anchor="end">${signo(v)}</text>`;
+  s += `<line x1="${x0}" x2="${x1}" y1="${z}" y2="${z}" stroke="var(--mute)" stroke-dasharray="3 4"/><text x="${x0 - 10}" y="${z + 4}" class="tx-m" font-size="11" text-anchor="end">0</text>`;
+  s += `<polygon points="${area}" fill="url(#mb-gu)" clip-path="url(#mb-up)"/><polygon points="${area}" fill="url(#mb-gd)" clip-path="url(#mb-dn)"/>`;
+  s += `<polyline points="${line}" fill="none" stroke="#2bd47d" stroke-width="2.6" stroke-linejoin="round" clip-path="url(#mb-up)"/><polyline points="${line}" fill="none" stroke="#e0646f" stroke-width="2.6" stroke-linejoin="round" clip-path="url(#mb-dn)"/>`;
+  xs.forEach((b, i) => { const v = pts[i + 1], m = byId(b.m); s += `<circle cx="${X(i + 1).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="${pts.length > 40 ? 2.4 : 4}" fill="${b.st === 'won' ? '#2bd47d' : '#e0646f'}" stroke="var(--bg)" stroke-width="2"><title>${esc(m ? pn(m, b.p) : '')} · ${b.st === 'won' ? '▲ ' + N(b.pay - b.stake) : '▼ ' + N(b.stake)} · total ${signo(v)}</title></circle>` });
+  s += `<text x="${X(pts.length - 1) + 12}" y="${Y(fin) + 5}" class="${fin >= 0 ? 'tx-g' : 'tx-r'}" font-size="15" font-weight="600">${signo(fin) || '0'}</text>`;
+  s += `<text x="${x0}" y="${H - 6}" class="tx-d" font-size="11">primera</text><text x="${x1}" y="${H - 6}" class="tx-d" font-size="11" text-anchor="end">última · ${xs.length} apuestas</text></svg>`;
+  return `<div class="chart mb2-chart">${s}</div><p class="mb2-ch"><span>mejor momento <b class="g">${signo(best) || '0'}</b></span><span>peor momento <b class="r">${signo(worst) || '0'}</b></span></p>`;
 }
 function apuestas() {
   const mine = ALL.filter((b) => b.k === MEK && byId(b.m));
@@ -696,22 +723,24 @@ function apuestas() {
   const ests = [['all', 'Todas'], ['won', 'Ganadas'], ['lost', 'Perdidas'], ['void', 'Anuladas']].filter(([k]) => k === 'all' || set.some((b) => b.st === k));
   const bf = ests.some(([k]) => k === S.bf) ? S.bf : 'all';
   const list = set.filter((b) => (bf === 'all' || b.st === bf) && (sp === 'all' || byId(b.m).s === sp));
-  const POR = 10, pags = Math.max(1, Math.ceil(list.length / POR)), pg = Math.min(S.bp || 0, pags - 1);
+  const POR = 9, pags = Math.max(1, Math.ceil(list.length / POR)), pg = Math.min(S.bp || 0, pags - 1);
   const misRetos = CH.filter((c) => c.from === MEK || c.to === MEK);
-  return `<div class="pad mb">
-    <section class="mb-top">
-      <div><span class="lab">En juego</span><b class="num">${N(enJuego)}${coin()}</b><small>${open.length} ${open.length === 1 ? 'apuesta abierta' : 'apuestas abiertas'}${vivas ? ` · ${vivas} en vivo` : ''}</small></div>
-      <div class="co"><span class="lab">Cobrable</span><b class="num">${N(cobrable)}${coin()}</b><small>si aciertas todo · ${signo(cobrable - enJuego)} limpias</small></div>
-      <div class="${ben > 0 ? 'up' : ben < 0 ? 'dn' : ''}"><span class="lab">Beneficio</span><b class="num">${ben ? `<i class="ar">${ben > 0 ? '▲' : '▼'}</i>${N(Math.abs(ben))}` : '0'}</b><small>${res.length ? `${apostado ? 'ROI ' + Math.round((ben / apostado) * 100) + '% · ' : ''}${res.length} ${res.length === 1 ? 'resuelta' : 'resueltas'}` : 'sale con la primera resuelta'}</small></div>
+  return `<div class="pad mb mb2">
+    <section class="mb2-hero">
+      <div class="mb2-nums">
+        <div><span class="lab">En juego</span><b class="num">${N(enJuego)}${coin()}</b><small>${open.length} ${open.length === 1 ? 'apuesta abierta' : 'apuestas abiertas'}${vivas ? ` · ${vivas} en vivo` : ''}</small></div>
+        <div class="co"><span class="lab">Cobrable</span><b class="num">${N(cobrable)}${coin()}</b><small>si aciertas todo · ${signo(cobrable - enJuego)} limpias</small></div>
+        <div class="${ben > 0 ? 'up' : ben < 0 ? 'dn' : ''}"><span class="lab">Beneficio</span><b class="num">${ben ? `<i class="ar">${ben > 0 ? '▲' : '▼'}</i>${N(Math.abs(ben))}` : '0'}</b><small>${res.length ? `${apostado ? 'ROI ' + Math.round((ben / apostado) * 100) + '% · ' : ''}${res.length} ${res.length === 1 ? 'resuelta' : 'resueltas'}` : 'sale con la primera resuelta'}</small></div>
+      </div>
+      <div class="mb2-curva"><div class="mb2-ct"><h3>Tu beneficio</h3><p class="mb-tags"><span>aciertos <b>${f.ac}</b></span><span>racha <b>${f.racha}</b></span><span>mejor cuota <b>${best ? O(best) : '·'}</b></span></p></div>${mbCurva(res)}</div>
     </section>
-    <p class="mb-tags"><span>aciertos <b>${f.ac}</b></span><span>racha <b>${f.racha}</b></span><span>mejor cuota acertada <b>${best ? O(best) : '·'}</b></span><span>cobrado en total <b>${N(won.reduce((a, b) => a + b.pay, 0))}</b></span></p>
     <div class="sec-h mb-h"><h2>En juego</h2><i>${open.length}</i></div>
     ${open.length ? `<div class="mb-cs">${open.map(mbCard).join('')}</div>` : '<p class="hint mb-vacio">Nada en juego. Ve a Partidos y toca una cuota.</p>'}
     ${misRetos.length ? `<div class="sec-h mb-h"><h2>Tus retos</h2><i>${misRetos.length}</i></div>${retosHtml(misRetos.slice(0, 12), '')}` : ''}
     <div class="sec-h mb-h"><h2>Resueltas</h2><i>${set.length}</i></div>
     ${set.length ? `<nav class="mb-fil"><span class="mb-fg">${ests.map(([k, n]) => `<button class="chip ${bf === k ? 'on' : ''}" data-bf="${k}">${n} <i>${k === 'all' ? set.length : set.filter((b) => b.st === k).length}</i></button>`).join('')}</span>
       ${deps.length > 1 ? `<span class="mb-fg">${[['all', 'Todo', null], ...deps.map((k) => [k, ...SP[k]])].map(([k, n, im]) => `<button class="f ${sp === k ? 'on' : ''}" data-bsp="${k}">${im ? `<img src="${im}" alt="">` : ''}${n}</button>`).join('')}</span>` : ''}</nav>` : ''}
-    <div class="mb-rs">${list.slice(pg * POR, pg * POR + POR).map(mbFila).join('') || `<p class="hint">${set.length ? 'Nada con este filtro.' : 'Todavía nada. Cuando acabe un partido en el que hayas apostado, sale aquí.'}</p>`}</div>
+    ${list.length ? `<div class="mb-rs2">${list.slice(pg * POR, pg * POR + POR).map(mbFila).join('')}</div>` : `<p class="hint">${set.length ? 'Nada con este filtro.' : 'Todavía nada. Cuando acabe un partido en el que hayas apostado, sale aquí.'}</p>`}
     ${pags > 1 ? `<nav class="pags"><button data-bp="${pg - 1}" ${pg ? '' : 'disabled'} aria-label="Anterior">‹</button>${Array.from({ length: pags }, (_, i) => `<button data-bp="${i}" class="${i === pg ? 'on' : ''}">${i + 1}</button>`).join('')}<button data-bp="${pg + 1}" ${pg < pags - 1 ? '' : 'disabled'} aria-label="Siguiente">›</button></nav>` : ''}
   </div>`;
 }
@@ -951,12 +980,96 @@ const msgRow = (c) => (!c.k
 const diaChat = (t) => (DK(t) === DK(NOW) ? 'Hoy' : DK(t) === DK(NOW - DAY) ? 'Ayer' : `${WD(t)} ${DD(t)} ${MO(t)}`);
 const conDias = (lista) => { let k = ''; return lista.map((c) => { const d = DK(c.at), sep = d !== k ? `<div class="ch-dia"><span>${diaChat(c.at)}</span></div>` : ''; k = d; return sep + msgRow(c) }).join('') };
 let lastSeen = 0; try { lastSeen = +localStorage.getItem('apuestas-chat-visto') || 0 } catch {}
-const unread = () => CHAT.filter((c) => c.id > lastSeen && c.k !== MEK).length;
+const unread = () => CHAT.filter((c) => c.id > lastSeen && c.k && c.k !== MEK).length;
+// PM, 30-10: "la feed de lo que abrimos y todo eso que no son mensajes, en otro lugar dentro de chat, no en el medio,
+// que se llame Feed". Chat solo con lo que escribe la gente; Feed con avisos, apuestas de todos, resultados, ruleta, cajas y batallas
+const RAR_C = { esp: '#e4ae39', cov: '#eb4b4b', cla: '#d32ce6', res: '#8847ff', mil: '#4b69ff' };
+// los resultados de apuestas ya salen de las apuestas: esos avisos no se repiten
+const avisoRepe = (t) => /^.+ (ganó|perdió) [\d.]+ con .+ · /.test(t || '') || /^.+ recupera [\d.]+: .+ no se ha jugado$/.test(t || '');
+let FEED_CS = null, FEED_T = 0, cargandoFeed = null;
+async function cargaFeed() {
+  if (cargandoFeed) return cargandoFeed;
+  cargandoFeed = (async () => {
+    try {
+      if (!CAJAS_L) await cargaCasos();
+      const [inv, bt] = await Promise.all([
+        db.from('cs_inv').select('id,player,item_id,wear,st,value,case_id,battle_id,opened_by,created_at').is('battle_id', null).order('created_at', { ascending: false }).limit(80),
+        db.from('cs_battles').select('id,mode,cases,cost,winner,totals,done_at,cs_battle_seats(seat,player)').eq('status', 'done').order('done_at', { ascending: false }).limit(20),
+      ]);
+      const ids = [...new Set((inv.data || []).map((x) => x.item_id))];
+      const it = ids.length ? await db.rpc('cs_items_info', { p_ids: ids }) : { data: [] };
+      FEED_CS = { inv: inv.data || [], bats: bt.data || [], items: new Map(((it.data) || []).map((x) => [x.id, x])) };
+    } catch { FEED_CS = FEED_CS || { inv: [], bats: [], items: new Map() } }
+    FEED_T = Date.now(); cargandoFeed = null;
+    if (S.scr === 'chat' && S.ct === 'feed') render();
+  })();
+  return cargandoFeed;
+}
+const kDe = (uid) => F.find((f) => f.uid === uid)?.id;
+const IC_BELL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>';
+const IC_VS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l9 9M4 4h4M4 4v4M20 4l-9 9M20 4h-4M20 4v4M7 17l-3 3M17 17l3 3M9.5 14.5l-3 3M14.5 14.5l3 3"/></svg>';
+function feedItems() {
+  const out = [];
+  // avisos de la app (mensajes sin jugador)
+  for (const c of CHAT) if (!c.k && !avisoRepe(c.txt)) out.push({ at: c.at, t: 'aviso', html: `<div class="fd aviso"><span class="fd-ic ${/^Paga del lunes|Bote|Premios/.test(c.txt) ? 'oro' : ''}">${/^Paga del lunes/.test(c.txt) ? '<span class="cn"></span>' : IC_BELL}</span><div class="fd-b"><p>${sysTxt(c.txt)}</p></div><time>${HM(c.at)}</time></div>` });
+  // apuestas de todos y sus resultados
+  for (const b of ALL) {
+    const m = byId(b.m); if (!m || !b.k) continue;
+    const lado = b.p === '1' ? logo(m, 'a') : b.p === '2' ? logo(m, 'b') : `<span class="fd-x">${b.p ? 'X' : '?'}</span>`;
+    const meta = `<small>${esc(m.a)} vs ${esc(m.b)} · ${esc(corto(L[m.lg]?.[0] || ''))}</small>`;
+    out.push({ at: Date.parse(b.at), t: 'apuestas', html: `<div class="fd" data-goto="${m.id}">${av(b.k)}<div class="fd-b"><p><b>${esc(fr(b.k).n)}</b> <span>${b.p ? `apuesta ${N(b.stake)} a` : `ha apostado ${N(b.stake)}`}</span> ${b.p ? `<em>${esc(pn(m, b.p))}</em> <i class="fd-o">${O(b.o)}</i>` : '<i class="fd-o">se ve al empezar</i>'}</p>${meta}</div><span class="fd-vis">${lado}</span><time>${HM(Date.parse(b.at))}</time></div>` });
+    if ((b.st === 'won' || b.st === 'lost') && b.set) out.push({ at: Date.parse(b.set), t: 'apuestas', html: `<div class="fd res ${b.st}" data-goto="${m.id}">${av(b.k)}<div class="fd-b"><p><b>${esc(fr(b.k).n)}</b> <span>${b.st === 'won' ? 'acierta con' : 'falla con'}</span> <em>${esc(pn(m, b.p))}</em> <i class="fd-o">${O(b.o)}</i></p><small>${esc(m.a)} ${esc(m.score || '')} ${esc(m.b)}</small></div><span class="fd-amt">${b.st === 'won' ? '▲ ' + N(b.pay - b.stake) : '▼ ' + N(b.stake)}</span><time>${HM(Date.parse(b.set))}</time></div>` });
+  }
+  // la ruleta de la semana
+  for (const w of WHEEL || []) {
+    const k = kDe(w.player); if (!k || !w.created_at) continue;
+    const caja = /^Caja gratis: /.test(w.label) ? casoPorNombre(w.label.replace(/^Caja gratis: /, '')) : null;
+    out.push({ at: Date.parse(w.created_at), t: 'premios', html: `<div class="fd">${av(k)}<div class="fd-b"><p><b>${esc(fr(k).n)}</b> <span>gira la ruleta de la semana</span></p><small>${esc(w.label)}</small></div><span class="fd-vis">${caja ? `<img class="fd-case" src="${esc(casoSrc(caja.image, 128))}" alt="">` : '<span class="cn fd-coin"></span>'}</span><time>${HM(Date.parse(w.created_at))}</time></div>` });
+  }
+  // cajas: lo que sale, agrupado por quien abre, que caja y el mismo momento
+  if (FEED_CS) {
+    const grupos = [];
+    for (const x of FEED_CS.inv) { const quien = x.opened_by || x.player, t = Date.parse(x.created_at), g = grupos.find((y) => y.quien === quien && y.caja === x.case_id && Math.abs(y.t - t) < 8000); if (g) g.xs.push(x); else grupos.push({ quien, caja: x.case_id, t, xs: [x] }) }
+    const RK = { esp: 5, cov: 4, cla: 3, res: 2, mil: 1 };
+    for (const g of grupos) {
+      const k = kDe(g.quien); if (!k) continue;
+      const c = (CAJAS_L || []).find((y) => y.id === g.caja), its = g.xs.map((x) => ({ x, it: FEED_CS.items.get(x.item_id) || { name: '·', rarity: 'mil' } })).sort((a, b) => (RK[b.it.rarity] || 0) - (RK[a.it.rarity] || 0) || b.x.value - a.x.value);
+      const top = its[0], tot = g.xs.reduce((a, x) => a + x.value, 0);
+      out.push({ at: g.t, t: 'cajas', html: `<div class="fd fdc" data-scr="cajas">${av(k)}<div class="fd-b"><p><b>${esc(fr(k).n)}</b> <span>${g.xs.length > 1 ? `abre ${g.xs.length} cajas` : 'abre una caja'}</span> <em>${esc(c?.name || 'de CS2')}</em></p>
+        <small>le sale <b style="color:${RAR_C[top.it.rarity] || RAR_C.mil}">${esc(top.it.name)}${top.it.phase ? ' · ' + esc(top.it.phase) : ''}</b> · ${N(top.x.value)}${g.xs.length > 1 ? ` · en total ${N(tot)}` : ''}</small>
+        <span class="fd-its">${its.slice(0, 8).map(({ x, it }) => `<span class="fd-it" style="--c:${RAR_C[it.rarity] || RAR_C.mil}" title="${esc(it.name)} · ${N(x.value)}">${it.image ? `<img src="${esc(casoSrc(it.image, 96))}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : ''}</span>`).join('')}</span></div>
+        <span class="fd-vis">${c?.image ? `<img class="fd-case" src="${esc(casoSrc(c.image, 128))}" alt="" loading="lazy">` : `<span class="fd-ic">${IC_BOX}</span>`}</span><time>${HM(g.t)}</time></div>` });
+    }
+    for (const b of FEED_CS.bats) {
+      const seats = (b.cs_battle_seats || []).sort((x, y) => x.seat - y.seat), mitad = seats.length / 2;
+      const lados = [seats.filter((s) => s.seat < mitad), seats.filter((s) => s.seat >= mitad)].map((l) => l.map((s) => kDe(s.player)).filter(Boolean));
+      if (!lados[0].length || !lados[1].length || b.winner == null) continue;
+      const g = lados[b.winner], p = lados[1 - b.winner], tt = b.totals || [0, 0], c = (CAJAS_L || []).find((y) => y.id === (b.cases || [])[0]);
+      out.push({ at: Date.parse(b.done_at), t: 'cajas', html: `<div class="fd fdb" data-scr="cajas"><span class="fd-avs">${g.map((k) => av(k)).join('')}</span><div class="fd-b"><p><b>${g.map((k) => esc(fr(k).n)).join(' y ')}</b> <span>${g.length > 1 ? 'ganan la batalla a' : 'gana la batalla a'}</span> <b>${p.map((k) => esc(fr(k).n)).join(' y ')}</b></p><small>Batalla ${esc(b.mode)} · ${N(tt[b.winner])} contra ${N(tt[1 - b.winner])} · ${(b.cases || []).length} ${(b.cases || []).length === 1 ? 'caja' : 'cajas'}</small></div><span class="fd-vis">${c?.image ? `<img class="fd-case" src="${esc(casoSrc(c.image, 128))}" alt="" loading="lazy">` : `<span class="fd-ic">${IC_VS}</span>`}</span><time>${HM(Date.parse(b.done_at))}</time></div>` });
+    }
+  }
+  return out.filter((x) => isFinite(x.at)).sort((a, b) => b.at - a.at);
+}
+let feedVisto = 0; try { feedVisto = +localStorage.getItem('apuestas-feed-visto') || 0 } catch {}
+const feedNuevo = () => { const ult = Math.max(0, ...CHAT.filter((c) => !c.k).map((c) => c.at), ...ALL.filter((b) => b.k !== MEK).map((b) => Date.parse(b.set || b.at) || 0)); return ult > feedVisto };
+function feedHtml() {
+  if (!FEED_CS || Date.now() - FEED_T > 6e4) setTimeout(cargaFeed, 0);
+  const tipos = [['todo', 'Todo'], ['apuestas', 'Apuestas'], ['cajas', 'Cajas'], ['premios', 'Ruleta'], ['aviso', 'Avisos']];
+  const todo = feedItems(), ft = S.ft || 'todo', xs = todo.filter((x) => ft === 'todo' || x.t === ft), n = S.fdN || 60;
+  let k = '', h = '';
+  for (const x of xs.slice(0, n)) { const d = DK(x.at); if (d !== k) { h += `<div class="ch-dia fd-dia"><span>${diaChat(x.at)}</span></div>`; k = d } h += x.html }
+  return `<nav class="fd-fil">${tipos.filter(([t]) => t === 'todo' || todo.some((x) => x.t === t)).map(([t, nm]) => `<button class="chip ${ft === t ? 'on' : ''}" data-ft="${t}">${nm}</button>`).join('')}</nav>
+    <div class="fd-list">${h || `<p class="hint">${FEED_CS ? 'Todavía no ha pasado nada por aquí.' : 'Cargando…'}</p>`}${xs.length > n ? `<button class="q hst-mas" data-act="fd-mas">Ver más</button>` : ''}</div>`;
+}
 function chat() {
   const live = M.filter((m) => m.live && whoOn(m.id).length)[0];
-  const maxId = Math.max(0, ...CHAT.map((c) => c.id)); if (maxId > lastSeen) { lastSeen = maxId; try { localStorage.setItem('apuestas-chat-visto', maxId) } catch {} }
-  return `<div class="c-wrap ${live ? '' : 'solo'}"><section class="c-main"><div class="chat"><div class="ch-list" data-chat>${conDias(CHAT) || '<p class="hint">Escribe el primero.</p>'}</div>
-    ${S.pollForm ? `<div class="poll-f"><input type="text" id="poll-q" maxlength="140" placeholder="La pregunta" autocomplete="off">${[0, 1, 2, 3].map((i) => `<input type="text" id="poll-o${i}" maxlength="40" placeholder="Opción ${i + 1}${i > 1 ? ' (si quieres)' : ''}" autocomplete="off">`).join('')}<div class="poll-b"><button class="q" data-act="poll-x">Cancelar</button><button class="go-s" data-act="poll-ok">Crear encuesta</button></div></div>` : ''}<div class="ch-in"><button class="ic" data-act="img" aria-label="Mandar foto">${IC_IMG}</button><button class="ic" data-act="poll" aria-label="Encuesta">${IC_POLL}</button><button class="ic mic ${REC ? 'on' : ''}" data-act="mic" aria-label="${REC ? 'Parar y enviar' : 'Nota de voz'}">${IC_MIC}</button>${REC ? `<span class="rec" data-rec>${recTxt()}</span><button class="q rec-x" data-act="mic-x">Cancelar</button>` : ''}<input type="text" id="msg" data-msg placeholder="Escribe a tus colegas" maxlength="500" autocomplete="off"><button class="send" data-act="send" aria-label="Enviar">${IC_SEND}</button><input type="file" id="pic" accept="image/*" data-file hidden></div></div></section>
+  const fd = S.ct === 'feed';
+  if (fd) { feedVisto = Date.now(); try { localStorage.setItem('apuestas-feed-visto', feedVisto) } catch {} }
+  else { const maxId = Math.max(0, ...CHAT.map((c) => c.id)); if (maxId > lastSeen) { lastSeen = maxId; try { localStorage.setItem('apuestas-chat-visto', maxId) } catch {} } }
+  const un = fd ? unread() : 0;
+  const tabs = `<nav class="ch-tabs"><button class="${fd ? '' : 'on'}" data-ct="chat">Chat${un ? `<i>${un}</i>` : ''}</button><button class="${fd ? 'on' : ''}" data-ct="feed">Feed${!fd && feedNuevo() ? '<i class="nv-pt"></i>' : ''}</button></nav>`;
+  return `<div class="c-wrap ${live ? '' : 'solo'}"><section class="c-main">${tabs}${fd ? `<div class="fd-wrap" data-keep="fd">${feedHtml()}</div>` : `<div class="chat"><div class="ch-list" data-chat>${conDias(CHAT.filter((c) => c.k)) || '<p class="hint">Escribe el primero.</p>'}</div>
+    ${S.pollForm ? `<div class="poll-f"><input type="text" id="poll-q" maxlength="140" placeholder="La pregunta" autocomplete="off">${[0, 1, 2, 3].map((i) => `<input type="text" id="poll-o${i}" maxlength="40" placeholder="Opción ${i + 1}${i > 1 ? ' (si quieres)' : ''}" autocomplete="off">`).join('')}<div class="poll-b"><button class="q" data-act="poll-x">Cancelar</button><button class="go-s" data-act="poll-ok">Crear encuesta</button></div></div>` : ''}<div class="ch-in"><button class="ic" data-act="img" aria-label="Mandar foto">${IC_IMG}</button><button class="ic" data-act="poll" aria-label="Encuesta">${IC_POLL}</button><button class="ic mic ${REC ? 'on' : ''}" data-act="mic" aria-label="${REC ? 'Parar y enviar' : 'Nota de voz'}">${IC_MIC}</button>${REC ? `<span class="rec" data-rec>${recTxt()}</span><button class="q rec-x" data-act="mic-x">Cancelar</button>` : ''}<input type="text" id="msg" data-msg placeholder="Escribe a tus colegas" maxlength="500" autocomplete="off"><button class="send" data-act="send" aria-label="Enviar">${IC_SEND}</button><input type="file" id="pic" accept="image/*" data-file hidden></div></div>`}</section>
     ${live ? `<aside class="c-side">
       ${live ? `<section><span class="lab">En juego ahora</span><div class="live-m" data-goto="${live.id}" style="cursor:pointer"><div>${logo(live, 'a')}${esc(live.a)}</div><b>${esc(live.score || '')}</b><div>${logo(live, 'b')}${esc(live.b)}</div></div></section>
       <section><span class="lab">Sus apuestas</span>${whoOn(live.id).map((x) => `<div class="ifr">${av(x.f)}<span class="nm">${esc(fr(x.f).n)}</span><span class="st rev">${x.p ? esc(pn(live, x.p)) + ' · ' : ''}${N(x.stake)}</span></div>`).join('')}</section>` : ''}
@@ -1013,7 +1126,7 @@ function ruLoop() {
   if (!RU) return;
   if (Date.now() - RU.t0 < RU_DUR) return requestAnimationFrame(ruLoop);
   const r = RU; RU = null; S.ruRot = r.to; S.ruGira = false; S.ruWin = r.res.prize; S.ruRes = r.res; S.ruCel = Date.now();
-  confeti();
+  { const b = document.getElementById('rueda')?.getBoundingClientRect(); confeti(b ? b.left + b.width / 2 : undefined, b ? b.top + b.height * 0.3 : undefined) }
   toast(r.res.box ? `${esc(r.res.label)}: la tienes en Cajas › Inventario` : `Ruleta: <b>${esc(r.res.label)}</b>`);
   setTimeout(() => { if (S.rew) render() }, 4200);
   refresh();
@@ -1068,11 +1181,35 @@ function rwPend() {
   const wk = new Date(WEEK0 + DAY / 2).toISOString().slice(0, 10), di = Math.floor((NOW - WEEK0) / DAY);
   const rueda = !(WHEEL || []).some((w) => w.player === me().uid && w.week === wk);
   const dentroBote = !!BOTE?.players?.[me().uid], boteAbierto = BOTE && (!BOTE.desde || wk >= BOTE.desde) && di <= 2;
-  return { diario: !!CLAIM && !CLAIM.today, rueda, rescate: puedeRescate(), bote: boteAbierto && !dentroBote, dentroBote, boteAbierto };
+  const tiempo = (TIEMPO?.tiers || []).filter((t) => !t.claimed && TIEMPO.minutes >= t.min).length;
+  return { diario: !!CLAIM && !CLAIM.today, rueda, rescate: puedeRescate(), bote: boteAbierto && !dentroBote, dentroBote, boteAbierto, tiempo };
 }
-function rwBoton() { const p = rwPend(), n = [p.diario, p.rueda, p.rescate, p.bote].filter(Boolean).length;
+function rwBoton() { const p = rwPend(), n = [p.diario, p.rueda, p.rescate, p.bote].filter(Boolean).length + p.tiempo;
   return `<button class="claim ${n ? '' : 'nada'} ${S.rew ? 'on' : ''}" data-act="rw" aria-label="Recompensas">${IC_GIFT}<span>Recompensas</span>${n ? `<b>${n}</b>` : ''}</button>` }
 const IC_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+// PM, 30-10: premios por estar en la app (db/019): 30 min, 1 h y 2 h al dia. La app manda un latido por minuto a la vista
+const IC_RELOJ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
+const minTxt = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ' ' + (m % 60) + ' min' : ''}` : `${m} min`);
+function tiempoHtml() {
+  if (!TIEMPO?.tiers?.length) return '';
+  const ts = [...TIEMPO.tiers].sort((a, b) => a.min - b.min), mins = TIEMPO.minutes || 0, n = ts.length;
+  // cada tramo en el centro de su columna; la barra avanza a trozos entre tramo y tramo
+  const at = (i) => ((i + 0.5) / n) * 100, pos = (m) => { let a = 0, x0 = 0; for (let i = 0; i < n; i++) { const b = at(i); if (m <= ts[i].min) return x0 + (b - x0) * (m - a) / (ts[i].min - a); a = ts[i].min; x0 = b } return 100 }, pc = pos(mins);
+  return `<div class="rw-tiempo"><div class="rw-th"><span class="rw-t r">${IC_RELOJ}</span><p><b>Tiempo en la app</b><span>Hoy llevas <i>${minTxt(mins)}</i> · cuenta mientras la tienes abierta y a la vista</span></p></div>
+    <div class="rw-tb"><span class="rw-tf" style="width:${pc.toFixed(1)}%"></span>${ts.map((t, i) => `<i class="${t.claimed ? 'hecho' : mins >= t.min ? 'listo' : ''}" style="left:${at(i).toFixed(1)}%"></i>`).join('')}</div>
+    <div class="rw-tt" style="--n:${ts.length}">${ts.map((t) => `<div class="${t.claimed ? 'hecho' : mins >= t.min ? 'listo' : ''}"><b>+${N(t.amt)}${coin()}</b><small>${minTxt(t.min)}</small>${t.claimed ? `<em class="rw-ok">${IC_OK}Cobrado</em>` : mins >= t.min ? `<button class="go-s" data-tclaim="${t.min}">Reclamar</button>` : `<em>faltan ${minTxt(t.min - mins)}</em>`}</div>`).join('')}</div></div>`;
+}
+let LATIDO = null;
+function latido() {
+  if (LATIDO) return;
+  const uno = async () => {
+    if (document.visibilityState !== 'visible') return;
+    const { data, error } = await db.rpc('heartbeat'); if (error || typeof data !== 'number' || !TIEMPO) return;
+    const antes = rwPend().tiempo; TIEMPO.minutes = data;
+    if (rwPend().tiempo !== antes || S.rew) render();
+  };
+  uno(); LATIDO = setInterval(uno, 60000);
+}
 function pintaRw() {
   let el = document.getElementById('rw');
   if (!S.rew) { if (el) el.remove(); return }
@@ -1084,6 +1221,7 @@ function pintaRw() {
     <header><span class="rw-gi">${IC_GIFT}</span><h2>Recompensas</h2><button class="rw-x" data-act="rw" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
     ${ruedaHtml()}
     <div class="rw-l">
+      ${tiempoHtml()}
       <div class="rw-r2"><span class="rw-t d"><span class="cn"></span></span><p><b>Premio diario</b><span>${N(CLAIM?.amount || 50)} V-Bucks cada día que lo reclames</span></p>${p.diario ? `<button class="go-s" data-act="claim">Reclamar</button>` : hecho('Hecho hoy')}</div>
       <div class="rw-r2"><span class="rw-t b">${IC_TICKET}</span><p><b>Bote de la semana</b><span>${BOTE?.pot ? `<i class="rw-pot">${N(BOTE.pot)}${coin()}</i> en el bote` : `${N(BOTE?.amount || 100)} cada uno, de lunes a miércoles`} · se lo lleva quien más gane</span>${dentro.length ? `<span class="rw-av">${dentro.map((f) => av(f.id, 'sm')).join('')}<small>${dentro.length} dentro</small></span>` : ''}</p>${p.bote ? `<button class="go-s" data-act="bote">Entrar</button>` : p.dentroBote ? hecho('Estás dentro') : `<em>${BOTE?.desde && new Date(WEEK0 + DAY / 2).toISOString().slice(0, 10) < BOTE.desde ? 'Empieza el lunes' : 'Cerrado hasta el lunes'}</em>`}</div>
       ${p.rescate ? `<div class="rw-r2"><span class="rw-t p">${IC_GIFT}</span><p><b>Rescate</b><span>Te has quedado a cero: ${N(CLAIM.rescue)} para seguir, una vez por semana</span></p><button class="go-s" data-act="rescue">Pedir</button></div>` : ''}
@@ -1197,7 +1335,7 @@ function render() {
   document.getElementById('lang').innerHTML = ['es', 'en'].map((l) => `<button type="button" class="${l === lg ? 'on' : ''}" data-lang="${l}">${l.toUpperCase()}</button>`).join('');
   const [t, sub] = S.scr === 'perfil' ? ['Perfil', fr(S.prof).n + (fr(S.prof).apodo ? ' · ' + fr(S.prof).apodo : '')] : SCREENS[S.scr];
   pintaRw();
-  document.getElementById('top').innerHTML = `<h1>${t}</h1>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}<span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>${M.some((x) => x.live) ? `<button class="dv-btn ${S.scr === 'directo' ? 'on' : ''}" data-scr="directo"><i></i>Directo <b>${M.filter((x) => x.live).length}</b></button>` : ''}${rwBoton()}<span class="onl" data-onl>${onlineHtml()}</span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span>`;
+  document.getElementById('top').innerHTML = `<h1>${t}</h1>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}<span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>${M.some((x) => x.live) ? `<button class="dv-btn ${S.scr === 'directo' ? 'on' : ''}" data-scr="directo"><i></i>Directo <b>${M.filter((x) => x.live).length}</b></button>` : ''}${rwBoton()}<span class="onl ${S.onl ? 'abre' : ''}" data-onl>${onlineHtml()}</span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span>`;
   photoCss();
   const vw = document.getElementById('view'), cambia = vw.dataset.vista !== S.scr;
   const mismoVideo = S.scr === 'directo' && vw.dataset.vista === 'directo' && vw.querySelector('[data-dv-key]')?.dataset.dvKey === dvKey();
@@ -1207,7 +1345,7 @@ function render() {
   avisaMira();
   if (S.scr === 'cajas' && window.GM_CAJAS) GM_CAJAS.montar(vw, cajasCtx(), cambia);
   if (S.scr === 'juegos' && window.GM_JUEGOS) GM_JUEGOS.montar(vw, jgCtx(), cambia);
-  if (cambia) { vw.classList.remove('entra'); void vw.offsetWidth; vw.classList.add('entra') }
+  if (cambia) { vw.classList.remove('entra'); void vw.offsetWidth; vw.classList.add('entra'); clearTimeout(render.ent); render.ent = setTimeout(() => vw.classList.remove('entra'), 1400) }
   cuentaSaldo();
   if (S.scr === 'partidos') { lgFlechas(); fillEspn(); fillSheet(); fillBracket() }
   document.querySelectorAll('[data-keep]').forEach((e) => { if (keep[e.dataset.keep]) e.scrollTop = keep[e.dataset.keep] });
@@ -1304,7 +1442,8 @@ async function savePerfil(k, v) {
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lang]'); if (!b || !window.GM_LANG) return; GM_LANG.set(b.dataset.lang); location.reload(); }, true);
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lga]'); if (!b) return; const n = document.querySelector('[data-lgs]'); n?.scrollBy({ left: +b.dataset.lga * n.clientWidth * 0.8, behavior: 'smooth' }) });
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-bsp],[data-bp],[data-side],[data-bm],[data-dv],[data-dtv],[data-mt],[data-mp],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
+  if (S.onl && !e.target.closest('.onl')) { S.onl = false; pintaOnline() }
+  const t = e.target.closest('[data-ct],[data-ft],[data-tclaim],[data-bsp],[data-bp],[data-side],[data-bm],[data-dv],[data-dtv],[data-mt],[data-mp],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
   const d = t.dataset;
   if (d.side && t.matches('[data-side]')) { S.side = d.side; document.querySelector('.det')?.scrollTo?.(0, 0); return render() }
   if (d.act === 'sheet-back') { S.side = null; return render() }
@@ -1312,7 +1451,7 @@ document.addEventListener('click', async (e) => {
   if (d.dtv != null && t.matches('[data-dtv]')) { S.dtv = +d.dtv; S.dvm = dvSel().m?.id; return render() }
   if (d.mt) { S.mt = d.mt; S.mp = 0; return render() }
   if (d.bsp) { S.bsp = d.bsp; S.bp = 0; return render() }
-  if (d.bp != null && t.matches('[data-bp]')) { S.bp = +d.bp; render(); document.querySelector('.mb-rs')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); return }
+  if (d.bp != null && t.matches('[data-bp]')) { S.bp = +d.bp; render(); document.querySelector('.mb-rs2')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); return }
   if (d.mp != null && t.matches('[data-mp]')) { S.mp = +d.mp; render(); document.querySelector('.movs')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); return }
   if (d.act === 'girar') {
     if (S.ruGira || RU) return; S.ruGira = true;
@@ -1329,7 +1468,12 @@ document.addEventListener('click', async (e) => {
   if (d.vote) { const [pid, o] = d.vote.split('|'); const { error } = await db.rpc('vote_poll', { p_poll: +pid, p_opt: +o }); if (error) return toast(errMsg(error)); return refresh() }
   if (d.share) { const { error } = await db.from('chat').insert({ player: ME, body: '', bet_id: +d.share }); if (error) return toast(errMsg(error)); toast('Apuesta mandada al chat'); return refresh() }
   if (d.sumo) { const [mid, pk] = d.sumo.split('|'); S.scr = 'partidos'; S.foc = mid; S.sheet = true; S.side = null; S.sel = { m: mid, p: pk }; location.hash = 'partidos'; render(); return toast('Elige cuánto y dale a Apostar') }
+  if (d.act === 'onl') { S.onl = !S.onl; return pintaOnline() }
+  if (d.ct) { S.ct = d.ct; return render() }
+  if (d.ft) { S.ft = d.ft; S.fdN = 60; return render() }
+  if (d.act === 'fd-mas') { S.fdN = (S.fdN || 60) + 60; return render() }
   if (d.act === 'rw') { S.rew = !S.rew; return render() }
+  if (d.tclaim) { const { data, error } = await db.rpc('claim_time_reward', { p_min: +d.tclaim }); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} por tu tiempo en la app`); return refresh() }
   if (d.act === 'rw-cajas') { S.rew = false; S.scr = 'cajas'; document.getElementById('view').scrollTop = 0; return render() }
   if (d.act === 'bote') { const { error } = await db.rpc('join_bote'); if (error) return toast(errMsg(error)); toast('Estás dentro del bote de esta semana'); return refresh() }
   if (d.act === 'claim') { const { data, error } = await db.rpc('claim_daily'); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} del premio diario`); return refresh() }
@@ -1418,14 +1562,21 @@ const IC_TICKET = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const IC_DADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r=".9" fill="currentColor"/><circle cx="15" cy="15" r=".9" fill="currentColor"/><circle cx="12" cy="12" r=".9" fill="currentColor"/></svg>';
 const IC_BOX = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3.8 8.2 12 4.2l8.2 4v7.6L12 19.8l-8.2-4z"/><path d="M3.8 8.2 12 12.2l8.2-4M12 12.2v7.6"/></svg>';
 const puedeRescate = () => CLAIM && !CLAIM.rescue_used && me().s < 10 && !openOf(MEK).length;
-let chan = null, ONLINE = new Set(), MIRA = {}, MIRA_YO = null;
-const avisaMira = () => { const v = S.scr === 'directo' ? dvSel().m?.id || null : null; if (v === MIRA_YO || !chan) return; MIRA_YO = v; try { chan.track({ k: MEK, v }) } catch {} };
-const onlineHtml = () => { const ks = [...new Set([MEK, ...ONLINE])].filter((k) => F.some((f) => f.id === k)); return `<span class="onl-l"><i></i>En línea</span>${ks.map((k) => `<span class="onl-a" data-prof="${k}" title="${esc(fr(k).n)}">${av(k, 'sm')}</span>`).join('')}` };
-const pintaOnline = () => document.querySelectorAll('[data-onl]').forEach((e) => { e.innerHTML = onlineHtml(); if (window.GM_LANG) GM_LANG.traduce(e) });
+let chan = null, ONLINE = new Set(), MIRA = {}, MIRA_YO = null, ONT = {};
+// PM, 30-10: "que salga la persona que esta online mas tiempo y luego +N": cada uno manda la hora a la que entro
+const ENTRADA = Date.now();
+const avisaMira = () => { const v = S.scr === 'directo' ? dvSel().m?.id || null : null; if (v === MIRA_YO || !chan) return; MIRA_YO = v; try { chan.track({ k: MEK, v, t: ENTRADA }) } catch {} };
+const durOn = (ms) => { const m = Math.max(1, Math.round(ms / 6e4)); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60 ? (m % 60) + ' min' : ''}`.trim() };
+const onlineHtml = () => {
+  const ks = [...new Set([MEK, ...ONLINE])].filter((k) => F.some((f) => f.id === k)).sort((a, b) => (ONT[a] || ENTRADA) - (ONT[b] || ENTRADA));
+  const [k0, ...resto] = ks;
+  return `<span class="onl-l"><i></i>En línea</span><span class="onl-a" data-prof="${k0}" title="${esc(fr(k0).n)}">${av(k0, 'sm')}</span>${resto.length ? `<button class="onl-mas" data-act="onl" aria-label="Quién más está">+${resto.length}</button>` : ''}
+    <span class="onl-pop"><span class="lab">En línea ahora · ${ks.length}</span>${ks.map((k) => `<button class="onl-r" data-prof="${k}">${av(k, 'sm')}<b>${esc(fr(k).n)}</b><small>${durOn(Date.now() - (ONT[k] || ENTRADA))}</small></button>`).join('')}</span>` };
+const pintaOnline = () => document.querySelectorAll('[data-onl]').forEach((e) => { e.innerHTML = onlineHtml(); e.classList.toggle('abre', !!S.onl); if (window.GM_LANG) GM_LANG.traduce(e) });
 function live() {
   if (chan) return;
   let to; const soon = () => { if (window.GM_JUEGOS && GM_JUEGOS.ocupado()) return; clearTimeout(to); to = setTimeout(refresh, 700) };
-  chan = db.channel('vivo', { config: { presence: { key: String(ME) } } }).on('presence', { event: 'sync' }, () => { const ps = Object.values(chan.presenceState()).flat(); ONLINE = new Set(ps.map((x) => x.k)); MIRA = {}; for (const x of ps) if (x.v) MIRA[x.k] = x.v; pintaOnline(); if (S.scr === 'directo') render() }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pulse' }, soon).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat' }, soon).subscribe(async (st) => { if (st === 'SUBSCRIBED') try { MIRA_YO = undefined; avisaMira(); if (MIRA_YO === undefined || MIRA_YO === null) await chan.track({ k: MEK, v: null }) } catch {} });
+  chan = db.channel('vivo', { config: { presence: { key: String(ME) } } }).on('presence', { event: 'sync' }, () => { const ps = Object.values(chan.presenceState()).flat(); ONLINE = new Set(ps.map((x) => x.k)); ONT = {}; for (const x of ps) if (x.k && (!ONT[x.k] || (x.t && x.t < ONT[x.k]))) ONT[x.k] = x.t || Date.now(); MIRA = {}; for (const x of ps) if (x.v) MIRA[x.k] = x.v; pintaOnline(); if (S.scr === 'directo') render() }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pulse' }, soon).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat' }, soon).subscribe(async (st) => { if (st === 'SUBSCRIBED') try { MIRA_YO = undefined; avisaMira(); if (MIRA_YO === undefined || MIRA_YO === null) await chan.track({ k: MEK, v: null, t: ENTRADA }) } catch {} });
   // cuenta atras cada minuto y datos frescos cada 5, solo con la pantalla visible
   let ticks = 0;
   setInterval(() => { if (document.hidden) return; ticks++; if (ticks % 5 === 0) return refresh(); if (!document.activeElement?.matches('input,textarea')) render() }, 60000);
@@ -1465,7 +1616,7 @@ async function start() {
     toast(errMsg(e)); setTimeout(start, 6000); return
   }
   const h = location.hash.slice(1); if (R[h] && h !== 'perfil') S.scr = h;
-  S.prof = MEK; showApp(); render(); live();
+  S.prof = MEK; showApp(); render(); live(); latido();
 }
 window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (R[h] && h !== 'perfil') { S.scr = h; render() } });
 start();

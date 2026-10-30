@@ -519,3 +519,22 @@ button.cj-seat:hover{background:rgba(242,193,78,.16);color:var(--acc)}
   .bv-vs{font-size:14px}
 }
 @media (prefers-reduced-motion:reduce){.bv-it.nuevo{animation:none}}
+
+/* pestanas sin saltos: la raya de abajo crece en vez de aparecer de golpe (PM, 30-10) */
+.cj-tab::after{content:"";position:absolute;left:50%;width:28px;margin-left:-14px;bottom:0;height:3px;border-radius:2px;background:var(--acc);opacity:0;transform:scaleX(0);transition:transform .2s var(--ease),opacity .2s var(--ease)}
+.cj-tab:hover::after{opacity:.4;transform:scaleX(.5)}
+.cj-tab.on::after{opacity:1;transform:none}
+
+/* top 3 de batallas */
+.cj-top{margin:4px 0 30px;text-align:center}
+.cj-top .lab{display:block;margin-bottom:16px}
+.cj-top-r{display:flex;justify-content:center;align-items:flex-end;gap:34px;flex-wrap:wrap}
+.cj-top-p{position:relative;display:grid;justify-items:center;gap:6px}
+.cj-top-p.p1{order:2;transform:translateY(-10px)}.cj-top-p.p2{order:1}.cj-top-p.p3{order:3}
+.cj-top-p .pos{position:absolute;top:-8px;right:-8px;z-index:2;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--bg2);font:700 12px var(--mono);color:var(--mute)}
+.cj-top-p.p1 .pos{background:var(--acc);color:#141008}
+.cj-top-p.p1 .av{box-shadow:0 0 0 3px var(--acc),0 0 24px rgba(242,193,78,.35)}
+.cj-top-p b{font:700 15px var(--sans)}
+.cj-top-p .v{display:flex;align-items:center;gap:6px;font:600 20px var(--mono)}
+.cj-top-p.p1 .v{color:var(--acc)}
+.cj-top-p small{font:11px var(--mono);color:var(--dim)}
