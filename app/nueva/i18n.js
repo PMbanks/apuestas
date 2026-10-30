@@ -467,9 +467,14 @@
     [/^Ninguna en juego\. En Partidos, mete 2 o más cuotas en el boleto y elige Combinada\.$/, 'None in play. In Matches, add 2 or more odds to the slip and choose Parlay.'],
     [/^Toca 2 o más cuotas y en el boleto elige$/, 'Tap 2 or more odds and in the slip choose'], [/^: las cuotas se multiplican y cobras si aciertas todas\.$/, ': the odds multiply and you win if they all win.'],
     [/^Combinada de (\d+) · cuota ([\d,]+)$/, 'Parlay of $1 · odds $2'], [/^Combinada · cuota ([\d,]+)$/, 'Parlay · odds $1'], [/^Combinada (cancelada|anulada)$/, (m, v) => `Parlay ${v === 'cancelada' ? 'cancelled' : 'void'}`],
+    // combinadas en Apuestas de todos y en el perfil (31-10)
+    [/^(\d+) en juego$/, '$1 in play'], [/^perdida$/, 'lost'], [/^devuelta$/, 'refunded'], [/^Mejor cuota acertada$/, 'Best odds won'],
+    [/^(\d+) hechas · (\d+) ganadas? · (\d+) perdidas?( · (\d+) en juego)?$/, (m, a, b, c, d, e) => `${a} made · ${b} won · ${c} lost${d ? ` · ${e} in play` : ''}`],
     // decimales con punto en ingles (x1,25 a x1.25): esta va la ultima de la lista
     [/×(\d+),(\d\d)/g, '×$1.$2'],
   ];
+  // en ingles N y O escriben 1,808 y 18.08 (31-10): las reglas que capturan numeros acepten los dos formatos
+  for (const r of R) r[0] = new RegExp(r[0].source.split('[\\d.]').join('[\\d.,]').split('[\\d,]').join('[\\d.,]'), r[0].flags);
   const tr = (s) => {
     const t = s.trim();
     if (!t) return s;

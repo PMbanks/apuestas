@@ -2,6 +2,19 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "combinadas-todos-0015",
+   "fecha": "2026-10-31",
+   "hora": "00:15",
+   "titulo": "Combinadas de todos",
+   "texto": "Las combinadas salen en Apuestas de todos y en el perfil de cada uno, con cuántas ha hecho, ganado y perdido. Discord también avisa de combinadas y de apuestas canceladas en directo. En inglés, los números salen como 1,808 y 18.08.",
+   "img": [
+    "novedades/combinadas-todos.webp"
+   ],
+   "ir": "colegas",
+   "titulo_en": "Everyone's parlays",
+   "texto_en": "Parlays show up in All bets and on each profile, with how many were made, won and lost. Discord also announces parlays and bets cancelled live. In English, numbers now read 1,808 and 18.08."
+  },
+  {
    "id": "combinadas-0030",
    "fecha": "2026-10-31",
    "hora": "00:30",

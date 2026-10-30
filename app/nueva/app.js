@@ -20,8 +20,8 @@ try { localStorage.removeItem('apuestas-calc') } catch {}
 let loaded = false;
 
 /* ---------- formato ---------- */
-const N = (x) => String(Math.round(x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-const O = (x) => Number(x).toFixed(2).replace('.', ',');
+const N = (x) => String(Math.round(x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, document.documentElement.lang === 'en' ? ',' : '.');
+const O = (x) => Number(x).toFixed(2).replace('.', document.documentElement.lang === 'en' ? '.' : ',');
 const fmt = (t, o) => new Intl.DateTimeFormat('es-ES', { timeZone: TZ, ...o }).format(new Date(t));
 const HM = (t) => fmt(t, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 const DD = (t) => fmt(t, { day: 'numeric' });
@@ -1101,6 +1101,7 @@ function colegas() {
     <div class="ab-gente">${gente}</div>
     <div class="sec-h ab-sec"><h2>En juego</h2><i>${abiertas.length} ${abiertas.length === 1 ? 'apuesta' : 'apuestas'} · ${partidos.length} ${partidos.length === 1 ? 'partido' : 'partidos'}</i></div>
     ${partidos.map(partido).join('') || '<p class="hint">Nadie tiene nada en juego. Se apuesta desde Partidos.</p>'}
+    <div id="cmb-todos"></div>
     ${CH.length ? `<div class="sec-h ab-sec"><h2>Retos 1 contra 1</h2><i>${retosAbiertos.length} abiertos</i></div>${retosHtml(CH.slice(0, 10), '')}` : ''}
     ${todasHtml()}
   </div>`;
@@ -1587,6 +1588,7 @@ function rendimiento(f) {
       <div><h4>Beneficio por deporte</h4><p class="rd-s">Lo ganado o perdido en cada deporte.</p>${barras}</div>
     </div>
     <div class="rd-gw"><h4>${yo ? 'En qué te lo gastas' : 'En qué se lo gasta'}</h4><p class="rd-s">V-Bucks puestos en cada cosa desde el principio.</p>${gasto}</div>
+    <div id="cmb-perfil" data-k="${f.id}"></div>
   </section>`;
 }
 /* ---------- Perfil ---------- */

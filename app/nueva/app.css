@@ -2257,3 +2257,15 @@ html[data-moneda="robux"] .cn{background-image:url(../img/monedas/robux.svg)}
 /* aviso en Partidos: se puede hacer una combinada */
 .cmb-hint{display:flex;align-items:center;gap:10px;margin:10px 0 2px;font:500 12.5px var(--sans);color:var(--mute)}
 .cmb-hint b{color:var(--acc);font-weight:700}.cmb-hint i{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:rgba(242,193,78,.16);color:var(--acc);font:800 12px var(--sans);font-style:normal}
+/* Combinadas de todos (Apuestas de todos) y en el perfil (31-10) */
+.cmt-s{display:grid;gap:2px}
+.cmt{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--hair)}
+.cmt-b{display:grid;gap:6px;min-width:0}.cmt-b p{min-width:0;overflow:hidden;font:500 13px var(--sans);text-overflow:ellipsis;white-space:nowrap}.cmt-b p b{font-weight:700}.cmt-b p span{color:var(--mute)}
+.cmt-ls{display:flex;flex-wrap:wrap;gap:6px 12px;white-space:normal!important}
+.cmt-l{display:inline-flex;align-items:center;gap:5px;font:500 12px var(--sans);color:var(--mute)}.cmt-l i{font-style:normal;font-weight:700}
+.cmt-l.ok{color:var(--win)}.cmt-l.ko{color:#ff8a8a;text-decoration:line-through}.cmt-l.vivo i{color:#ff6b6b}
+.cmt-v{display:grid;justify-items:end;gap:4px;font:500 15px var(--mono)}.cmt-v em{font:500 12px var(--mono);font-style:normal;color:var(--mute)}
+.cmt-v em.up{color:var(--win)}.cmt-v em.dn{color:#ff8a8a}.cmt-v .cn{--s:14px}
+.cmp-n{display:flex;gap:30px;margin:4px 0 10px}.cmp-n small{display:block;font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.cmp-n b{display:flex;align-items:center;margin-top:6px;font:500 20px var(--mono)}.cmp-n b.up{color:var(--win)}.cmp-n b.dn{color:#ff8a8a}.cmp-n .cn{--s:16px;margin-left:4px}
+.cmt-v b,.cmt-v em{display:inline-flex;align-items:center;white-space:nowrap;font-weight:500}.cmt-v b .cn{--s:15px;margin-left:5px}.cmt-v em .cn{--s:13px;margin-left:4px}

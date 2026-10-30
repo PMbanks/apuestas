@@ -14,8 +14,8 @@
 'use strict';
 (function () {
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const N = (x) => String(Math.round(x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  const O = (x) => Number(x).toFixed(2).replace('.', ',');
+  const N = (x) => String(Math.round(x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, document.documentElement.lang === 'en' ? ',' : '.');
+  const O = (x) => Number(x).toFixed(2).replace('.', document.documentElement.lang === 'en' ? '.' : ',');
   const traduce = (el) => { if (window.GM_LANG && el) { try { GM_LANG.traduce(el) } catch {} } };
   const texto = (html) => { const d = document.createElement('div'); d.innerHTML = html; traduce(d); return d.textContent.replace(/\s+/g, ' ').trim() };
   const sinAnim = () => document.documentElement.classList.contains('sin-anim');

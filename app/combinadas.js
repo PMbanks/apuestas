@@ -5,8 +5,8 @@
 'use strict';
 (function () {
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const N = (x) => String(Math.round(x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  const O = (x) => Number(x).toFixed(2).replace('.', ',');
+  const N = (x) => String(Math.round(x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, document.documentElement.lang === 'en' ? ',' : '.');
+  const O = (x) => Number(x).toFixed(2).replace('.', document.documentElement.lang === 'en' ? '.' : ',');
   const coin = () => '<span class="cn"></span>';
   const g = (f) => { try { return f() } catch { return undefined } };
   const traduce = (el) => { if (window.GM_LANG && el) { try { GM_LANG.traduce(el) } catch {} } };
@@ -17,11 +17,12 @@
     const me = g(() => ME); if (!me || C.vivo || (!forzar && Date.now() - C.t < 30e3)) return;
     C.vivo = true;
     try {
+      // las de todos (las ven todos, como las apuestas sueltas): Mis apuestas se queda con las tuyas
       const { data, error } = await db.from('combos')
-        .select('id,stake,odds,status,payout,created_at,combo_legs(match_id,pick,odds,result,matches(home,away,sport,status,starts_at,score,winner))')
-        .eq('player', me).order('created_at', { ascending: false }).limit(30);
+        .select('id,player,stake,odds,status,payout,created_at,settled_at,combo_legs(match_id,pick,odds,result,matches(home,away,sport,status,starts_at,score,winner))')
+        .order('created_at', { ascending: false }).limit(80);
       if (error) throw error;
-      C.list = data || []; C.err = '';
+      C.todas = data || []; C.list = C.todas.filter((c) => c.player === me); C.err = '';
     } catch (e) { C.err = /does not exist|PGRST/.test(String(e && (e.message || e.code))) ? '' : 'No se han podido cargar tus combinadas'; if (!C.list) C.list = [] }
     C.t = Date.now(); C.vivo = false; pinta(true);
   }
@@ -53,8 +54,49 @@
         ${puede ? `<button class="x-cancel ${sure ? 'sure' : ''}" data-cmb-cancel="${c.id}">${IC_X}${sure ? `¿Seguro? Te devuelvo ${N(c.stake)}` : 'Cancelar combinada'}</button>` : ''}</div>
     </article>`;
   }
+  /* ---------- Apuestas de todos y el perfil (PM 31-10: "que salgan en Apuestas de todos y en el perfil") ---------- */
+  const quien = (uid) => g(() => F.find((f) => f.uid === uid));
+  const ava = (f) => (f ? g(() => av(f.id, 'sm')) || '' : '');
+  function filaTodos(c) {
+    const f = quien(c.player), legs = (c.combo_legs || []).slice().sort((a, b) => Date.parse(a.matches?.starts_at || 0) - Date.parse(b.matches?.starts_at || 0));
+    const fin = c.status === 'won' ? `<em class="up">+${N(c.payout)}${coin()}</em>` : c.status === 'lost' ? '<em class="dn">perdida</em>' : c.status === 'void' ? '<em>devuelta</em>' : `<em>→ ${N(c.stake * c.odds)}${coin()}</em>`;
+    return `<div class="cmt ${c.status}" style="--c:var(--f-${f ? f.id : 'pm'})">${ava(f)}<div class="cmt-b"><p><b>${esc(f ? f.n : '?')}</b> <span>Combinada de ${legs.length} · cuota ${O(c.odds)}</span></p>
+      <p class="cmt-ls">${legs.map((l) => { const [k, ic] = estadoPata(l); return `<span class="cmt-l ${k}"><i>${ic || '·'}</i>${esc(nombre(l.matches || {}, l.pick))}</span>` }).join('')}</p></div>
+      <span class="cmt-v"><b>${N(c.stake)}${coin()}</b>${fin}</span></div>`;
+  }
+  function pintaTodos(slot) {
+    const recientes = (C.todas || []).filter((c) => c.status === 'open' || Date.parse(c.settled_at || 0) > Date.now() - 2 * 864e5);
+    const f = JSON.stringify(['t', recientes.map((c) => [c.id, c.status, (c.combo_legs || []).map((l) => l.result)]), document.documentElement.lang]);
+    if (slot.dataset.f === f && slot.childElementCount) return;
+    slot.dataset.f = f;
+    slot.innerHTML = !recientes.length ? '' : `<div class="sec-h ab-sec"><h2>Combinadas</h2><i>${recientes.filter((c) => c.status === 'open').length} en juego</i></div><div class="cmt-s">${recientes.map(filaTodos).join('')}</div>`;
+    traduce(slot);
+  }
+  function pintaPerfil(slot) {
+    const f = g(() => F.find((x) => x.id === slot.dataset.k)); if (!f) return;
+    const suyas = (C.todas || []).filter((c) => c.player === f.uid);
+    const firmaP = JSON.stringify(['p', f.id, suyas.map((c) => [c.id, c.status]), document.documentElement.lang]);
+    if (slot.dataset.f === firmaP && slot.childElementCount) return;
+    slot.dataset.f = firmaP;
+    if (!suyas.length) { slot.innerHTML = ''; return }
+    const gan = suyas.filter((c) => c.status === 'won'), per = suyas.filter((c) => c.status === 'lost'), abiertas = suyas.filter((c) => c.status === 'open');
+    const neto = [...gan, ...per].reduce((t, c) => t + (c.status === 'won' ? c.payout - c.stake : -c.stake), 0), mejor = gan.reduce((m, c) => Math.max(m, +c.odds), 0);
+    slot.innerHTML = `<div class="rd-gw cmp"><h4>Combinadas</h4><p class="rd-s">${suyas.length} hechas · ${gan.length} ${gan.length === 1 ? 'ganada' : 'ganadas'} · ${per.length} ${per.length === 1 ? 'perdida' : 'perdidas'}${abiertas.length ? ` · ${abiertas.length} en juego` : ''}</p>
+      <div class="cmp-n"><span><small>Beneficio</small><b class="${neto > 0 ? 'up' : neto < 0 ? 'dn' : ''}">${neto > 0 ? '▲' : neto < 0 ? '▼' : ''}${N(Math.abs(neto))}${coin()}</b></span>${mejor ? `<span><small>Mejor cuota acertada</small><b>${O(mejor)}</b></span>` : ''}</div>
+      <div class="cmt-s">${suyas.slice(0, 3).map(filaTodos).join('')}</div></div>`;
+    traduce(slot);
+  }
+  function pintaOtros() {
+    const t = document.getElementById('cmb-todos'), p = document.getElementById('cmb-perfil');
+    if (!t && !p) return;
+    if (!C.todas) { carga(); return }
+    if (t) pintaTodos(t);
+    if (p) pintaPerfil(p);
+  }
+
   let firma = '';
   function pinta(todo) {
+    pintaOtros();
     const slot = document.getElementById('cmb-slot'); if (!slot) return;
     if (!C.list) { carga(); return }
     const abiertas = C.list.filter((c) => c.status === 'open'), cerradas = C.list.filter((c) => c.status !== 'open').slice(0, 6);
@@ -83,7 +125,11 @@
   let pendiente = false;
   new MutationObserver(() => {
     if (pendiente) return; pendiente = true;
-    queueMicrotask(() => { pendiente = false; const s = document.getElementById('cmb-slot'); if (s && !s.childElementCount) { pinta(true); carga() } });
+    queueMicrotask(() => {
+      pendiente = false;
+      const s = document.getElementById('cmb-slot'), t = document.getElementById('cmb-todos'), p = document.getElementById('cmb-perfil');
+      if ((s && !s.childElementCount) || (t && !t.childElementCount) || (p && !p.childElementCount)) { pinta(true); carga() }
+    });
   }).observe(document.documentElement, { childList: true, subtree: true });
-  setInterval(() => { if (document.getElementById('cmb-slot') && !document.hidden) carga() }, 60e3);
+  setInterval(() => { if (document.querySelector('#cmb-slot, #cmb-todos, #cmb-perfil') && !document.hidden) carga() }, 60e3);
 })();

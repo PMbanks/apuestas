@@ -34,7 +34,7 @@
   /* ---------- utilidades ---------- */
   function lee(k) { try { return localStorage.getItem(k) } catch { return null } }
   function guarda(k, v) { try { localStorage.setItem(k, String(v)) } catch {} }
-  const N = (x) => String(Math.round(x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const N = (x) => String(Math.round(x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, document.documentElement.lang === 'en' ? ',' : '.');
   const X = (m) => { const t = Number(m).toFixed(2); return window.GM_LANG && GM_LANG.get && GM_LANG.get() === 'en' ? t : t.replace('.', ',') };   // en ingles, decimales con punto
   const M1 = (m) => String(m).replace('.', ',');
   const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

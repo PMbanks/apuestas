@@ -12,8 +12,8 @@
   window.__gaExtras = true;
   const CFG = window.APP_CONFIG || {};
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const N = (x) => String(Math.round(x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  const O = (x) => Number(x).toFixed(2).replace('.', ',');
+  const N = (x) => String(Math.round(x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, document.documentElement.lang === 'en' ? ',' : '.');
+  const O = (x) => Number(x).toFixed(2).replace('.', document.documentElement.lang === 'en' ? '.' : ',');
   const lang = () => (window.GM_LANG && GM_LANG.get() === 'en' ? 'en-GB' : 'es-ES');
   const traduce = (el) => { if (window.GM_LANG && el) { try { GM_LANG.traduce(el) } catch {} } };
   const coin = () => '<span class="cn"></span>';
@@ -54,7 +54,7 @@
   }
   const centimos = (txt) => { const m = /(\d+),(\d\d)/.exec(txt || ''); return m ? +m[1] * 100 + +m[2] : null };
   const mejora = (c, pct) => Math.floor((c * (100 + pct) + 50) / 100);         // igual que round(o * (100 + pct) / 100, 2) en la base
-  const fmtC = (c) => (c / 100).toFixed(2).replace('.', ',');
+  const fmtC = (c) => (c / 100).toFixed(2).replace('.', document.documentElement.lang === 'en' ? '.' : ',');
   const aplica = (b, p) => !b.pick || b.pick === p;
   const cuando = (t) => { try { const f = (o) => new Intl.DateTimeFormat(lang(), { timeZone: 'Europe/Madrid', ...o }).format(new Date(t)); return `${f({ weekday: 'short' }).replace('.', '')} ${f({ hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}` } catch { return '' } };
   const quePick = (b) => (b.pick ? `la cuota de ${b.pick === '1' ? b.home : b.pick === '2' ? b.away : 'el empate'}` : 'las tres cuotas');

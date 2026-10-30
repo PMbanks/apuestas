@@ -11,7 +11,7 @@
   const RAR = { esp: ['Especial', '#e4ae39'], cov: ['Encubierto', '#eb4b4b'], cla: ['Clasificado', '#d32ce6'], res: ['Restringido', '#8847ff'], mil: ['Grado militar', '#4b69ff'] };
   const IMG_OK = /^https:\/\/(community\.akamai\.steamstatic\.com|pmbanks\.github\.io)\//;
   const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const N = (x) => String(Math.round(+x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const N = (x) => String(Math.round(+x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, document.documentElement.lang === 'en' ? ',' : '.');
   const quieto = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return false } };
   const corta = (t, n) => String(t ?? '').slice(0, n);
 
