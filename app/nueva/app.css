@@ -2204,3 +2204,26 @@ html[data-moneda="robux"] .cn{background-image:url(../img/monedas/robux.svg)}
 /* movil estrecho: que el engranaje quepa siempre a la derecha del saldo */
 @media (max-width:440px){.top{gap:7px;padding:0 12px}.top .bal{font-size:20px}.top .bal .cn{--s:20px;margin-left:5px}.top .aj-btn{margin-left:0;width:30px;height:30px}.top .aj-btn svg{width:19px;height:19px}}
 @media (max-width:380px){.top .onl{display:none}}
+/* Cancelar apuesta (30-10 noche): un boton que se ve, rojo suave con su X; al primer toque pide confirmar con lo que devuelve */
+.x-cancel{display:inline-flex;align-items:center;gap:7px;flex:none;margin-left:12px;padding:9px 16px 9px 12px;border:0;border-radius:999px;background:rgba(255,99,99,.14);color:#ff9d9d;font:700 13px/1 var(--sans);white-space:nowrap;cursor:pointer}
+.x-cancel svg{flex:none;width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+.x-cancel:hover{background:rgba(255,99,99,.24);color:#ffc4c4}
+.x-cancel.sure{background:#e5484d;color:#fff;border-bottom-color:transparent;box-shadow:0 6px 18px rgba(229,72,77,.35)}
+.bol-n .x-cancel{align-self:center;margin-left:auto}
+@media (max-width:560px){.bol-n{flex-wrap:wrap}.bol-n .x-cancel{width:100%;justify-content:center;margin:6px 0 0;padding:12px 16px}}
+/* Cancelar durante el partido = cash out (30-10 noche): misma pildora que Cancelar apuesta; roja si cobras menos de lo apostado, verde si mas */
+.xc-btn{display:inline-flex;align-items:center;flex:none;margin-left:12px;padding:9px 16px;border:0;border-radius:999px;font:700 13px/1 var(--sans);white-space:nowrap;cursor:pointer}
+.xc-btn b,.bol-n .xc-btn b{display:inline;margin:0 0 0 4px;font:600 14px/1 var(--mono);letter-spacing:-.02em;color:inherit}
+.xc-btn .cn{--s:15px;margin-left:4px}
+.xc-btn span{margin-left:2px;font-weight:600}
+.xc-btn.neg{background:rgba(255,99,99,.14);color:#ff9d9d}.xc-btn.neg:hover{background:rgba(255,99,99,.24)}
+.xc-btn.pos{background:rgba(43,212,125,.14);color:#6ee7a8}.xc-btn.pos:hover{background:rgba(43,212,125,.24)}
+.xc-btn.sure.neg{background:#e5484d;color:#fff;box-shadow:0 6px 18px rgba(229,72,77,.35)}
+.xc-btn.sure.pos{background:#22b36a;color:#04160b;box-shadow:0 6px 18px rgba(34,179,106,.35)}
+.xc-btn.off{background:rgba(255,255,255,.06);color:var(--dim);cursor:default}
+.bol-n .xc-btn{align-self:center;margin-left:auto}
+.dm{flex-wrap:wrap;height:auto;min-height:50px;padding:6px 0}
+.dm .xc-btn,.dm .x-cancel{margin-left:auto}
+.xc-vy{margin-top:6px}.xc-vy .xc-btn{width:100%;justify-content:center;margin-left:0}
+@media (max-width:560px){.bol-n .xc-btn{width:100%;justify-content:center;margin:6px 0 0;padding:12px 16px;white-space:normal}}
+.bol-n{flex-wrap:wrap;row-gap:14px}

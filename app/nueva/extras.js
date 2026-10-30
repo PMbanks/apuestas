@@ -386,6 +386,80 @@
     XV.guardando = false; rev();
   }
 
+  /* =====================================================================================================
+     CANCELAR DURANTE EL PARTIDO = cash out (db/024_cashout.sql). PM, 30-10 noche: "que pueda cancelar apuestas antes de su
+     partido y tambien durante, pero si lo hago durante tal vez pierdo X dinero, como en las casas de apuestas reales".
+     Antes de empezar manda el boton de app.js (cancel_bet, devuelve todo). Ya empezado, este: cobras lo que vale tu apuesta
+     ahora mismo (lo calcula el servidor con el marcador, menos el margen de la casa; nunca mas de lo que pagaria si gana).
+     Aqui solo se pregunta el valor (cada 20 s) y se pide, con confirmacion de dos toques.
+     ===================================================================================================== */
+  const CO = { t: 0, q: new Map(), vivo: false, off: 0, sure: null, busy: false };
+  async function cargaCO(forzar) {
+    if (CO.vivo || Date.now() < CO.off || (!forzar && Date.now() - CO.t < 20e3)) return;
+    CO.vivo = true;
+    try { const l = await rpc('cash_out_quotes'); CO.q = new Map((l || []).map((x) => [x.bet, x])); CO.t = Date.now() }
+    catch (e) { CO.off = Date.now() + (noEsta(e) ? 30 : 2) * 60e3; CO.t = Date.now() }
+    CO.vivo = false; rev();
+  }
+  function botonCO(id, qt) {
+    if (!qt.ok) return { sig: `${id}|no|${qt.why || ''}`, html: `<button class="xc-btn off" disabled data-bet="${id}" data-sig="${esc(`${id}|no|${qt.why || ''}`)}" title="${esc(qt.why || '')}">Cancelar no disponible</button>` };
+    const sure = CO.sure && CO.sure.bet === id, v = qt.value, dif = v - qt.stake, sig = `${id}|${v}|${sure ? 1 : 0}`;
+    const txt = sure ? `¿Seguro? Cobras <b>${N(v)}</b>${coin()}<span>, ${dif < 0 ? 'pierdes' : 'ganas'} ${N(Math.abs(dif))}</span>`
+      : `Cancelar · cobras <b>${N(v)}</b>${coin()}`;
+    return { sig, html: `<button class="xc-btn ${sure ? 'sure' : ''} ${dif < 0 ? 'neg' : 'pos'}" data-xc="ask" data-bet="${id}" data-sig="${sig}" title="${dif >= 0 ? 'Ganas' : 'Pierdes'} ${N(Math.abs(dif))} frente a lo apostado">${txt}</button>` };
+  }
+  // solo con el partido ya empezado: antes, el boton de cancelar de app.js lo devuelve todo
+  const enJuego = (qt) => qt && qt.mode !== 'pre';
+  function pon(fila, id, ya, despues) {
+    const qt = CO.q.get(id);
+    if (!enJuego(qt)) { if (ya) ya.remove(); return }
+    const b = botonCO(id, qt);
+    if (ya && ya.dataset.sig === b.sig) return;
+    if (ya) ya.remove();
+    if (despues) { fila.insertAdjacentHTML('afterend', `<div class="xc-vy">${b.html}</div>`); traduce(fila.nextElementSibling) }
+    else { fila.insertAdjacentHTML('beforeend', b.html); traduce(fila.lastElementChild) }
+  }
+  function parcheaCash() {
+    if (CO.sure && Date.now() - CO.sure.t > 6000) CO.sure = null;
+    // boletos de Mis apuestas: el numero de la apuesta esta en el propio boleto ("Nº 000123")
+    document.querySelectorAll('.bol[data-goto]').forEach((art) => {
+      const id = +((/(\d+)/.exec(art.querySelector('.bol-no')?.textContent || '') || [])[1] || 0), fila = art.querySelector('.bol-n');
+      if (fila && id) pon(fila, id, art.querySelector('.xc-btn'));
+    });
+    // "Tus apuestas aqui" en la ficha del partido
+    document.querySelectorAll('.dm[data-bet]').forEach((dm) => pon(dm, +dm.dataset.bet, dm.querySelector('.xc-btn')));
+    // la tarjeta de tus apuestas en directo, encima del perfil: una por apuesta, en el mismo orden que las del servidor
+    const porPartido = new Map();
+    for (const qt of CO.q.values()) { const l = porPartido.get(qt.match) || []; l.push(qt); porPartido.set(qt.match, l) }
+    const vistos = new Map();
+    document.querySelectorAll('#vivoyo .vy[data-vivo]').forEach((vy) => {
+      const m = vy.dataset.vivo, k = vistos.get(m) || 0; vistos.set(m, k + 1);
+      const qt = (porPartido.get(m) || [])[k], ya = vy.nextElementSibling && vy.nextElementSibling.classList.contains('xc-vy') ? vy.nextElementSibling : null;
+      if (!qt) { if (ya) ya.remove(); return }
+      pon(vy, qt.bet, ya && ya.firstElementChild, true);
+      if (ya && !ya.firstElementChild) ya.remove();
+    });
+  }
+  async function pideCO(id) {
+    if (CO.busy) return;
+    if (!(CO.sure && CO.sure.bet === id)) {
+      // primer toque: se pide el valor de ahora mismo y se enseña para confirmar
+      CO.sure = { bet: id, t: Date.now() }; rev();
+      try { const q = await rpc('cash_out_quote', { p_bet: id }); if (q && q.ok) CO.q.set(id, { ...CO.q.get(id), ...q, match: q.match || (CO.q.get(id) || {}).match }); else { CO.sure = null; avisa(esc((q && q.why) || 'Ahora no se puede cancelar')); cargaCO(true) } }
+      catch (e) { CO.sure = null; avisa(aviso(e)) }
+      rev(); setTimeout(rev, 6200); return;
+    }
+    const qt = CO.q.get(id); CO.busy = true;
+    try {
+      const r = await rpc('cash_out', { p_bet: id, p_min: qt ? qt.value : null });
+      avisa(`Cancelada: cobras <b>${N(r.value)}</b> · ${r.beneficio >= 0 ? 'ganas' : 'pierdes'} ${N(Math.abs(r.beneficio))}`);
+      CO.q.delete(id); recarga();
+    } catch (e) { avisa(aviso(e)) }
+    CO.sure = null; CO.busy = false; await cargaCO(true); rev();
+  }
+  // en fase de captura, para que el boleto (que lleva al partido) no navegue al tocar el boton
+  document.addEventListener('click', (e) => { const c = e.target.closest('[data-xc]'); if (c) { e.stopPropagation(); e.preventDefault(); pideCO(+c.dataset.bet) } }, true);
+
   /* ---------- clics ---------- */
   document.addEventListener('click', (e) => {
     const p = e.target.closest('[data-xp]');
@@ -416,6 +490,7 @@
     if (document.querySelector('.p-board, .det')) { if (Date.now() - B.t > 90e3) cargaBoost(); parcheaBoost() }
     if (document.querySelector('.dv [data-dv-info]')) pintaPred();
     if (document.querySelector('.pf')) pintaPerfil();
+    if (document.querySelector('.bol, .dm[data-bet], #vivoyo .vy')) { cargaCO(); parcheaCash() }
   }
   let pendiente = false;
   new MutationObserver(() => { if (pendiente) return; pendiente = true; queueMicrotask(() => { pendiente = false; try { rev() } catch (e) { if (!rev.avisado) { rev.avisado = 1; console.warn('extras.js', e) } } }) }).observe(document.documentElement, { childList: true, subtree: true });

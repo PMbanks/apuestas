@@ -233,7 +233,10 @@ const isDaily = (m) => DAILY.some((d) => d.match === m.id);
 const fmtPay = (t) => { const s = Math.max(0, (t - Date.now()) / 1e3), d = (s / 86400) | 0, h = ((s % 86400) / 3600) | 0, mi = ((s % 3600) / 60) | 0, se = (s % 60) | 0, z = (n) => String(n).padStart(2, '0'); return `${d ? d + 'd ' : ''}${z(h)}:${z(mi)}:${z(se)}` };
 const myBetsOn = (mid) => ALL.filter((b) => b.k === MEK && b.m === mid && b.st === 'open');
 const canCancel = (b) => { const m = byId(b.m); return b.k === MEK && b.st === 'open' && m && isOpen(m) };
-const cancelBtn = (b) => (canCancel(b) ? `<button class="x-cancel ${S.sure === 'b' + b.id ? 'sure' : ''}" data-cancel="${b.id}">${S.sure === 'b' + b.id ? '¿Seguro? Toca otra vez' : 'Cancelar'}</button>` : '');
+// PM, 30-10 noche: "pon lo de cancelar apuesta y que se vea tambien visualmente el boton": antes era un texto gris pequeño.
+// Se puede mientras el partido no empiece (cancel_bet, db/003) y devuelve lo apostado entero; el segundo toque confirma.
+const IC_X = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>';
+const cancelBtn = (b) => (canCancel(b) ? `<button class="x-cancel ${S.sure === 'b' + b.id ? 'sure' : ''}" data-cancel="${b.id}">${IC_X}${S.sure === 'b' + b.id ? `¿Seguro? Te devuelvo ${N(b.stake)}` : 'Cancelar apuesta'}</button>` : '');
 const STAR = '<svg class="star" viewBox="0 0 24 24"><path d="M12 3.2l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.5l6-.8z"/></svg>';
 const dailyTag = (m) => (isDaily(m) ? `<span class="dly" title="Apuesta del día${DAILY_ON ? ': se cobra ×' + O(DAILY_BONUS) : ''}">${STAR}${DAILY_ON ? '×' + O(DAILY_BONUS) : ''}</span>` : '');
 const calcChips = () => `<span class="calc"><span class="lab">Cobro con</span>${[0, 100, 250, 500, 1000].map((v) => `<button class="chip ${S.calc === v ? 'on' : ''}" data-calc="${v}">${v ? N(v) : 'nada'}</button>`).join('')}</span>`;
@@ -850,7 +853,7 @@ function ficha(m) {
       <button class="go" data-act="bet" data-go ${st < 1 ? 'disabled' : ''}>Apostar ${N(st)}</button>`;
   }
   const mineHere = myBetsOn(m.id);
-  if (mineHere.length) h += `<div class="d-mine"><span class="lab">Tus apuestas aquí</span>${mineHere.map((b) => `<div class="dm"><strong>${esc(pn(m, b.p))} <em>${O(b.o)}</em></strong><span>${N(b.stake)} → <b>${N(b.stake * b.o)}${coin()}</b></span><button class="x-share" data-share="${b.id}">Al chat</button>${cancelBtn(b)}</div>`).join('')}</div>`;
+  if (mineHere.length) h += `<div class="d-mine"><span class="lab">Tus apuestas aquí</span>${mineHere.map((b) => `<div class="dm" data-bet="${b.id}"><strong>${esc(pn(m, b.p))} <em>${O(b.o)}</em></strong><span>${N(b.stake)} → <b>${N(b.stake * b.o)}${coin()}</b></span><button class="x-share" data-share="${b.id}">Al chat</button>${cancelBtn(b)}</div>`).join('')}</div>`;
   h += `<div id="espn-box" class="espn" data-m="${m.id}">${m.espn ? '<p class="hint">Cargando datos de ESPN…</p>' : tvHtml(m.tv || [], m)}</div>`;
   const rts = CH.filter((c) => c.m === m.id);
   if (isOpen(m) || rts.length) h += `<div class="d-retos">${rts.length ? retosHtml(rts, '') : ''}${isOpen(m) ? retoForm(m) : ''}</div>`;

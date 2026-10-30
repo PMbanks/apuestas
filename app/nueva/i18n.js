@@ -451,6 +451,11 @@
     [/^Mapa (\d+) de (\d+) · (.+)$/, 'Map $1 of $2 · $3'], [/^Mapa (\d+) de (\d+)$/, 'Map $1 of $2'], [/^(\d+) en vivo$/, '$1 live'],
     // prediccion de ronda en la celebracion y en Resultados: 'Ronda 18 de Split · Nova Esports' (30-10 noche)
     [/^Ronda (\d+) de (.+?) · (.+)$/, 'Round $1 on $2 · $3'],
+    // cancelar apuesta, antes y durante el partido (30-10 noche)
+    [/^Cancelar apuesta$/, 'Cancel bet'], [/^¿Seguro\? Te devuelvo ([\d.]+)$/, 'Sure? You get $1 back'], [/^Cancelar · cobras$/, 'Cancel · you get'],
+    [/^¿Seguro\? Cobras$/, 'Sure? You get'], [/^, (pierdes|ganas) ([\d.]+)$/, (m, v, n) => `, you ${v === 'pierdes' ? 'lose' : 'win'} ${n}`],
+    [/^Cancelar no disponible$/, 'Cancel not available'], [/^Cancelada: cobras$/, 'Cancelled: you get'], [/^· (pierdes|ganas) ([\d.]+)$/, (m, v, n) => `· you ${v === 'pierdes' ? 'lose' : 'win'} ${n}`],
+    [/^Cancelada: te devuelvo$/, 'Cancelled: you get back'],
     // decimales con punto en ingles (x1,25 a x1.25): esta va la ultima de la lista
     [/×(\d+),(\d\d)/g, '×$1.$2'],
   ];

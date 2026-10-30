@@ -2,6 +2,19 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "cancelar-apuesta-2355",
+   "fecha": "2026-10-30",
+   "hora": "23:55",
+   "titulo": "Cancelar apuesta",
+   "texto": "Antes del partido, Cancelar apuesta te devuelve todo. Ya empezado también puedes cancelar: cobras lo que vale tu apuesta en ese momento, menos si va mal y más si va bien, como en las casas de apuestas.",
+   "img": [
+    "novedades/cancelar-apuesta.webp"
+   ],
+   "ir": "apuestas",
+   "titulo_en": "Cancel bet",
+   "texto_en": "Before the match, Cancel bet gives you everything back. Once it has started you can still cancel: you get what your bet is worth right then, less if it is going badly and more if it is going well, like real bookmakers."
+  },
+  {
    "id": "futbol-ligas-2345",
    "fecha": "2026-10-30",
    "hora": "23:45",
