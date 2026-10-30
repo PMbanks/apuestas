@@ -23,13 +23,13 @@
   const POR_PAG = 8;          // batallas terminadas por pagina
   const INV_PASO = 60;        // skins del inventario que se pintan de cada vez
   const ESP_VER = 6;          // cuchillos y guantes que se ven de primeras en lo que trae una caja
-  const CATS = [['skins', 'Skins de CS2'], ['lujo', 'Lujo']];
+  const CATS = [['skins', 'Skins de CS2'], ['lujo', 'Lujo'], ['cosmeticos', 'Cosméticos']];
   const ORDENES = [['valor', 'Más valiosas'], ['nuevas', 'Más nuevas'], ['rareza', 'Por rareza']];
   const SEL_BAT = 'id,mode,cases,cost,status,created_by,winner,totals,created_at,done_at,cs_battle_seats(seat,player)';
 
   /* ---------- estado ---------- */
   let ctx = null, root = null;
-  const S = { tab: 'abrir', cat: lee('cj-cat') === 'lujo' ? 'lujo' : 'skins', caja: null, n: 1, rapido: lee('cj-rapido') === '1', quien: null, sel: new Set(), bat: null, nueva: null, res: null, sure: null, rep: null, espTodo: null,
+  const S = { tab: 'abrir', cat: ['lujo', 'cosmeticos'].includes(lee('cj-cat')) ? lee('cj-cat') : 'skins', caja: null, n: 1, rapido: lee('cj-rapido') === '1', quien: null, sel: new Set(), bat: null, nueva: null, res: null, sure: null, rep: null, espTodo: null,
     orden: ['valor', 'nuevas', 'rareza'].includes(lee('cj-orden')) ? lee('cj-orden') : 'valor', fR: null, fC: null, invN: INV_PASO, pag: 0 };
   const D = { cases: null, caja: new Map(), items: new Map(), st: null, bats: new Map(), err: null, hechas: null, cajasDe: new Map() };
   let anim = null, pendiente = false, cargando = null, otraVez = false, ultima = 0, ocupado = false;
@@ -60,8 +60,8 @@
     return [w.replace(/^★ /, ''), (k || 'Original') + (it.phase ? ' · ' + it.phase : '')];
   }
   const nombre = (it) => { const p = partes(it); return p.length > 1 ? { top: p[0], main: p[1] } : { top: '', main: p[0] } };
-  const esLujo = (id) => /^lujo/.test(String(id || ''));
-  const catDe = (c) => { const k = c && (c.cat || c.category || c.categoria); return k ? (/lujo/i.test(k) ? 'lujo' : 'skins') : esLujo(c && c.id) ? 'lujo' : 'skins' };
+  const esLujo = (id) => /^(lujo|cos)-/.test(String(id || ''));
+  const catDe = (c) => { const k = c && (c.cat || c.category || c.categoria); return k ? (/lujo/i.test(k) ? 'lujo' : /cosm/i.test(k) ? 'cosmeticos' : 'skins') : /^cos-/.test(String((c && c.id) || '')) ? 'cosmeticos' : esLujo(c && c.id) ? 'lujo' : 'skins' };
   const caja = (id) => (D.cases && D.cases.find((c) => c.id === id)) || D.caja.get(id) || {};
   // cajas sin abrir (las regala la ruleta de la semana): las tuyas, de una caja o todas
   const mias = (cid) => (D.cajasDe.get(ctx && ctx.me) || []).filter((o) => !cid || o.case_id === cid);
@@ -673,7 +673,7 @@
         pinta(); arriba();
         if (v === 'batallas' && !S.bat) { await cargaHechas(); pinta() }
         return;
-      case 'cat': S.cat = v === 'lujo' ? 'lujo' : 'skins'; guarda('cj-cat', S.cat); return pinta();
+      case 'cat': S.cat = ['lujo', 'cosmeticos'].includes(v) ? v : 'skins'; guarda('cj-cat', S.cat); return pinta();
       case 'caja': S.caja = v; S.res = null; pinta(); arriba(); try { await cargaCaja(v) } catch (err) { avisa(esc(msgErr(err))) } return pinta();
       case 'cajas': S.caja = null; S.res = null; pinta(); return arriba();
       case 'n': S.n = +v; return pinta();
