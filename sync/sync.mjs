@@ -14,9 +14,9 @@ const UA = { 'user-agent': 'apuestas-colegas/1.0' };
 
 const SOCCER = [
   ['esp.1', 'LaLiga'], ['eng.1', 'Premier League'], ['ger.1', 'Bundesliga'], ['ita.1', 'Serie A'], ['fra.1', 'Ligue 1'],
-  ['uefa.champions', 'Champions League'], ['uefa.europa', 'Europa League'], ['uefa.europa.conf', 'Conference League'],
-  ['esp.copa_del_rey', 'Copa del Rey'], ['eng.fa', 'FA Cup'], ['esp.2', 'LaLiga Hypermotion'], ['por.1', 'Liga Portugal'],
-  ['ned.1', 'Eredivisie'], ['usa.1', 'MLS'], ['mex.1', 'Liga MX'], ['arg.1', 'Liga Argentina'], ['bra.1', 'Brasileirão'],
+  // PM, 30-10 noche: fuera FA Cup, MLS, Conference League, Eredivisie, Brasileirao, Liga MX y Liga Portugal (db/028 borra lo que habia)
+  ['uefa.champions', 'Champions League'], ['uefa.europa', 'Europa League'],
+  ['esp.copa_del_rey', 'Copa del Rey'], ['esp.2', 'LaLiga Hypermotion'], ['arg.1', 'Liga Argentina'],
   ['sau.1', 'Saudi Pro League'], ['uefa.nations', 'Nations League'], ['fifa.worldq.uefa', 'Clasificación Mundial'], ['fifa.friendly', 'Amistosos'],
 ];
 const SOCCER_PAST = 3 * DAY, SOCCER_AHEAD = 10 * DAY, UFC_AHEAD = 70 * DAY;
