@@ -74,7 +74,7 @@ function build(st, rows, chat, ex) {
     id: r.id, s: r.sport, lg: r.league, a: r.home, b: r.away, la: r.home_logo, lb: r.away_logo, at: r.starts_at,
     o: [r.odds_1, r.odds_x, r.odds_2].map((x) => (x == null ? null : Number(x))), status: r.status, live: r.status === 'live',
     score: r.score, winner: r.winner, tag: r.tag, venue: r.venue, stage: r.stage, bo: r.bo, tape: r.details?.tape || [], src: r.odds_src,
-    tv: r.details?.tv || [], espn: r.details?.espn || null, players: r.details?.players || null, recent: r.details?.recent || null, tier: r.details?.tier || null, tid: r.details?.ids || null,
+    tv: r.details?.tv || [], espn: r.details?.espn || null, players: r.details?.players || null, recent: r.details?.recent || null, tier: r.details?.tier || null, tid: r.details?.ids || null, tour: r.details?.bracket ? `${r.details.game}:${r.details.tour}` : null,
   }));
   MI = new Map(M.map((m) => [m.id, m]));
   L = {}; for (const r of rows) if (!L[r.league]) L[r.league] = [r.league_name, r.league_logo || SP[r.sport][1]];
@@ -378,6 +378,60 @@ async function fillSheet() {
   if (window.GM_LANG) GM_LANG.traduce(now);
 }
 
+/* bracket del torneo (Valorant y CS2; lo guarda el sincronizador en la tabla brackets, db/011) */
+const BRK = new Map();
+const brRonda = (n) => String(n).split(':')[0].replace(/\s+(Match\s+)?\d+$/i, '').trim();
+const brSec = (n) => (/grand final/i.test(n) ? 'Gran final' : /lower/i.test(n) ? 'Cuadro de perdedores' : /upper/i.test(n) ? 'Cuadro de ganadores' : 'Eliminatorias');
+const brNom = (r) => { const x = r.replace(/^(upper|lower) bracket\s*/i, '').trim(); return /grand final/i.test(x) ? 'Gran final' : /^quarter/i.test(x) ? 'Cuartos' : /^semi/i.test(x) ? 'Semis' : /^final$/i.test(x) ? 'Final' : x.replace(/^round/i, 'Ronda') || 'Ronda' };
+function bracketHtml(ms, cur) {
+  const secs = new Map();
+  for (const x of ms) { const sc = brSec(x.name), rk = brRonda(x.name); if (!secs.has(sc)) secs.set(sc, new Map()); const rs = secs.get(sc); if (!rs.has(rk)) rs.set(rk, []); rs.get(rk).push(x) }
+  const t0 = (x) => Date.parse(x.at || '') || 9e15;
+  const orden = ['Cuadro de ganadores', 'Eliminatorias', 'Cuadro de perdedores', 'Gran final'];
+  const fila = (x, e, sc, w) => `<div class="bt ${w ? 'w' : ''} ${e ? '' : 'tbd'}">${e?.img ? `<img class="tl" src="${esc(e.img)}" alt="" loading="lazy">` : '<span class="bt-i"></span>'}<span class="bt-n">${esc(e ? e.acr || e.n : 'Por decidir')}</span><b>${sc ?? ''}</b></div>`;
+  return [...secs.entries()].sort((a, b) => orden.indexOf(a[0]) - orden.indexOf(b[0])).map(([sc, rs]) => {
+    const cols = [...rs.entries()].sort((a, b) => Math.min(...a[1].map(t0)) - Math.min(...b[1].map(t0)) || a[1][0].id - b[1][0].id);
+    return `<section class="brk-s"><span class="lab">${sc}</span><div class="brk-cols">${cols.map(([rk, xs]) => `<div class="brk-c"><span class="brk-r">${esc(brNom(rk))}</span><div class="brk-ms">${xs.sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true })).map((x) => {
+      const live = x.st === 'running', fin = x.st === 'finished';
+      return `<div class="brk-m ${live ? 'live' : ''} ${String(x.id) === cur ? 'yo' : ''}" data-bm="${x.id}" data-prev="${(x.prev || []).filter((p) => p.t === 'winner').map((p) => p.id).join(',')}">
+        <span class="bm-h">${live ? 'EN VIVO' : fin ? 'Final' : x.at ? `${WD(Date.parse(x.at))} ${HM(Date.parse(x.at))}` : ''}${x.bo ? ' · BO' + x.bo : ''}</span>${fila(x, x.a, x.sa, fin && x.w && x.a && x.w === x.a.id)}${fila(x, x.b, x.sb, fin && x.w && x.b && x.w === x.b.id)}</div>` }).join('')}</div></div>`).join('')}</div></section>`;
+  }).join('');
+}
+function bracketSheet(m) {
+  return `<section class="det sheet ${S.sheet ? 'open' : ''}" data-keep="dt">
+    <button class="det-x vis" data-act="brk-back">← ${esc(m.a)} vs ${esc(m.b)}</button>
+    <div class="sh-hd"><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt=""><div><h2>${esc(L[m.lg]?.[0] || '')}</h2><span class="lab">${esc(m.stage || '')}</span></div></div>
+    <div id="brk-box" data-t="${esc(m.tour)}" data-cur="${esc(String(m.id).split(':').pop())}"><p class="hint">Cargando el bracket…</p></div>
+  </section>`;
+}
+async function fillBracket() {
+  const box = document.getElementById('brk-box'); if (!box) return;
+  const k = box.dataset.t; let d = BRK.get(k);
+  if (!d || Date.now() - d.t > 3e5) { const { data } = await db.from('brackets').select('data').eq('id', k).maybeSingle(); d = { t: Date.now(), ms: data?.data || [] }; BRK.set(k, d) }
+  const now = document.getElementById('brk-box'); if (!now || now.dataset.t !== k) return;
+  now.innerHTML = d.ms.length ? `<div class="brk">${bracketHtml(d.ms, now.dataset.cur)}</div>` : '<p class="hint">Este torneo todavía no tiene bracket.</p>';
+  if (window.GM_LANG) GM_LANG.traduce(now);
+  brLineas(now);
+  const yo = now.querySelector('.brk-m.yo'), cols = yo?.closest('.brk-cols'); if (cols) cols.scrollLeft = Math.max(0, yo.offsetLeft - cols.clientWidth / 2 + yo.offsetWidth / 2);
+}
+// lineas de quien pasa a donde, dentro de cada cuadro
+function brLineas(box) {
+  box.querySelectorAll('.brk-s').forEach((sec) => {
+    const cols = sec.querySelector('.brk-cols'); cols.querySelector('svg.brk-l')?.remove();
+    const R = cols.getBoundingClientRect(), W = cols.scrollWidth, H = cols.scrollHeight;
+    let d = '';
+    cols.querySelectorAll('.brk-m[data-prev]').forEach((m) => {
+      for (const id of (m.dataset.prev || '').split(',').filter(Boolean)) {
+        const p = cols.querySelector(`.brk-m[data-bm="${id}"]`); if (!p) continue;
+        const a = p.getBoundingClientRect(), b = m.getBoundingClientRect();
+        const x1 = a.right - R.left + cols.scrollLeft, y1 = a.top + a.height / 2 - R.top, x2 = b.left - R.left + cols.scrollLeft, y2 = b.top + b.height / 2 - R.top, xm = (x1 + x2) / 2;
+        d += `M${x1} ${y1}H${xm}V${y2}H${x2}`;
+      }
+    });
+    if (d) cols.insertAdjacentHTML('afterbegin', `<svg class="brk-l" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path d="${d}"/></svg>`);
+  });
+}
+
 /* retos 1 contra 1 */
 const chName = (st) => ({ pending: 'Esperando respuesta', accepted: 'En juego', declined: 'Rechazado', expired: 'Sin contestar', canceled: 'Retirado', won_from: 'Ganado', won_to: 'Ganado', void: 'Sin ganador' }[st] || st);
 function retoRow(c) {
@@ -511,6 +565,7 @@ function partidos() {
   return h + `</section>${byId(S.foc) ? ficha(byId(S.foc)) : '<section class="det"></section>'}</div>`;
 }
 function ficha(m) {
+  if (S.brk && m.tour) return bracketSheet(m);
   if (S.side) return sheet(m, S.side);
   const open = isOpen(m), ps = picksOf(m).filter((p) => po(m, p) != null);
   const imp = ps.map((p) => 1 / po(m, p)), sum = imp.reduce((a, b) => a + b, 0) || 1, pct = imp.map((x) => Math.round((x / sum) * 100));
@@ -519,6 +574,7 @@ function ficha(m) {
   let h = `<section class="det ${S.sheet ? 'open' : ''}" data-keep="dt">
     <button class="det-x" data-act="close">← Partidos</button>
     <div class="d-meta"><img src="${esc(L[m.lg][1])}" alt="">${esc(L[m.lg][0])}${m.stage ? ' · ' + esc(m.stage) : ''}</div>
+    ${m.tour ? `<button class="d-brk" data-act="bracket"><svg viewBox="0 0 24 24"><path d="M4 5h5v5H4zM4 14h5v5H4zM9 7.5h3v9H9M12 12h3M15 9.5h5v5h-5z"/></svg>Ver bracket</button>` : ''}
     ${mainTv(m) ? `<a class="d-ver" href="${esc(mainTv(m).u)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>${m.live ? 'Verlo en directo' : 'Dónde verlo'} · ${esc(mainTv(m).n)}${mainTv(m).l ? ' en ' + esc(LANG[mainTv(m).l] || mainTv(m).l) : ''}</a>` : ''}
     <div class="d-cd">${m.live ? `En vivo · ${esc(m.score || '')}` : `${WD(m.at)} ${DD(m.at)} ${MO(m.at)} · ${HM(m.at)} · empieza en ${CD(m.at)}`}${m.venue ? ' · ' + esc(m.venue) : ''}</div>
     <div class="d-vs"><button class="d-side" data-side="a" title="Ver ficha">${logo(m, 'a')}<h3>${esc(m.a)}</h3><small>Ver ficha</small></button><span class="x">vs</span><button class="d-side" data-side="b" title="Ver ficha">${logo(m, 'b')}<h3>${esc(m.b)}</h3><small>Ver ficha</small></button></div>
@@ -932,7 +988,7 @@ function render() {
   if (S.scr === 'cajas' && window.GM_CAJAS) GM_CAJAS.montar(vw, cajasCtx(), cambia);
   if (cambia) { vw.classList.remove('entra'); void vw.offsetWidth; vw.classList.add('entra') }
   cuentaSaldo();
-  if (S.scr === 'partidos') { lgFlechas(); fillEspn(); fillSheet() }
+  if (S.scr === 'partidos') { lgFlechas(); fillEspn(); fillSheet(); fillBracket() }
   document.querySelectorAll('[data-keep]').forEach((e) => { if (keep[e.dataset.keep]) e.scrollTop = keep[e.dataset.keep] });
   if (window.GM_LANG) GM_LANG.traduce(document.getElementById('app'));
   for (const [id, v, f] of cajas) { const e = document.getElementById(id); if (e) { e.value = v; if (f) e.focus() } }
@@ -1027,10 +1083,13 @@ async function savePerfil(k, v) {
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lang]'); if (!b || !window.GM_LANG) return; GM_LANG.set(b.dataset.lang); location.reload(); }, true);
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lga]'); if (!b) return; const n = document.querySelector('[data-lgs]'); n?.scrollBy({ left: +b.dataset.lga * n.clientWidth * 0.8, behavior: 'smooth' }) });
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-side],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
+  const t = e.target.closest('[data-side],[data-bm],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
   const d = t.dataset;
   if (d.side && t.matches('[data-side]')) { S.side = d.side; document.querySelector('.det')?.scrollTo?.(0, 0); return render() }
   if (d.act === 'sheet-back') { S.side = null; return render() }
+  if (d.act === 'bracket') { S.brk = true; S.side = null; document.querySelector('.det')?.scrollTo?.(0, 0); return render() }
+  if (d.act === 'brk-back') { S.brk = false; return render() }
+  if (d.bm) { const g = (byId(S.foc)?.tour || '').split(':')[0], mid = `ps:${g}:${d.bm}`; if (byId(mid) && mid !== S.foc) { S.foc = mid; S.brk = false; return render() } return }
   if (d.rxo !== undefined && t.matches('[data-rxo]')) { S.rx = S.rx === d.rxo ? null : d.rxo; return render() }
   if (d.rx) { const [tg, em] = d.rx.split('|'); S.rx = null; const { error } = await db.rpc('react', { p_target: tg, p_emoji: em }); if (error) return toast(errMsg(error)); return refresh() }
   if (d.vote) { const [pid, o] = d.vote.split('|'); const { error } = await db.rpc('vote_poll', { p_poll: +pid, p_opt: +o }); if (error) return toast(errMsg(error)); return refresh() }
@@ -1093,7 +1152,7 @@ document.addEventListener('click', async (e) => {
   }
   else if (d.act === 'close') S.sheet = false;
   else if (d.act === 'back') S.scr = S.prev || 'colegas';
-  else if (d.foc) { if (S.foc !== d.foc) { S.reto = null; S.side = null } S.foc = d.foc; S.sheet = true }
+  else if (d.foc) { if (S.foc !== d.foc) { S.reto = null; S.side = null; S.brk = false } S.foc = d.foc; S.sheet = true }
   render();
 });
 document.addEventListener('input', (e) => { if (!e.target.matches('[data-in]')) return; S.stake = Math.max(0, Math.round(+e.target.value || 0)); updStake() });

@@ -228,13 +228,39 @@ async function esports(game) {
       starts_at: new Date(t).toISOString(), status, bo: m.number_of_games || null,
       score: status === 'live' || status === 'final' ? `${sc(A.id)}:${sc(B.id)}` : null,
       winner: status === 'final' ? (m.winner_id === A.id ? '1' : '2') : null,
-      details: { ids: { a: A.id, b: B.id }, tier: tier || null, game,
+      details: { ids: { a: A.id, b: B.id }, tier: tier || null, game, tour: m.tournament_id || null, bracket: !!m.tournament?.has_bracket,
         tv: (m.streams_list || []).filter((x) => x.raw_url).sort((x, y) => (/^(en|es)$/.test(y.language) - /^(en|es)$/.test(x.language)) || (y.main - x.main)).slice(0, 8)
           .map((x) => ({ n: /twitch/.test(x.raw_url) ? 'Twitch' : /youtube/.test(x.raw_url) ? 'YouTube' : /kick\.com/.test(x.raw_url) ? 'Kick' : 'Stream', l: x.language, u: x.raw_url, main: !!x.main })),
         tape: [[m.number_of_games ? 'BO' + m.number_of_games : '', 'Formato', m.number_of_games ? 'BO' + m.number_of_games : '']].filter((r) => r[0] || r[2]) },
     });
   }
   return [...new Map(out.map((r) => [r.id, r])).values()];
+}
+
+// brackets de los torneos con eliminatorias (PM, 30-10: "si hay torneo con brackets que se vean bien").
+// Se refrescan cada 30 min como mucho, 12 torneos por pasada; los que tienen partidos en directo, en cada pasada
+async function bracketsEsports(rows) {
+  if (!PS) return;
+  const H = { authorization: `Bearer ${PS}` };
+  const tours = new Map();
+  for (const r of rows) if (r.details.bracket && r.details.tour) { const k = `${r.details.game}:${r.details.tour}`; tours.set(k, (tours.get(k) || false) || r.status === 'live') }
+  if (!tours.size) return;
+  let fresh = {};
+  if (SECRET && SB) { try { fresh = (await rpc('sync_brackets_get', { p_secret: SECRET, p_ids: [...tours.keys()] })) || {} } catch {} }
+  const toca = [...tours.entries()].filter(([k, vivo]) => vivo || !fresh[k] || NOW - fresh[k] > 30 * 60e3).map(([k]) => k).slice(0, 12);
+  const filas = [];
+  for (const k of toca) {
+    const ms = await getJson(`https://api.pandascore.co/tournaments/${k.split(':')[1]}/brackets?per_page=100`, H);
+    if (!Array.isArray(ms) || !ms.length) continue;
+    const eq = (o) => (o ? { id: o.id, n: o.name, acr: o.acronym || null, img: o.image_url || null } : null);
+    filas.push({ id: k, data: ms.map((m) => {
+      const [A, B] = (m.opponents || []).map((o) => o.opponent), sc = (x) => (x ? m.results?.find((r) => r.team_id === x.id)?.score ?? null : null);
+      return { id: m.id, name: m.name || '', st: m.status, at: m.begin_at || m.scheduled_at || null, bo: m.number_of_games || null,
+        a: eq(A), b: eq(B), sa: sc(A), sb: sc(B), w: m.winner_id || null, prev: (m.previous_matches || []).map((x) => ({ t: x.type, id: x.match_id })) };
+    }) });
+  }
+  if (filas.length && SECRET && SB && !DRY) await rpc('sync_brackets_put', { p_secret: SECRET, p_rows: filas });
+  console.log(`brackets: ${tours.size} torneos · ${filas.length} refrescados`);
 }
 
 // fichas de los equipos: lee lo guardado, refresca lo viejo (primero los que juegan antes) y pone forma y cuotas
@@ -304,6 +330,7 @@ async function main() {
   const t0 = Date.now();
   const [f, u, v, c] = await Promise.all([soccer(), ufc(), esports('valorant'), esports('csgo')]);
   await fichasEsports([...v, ...c]);
+  await bracketsEsports([...v, ...c]);
   const rows = [...f, ...u, ...v, ...c];
   await carasUfc(rows);
   console.log(`futbol ${f.length} · ufc ${u.length} · valorant ${v.length} · cs2 ${c.length} · con cuotas reales ${rows.filter((r) => r.odds_src === 'draftkings').length}`);
