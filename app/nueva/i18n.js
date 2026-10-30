@@ -18,7 +18,7 @@
 (function () {
   const D = {
     // apostar en directo (31-10): frases enteras, antes de que las reglas sueltas cambien palabras sueltas
-    'la cuota se mueve con el marcador': 'odds move with the score',
+    'la cuota se mueve con el marcador': 'odds move with the score', 'Combinada de la semana': 'Parlay of the week',
     // Ajustes, moneda y ya jugados (30-10 noche)
     'Ajustes': 'Settings', 'Sonido y movimiento': 'Sound and motion', 'Sonidos': 'Sounds', 'Botones, ruletas, premios y mensajes': 'Buttons, spins, prizes and messages',
     'Ruletas, confeti y transiciones': 'Spins, confetti and transitions', 'Moneda': 'Currency', 'Cambia el logo y el nombre. Lo que tienes es lo mismo.': 'Changes the logo and the name. What you have stays the same.',
