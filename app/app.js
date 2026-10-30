@@ -5,7 +5,8 @@ const CFG = window.APP_CONFIG || {};
 const db = supabase.createClient(CFG.url, CFG.anon, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'apuestas-auth' } });
 const TZ = 'Europe/Madrid', DAY = 864e5, DOMAIN = '@apuestas.app';
 const TOP = new Set(['esp.1', 'eng.1', 'ger.1', 'ita.1', 'fra.1', 'uefa.champions', 'uefa.europa', 'esp.copa_del_rey']);
-const SP = { f: ['Fútbol', 'img/futbol.svg'], v: ['Valorant', 'img/valorant.svg'], u: ['UFC', 'img/ufc.png'] };
+const SP = { f: ['Fútbol', 'img/futbol.svg'], v: ['Valorant', 'img/valorant.svg'], c: ['CS2', 'img/cs2.png'], u: ['UFC', 'img/ufc.png'] };
+const DEP = ['f', 'v', 'c', 'u'];
 const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste' };
 
 /* ---------- estado ---------- */
@@ -14,7 +15,7 @@ let ME = null, MEK = 'pm', VIS = 'open', WEEKLY = 1000, SEASON = '';
 let F = [], M = [], MI = new Map(), L = {}, ALL = [], LEDGER = [], CHAT = [], AW = [], H2H = {};
 let CH = [], DAILY = [], DAILY_ON = false, DAILY_BONUS = 1.25;
 let S = { side: null, scr: 'partidos', f: 'all', lg: 'top', sel: null, stake: 200, foc: null, sheet: false, bf: 'all', pf: 'pm', prof: 'pm', prev: 'colegas', calc: 0, reto: null, sure: null };
-try { S.calc = +localStorage.getItem('apuestas-calc') || 0 } catch {}
+try { localStorage.removeItem('apuestas-calc') } catch {}
 let loaded = false;
 
 /* ---------- formato ---------- */
@@ -72,7 +73,7 @@ function build(st, rows, chat, ex) {
     id: r.id, s: r.sport, lg: r.league, a: r.home, b: r.away, la: r.home_logo, lb: r.away_logo, at: r.starts_at,
     o: [r.odds_1, r.odds_x, r.odds_2].map((x) => (x == null ? null : Number(x))), status: r.status, live: r.status === 'live',
     score: r.score, winner: r.winner, tag: r.tag, venue: r.venue, stage: r.stage, bo: r.bo, tape: r.details?.tape || [], src: r.odds_src,
-    tv: r.details?.tv || [], espn: r.details?.espn || null, players: r.details?.players || null, recent: r.details?.recent || null,
+    tv: r.details?.tv || [], espn: r.details?.espn || null, players: r.details?.players || null, recent: r.details?.recent || null, tier: r.details?.tier || null, tid: r.details?.ids || null,
   }));
   MI = new Map(M.map((m) => [m.id, m]));
   L = {}; for (const r of rows) if (!L[r.league]) L[r.league] = [r.league_name, r.league_logo || SP[r.sport][1]];
@@ -86,8 +87,8 @@ function build(st, rows, chat, ex) {
     let run = 0, last = settled[settled.length - 1]; for (let i = settled.length - 1; i >= 0 && settled[i].st === last.st; i--) run++;
     let streak = 0, cur = 0; for (const b of settled) { cur = b.st === 'won' ? cur + 1 : 0; streak = Math.max(streak, cur) }
     const sp = {}, stakeBy = {}; let stakeAll = 0;
-    for (const s of ['f', 'v', 'u']) { const x = settled.filter((b) => MI.get(b.m)?.s === s); sp[s] = [x.filter((b) => b.st === 'won').length, x.length]; stakeBy[s] = mine.filter((b) => MI.get(b.m)?.s === s).reduce((a, b) => a + b.stake, 0); stakeAll += stakeBy[s] }
-    const ranked = ['f', 'v', 'u'].filter((s) => sp[s][1] >= 2).sort((a, b) => sp[b][0] / sp[b][1] - sp[a][0] / sp[a][1]);
+    for (const s of DEP) { const x = settled.filter((b) => MI.get(b.m)?.s === s); sp[s] = [x.filter((b) => b.st === 'won').length, x.length]; stakeBy[s] = mine.filter((b) => MI.get(b.m)?.s === s).reduce((a, b) => a + b.stake, 0); stakeAll += stakeBy[s] }
+    const ranked = DEP.filter((s) => sp[s][1] >= 2).sort((a, b) => sp[b][0] / sp[b][1] - sp[a][0] / sp[a][1]);
     const weeks = p.weeks.length ? p.weeks : [p.saldo];
     return {
       id: k, uid: p.id, n: p.name, ini: p.ini, s: p.saldo, me: p.id === ME, admin: p.admin, username: p.username,
@@ -96,8 +97,8 @@ function build(st, rows, chat, ex) {
       ac: t ? Math.round((w / t) * 100) + '%' : '·', acn: `${w} de ${t}`, bets: mine.length,
       racha: t ? `${last.st === 'won' ? '▲' : '▼'} ${run}` : '·', streak,
       best: Math.max(0, ...mine.filter((b) => b.st === 'won').map((b) => b.pay)),
-      fuerte: ranked[0] ? SP[ranked[0]][0] : stakeAll ? SP[['f', 'v', 'u'].sort((a, b) => stakeBy[b] - stakeBy[a])[0]][0] : '·',
-      sp, share: Object.fromEntries(['f', 'v', 'u'].map((s) => [s, stakeAll ? Math.round((stakeBy[s] / stakeAll) * 100) : 0])),
+      fuerte: ranked[0] ? SP[ranked[0]][0] : stakeAll ? SP[DEP.sort((a, b) => stakeBy[b] - stakeBy[a])[0]][0] : '·',
+      sp, share: Object.fromEntries(DEP.map((s) => [s, stakeAll ? Math.round((stakeBy[s] / stakeAll) * 100) : 0])),
       last: settled.slice(-10).map((b) => (b.st === 'won' ? 'W' : 'L')).join(''),
       avgO: mine.length ? mine.reduce((a, b) => a + b.o, 0) / mine.length : 0,
     };
@@ -152,21 +153,29 @@ const img = (src, cls = '') => (src ? `<img class="${cls}" src="${esc(src)}" alt
 const logo = (m, side) => img(side === 'a' ? m.la : m.lb, m.s === 'u' ? 'face' : 'tl');
 const form = (s) => `<span class="fm">${[...s].map((c) => `<b class="${c === 'G' ? 'g' : c === 'E' ? 'e' : ''}">${c}</b>`).join('')}</span>`;
 const board = () => M.filter((m) => (m.status === 'scheduled' || m.live) && (m.live || Date.parse(m.at) > NOW) && Date.parse(m.at) < NOW + (m.s === 'u' ? 72 : 8) * DAY);
-const inLeague = (m) => S.lg === 'all' ? true : S.lg === 'top' ? m.live || m.s === 'v' || (m.s === 'u' ? !!m.tag : TOP.has(m.lg)) || whoOn(m.id).length > 0 : m.lg === S.lg;
+const inLeague = (m) => S.lg === 'all' ? true : S.lg === 'top' ? m.live || m.s === 'v' || (m.s === 'c' ? 'sa'.includes(m.tier || 'x') : m.s === 'u' ? !!m.tag : TOP.has(m.lg)) || whoOn(m.id).length > 0 : m.lg === S.lg;
 const filtered = () => board().filter((m) => (S.f === 'all' || m.s === S.f) && inLeague(m)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
 const groups = (list) => { const g = new Map(); for (const m of list) { const k = DK(m.at); if (!g.has(k)) g.set(k, []); g.get(k).push(m) } return [...g.values()] };
 const dayLab = (t) => (today(t) ? `HOY · ${WD(t)}` : `${WD(t)} · ${MO(t)}`);
 const stakeNow = () => Math.max(0, Math.min(S.stake, me().s));
 const chips = () => [50, 100, 250, 500, 'all'].map((v) => { const on = v === 'all' ? S.stake >= me().s : S.stake === v; return `<button class="chip ${on ? 'on' : ''}" data-stake="${v}">${v === 'all' ? 'Todo' : N(v)}</button>` }).join('');
 const filt = () => { const b = board().filter(inLeague), cnt = (k) => b.filter((m) => k === 'all' || m.s === k).length;
-  return [['all', 'Todo', null], ['f', ...SP.f], ['v', ...SP.v], ['u', ...SP.u]].map(([k, n, im]) => `<button class="f ${S.f === k ? 'on' : ''}" data-f="${k}">${im ? `<img src="${im}" alt="">` : ''}${n}<i>${cnt(k)}</i></button>`).join('') };
+  return [['all', 'Todo', null], ...DEP.map((k) => [k, ...SP[k]])].map(([k, n, im]) => `<button class="f ${S.f === k ? 'on' : ''}" data-f="${k}">${im ? `<img src="${im}" alt="">` : ''}${n}<i>${cnt(k)}</i></button>`).join('') };
 const IC_TOP = '<svg viewBox="0 0 24 24"><path d="M12 3.2l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.5l6-.8z"/></svg>';
 const IC_ALL = '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></svg>';
 // PM, 30-10: "los menus de champions league, europa... no me gusta nada": una fila de escudos, el elegido con su nombre encendido
 const leagues = () => { const c = {}; for (const m of board()) if (S.f === 'all' || m.s === S.f) c[m.lg] = (c[m.lg] || 0) + 1;
   const ks = Object.keys(c).sort((a, b) => (TOP.has(b) - TOP.has(a)) || c[b] - c[a]);
   const it = (k, n, ico, cnt) => `<button class="lgc ${S.lg === k ? 'on' : ''}" data-lg="${esc(k)}" title="${esc(n)}${cnt != null ? ' · ' + cnt : ''}"><span class="lgc-i">${ico}${cnt != null ? `<i>${cnt}</i>` : ''}</span><span class="lgc-n">${esc(n)}</span></button>`;
-  return `<nav class="lgs2">${it('top', 'Principales', IC_TOP, null)}${it('all', 'Todas', IC_ALL, null)}${ks.map((k) => it(k, L[k]?.[0] || k, `<img class="tl" src="${esc(L[k]?.[1])}" alt="" loading="lazy">`, c[k])).join('')}</nav>` };
+  return `<div class="lgw"><button class="lga l" data-lga="-1" aria-label="Anteriores" hidden><svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg></button><button class="lga r" data-lga="1" aria-label="Más ligas" hidden><svg viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg></button><nav class="lgs2" data-lgs>${it('top', 'Principales', IC_TOP, null)}${it('all', 'Todas', IC_ALL, null)}${ks.map((k) => it(k, L[k]?.[0] || k, `<img class="tl" src="${esc(L[k]?.[1])}" alt="" loading="lazy">`, c[k])).join('')}</nav></div>` };
+let LGX = 0;
+function lgFlechas() {
+  const n = document.querySelector('[data-lgs]'); if (!n) return;
+  if (n.scrollLeft !== LGX) n.scrollLeft = LGX;
+  const pon = () => { const w = n.closest('.lgw'); w.querySelector('.l').hidden = n.scrollLeft < 8; w.querySelector('.r').hidden = n.scrollLeft + n.clientWidth > n.scrollWidth - 8; w.classList.toggle('fin', n.scrollLeft + n.clientWidth > n.scrollWidth - 8) };
+  n.onscroll = () => { LGX = n.scrollLeft; pon() };
+  pon();
+}
 const betRow = (b) => {
   const m = byId(b.m); if (!m) return '';
   const st = b.st === 'open' ? (m.live ? 'live' : 'pend') : b.st;
@@ -269,6 +278,11 @@ async function sheetData(m, side) {
       const base = `https://site.api.espn.com/apis/site/v2/sports/soccer/${m.espn.league}/teams/${id}`;
       const [sc, ro] = await Promise.all([fetch(base + '/schedule').then((r) => r.json()), fetch(base + '/roster').then((r) => r.json()).catch(() => null)]);
       d = { sc, ro };
+    } else if ((m.s === 'v' || m.s === 'c') && m.tid) {
+      const juego = m.s === 'v' ? 'valorant' : 'csgo';
+      const { data } = await db.from('teams').select('id,data').in('id', [`${juego}:${m.tid.a}`, `${juego}:${m.tid.b}`]);
+      const t = Object.fromEntries((data || []).map((r) => [r.id, r.data]));
+      d = { yo: t[`${juego}:${m.tid[side]}`] || null, otro: t[`${juego}:${m.tid[side === 'a' ? 'b' : 'a']}`] || null, rival: m.tid[side === 'a' ? 'b' : 'a'] };
     } else if (m.s === 'u' && id) {
       d = { at: await fetch(`https://site.web.api.espn.com/apis/common/v3/sports/mma/ufc/athletes/${id}`).then((r) => r.json()) };
     }
@@ -303,11 +317,28 @@ function sheetUfc(m, side, d) {
   return `<div class="bio">${bio.map(([k, v]) => `<div><span class="lab">${k}</span><b>${esc(String(v).replace(/-/g, '·'))}</b></div>`).join('')}</div>
     ${peleas.length ? `<div class="shs"><span class="lab">Últimas peleas</span>${peleas.map((e) => `<div class="shr"><span class="nm">${esc(e.opponent?.displayName || '')}</span><span class="dt">${esc(e.shortName || '')} · ${dmy(Date.parse(e.gameDate))}</span>${res(e.gameResult === 'W' ? 'W' : e.gameResult === 'D' ? 'D' : 'L')}</div>`).join('')}</div>` : ''}`;
 }
+// Valorant y CS2: historial de PandaScore que guarda el sincronizador en la tabla teams (db/006)
+function sheetEsports(m, side, d) {
+  const t = d.yo; if (!t) return sheetValorant(m, side);
+  const h = t.hist || [], w = h.filter((x) => x.won).length, mapsW = h.reduce((a, x) => a + (+String(x.score).split(':')[0] || 0), 0), mapsL = h.reduce((a, x) => a + (+String(x.score).split(':')[1] || 0), 0);
+  let racha = 0; for (const x of h) { if (x.won === h[0]?.won) racha++; else break }
+  const nm = side === 'a' ? m.a : m.b, prox = board().filter((x) => x.id !== m.id && (x.a === nm || x.b === nm)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(0, 4);
+  const h2h = h.filter((x) => String(x.vsId) === String(d.rival));
+  const kpi = [['Últimos ' + h.length, `${w}-${h.length - w}`], ['Victorias', h.length ? Math.round((w / h.length) * 100) + '%' : '·'], ['Racha', h.length ? `${racha} ${h[0].won ? 'ganados' : 'perdidos'}` : '·'], ['Mapas', `${mapsW}-${mapsL}`], ['País', t.loc || '·'], ['Siglas', t.acr || '·']];
+  let o = `<div class="bio">${kpi.map(([k, v]) => `<div><span class="lab">${k}</span><b>${esc(String(v))}</b></div>`).join('')}</div>`;
+  if (h.length) o += `<div class="shs"><span class="lab">Forma</span><span class="fm big">${h.slice(0, 5).reverse().map((x) => res(x.won ? 'W' : 'L')).join('')}</span></div>`;
+  if (h2h.length) o += `<div class="shs"><span class="lab">Cara a cara</span>${h2h.map((e) => `<div class="shr">${img(e.logo, 'tl')}<span class="nm">${esc(e.vs)}</span><span class="dt">${[e.at ? dmy(Date.parse(e.at)) : '', esc(e.t || '')].filter(Boolean).join(' · ')}</span><span class="mk">${esc(e.score)}</span>${res(e.won ? 'W' : 'L')}</div>`).join('')}</div>`;
+  if (h.length) o += `<div class="shs"><span class="lab">Últimos resultados</span>${h.map((e) => `<div class="shr">${img(e.logo, 'tl')}<span class="nm">${esc(e.vs)}</span><span class="dt">${[e.at ? dmy(Date.parse(e.at)) : '', esc(e.t || '')].filter(Boolean).join(' · ')}</span><span class="mk">${esc(e.score)}</span>${res(e.won ? 'W' : 'L')}</div>`).join('')}</div>`;
+  if (prox.length) o += `<div class="shs"><span class="lab">Próximos</span>${prox.map((x) => { const r = x.a === nm ? x.b : x.a; return `<div class="shr">${img(x.a === nm ? x.lb : x.la, 'tl')}<span class="nm">${esc(r)}</span><span class="dt">${dmy(Date.parse(x.at))} · ${esc(L[x.lg]?.[0] || '')}</span><span class="mk">${HM(Date.parse(x.at))}</span><span></span></div>` }).join('')}</div>`;
+  const pl = t.players || m.players?.[side] || [];
+  if (pl.length) o += `<div class="shs"><span class="lab">Jugadores</span><div class="pls">${pl.map((x) => `<div class="pl">${x.img ? `<img class="face" src="${esc(x.img)}" alt="" loading="lazy">` : `<span class="pl-i">${esc((x.n || '?').slice(0, 2).toUpperCase())}</span>`}<b>${esc(x.n)}</b><span>${esc([x.nombre, x.nat, x.age ? x.age + ' años' : null].filter(Boolean).join(' · '))}</span></div>`).join('')}</div></div>`;
+  return o;
+}
 function sheetValorant(m, side) {
   const pl = m.players?.[side] || [], rc = m.recent?.[side] || [];
   let h = '';
   if (pl.length) h += `<div class="shs"><span class="lab">Jugadores</span><div class="pls">${pl.map((x) => `<div class="pl">${x.img ? `<img class="face" src="${esc(x.img)}" alt="" loading="lazy">` : `<span class="pl-i">${esc((x.n || '?').slice(0, 2).toUpperCase())}</span>`}<b>${esc(x.n)}</b><span>${esc([x.nombre, x.nat].filter(Boolean).join(' · '))}</span></div>`).join('')}</div></div>`;
-  if (rc.length) h += `<div class="shs"><span class="lab">Últimos resultados</span>${rc.map((e) => `<div class="shr">${img(e.logo, 'tl')}<span class="nm">${esc(e.vs)}</span><span class="dt">${e.at ? dmy(Date.parse(e.at)) : ''}${e.t ? ' · ' + esc(e.t) : ''}</span><span class="mk">${esc(e.score)}</span>${res(e.won ? 'W' : 'L')}</div>`).join('')}</div>`;
+  if (rc.length) h += `<div class="shs"><span class="lab">Últimos resultados</span>${rc.map((e) => `<div class="shr">${img(e.logo, 'tl')}<span class="nm">${esc(e.vs)}</span><span class="dt">${[e.at ? dmy(Date.parse(e.at)) : '', esc(e.t || '')].filter(Boolean).join(' · ')}</span><span class="mk">${esc(e.score)}</span>${res(e.won ? 'W' : 'L')}</div>`).join('')}</div>`;
   return h || '<p class="hint">PandaScore todavía no tiene datos de este equipo.</p>';
 }
 function sheet(m, side) {
@@ -315,15 +346,15 @@ function sheet(m, side) {
   return `<section class="det sheet ${S.sheet ? 'open' : ''}" data-keep="dt">
     <button class="det-x vis" data-act="sheet-back">← ${esc(m.a)} vs ${esc(m.b)}</button>
     <div class="sh-hd">${logo(m, side)}<div><h2>${esc(nm)}</h2><span class="lab">${esc(L[m.lg][0])}${m.stage ? ' · ' + esc(m.stage) : ''}</span></div></div>
-    <div id="sheet-box" data-m="${m.id}" data-side="${side}">${m.s === 'v' ? sheetValorant(m, side) : '<p class="hint">Cargando la ficha…</p>'}</div>
+    <div id="sheet-box" data-m="${m.id}" data-side="${side}">${'<p class="hint">Cargando la ficha…</p>'}</div>
   </section>`;
 }
 async function fillSheet() {
   const box = document.getElementById('sheet-box'); if (!box) return;
-  const m = byId(box.dataset.m), side = box.dataset.side; if (!m || m.s === 'v') return;
+  const m = byId(box.dataset.m), side = box.dataset.side; if (!m) return;
   const d = await sheetData(m, side);
   const now = document.getElementById('sheet-box'); if (!now || now.dataset.m !== m.id || now.dataset.side !== side) return;
-  now.innerHTML = !d ? '<p class="hint">No se ha podido cargar la ficha.</p>' : m.s === 'f' ? sheetFutbol(m, side, d) : sheetUfc(m, side, d);
+  now.innerHTML = !d ? '<p class="hint">No se ha podido cargar la ficha.</p>' : m.s === 'f' ? sheetFutbol(m, side, d) : m.s === 'u' ? sheetUfc(m, side, d) : sheetEsports(m, side, d);
   if (window.GM_LANG) GM_LANG.traduce(now);
 }
 
@@ -360,7 +391,7 @@ const LOGROS = [
   ['racha5', 'Imparable', '5 ganadas seguidas', (f) => f.streak >= 5],
   ['valiente', 'Valiente', 'Gana con cuota de 3 o más', (f, b) => b.some((x) => x.st === 'won' && x.o >= 3)],
   ['tirador', 'Francotirador', 'Gana con cuota de 5 o más', (f, b) => b.some((x) => x.st === 'won' && x.o >= 5)],
-  ['todo', 'Todoterreno', 'Apuesta en fútbol, Valorant y UFC', (f, b) => ['f', 'v', 'u'].every((s) => b.some((x) => byId(x.m)?.s === s))],
+  ['todo', 'Todoterreno', 'Apuesta en fútbol, Valorant y UFC', (f, b) => DEP.every((s) => b.some((x) => byId(x.m)?.s === s))],
   ['fiel', 'Fiel', '20 apuestas', (f, b) => b.length >= 20],
   ['ballena', 'Ballena', 'Apuesta 1.000 de una vez', (f, b) => b.some((x) => x.stake >= 1000)],
   ['verde', 'En verde', 'Ten más de lo que te han dado', (f) => f.s > f.recibido && f.bets > 0],
@@ -441,7 +472,7 @@ function partidos() {
       <span class="lab"><img src="${esc(L[m.lg][1])}" alt=""><b>${WD(m.at)} ${HM(m.at)}</b> · ${isDaily(m) ? 'Apuesta del día' : esc(m.tag || L[m.lg][0])}</span>
       <span class="ft-v">${logo(m, 'a')}<i>vs</i>${logo(m, 'b')}</span><span class="ft-n">${esc(m.a)} · ${esc(m.b)}</span>
       <span class="ft-o">${picksOf(m).map((p) => `<span>${p} <b>${po(m, p) ? O(po(m, p)) : '·'}</b></span>`).join('')}</span></button>`).join('')}</div>` : ''}
-    <nav class="fil">${filt()}</nav>${leagues()}<div class="calcrow">${calcChips()}<span class="note">cuotas reales de DraftKings o calculadas · se congelan al apostar</span></div>`;
+    <nav class="fil">${filt()}</nav>${leagues()}`;
   if (!list.length) h += `<p class="hint" style="padding:30px 0">No hay partidos con este filtro en los próximos días.</p>`;
   let ri = 0;
   for (const ms of groups(list)) {
@@ -515,7 +546,7 @@ function apuestas() {
       <div class="stt"><span class="lab">Mejor cuota</span><b>${best ? O(best) : '·'}</b><span>acertada</span></div>
     </div>
     <div class="potential"><span class="lab">Si aciertas todo lo abierto</span><b>+${N(open.reduce((a, b) => a + b.stake * b.o, 0))}${coin()}</b><span>${open.filter(canCancel).length} se pueden cancelar todavía</span></div>
-    <div class="bys">${['f', 'v', 'u'].map((k) => { const [w, t] = f.sp[k]; return `<div class="by"><img src="${SP[k][1]}" alt=""><strong>${SP[k][0]}</strong><em>${w} de ${t}</em><span class="bar"><i style="width:${t ? (w / t) * 100 : 0}%"></i></span></div>` }).join('')}</div>
+    <div class="bys">${DEP.map((k) => { const [w, t] = f.sp[k]; return `<div class="by"><img src="${SP[k][1]}" alt=""><strong>${SP[k][0]}</strong><em>${w} de ${t}</em><span class="bar"><i style="width:${t ? (w / t) * 100 : 0}%"></i></span></div>` }).join('')}</div>
     <div class="b-cols">
       <section><div class="sec-h"><h2>En juego</h2><i>${open.length}</i></div>${open.map(betRow).join('') || '<p class="hint">Nada en juego. Ve a Partidos y toca una cuota.</p>'}
         <div class="sec-h" style="margin-top:34px"><h2>Tus retos</h2><i>${CH.filter((c) => c.from === MEK || c.to === MEK).length}</i></div>${retosHtml(CH.filter((c) => c.from === MEK || c.to === MEK).slice(0, 12), 'Aún no has retado a nadie. Abre un partido y pulsa Retar.')}</section>
@@ -640,10 +671,10 @@ function chSemanas() {
   return s + `<line x1="${x0}" x2="${x1}" y1="${y0}" y2="${y0}" stroke="var(--mute)"/></svg>`;
 }
 function chDeporte() {
-  const W = 520, H = 230, x0 = 110, x1 = 500, X = (v) => x0 + ((x1 - x0) * v) / 100;
+  const W = 520, H = 290, x0 = 110, x1 = 500, X = (v) => x0 + ((x1 - x0) * v) / 100;
   let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Aciertos por deporte">`;
   [0, 25, 50, 75, 100].forEach((v) => (s += `<line x1="${X(v)}" x2="${X(v)}" y1="14" y2="${H - 30}" stroke="var(--hair)"/><text x="${X(v)}" y="${H - 10}" class="tx-d" font-size="10" text-anchor="middle">${v}%</text>`));
-  [['f', 'Fútbol'], ['v', 'Valorant'], ['u', 'UFC']].forEach(([k, n], r) => { const y = 40 + r * 60;
+  DEP.map((k) => [k, SP[k][0]]).forEach(([k, n], r) => { const y = 40 + r * 60;
     s += `<image href="${SP[k][1]}" x="0" y="${y - 9}" width="18" height="18"/><text x="26" y="${y + 4}" class="tx-i" font-size="13">${n}</text><line x1="${x0}" x2="${x1}" y1="${y}" y2="${y}" stroke="var(--hair2)"/>`;
     F.forEach((f, i) => { const [w, t] = f.sp[k]; if (!t) return; const v = (w / t) * 100, dy = (i - (F.length - 1) / 2) * 9; s += `<circle cx="${X(v)}" cy="${y + dy}" r="7" fill="var(--f-${f.id})" stroke="var(--bg)" stroke-width="2"><title>${esc(f.n)} · ${n} · ${w} de ${t} · ${Math.round(v)}%</title></circle>` });
   });
@@ -658,8 +689,8 @@ function chCuota() {
   return s + '</svg>';
 }
 const heat = () => { const ramp = (v) => (v >= 60 ? ['#f2c14e', '#14100a'] : v >= 40 ? ['#b88c2c', '#100c05'] : v >= 20 ? ['#6b5420', '#f4f2ec'] : ['#2e2615', '#f4f2ec']);
-  return `<div class="heat"><span></span>${['f', 'v', 'u'].map((k) => `<span class="hh"><img src="${SP[k][1]}" alt="">${SP[k][0]}</span>`).join('')}
-    ${F.map((f) => `<span class="hr">${av(f.id, 'sm')}${esc(f.n)}</span>${['f', 'v', 'u'].map((k) => { const v = f.share[k] || 0, [bg, fg] = ramp(v); return `<span class="hc" style="background:${bg};color:${fg}" title="${esc(f.n)} pone el ${v}% de lo que apuesta en ${SP[k][0]}">${v}%</span>` }).join('')}`).join('')}</div>` };
+  return `<div class="heat"><span></span>${DEP.map((k) => `<span class="hh"><img src="${SP[k][1]}" alt="">${SP[k][0]}</span>`).join('')}
+    ${F.map((f) => `<span class="hr">${av(f.id, 'sm')}${esc(f.n)}</span>${DEP.map((k) => { const v = f.share[k] || 0, [bg, fg] = ramp(v); return `<span class="hc" style="background:${bg};color:${fg}" title="${esc(f.n)} pone el ${v}% de lo que apuesta en ${SP[k][0]}">${v}%</span>` }).join('')}`).join('')}</div>` };
 const strips = () => F.some((f) => f.last) ? `<div class="strips">${F.map((f) => { const w = [...f.last].filter((c) => c === 'W').length; return `<div class="strip">${av(f.id)}<span class="nm">${esc(f.n)}</span>
   <span class="dots">${[...f.last].map((c) => `<i class="${c === 'W' ? 'w' : 'l'}" style="--c:var(--f-${f.id})" title="${c === 'W' ? 'ganada' : 'perdida'}"></i>`).join('')}</span><b>${w} de ${f.last.length}</b><span class="rc ${f.racha.startsWith('▲') ? 'up' : ''}">${f.racha}</span></div>` }).join('')}
   <p class="strips-k"><span><i class="w" style="--c:var(--mute)"></i>ganada</span><span><i class="l"></i>perdida</span><span>la más reciente, a la derecha</span></p></div>` : '<p class="hint">Cuando se resuelvan las primeras apuestas saldrán aquí.</p>';
@@ -743,7 +774,7 @@ function monedero() {
       <section class="rules"><div class="sec-h"><h2>Reglas</h2></div><ul>
         <li><b>1</b>Cada lunes a las 00:00 entran ${N(WEEKLY)} a cada uno. No se compran ni se ganan de otra forma.</li>
         <li><b>2</b>Lo que no gastas se acumula para siempre.</li>
-        <li><b>3</b>Solo se apuesta a quién gana: 1, X o 2. En Valorant y UFC no hay empate.</li>
+        <li><b>3</b>Solo se apuesta a quién gana: 1, X o 2. En Valorant, CS2 y UFC no hay empate.</li>
         <li><b>4</b>Cierra al empezar el partido. ${VIS === 'open' ? 'Las elecciones de todos se ven siempre.' : 'Las elecciones de todos se ven al empezar.'}</li>
         <li><b>5</b>Los resultados llegan solos y se pagan al momento. Si un partido no se juega, se devuelve lo apostado.</li>
       </ul><p>Reglas fijas. Solo PM puede cambiarlas.</p></section>
@@ -777,7 +808,7 @@ function perfil() {
     <div class="pf-2">
       <section class="cs"><div class="cs-h"><div><h3>${mine ? 'Tu saldo' : 'Su saldo'}</h3><p>Por encima de la línea discontinua va ganando.</p></div></div><div class="chart">${chLines([f], 640, 250, 44, 600, false)}</div></section>
       <section class="cs"><div class="cs-h"><div><h3>Por deporte</h3><p>Apuestas acertadas de las resueltas.</p></div></div>
-        ${['f', 'v', 'u'].map((k) => { const [w, t] = f.sp[k]; return `<div class="sb"><img src="${SP[k][1]}" alt=""><strong>${SP[k][0]}</strong><em>${w} de ${t} · ${t ? Math.round((w / t) * 100) : 0}%</em><span class="bar"><i style="width:${t ? (w / t) * 100 : 0}%"></i></span></div>` }).join('')}
+        ${DEP.map((k) => { const [w, t] = f.sp[k]; return `<div class="sb"><img src="${SP[k][1]}" alt=""><strong>${SP[k][0]}</strong><em>${w} de ${t} · ${t ? Math.round((w / t) * 100) : 0}%</em><span class="bar"><i style="width:${t ? (w / t) * 100 : 0}%"></i></span></div>` }).join('')}
         ${f.last ? `<div class="sb"><span></span><strong>Últimas ${f.last.length}</strong><em>${wins} de ${f.last.length}</em><span class="dots" style="grid-column:1/4">${[...f.last].map((c) => `<i class="${c === 'W' ? 'w' : 'l'}" style="--c:var(--f-${f.id})"></i>`).join('')}</span></div>` : ''}
       </section>
     </div>
@@ -788,8 +819,6 @@ function perfil() {
     ${f.favs.length ? `<section class="cs"><div class="cs-h"><div><h3>Sigue a</h3></div></div><div class="favs">${f.favs.map(([src, n, face]) => `<span class="fav">${img(src, face ? 'face' : 'tl')}${esc(n)}</span>`).join('')}</div></section>` : ''}
     <section class="cs"><div class="cs-h"><div><h3>En juego</h3><p>${op.length} apuestas · toca una para ver el partido.</p></div></div>
       <div class="pf-bets">${op.map((b) => betCard(f, b)).join('') || '<p class="hint">Nada en juego ahora mismo.</p>'}</div></section>
-    <section class="cs"><div class="cs-h"><div><h3>Logros</h3><p>${logrosDe(f).filter((l) => l[3]).length} de ${LOGROS.length}</p></div></div>
-      <div class="logros">${logrosDe(f).map(([id, n, d, ok]) => `<div class="lg2 ${ok ? 'ok' : ''}" title="${esc(d)}">${MEDAL}<strong>${esc(n)}</strong><span>${esc(d)}</span></div>`).join('')}</div></section>
     <section class="cs"><div class="cs-h"><div><h3>Premios</h3></div></div>
       ${aw.length ? `<div class="pf-aw">${aw.map(([k, v, , d]) => `<div><span class="lab">${k}</span><b>${v}</b><span class="dd">${esc(d)}</span></div>`).join('')}</div>` : '<p class="hint">Aún sin premios esta temporada.</p>'}</section>
   </div>`;
@@ -797,18 +826,19 @@ function perfil() {
 
 /* ---------- motor ---------- */
 const SCREENS = {
-  partidos: ['Partidos', 'Fútbol, Valorant y UFC · solo 1 X 2 · cierra al empezar', '<rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'],
+  partidos: ['Partidos', 'Fútbol, Valorant, CS2 y UFC · solo 1 X 2 · cierra al empezar', '<rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'],
   apuestas: ['Mis apuestas', 'Lo que llevas en juego y todo lo que ya se ha pagado', '<path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5V10a2 2 0 0 0 0 4v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5V14a2 2 0 0 0 0-4z"/><path d="M14.5 6.5v11" stroke-dasharray="1.5 2"/>'],
   colegas: ['Apuestas de todos', 'Lo que lleva cada uno en juego y cuánto falta', '<circle cx="9" cy="8.5" r="3.2"/><path d="M3.2 19.5a5.8 5.8 0 0 1 11.6 0"/><circle cx="16.8" cy="9.6" r="2.6"/><path d="M15.4 14.4a4.6 4.6 0 0 1 5.6 4.5"/>'],
   liga: ['Liga', 'La temporada, semana a semana', '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"/>'],
   chat: ['Chat', 'Fotos, mensajes y avisos', '<path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 17h-8l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 5 5z"/>'],
-  monedero: ['Monedero', 'Tu dinero, la paga del lunes y cada movimiento', '<path d="M4.5 8V7a2 2 0 0 1 2-2H17v3"/><rect x="4" y="8" width="16.5" height="11" rx="2.5"/><circle cx="16" cy="13.5" r="1.3"/>'],
+  monedero: ['Monedero', 'Tus V-Bucks, la paga del lunes y cada movimiento', '<path d="M4.5 8V7a2 2 0 0 1 2-2H17v3"/><rect x="4" y="8" width="16.5" height="11" rx="2.5"/><circle cx="16" cy="13.5" r="1.3"/>'],
 };
 const R = { partidos, apuestas, colegas, liga, chat, monedero, perfil };
 const photoCss = () => { document.getElementById('phs').textContent = F.filter((f) => f.photo).map((f) => `.av.${f.id}.ph{background-image:url("${encodeURI(f.photo)}")}`).join('') };
 function render() {
   if (!loaded) return;
   NOW = Date.now();
+  const msg = document.querySelector('[data-msg]'), borrador = msg ? { v: msg.value, f: document.activeElement === msg, a: msg.selectionStart } : null;
   const keep = {}; document.querySelectorAll('[data-keep]').forEach((e) => (keep[e.dataset.keep] = e.scrollTop));
   const un = S.scr === 'chat' ? 0 : unread();
   document.getElementById('nav').innerHTML = Object.entries(SCREENS).map(([k, [n, , ic]]) => `<button class="nv ${S.scr === k ? 'on' : ''}" data-scr="${k}"><svg viewBox="0 0 24 24">${ic}</svg><span class="nl">${n}</span><span class="ns">${n.replace('Mis apuestas', 'Apuestas').replace('Apuestas de todos', 'Todos')}</span>${k === 'chat' && un ? `<i>${un}</i>` : ''}</button>`).join('');
@@ -818,15 +848,16 @@ function render() {
   const lg = window.GM_LANG ? GM_LANG.get() : 'es';
   document.getElementById('lang').innerHTML = ['es', 'en'].map((l) => `<button type="button" class="${l === lg ? 'on' : ''}" data-lang="${l}">${l.toUpperCase()}</button>`).join('');
   const [t, sub] = S.scr === 'perfil' ? ['Perfil', fr(S.prof).n + (fr(S.prof).apodo ? ' · ' + fr(S.prof).apodo : '')] : SCREENS[S.scr];
-  document.getElementById('top').innerHTML = `<h1>${t}</h1><span class="sub">${esc(sub)}</span><span class="pay">+${N(WEEKLY)} el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span>`;
+  document.getElementById('top').innerHTML = `<h1>${t}</h1><span class="sub">${esc(sub)}</span><span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span>`;
   photoCss();
-  const vw = document.getElementById('view'), cambia = vw.dataset.scr !== S.scr;
-  vw.innerHTML = R[S.scr](); vw.dataset.scr = S.scr;
+  const vw = document.getElementById('view'), cambia = vw.dataset.vista !== S.scr;
+  vw.innerHTML = R[S.scr](); vw.dataset.vista = S.scr;
   if (cambia) { vw.classList.remove('entra'); void vw.offsetWidth; vw.classList.add('entra') }
   cuentaSaldo();
-  if (S.scr === 'partidos') { fillEspn(); fillSheet() }
+  if (S.scr === 'partidos') { lgFlechas(); fillEspn(); fillSheet() }
   document.querySelectorAll('[data-keep]').forEach((e) => { if (keep[e.dataset.keep]) e.scrollTop = keep[e.dataset.keep] });
   if (window.GM_LANG) GM_LANG.traduce(document.getElementById('app'));
+  const msg2 = document.querySelector('[data-msg]'); if (msg2 && borrador) { msg2.value = borrador.v; if (borrador.f) { msg2.focus(); try { msg2.setSelectionRange(borrador.a, borrador.a) } catch {} } }
   document.querySelectorAll('[data-chat]').forEach((e) => { e.scrollTop = e.scrollHeight; e.querySelectorAll('img').forEach((i) => i.addEventListener('load', () => (e.scrollTop = e.scrollHeight), { once: true })) });
 }
 function updStake() {
@@ -841,7 +872,7 @@ function updStake() {
 let tt;
 function toast(html) { const t = document.getElementById('toast'); t.innerHTML = html; if (window.GM_LANG) GM_LANG.traduce(t); t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 2800) }
 const errMsg = (e) => esc((e && (e.message || e.error_description)) || 'Algo ha fallado').replace(/^.*?: /, (x) => (x.length < 30 ? '' : x));
-async function refresh() { try { await load(); render() } catch (e) { toast(errMsg(e)) } }
+async function refresh() { try { await loadSeguro(); render() } catch (e) { toast(errMsg(e)) } }
 let busy = false;
 async function placeBet() {
   const m = S.sel && byId(S.sel.m); if (!m || !isOpen(m) || busy) return;
@@ -888,6 +919,7 @@ async function savePerfil(k, v) {
   if (error) return toast(errMsg(error)); toast(k === 'apodo' ? 'Apodo guardado' : 'Frase guardada'); await refresh();
 }
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lang]'); if (!b || !window.GM_LANG) return; GM_LANG.set(b.dataset.lang); location.reload(); }, true);
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-lga]'); if (!b) return; const n = document.querySelector('[data-lgs]'); n?.scrollBy({ left: +b.dataset.lga * n.clientWidth * 0.8, behavior: 'smooth' }) });
 document.addEventListener('click', async (e) => {
   const t = e.target.closest('[data-side],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
   const d = t.dataset;
@@ -930,7 +962,7 @@ document.addEventListener('click', async (e) => {
   else if (d.act === 'img') return document.getElementById('pic').click();
   else if (d.act === 'photo') return document.getElementById('foto').click();
   else if (d.act === 'nophoto') { const { error } = await db.rpc('update_profile', { p_photo: '' }); if (error) return toast(errMsg(error)); toast('Foto quitada'); return refresh() }
-  else if (d.act === 'logout') { await db.auth.signOut(); return showLogin() }
+  else if (d.act === 'logout') { await db.auth.signOut({ scope: 'local' }); return showLogin() }
   else if (d.act === 'pass') S.pw = !S.pw;
   else if (d.act === 'setpass') {
     const v = document.getElementById('newpass').value;
@@ -972,7 +1004,7 @@ function live() {
   chan = db.channel('vivo').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pulse' }, soon).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat' }, soon).subscribe();
   // cuenta atras cada minuto y datos frescos cada 5, solo con la pantalla visible
   let ticks = 0;
-  setInterval(() => { if (document.hidden) return; ticks++; if (ticks % 5 === 0) return refresh(); if (!document.activeElement?.matches('input')) render() }, 60000);
+  setInterval(() => { if (document.hidden) return; ticks++; if (ticks % 5 === 0) return refresh(); if (!document.activeElement?.matches('input,textarea')) render() }, 60000);
   // la cuenta atras de la paga con segundos: solo cambia ese texto
   setInterval(() => { if (document.hidden) return; const t = fmtPay(PAY); document.querySelectorAll('[data-cdpay]').forEach((e) => (e.textContent = t)); if (Date.now() > PAY) refresh() }, 1000);
   // marcadores en directo: cada minuto, ESPN da el marcador de los partidos en juego (solo con Partidos en pantalla)
@@ -984,11 +1016,30 @@ function live() {
   }, 60000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh() });
 }
+const haySesionGuardada = () => { try { return !!localStorage.getItem('apuestas-auth') } catch { return false } };
+const sesionMuerta = (e) => /refresh token|invalid grant|not found|revoked|already used|session_not_found/i.test(e?.message || '');
+async function loadSeguro() {
+  try { return await load() } catch (e) {
+    if (!/JWT|session|entrar/i.test(e?.message || '')) throw e;
+    const { error } = await db.auth.refreshSession(); if (error) throw error;
+    return await load();
+  }
+}
 async function start() {
   if (!CFG.url) { document.getElementById('boot').innerHTML = '<p class="hint">Falta config.js</p>'; return }
-  const { data: { session } } = await db.auth.getSession();
+  // antes: si el token habia caducado al abrir, se cerraba la sesion (y signOut la cerraba en TODOS sus aparatos).
+  // Ahora se renueva y se reintenta; solo se pide la contrasena si la base dice que esa sesion ya no vale
+  let { data: { session } } = await db.auth.getSession();
+  for (let i = 0; !session && i < 3 && haySesionGuardada(); i++) {
+    const r = await db.auth.refreshSession(); session = r.data?.session;
+    if (!session && r.error && sesionMuerta(r.error)) break;
+    if (!session) await new Promise((ok) => setTimeout(ok, 1500 * (i + 1)));
+  }
   if (!session) return showLogin();
-  try { await load() } catch (e) { if (/JWT|session|entrar/i.test(e.message || '')) { await db.auth.signOut(); return showLogin() } toast(errMsg(e)); return }
+  try { await loadSeguro() } catch (e) {
+    if (sesionMuerta(e)) return showLogin();
+    toast(errMsg(e)); setTimeout(start, 6000); return
+  }
   const h = location.hash.slice(1); if (R[h] && h !== 'perfil') S.scr = h;
   S.prof = MEK; showApp(); render(); live();
 }

@@ -5,7 +5,7 @@
 :root{
   color-scheme:dark;
   --bg:#1d2129;--bg2:#181b22;--ink:#f4f2ec;--soft:#dcd9d2;--mute:#99a0aa;--dim:#6c737e;--hair:rgba(255,255,255,.1);
-  --acc:#f2c14e;--acc2:#ffdc85;--win:#2bd47d;--f-pm:#b88c2c;--f-c1:#cc6496;--f-c2:#4d88e6;
+  --acc:#f2c14e;--acc2:#ffdc85;--win:#2bd47d;--f-pm:#b88c2c;--f-c1:#cc6496;--f-c2:#4d88e6;--f-c3:#a3c93a;
   --ease:cubic-bezier(.2,.7,.2,1);
   --sans:Inter,system-ui,sans-serif;--disp:Archivo,Inter,system-ui,sans-serif;--mono:JB,ui-monospace,Consolas,monospace;
 }
@@ -25,12 +25,12 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 .net{font:500 12px var(--mono);color:var(--mute);white-space:nowrap}
 .net.up{color:var(--win)}
 .av{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:700 10px/1 var(--disp)}
-.av.pm{background:var(--f-pm);color:#0d0b06}.av.c1{background:var(--f-c1);color:#12060c}.av.c2{background:var(--f-c2);color:#050f22}
+.av.pm{background:var(--f-pm);color:#0d0b06}.av.c1{background:var(--f-c1);color:#12060c}.av.c2{background:var(--f-c2);color:#050f22}.av.c3{background:var(--f-c3);color:#0d1405}
 .av.sm{width:18px;height:18px;font-size:7px}
 .av.xl{width:40px;height:40px;font-size:13px}
 .lock{width:11px;height:11px;vertical-align:-1px;margin-right:5px;stroke:currentColor;fill:none;stroke-width:1.6}
 /* moneda */
-.cn{display:inline-block;flex:none;width:var(--s,.8em);height:var(--s,.8em);margin-left:.18em;vertical-align:-.06em;background:url(img/moneda-corona.webp) center/contain no-repeat;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
+.cn{display:inline-block;flex:none;width:var(--s,.8em);height:var(--s,.8em);margin-left:.18em;vertical-align:-.06em;background:url(img/vbucks.webp) center/contain no-repeat;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
 .cn.big{--s:200px;margin:0;filter:drop-shadow(0 18px 40px rgba(242,193,78,.18)) drop-shadow(0 4px 10px rgba(0,0,0,.6))}
 
 /* armazon */
@@ -206,7 +206,7 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radiu
 .stt b .cn{--s:22px;margin-left:6px}
 .stt span{display:block;margin-top:8px;font:12px var(--mono);color:var(--dim)}
 .stt.ac b{color:var(--acc)}
-.bys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px;margin:30px 0 40px}
+.bys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:40px;margin:30px 0 40px}
 .by{display:grid;grid-template-columns:20px 1fr auto;column-gap:12px;row-gap:10px;align-items:center}
 .by img{width:18px;height:18px;object-fit:contain}
 .by strong{font:600 14px var(--sans)}
@@ -336,7 +336,7 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radiu
 .cs .chart svg{display:block;width:100%;height:auto;overflow:visible}
 .cs>.leg{margin-top:14px}
 .cgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:64px}
-.heat{display:grid;grid-template-columns:120px repeat(3,minmax(0,1fr));gap:3px;margin-top:6px}
+.heat{display:grid;grid-template-columns:120px repeat(4,minmax(0,1fr));gap:3px;margin-top:6px}
 .heat .hh{display:flex;align-items:center;justify-content:center;gap:7px;height:34px;font:600 12px var(--sans);color:var(--mute)}
 .heat .hh img{width:15px;height:15px;object-fit:contain}
 .heat .hr{display:flex;align-items:center;gap:9px;font:600 13px var(--sans)}
@@ -513,7 +513,7 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radiu
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .kpi:nth-child(3){border-left:0}
   .aw{grid-template-columns:1fr}
-  .heat{grid-template-columns:76px repeat(3,minmax(0,1fr))}
+  .heat{grid-template-columns:76px repeat(4,minmax(0,1fr))}
   .pf{padding:20px 16px 60px}
   .pf-hero{grid-template-columns:1fr;justify-items:center;text-align:center;gap:22px}
   .pf-hero input[data-pedit]{margin:0 auto;text-align:center}
@@ -690,7 +690,7 @@ a.tv:hover{text-decoration:underline}
 .brand{font-size:12px;letter-spacing:.16em;white-space:nowrap}
 
 /* PM, 30-10: "equipos con el logo negro no se pueden ver": cada escudo lleva un halo claro y redondo detras (sin caja) y un filo claro */
-img.tl{border-radius:50%;background:radial-gradient(closest-side,rgba(255,255,255,.2),rgba(255,255,255,.07) 72%,rgba(255,255,255,0));padding:2px;filter:drop-shadow(0 0 .7px rgba(255,255,255,.75))}
+img.tl{border-radius:0;background:none;padding:0;object-fit:contain;filter:drop-shadow(0 0 .6px rgba(255,255,255,.7))}
 .row .ll,.ft .lab img,.d-meta img,.s-match img{border-radius:50%;background:radial-gradient(closest-side,rgba(255,255,255,.2),rgba(255,255,255,.06) 72%,rgba(255,255,255,0));padding:1px;filter:drop-shadow(0 0 .6px rgba(255,255,255,.7))}
 
 .lang{display:flex;gap:4px;margin:14px 6px 0}
@@ -759,3 +759,15 @@ img.tl{border-radius:50%;background:radial-gradient(closest-side,rgba(255,255,25
 @media (max-width:860px){.bio{grid-template-columns:repeat(2,minmax(0,1fr))}.alin2,.sq{grid-template-columns:1fr}}
 
 .fm.big b.rs,.shr b.rs{color:#0d0f12}
+
+/* flechas de la fila de ligas (PM, 30-10) */
+.lgw{position:relative}
+.lgw .lgs2{-webkit-mask-image:none;mask-image:none}
+.lga{position:absolute;top:22px;z-index:2;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--bg2);box-shadow:0 0 0 1px var(--hair),0 6px 18px rgba(0,0,0,.35);color:var(--ink);transition:transform .15s}
+.lga:hover{transform:scale(1.08)}
+.lga svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.lga.l{left:-6px}.lga.r{right:-6px}
+.lga[hidden]{display:none}
+.lgw::after{content:'';position:absolute;top:0;right:0;bottom:1px;width:60px;pointer-events:none;background:linear-gradient(90deg,transparent,var(--bg));transition:opacity .2s}
+.lgw.fin::after{opacity:0}
+.lgc-i img.tl{width:30px;height:30px}

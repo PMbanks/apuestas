@@ -1,4 +1,4 @@
-// Sincronizador: trae partidos, cuotas y resultados (ESPN para futbol y UFC, PandaScore para Valorant),
+// Sincronizador: trae partidos, cuotas y resultados (ESPN para futbol y UFC, PandaScore para Valorant y CS2),
 // los guarda en Supabase, revela las apuestas al empezar y paga las apuestas de los partidos acabados.
 // Lo lanza GitHub Actions cada 15 minutos. Con DRY=1 solo cuenta lo que haria, sin tocar Supabase.
 //   SUPABASE_URL, SUPABASE_ANON_KEY, SYNC_SECRET, PANDASCORE_KEY
@@ -15,7 +15,7 @@ const SOCCER = [
   ['ned.1', 'Eredivisie'], ['usa.1', 'MLS'], ['mex.1', 'Liga MX'], ['arg.1', 'Liga Argentina'], ['bra.1', 'Brasileirão'],
   ['sau.1', 'Saudi Pro League'], ['uefa.nations', 'Nations League'], ['fifa.worldq.uefa', 'Clasificación Mundial'], ['fifa.friendly', 'Amistosos'],
 ];
-const SOCCER_PAST = 3 * DAY, SOCCER_AHEAD = 10 * DAY, UFC_AHEAD = 70 * DAY, VAL_AHEAD = 10 * DAY;
+const SOCCER_PAST = 3 * DAY, SOCCER_AHEAD = 10 * DAY, UFC_AHEAD = 70 * DAY;
 const MARGIN = 1.06;
 
 const getJson = async (url, headers = {}) => {
@@ -184,73 +184,110 @@ async function carasUfc(rows) {
   }
 }
 
-// ---------- Valorant (PandaScore) ----------
-async function valorant() {
+// ---------- Valorant y CS2 (PandaScore) ----------
+// Valorant: todo lo que haya (VCT, VCL, Game Changers, terceros). CS2: tiers s, a, b y c (el d son ligas minusculas).
+// Cada equipo tiene ficha en la tabla teams (db/006): ultimos 10 resultados, pais, siglas y jugadores. Se refresca cada
+// 12 h como mucho y 45 equipos por pasada, para no pasar del limite de PandaScore (1000 peticiones por hora)
+const ES = {
+  valorant: { sport: 'v', tiers: new Set(['s', 'a', 'b', 'c', 'd']), ahead: 14 * DAY, up: 2, past: 1 },
+  csgo: { sport: 'c', tiers: new Set(['s', 'a', 'b', 'c']), ahead: 7 * DAY, up: 3, past: 3 },
+};
+const FICHA_VIEJA = 12 * 3600e3, FICHAS_POR_PASADA = 45;
+const nombreLiga = (m) => {
+  const l = m.league?.name || '', s = m.serie?.name || '';
+  if (!s || s === l) return l || 'Torneo';
+  return s.toLowerCase().startsWith(l.toLowerCase()) ? s : `${l} ${s}`;
+};
+async function esports(game) {
+  const cfg = ES[game];
   if (!PS) return [];
   const H = { authorization: `Bearer ${PS}` };
-  const base = 'https://api.pandascore.co/valorant/matches';
-  const [up1, up2, run, past1, past2] = await Promise.all([
-    getJson(`${base}/upcoming?per_page=100&sort=begin_at&page=1`, H), getJson(`${base}/upcoming?per_page=100&sort=begin_at&page=2`, H),
+  const base = `https://api.pandascore.co/${game}/matches`;
+  const rango = `range[begin_at]=${new Date(NOW - 3 * DAY).toISOString()},${new Date(NOW).toISOString()}`;
+  const listas = await Promise.all([
+    ...Array.from({ length: cfg.up }, (_, i) => getJson(`${base}/upcoming?per_page=100&sort=begin_at&page=${i + 1}`, H)),
     getJson(`${base}/running?per_page=50`, H),
-    getJson(`${base}/past?per_page=100&sort=-end_at&page=1`, H), getJson(`${base}/past?per_page=100&sort=-end_at&page=2`, H),
+    ...Array.from({ length: cfg.past }, (_, i) => getJson(`${base}/past?per_page=100&sort=-begin_at&${rango}&page=${i + 1}`, H)),
   ]);
-  const past = [...(past1 || []), ...(past2 || [])];
-  // forma de cada equipo con sus ultimos resultados
-  const form = new Map();
-  for (const m of [...past].sort((a, b) => Date.parse(a.end_at || a.begin_at) - Date.parse(b.end_at || b.begin_at))) {
-    if (m.status !== 'finished' || !m.winner_id) continue;
-    for (const o of m.opponents || []) {
-      const id = o.opponent?.id; if (!id) continue;
-      const f = form.get(id) || { w: 0, g: 0, s: '', ult: [] };
-      const won = id === m.winner_id;
-      f.g++; if (won) f.w++; f.s = (f.s + (won ? 'G' : 'P')).slice(-5);
-      const otro = (m.opponents || []).find((o) => o.opponent?.id !== id)?.opponent;
-      const sc = (x) => m.results?.find((r) => r.team_id === x)?.score ?? 0;
-      f.ult = [...f.ult, { vs: otro?.name || '?', logo: otro?.image_url || null, won, score: `${sc(id)}:${sc(otro?.id)}`, at: m.end_at || m.begin_at, t: m.tournament?.name || '' }].slice(-5);
-      form.set(id, f);
-    }
-  }
   const out = [];
-  const tiers = new Set(['s', 'a', 'b', 'c']);
-  for (const m of [...(run || []), ...(up1 || []), ...(up2 || []), ...past]) {
+  for (const m of listas.flatMap((x) => x || [])) {
     const t = Date.parse(m.begin_at || m.scheduled_at);
-    if (!t || t > NOW + VAL_AHEAD || t < NOW - 3 * DAY) continue;
+    if (!t || t > NOW + cfg.ahead || t < NOW - 3 * DAY) continue;
     const tier = m.tournament?.tier;
-    if (tier && !tiers.has(tier)) continue;
+    if (tier && !cfg.tiers.has(tier)) continue;
     const [A, B] = (m.opponents || []).map((o) => o.opponent);
     if (!A || !B) continue;
     const status = m.status === 'canceled' ? 'canceled' : m.status === 'finished' ? (m.winner_id ? 'final' : 'canceled') : m.status === 'running' ? 'live' : 'scheduled';
     const sc = (id) => m.results?.find((r) => r.team_id === id)?.score ?? 0;
-    const fa = form.get(A.id), fb = form.get(B.id);
-    const row = {
-      id: `ps:valorant:${m.id}`, sport: 'v', league: `ps:${m.league?.id || 'val'}`, league_name: m.league?.name || 'Valorant',
+    out.push({
+      id: game === 'valorant' ? `ps:valorant:${m.id}` : `ps:${game}:${m.id}`, sport: cfg.sport,
+      league: `ps:${game}:${m.serie?.id || m.league?.id || 'x'}`, league_name: nombreLiga(m),
       league_logo: m.league?.image_url || null, stage: [m.serie?.full_name, m.tournament?.name].filter(Boolean).join(' · ') || null,
       tag: tier === 's' ? 'Internacional' : null,
       home: A.name, away: B.name, home_logo: A.image_url || null, away_logo: B.image_url || null,
       starts_at: new Date(t).toISOString(), status, bo: m.number_of_games || null,
       score: status === 'live' || status === 'final' ? `${sc(A.id)}:${sc(B.id)}` : null,
       winner: status === 'final' ? (m.winner_id === A.id ? '1' : '2') : null,
-      details: { recent: { a: (fa?.ult || []).slice().reverse(), b: (fb?.ult || []).slice().reverse() }, ids: { a: A.id, b: B.id },
+      details: { ids: { a: A.id, b: B.id }, tier: tier || null, game,
         tv: (m.streams_list || []).filter((x) => x.raw_url && /^(en|es)$/.test(x.language)).slice(0, 6)
           .map((x) => ({ n: /twitch/.test(x.raw_url) ? 'Twitch' : /youtube/.test(x.raw_url) ? 'YouTube' : /kick\.com/.test(x.raw_url) ? 'Kick' : 'Stream', l: x.language, u: x.raw_url, main: !!x.main })),
-        tape: [[m.number_of_games ? 'BO' + m.number_of_games : '', 'Formato', m.number_of_games ? 'BO' + m.number_of_games : ''],
-        [fa ? 'F:' + fa.s : '', 'Forma', fb ? 'F:' + fb.s : '']].filter((r) => r[0] || r[2]) },
-    };
-    if (status === 'scheduled') {
-      const pct = (f) => (f ? (f.w + 1) / (f.g + 2) : 0.5);
-      [row.odds_1, row.odds_x, row.odds_2] = twoWay(pct(fa), pct(fb));
-      row.odds_src = 'modelo';
-    }
-    out.push(row);
-  }
-  // los jugadores de cada equipo (una peticion para todos)
-  const ids = [...new Set(out.filter((r) => r.status !== 'final').flatMap((r) => [r.details.ids.a, r.details.ids.b]))].slice(0, 100);
-  if (ids.length) {
-    const teams = await getJson(`https://api.pandascore.co/valorant/teams?filter[id]=${ids.join(',')}&per_page=100`, H);
-    const pl = new Map((teams || []).map((t) => [t.id, (t.players || []).map((p) => ({ n: p.name, img: p.image_url || null, nat: p.nationality || null, role: p.role || null, nombre: [p.first_name, p.last_name].filter(Boolean).join(' ') || null }))]));
-    for (const r of out) r.details.players = { a: pl.get(r.details.ids.a) || [], b: pl.get(r.details.ids.b) || [] };
+        tape: [[m.number_of_games ? 'BO' + m.number_of_games : '', 'Formato', m.number_of_games ? 'BO' + m.number_of_games : '']].filter((r) => r[0] || r[2]) },
+    });
   }
   return [...new Map(out.map((r) => [r.id, r])).values()];
+}
+
+// fichas de los equipos: lee lo guardado, refresca lo viejo (primero los que juegan antes) y pone forma y cuotas
+async function fichasEsports(rows) {
+  if (!PS || !rows.length) return;
+  const H = { authorization: `Bearer ${PS}` };
+  const vivos = rows.filter((r) => r.status !== 'final' && r.status !== 'canceled').sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  const ids = [...new Set(vivos.flatMap((r) => [`${r.details.game}:${r.details.ids.a}`, `${r.details.game}:${r.details.ids.b}`]))];
+  let cache = {};
+  if (SECRET && SB && ids.length) { try { cache = (await rpc('sync_teams_get', { p_secret: SECRET, p_ids: ids })) || {} } catch (e) { console.log('fichas: no se pudo leer', e.message) } }
+  const viejas = ids.filter((k) => !cache[k] || NOW - cache[k].t > FICHA_VIEJA).slice(0, FICHAS_POR_PASADA);
+  const nuevas = {};
+  for (let i = 0; i < viejas.length; i += 5) {
+    await Promise.all(viejas.slice(i, i + 5).map(async (k) => {
+      const id = +k.split(':')[1];
+      const ms = await getJson(`https://api.pandascore.co/teams/${id}/matches?filter[status]=finished&sort=-begin_at&per_page=10`, H);
+      if (!Array.isArray(ms)) return;
+      const hist = ms.filter((m) => m.winner_id).map((m) => {
+        const otro = (m.opponents || []).map((o) => o.opponent).find((o) => o && o.id !== id);
+        const sc = (x) => m.results?.find((r) => r.team_id === x)?.score ?? 0;
+        return { vs: otro?.name || '?', vsId: otro?.id || null, logo: otro?.image_url || null, won: m.winner_id === id, score: `${sc(id)}:${sc(otro?.id)}`, at: m.begin_at, t: [m.league?.name, m.serie?.name].filter(Boolean).join(' ') };
+      });
+      const w = hist.filter((x) => x.won).length;
+      nuevas[k] = { w, g: hist.length, f: hist.slice(0, 5).reverse().map((x) => (x.won ? 'G' : 'P')).join(''), hist };
+    }));
+  }
+  // pais, siglas y jugadores de los equipos refrescados (una peticion por juego)
+  for (const game of Object.keys(ES)) {
+    const ks = Object.keys(nuevas).filter((k) => k.startsWith(game + ':'));
+    for (let i = 0; i < ks.length; i += 100) {
+      const ts = await getJson(`https://api.pandascore.co/${game}/teams?filter[id]=${ks.slice(i, i + 100).map((k) => k.split(':')[1]).join(',')}&per_page=100`, H);
+      for (const t of ts || []) {
+        const k = `${game}:${t.id}`; if (!nuevas[k]) continue;
+        Object.assign(nuevas[k], { name: t.name, logo: t.image_url || null, loc: t.location || null, acr: t.acronym || null,
+          players: (t.players || []).filter((p) => p.active !== false).map((p) => ({ n: p.name, img: p.image_url || null, nat: p.nationality || null, role: p.role || null, age: p.age || null, nombre: [p.first_name, p.last_name].filter(Boolean).join(' ') || null })) });
+      }
+    }
+  }
+  if (SECRET && SB && !DRY && Object.keys(nuevas).length) {
+    const filas = Object.entries(nuevas).map(([id, data]) => ({ id, data }));
+    for (let i = 0; i < filas.length; i += 50) await rpc('sync_teams_put', { p_secret: SECRET, p_rows: filas.slice(i, i + 50) });
+  }
+  const forma = (k) => nuevas[k] || cache[k] || null;
+  for (const r of rows) {
+    const fa = forma(`${r.details.game}:${r.details.ids.a}`), fb = forma(`${r.details.game}:${r.details.ids.b}`);
+    if (fa?.f || fb?.f) r.details.tape.push([fa?.f ? 'F:' + fa.f : '', 'Forma', fb?.f ? 'F:' + fb.f : '']);
+    if (r.status === 'scheduled') {
+      const pct = (f) => (f?.g ? (f.w + 1) / (f.g + 2) : 0.5);
+      [r.odds_1, r.odds_x, r.odds_2] = twoWay(pct(fa), pct(fb));
+      r.odds_src = 'modelo';
+    }
+  }
+  console.log(`fichas de equipos: ${Object.keys(cache).length} guardadas · ${Object.keys(nuevas).length} refrescadas`);
 }
 
 // ---------- Supabase ----------
@@ -265,10 +302,11 @@ const rpc = async (fn, args) => {
 
 async function main() {
   const t0 = Date.now();
-  const [f, u, v] = await Promise.all([soccer(), ufc(), valorant()]);
-  const rows = [...f, ...u, ...v];
+  const [f, u, v, c] = await Promise.all([soccer(), ufc(), esports('valorant'), esports('csgo')]);
+  await fichasEsports([...v, ...c]);
+  const rows = [...f, ...u, ...v, ...c];
   await carasUfc(rows);
-  console.log(`futbol ${f.length} · ufc ${u.length} · valorant ${v.length} · con cuotas reales ${rows.filter((r) => r.odds_src === 'draftkings').length}`);
+  console.log(`futbol ${f.length} · ufc ${u.length} · valorant ${v.length} · cs2 ${c.length} · con cuotas reales ${rows.filter((r) => r.odds_src === 'draftkings').length}`);
   if (DRY) {
     if (process.env.DRY_OUT) (await import('node:fs')).writeFileSync(process.env.DRY_OUT, JSON.stringify(rows));
     const show = rows.filter((r) => r.status === 'scheduled').sort((a, b) => a.starts_at.localeCompare(b.starts_at)).slice(0, 8);

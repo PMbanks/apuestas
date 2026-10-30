@@ -5,7 +5,7 @@
   const D = {
     // menú y cabeceras
     'Partidos': 'Matches', 'Mis apuestas': 'My bets', 'Apuestas de todos': 'All bets', 'Todos': 'All', 'Apuestas': 'Bets', 'Colegas': 'Friends', 'Liga': 'League', 'Monedero': 'Wallet', 'Perfil': 'Profile',
-    'Fútbol, Valorant y UFC · solo 1 X 2 · cierra al empezar': 'Football, Valorant and UFC · 1 X 2 only · closes at kick-off',
+    'Fútbol, Valorant, CS2 y UFC · solo 1 X 2 · cierra al empezar': 'Football, Valorant, CS2 and UFC · 1 X 2 only · closes at kick-off',
     'Lo que llevas en juego y todo lo que ya se ha pagado': 'What you have in play and everything already paid',
     'Lo que lleva cada uno en juego y cuánto falta': 'What each of you has in play and how long is left',
     'La temporada, semana a semana': 'The season, week by week', 'Fotos, mensajes y avisos': 'Photos, messages and notices',
@@ -27,7 +27,7 @@
     'Retar a un colega en este partido': 'Challenge a friend on this match', 'Cerrar': 'Close', 'Elige colega y resultado.': 'Pick a friend and a result.',
     'Reto 1 contra 1 · el que acierte se lleva lo de los dos': '1 vs 1 challenge · whoever is right takes both stakes',
     'Dónde verlo': 'Where to watch', 'En inglés': 'In English', 'En español': 'In Spanish', 'sin datos': 'no data',
-    'Últimos 5': 'Last 5', 'Ver ficha': 'View profile', 'Alineaciones': 'Line-ups', 'Las alineaciones salen cuando los equipos las dan, sobre una hora antes.': 'Line-ups show once the teams announce them, about an hour before.', 'Últimos partidos': 'Last matches', 'Próximos': 'Next', 'Plantilla': 'Squad', 'Porteros': 'Goalkeepers', 'Defensas': 'Defenders', 'Centrocampistas': 'Midfielders', 'Delanteros': 'Forwards', 'Sumisiones': 'Submissions', 'Edad': 'Age', 'Altura': 'Height', 'Peso': 'Weight', 'Alcance': 'Reach', 'Guardia': 'Stance', 'País': 'Country', 'Gimnasio': 'Gym', 'Categoría': 'Division', 'Apodo': 'Nickname', 'Últimas peleas': 'Last fights', 'Jugadores': 'Players', 'Últimos resultados': 'Last results', 'Cargando la ficha…': 'Loading the profile…', 'No se ha podido cargar la ficha.': 'Could not load the profile.', 'ESPN no tiene más datos de este equipo.': 'ESPN has no more data on this team.', 'ESPN no tiene la ficha de este luchador.': 'ESPN has no profile for this fighter.', 'PandaScore todavía no tiene datos de este equipo.': 'PandaScore has no data on this team yet.', 'Clasificación': 'Standings', 'Posesión': 'Possession', 'Tiros': 'Shots', 'A puerta': 'On target', 'Córners': 'Corners',
+    'Últimos 5': 'Last 5', 'Ver ficha': 'View profile', 'Tus V-Bucks, la paga del lunes y cada movimiento': 'Your V-Bucks, Monday pay and every move', 'Victorias': 'Win rate', 'Racha': 'Streak', 'Mapas': 'Maps', 'Siglas': 'Tag', 'Cara a cara': 'Head to head', 'Anteriores': 'Previous', 'Más ligas': 'More leagues', 'Alineaciones': 'Line-ups', 'Las alineaciones salen cuando los equipos las dan, sobre una hora antes.': 'Line-ups show once the teams announce them, about an hour before.', 'Últimos partidos': 'Last matches', 'Próximos': 'Next', 'Plantilla': 'Squad', 'Porteros': 'Goalkeepers', 'Defensas': 'Defenders', 'Centrocampistas': 'Midfielders', 'Delanteros': 'Forwards', 'Sumisiones': 'Submissions', 'Edad': 'Age', 'Altura': 'Height', 'Peso': 'Weight', 'Alcance': 'Reach', 'Guardia': 'Stance', 'País': 'Country', 'Gimnasio': 'Gym', 'Categoría': 'Division', 'Apodo': 'Nickname', 'Últimas peleas': 'Last fights', 'Jugadores': 'Players', 'Últimos resultados': 'Last results', 'Cargando la ficha…': 'Loading the profile…', 'No se ha podido cargar la ficha.': 'Could not load the profile.', 'ESPN no tiene más datos de este equipo.': 'ESPN has no more data on this team.', 'ESPN no tiene la ficha de este luchador.': 'ESPN has no profile for this fighter.', 'PandaScore todavía no tiene datos de este equipo.': 'PandaScore has no data on this team yet.', 'Clasificación': 'Standings', 'Posesión': 'Possession', 'Tiros': 'Shots', 'A puerta': 'On target', 'Córners': 'Corners',
     'Faltas': 'Fouls', 'Amarillas': 'Yellow cards', 'Rojas': 'Red cards', 'Fueras de juego': 'Offsides', 'Forma': 'Form', 'G · E · P': 'W · D · L',
     'Récord': 'Record', 'Formato': 'Format', 'Cargando datos de ESPN…': 'Loading ESPN data…', 'Apuesta del día': 'Bet of the day',
     '← Partidos': '← Matches', '← Volver': '← Back', 'Cartelera principal': 'Main card', 'Combate estelar': 'Main event', 'Internacional': 'International',
@@ -68,7 +68,7 @@
     'los últimos': 'the latest', 'Cuándo': 'When', 'Qué': 'What', 'Importe': 'Amount', 'Reglas': 'Rules', 'Apuesta': 'Bet', 'Premio': 'Win', 'Devolución': 'Refund',
     'Ajuste': 'Adjustment', 'Sin movimientos todavía.': 'No moves yet.', 'Reglas fijas. Solo PM puede cambiarlas.': 'Fixed rules. Only PM can change them.',
     'Lo que no gastas se acumula para siempre.': 'What you do not spend adds up for ever.',
-    'Solo se apuesta a quién gana: 1, X o 2. En Valorant y UFC no hay empate.': 'You only bet on who wins: 1, X or 2. Valorant and UFC have no draw.',
+    'Solo se apuesta a quién gana: 1, X o 2. En Valorant, CS2 y UFC no hay empate.': 'You only bet on who wins: 1, X or 2. Valorant, CS2 and UFC have no draw.',
     'Los resultados llegan solos y se pagan al momento. Si un partido no se juega, se devuelve lo apostado.': 'Results arrive by themselves and pay out at once. If a match is not played, the stake comes back.',
     // perfil
     'Poner foto': 'Add photo', 'Cambiar foto': 'Change photo', 'Quitar': 'Remove', 'Cambiar contraseña': 'Change password', 'Cerrar sesión': 'Log out',
@@ -99,7 +99,7 @@
     [/\bayer\b/g, 'yesterday'], [/\bhoy\b/g, 'today'],
     [/^(\d+) partidos?$/, (m, n) => `${n} match${n === '1' ? '' : 'es'}`],
     [/empieza en /g, 'starts in '], [/^En vivo/, 'Live'], [/en mapas/g, 'on maps'], [/\ben juego\b/g, 'in play'],
-    [/^\+([\d.]+) el lunes ·$/, '+$1 on Monday ·'], [/(\d+)º de (\d+)/g, '#$1 of $2'], [/^Apostar ([\d.]+)$/, 'Bet $1'], [/^([\d.]+) limpias$/, '$1 profit'],
+    [/^\+([\d.]+) el lunes ·$/, '+$1 on Monday ·'], [/^\+([\d.]+) V-Bucks el lunes ·$/, '+$1 V-Bucks on Monday ·'], [/(\d+)º de (\d+)/g, '#$1 of $2'], [/^Apostar ([\d.]+)$/, 'Bet $1'], [/^([\d.]+) limpias$/, '$1 profit'],
     [/^(\d+) apuestas abiertas$/, '$1 open bets'], [/^(\d+) apuestas en total$/, '$1 bets in total'], [/^(\d+) premios$/, '$1 wins'],
     [/^(\d+) de (\d+) resueltas$/, '$1 of $2 settled'], [/^(\d+) de (\d+)$/, '$1 of $2'], [/^(\d+) se pueden cancelar todavía$/, '$1 can still be cancelled'],
     [/^(\d+) abiertos$/, '$1 open'], [/^Próximas · (\d+)$/, 'Upcoming · $1'], [/racha/g, 'streak'], [/^hasta las (.+)$/, 'until $1'],
@@ -124,7 +124,7 @@
     [/^Cada lunes a las 00:00 entran ([\d.]+) a cada uno\. No se compran ni se ganan de otra forma\.$/, 'Every Monday at 00:00 each of you gets $1. They cannot be bought or earned any other way.'],
     [/^Cierra al empezar el partido\. Las elecciones de todos se ven siempre\.$/, 'Betting closes at kick-off. Everyone\'s picks are always visible.'],
     [/^Cierra al empezar el partido\. Las elecciones de todos se ven al empezar\.$/, 'Betting closes at kick-off. Everyone\'s picks show at kick-off.'],
-    [/^Gana (\d) con/, 'Win $1 with'], [/^← (.+) vs (.+)$/, '← $1 vs $2'], [/^(\d+) apuestas · toca una para ver el partido\.$/, '$1 bets · tap one to open the match.'],
+    [/^Gana (\d) con/, 'Win $1 with'], [/^Últimos (\d+)$/, 'Last $1'], [/^(\d+) ganados$/, '$1 won'], [/^(\d+) perdidos$/, '$1 lost'], [/ años$/, ' y/o'], [/^← (.+) vs (.+)$/, '← $1 vs $2'], [/^(\d+) apuestas · toca una para ver el partido\.$/, '$1 bets · tap one to open the match.'],
   ];
   const tr = (s) => {
     const t = s.trim();
