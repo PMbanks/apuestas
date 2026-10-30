@@ -809,7 +809,7 @@ img.tl{border-radius:0;background:none;padding:0;object-fit:contain;filter:drop-
 .hst .hm strong{display:block;font:600 14px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hst .hm small{display:block;margin-top:3px;font:12px var(--mono);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hst b{font:600 15px var(--mono);white-space:nowrap}
-.hst.g b{color:var(--win)}.hst.p b{color:#e0646f}.hst.e b,.hst.o b{color:var(--mute);font-size:12px}
+.hst.h-g b{color:var(--win)}.hst.h-p b{color:#e0646f}.hst.h-e b{color:var(--mute);font-size:12px}
 .hst-mas{margin-top:14px}
 .pc-ver{display:block;margin-top:18px;font:600 13px var(--sans);color:var(--acc)}
 .pc-ver:hover{color:var(--acc2)}
@@ -1074,3 +1074,27 @@ img.tl{border-radius:0;background:none;padding:0;object-fit:contain;filter:drop-
 
 .mv-i.j{background:rgba(204,100,150,.16);color:#e58ab4}
 .dv-sc strong{display:grid;justify-items:center}.dv-sc strong small{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-top:6px}
+
+/* historial: lo abierto se ve abierto */
+.hst.h-o{position:relative;padding-left:12px;background:linear-gradient(90deg,rgba(242,193,78,.08),transparent 60%)}
+.hst.h-o::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:2px;background:var(--acc)}
+.hst.h-o b{padding:4px 10px;border-radius:999px;background:rgba(242,193,78,.16);color:var(--acc);font:700 10px var(--mono);letter-spacing:.12em}
+.hst.h-live{background:linear-gradient(90deg,rgba(224,100,111,.1),transparent 60%)}
+.hst.h-live::before{background:#e0646f}
+.hst.h-live b{background:rgba(224,100,111,.18);color:#ff8f98}
+/* directo: el juego y quien esta mirando */
+.dv-sp{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 6px;border-radius:999px;background:rgba(255,255,255,.06);color:var(--soft);font-weight:600}
+.dv-sp img{width:14px;height:14px;object-fit:contain}
+.dv-spi{width:11px;height:11px;object-fit:contain;vertical-align:-1px;margin-right:4px}
+.dv-ven{display:flex!important;align-items:center;gap:5px;color:#ff8f98!important}
+.dv-ven svg{width:12px;height:12px;flex:none}
+.dv-watch{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;font:12px var(--mono);color:#ff8f98}
+.dv-watch svg{width:16px;height:16px}
+.dv-w{display:inline-flex;align-items:center;gap:6px;font:600 13px var(--sans);color:var(--ink)}
+
+/* bracket a pantalla completa */
+.brk-full .brk-page{display:block}
+.brk-full .det-x.vis{justify-content:flex-start}
+.brk-full .brk-c{width:200px}
+.brk-full .brk-cols{gap:40px;padding-bottom:14px}
+.brk-full .sh-hd{padding-bottom:18px}
