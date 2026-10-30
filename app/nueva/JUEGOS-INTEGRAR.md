@@ -53,4 +53,52 @@ const R = { partidos, apuestas, colegas, liga, chat, monedero, juegos, perfil };
 - `GM_JUEGOS.ocupado()` es true mientras una animacion esconde un resultado.
 - El saldo del Monedero y de las semanas de la Liga (`weeks`, `recibido`) salen de `ledger`, asi que ganar o perder en los juegos ya cuenta ahi. `get_state` solo trae los ultimos 60 movimientos: con el plinko se llenaran rapido.
 - Apuesta maxima por jugada: 100.000 (para que ningun saldo se acerque al limite de `int`).
-- Textos para el diccionario del ingles: el modulo pasa lo que pinta por `GM_LANG.traduce`. Frases fijas: Cara o cruz, Crash, Ruleta, Blackjack, Plinko, Contra, Cualquiera, Tu lado, Cara, Cruz, Apuesta, Todo, Aceptar, Retirar, Abiertos, Tus retos, Últimos, Retirar solo en, sin límite, Apostar, Dentro, En marcha, Retirado, Perdida, dentro, En la ronda, Color, Rojo, Negro, Verde, Girando, Banca, Tú, En juego, Pedir, Plantarse, Doblar, doblada, Riesgo, Bajo, Medio, Alto, Últimas bolas, "Apuesta para abrir una ronda", "Retira antes de que explote", "Empate · te devuelvo la apuesta", "Blackjack paga 3 a 2. La banca se planta en 17.". Con numeros (para las reglas): `Retar por N`, `Apostar N`, `Apostar N a rojo`, `Repartir por N`, `Otra mano por N`, `Soltar bola por N`, `Retirar ×X N`, `Arranca en N s · M dentro`, `Explotó en ×X · cobraste N` o `· perdiste N`, `Has cobrado N`, `Salió el N, rojo · cobras N` o `· pierdes N`, `Salió cara. Ganas N`, `Salió cruz. Pierdes N`, `Salió cara. Ana aceptó y ganas N` o `pierdes N`, `Ganas ▲ N`, `Blackjack · ▲ N`, `Te pasas · ▼ N`, `Pierdes ▼ N`, `×M · ▲ N`, `×M · ▼ N`, `×M · te devuelve lo apostado`, `Máximo ×N`, `va a cara`, `te reta, va a cruz`, `le gana a ti · cruz`, `sale en ×X`, y los avisos: `Reto lanzado por N`, `Reto retirado: te devuelvo N`, `Retirado a ×X · +N`, `Tarde: explotó en ×X`, `No tienes tanto: te quedan N`, `Pon una cantidad`. Los errores de la base ya vienen en español (`No tienes saldo suficiente: te quedan N`, `Ya estás dentro de esta ronda`, `La ronda ya ha arrancado: espera a la siguiente`, `La ruleta está girando: espera a que acabe`, `Apuestas cerradas`, `Ya tienes una mano en juego`, etc.).
+- **Ingles**: el modulo pinta en espanol y pasa lo pintado por `GM_LANG.traduce` (nodo de texto a nodo de texto), asi que solo hace falta meter estas lineas en `i18n.js`. Pestanas visibles: Cara o cruz, Crash y Blackjack (ruleta y plinko ya no tienen pestana). Las de `D` son frases exactas; las de `R` van al final de la lista de reglas, en este orden.
+
+```js
+// ---- D: frases exactas (juegos.js) ----
+'Cara o cruz': 'Heads or tails', 'Crash': 'Crash', 'Blackjack': 'Blackjack',
+'Contra': 'Against', 'Cualquiera': 'Anyone', 'Tu lado': 'Your side', 'Cara': 'Heads', 'Cruz': 'Tails', 'cara': 'heads', 'cruz': 'tails',
+'Apuesta': 'Bet', 'Todo': 'All', 'Máx': 'Max', 'Retar por': 'Challenge for', 'Abiertos': 'Open', 'Tus retos': 'Your challenges', 'Últimos': 'Latest',
+'Aceptar': 'Accept', 'Retirar': 'Withdraw', 'Tú': 'You', 'ti': 'you',
+'Retirar solo en': 'Cash out only at', 'sin límite': 'no limit', 'Retirada automática': 'Auto cash out',
+'Dentro': 'In', 'dentro': 'in', 'En marcha': 'Running', 'Retirado': 'Cashed out', 'Perdida': 'Lost', 'En la ronda': 'In the round', 'Últimas rondas': 'Last rounds',
+'Todavía nadie dentro': 'Nobody in yet', 'segundos': 'seconds', 'Apuesta para abrir una ronda': 'Bet to open a round', 'Retira antes de que explote': 'Cash out before it blows',
+'Banca': 'Dealer', 'Haz tu apuesta': 'Place your bet', 'En juego': 'In play', 'Pedir': 'Hit', 'Plantarse': 'Stand', 'Doblar': 'Double', 'doblada': 'doubled',
+'Repartir por': 'Deal for', 'Otra mano por': 'Another hand for', 'Hoy te quedan': 'Today you have', 'por arriesgar': 'left to risk',
+'Hoy ya has perdido 100. Vuelve mañana': 'You have already lost 100 today. Come back tomorrow',
+'Blackjack paga 3 a 2': 'Blackjack pays 3 to 2', 'Blackjack paga 3 a 2. La banca se planta en 17.': 'Blackjack pays 3 to 2. The dealer stands on 17.',
+'Empate · te devuelvo la apuesta': 'Push · your bet is returned',
+'Pon una cantidad': 'Enter an amount', 'Este juego está cerrado ahora mismo': 'This game is closed right now',
+'La retirada automática va de ×1,01 a ×1000': 'Auto cash out goes from ×1.01 to ×1000',
+// errores de la base (db/010 y db/016)
+'Tienes que entrar primero': 'You need to log in first', 'La apuesta mínima es 1': 'The minimum bet is 1', 'La apuesta máxima es 100.000': 'The maximum bet is 100,000',
+'Elige cara o cruz': 'Pick heads or tails', 'Elige a un colega': 'Pick a friend', 'Ya tienes 5 retos abiertos: retira alguno': 'You already have 5 open challenges: withdraw one',
+'Ese reto no existe': 'That challenge does not exist', 'Ese reto ya no está abierto': 'That challenge is no longer open', 'No puedes aceptar tu propio reto': 'You cannot accept your own challenge',
+'Ese reto es para otro': 'That challenge is for someone else', 'Ese reto no es tuyo': 'That challenge is not yours', 'Ese reto ya no se puede retirar': 'That challenge can no longer be withdrawn',
+'La ronda ya ha arrancado: espera a la siguiente': 'The round has already started: wait for the next one', 'Ya estás dentro de esta ronda': 'You are already in this round',
+'No hay ninguna ronda': 'There is no round', 'No estás en esta ronda': 'You are not in this round', 'La ronda aún no ha arrancado': 'The round has not started yet',
+'Ya tienes una mano en juego': 'You already have a hand in play', 'Esa mano no es tuya': 'That hand is not yours', 'Esa mano ya ha terminado': 'That hand has already ended',
+'Solo puedes doblar con las dos primeras cartas': 'You can only double on your first two cards',
+'Los juegos aún no están en la base: falta cargar db/010_juegos.sql': 'The games are not in the database yet: db/010_juegos.sql is missing',
+
+// ---- R: con numeros o nombres (añadir a la lista de reglas) ----
+[/^Apostar ([\d.]+)$/, 'Bet $1'], [/^Retirar ×([\d,]+)$/, 'Cash out ×$1'],
+[/^([\d.]+) dentro$/, '$1 in'], [/^sale en ×([\d,]+)$/, 'exits at ×$1'],
+[/^Has cobrado ([\d.]+)$/, 'You cashed $1'], [/^Explotó en ×([\d,]+)/, 'Crashed at ×$1'], [/ · cobraste ([\d.]+)$/, ' · you cashed $1'], [/ · perdiste ([\d.]+)$/, ' · you lost $1'],
+[/^Retirado a ×([\d,]+) · \+([\d.]+)$/, 'Cashed out at ×$1 · +$2'], [/^Tarde: explotó en ×([\d,]+)$/, 'Too late: it crashed at ×$1'],
+[/^Reto lanzado por ([\d.]+)$/, 'Challenge sent for $1'], [/^Reto retirado: te devuelvo ([\d.]+)$/, 'Challenge withdrawn: your $1 is back'],
+[/^No tienes tanto: te quedan ([\d.]+)$/, 'You do not have that much: you have $1 left'],
+[/^No tienes saldo suficiente: te quedan ([\d.]+)$/, 'Not enough balance: you have $1 left'],
+[/^Salió (cara|cruz)\. Ganas ([\d.]+)$/, 'It came up $1. You win $2'], [/^Salió (cara|cruz)\. Pierdes ([\d.]+)$/, 'It came up $1. You lose $2'],
+[/^Salió (cara|cruz)\. (.+) aceptó y ganas ([\d.]+)$/, 'It came up $1. $2 accepted and you win $3'], [/^Salió (cara|cruz)\. (.+) aceptó y pierdes ([\d.]+)$/, 'It came up $1. $2 accepted and you lose $3'],
+[/^It came up cara/, 'It came up heads'], [/^It came up cruz/, 'It came up tails'],
+[/^te reta, va a cara$/, 'challenges you, goes for heads'], [/^te reta, va a cruz$/, 'challenges you, goes for tails'], [/^va a cara$/, 'goes for heads'], [/^va a cruz$/, 'goes for tails'],
+[/^le gana a (.+) · (cara|cruz)$/, 'beats $1 · $2'], [/^le ganas a (.+) · (cara|cruz)$/, 'you beat $1 · $2'], [/^(beats|you beat) (.+) · cara$/, '$1 $2 · heads'], [/^(beats|you beat) (.+) · cruz$/, '$1 $2 · tails'], [/^beats ti · /, 'beats you · '],
+[/^Ganas ▲ ([\d.]+)$/, 'You win ▲ $1'], [/^Te pasas · ▼ ([\d.]+)$/, 'Bust · ▼ $1'], [/^Pierdes ▼ ([\d.]+)$/, 'You lose ▼ $1'],
+[/^Hoy solo puedes arriesgar ([\d.]+) más en el blackjack$/, 'Today you can only risk $1 more in blackjack'],
+[/^Hoy ya has perdido 100 en el blackjack\. Vuelve mañana$/, 'You have already lost 100 today in blackjack. Come back tomorrow'],
+[/×(\d+),(\d\d)/g, '×$1.$2'],   // decimales con punto: este va el ultimo de la lista
+```
+
+  Notas: `Blackjack · ▲ N` se queda igual en ingles. La cuenta atras del crash, las fichas y los puntos de explosion llevan numeros solos (no se traducen). El letrero de la mesa ("Blackjack paga 3 a 2") es un elemento normal, traducible con la frase de `D`. `Retar por`, `Repartir por` y `Otra mano por` llevan la cifra en un `<span>` aparte, por eso van en `D` sin cifra. Ruleta y plinko siguen en el codigo con sus frases (Rojo, Negro, Verde, Girando, Riesgo, Soltar bola...) pero ya no se ven.

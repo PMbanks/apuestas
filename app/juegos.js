@@ -28,7 +28,7 @@
   const D = { moneda: null, crash: null, ruleta: null, blackjack: null, plinko: null, res: null };
   const T = { off: 0 };
   let ultima = 0, cargaId = 0, pend = false, refs = {}, sigs = {};
-  let crRaf = 0, crPoll = 0, ruRaf = 0, ruPoll = 0, ruTimer = 0;
+  let tCarga = 0, crRaf = 0, crPoll = 0, ruRaf = 0, ruPoll = 0, ruTimer = 0;
 
   /* ---------- utilidades ---------- */
   function lee(k) { try { return localStorage.getItem(k) } catch { return null } }
@@ -168,7 +168,7 @@
   function tabs() {
     const r = D.res || {};
     const pt = { crash: !!r.crash, ruleta: !!r.ruleta, blackjack: !!r.bj };
-    return JUEGOS.map(([k, n]) => `<button class="jg-tab ${S.juego === k ? 'on' : ''}" data-jg="tab" data-v="${k}">${n}${pt[k] ? '<i></i>' : ''}${k === 'moneda' && r.moneda > 0 ? `<b>${r.moneda}</b>` : ''}</button>`).join('');
+    return JUEGOS.map(([k, n]) => `<button class="jg-tab ${S.juego === k ? 'on' : ''}" data-jg="tab" data-v="${k}">${n}${k === 'moneda' ? `<b class="${r.moneda > 0 ? '' : 'off'}">${r.moneda || 0}</b>` : `<i class="${pt[k] ? '' : 'off'}"></i>`}</button>`).join('');
   }
   function vista() {
     return { moneda: vMoneda, crash: vCrash, ruleta: vRuleta, blackjack: vBj, plinko: vPlinko }[S.juego]();
@@ -176,7 +176,7 @@
   function post() {
     if (!root) return;
     refs = {
-      mult: root.querySelector('[data-mult]'), sub: root.querySelector('[data-sub]'), cv: root.querySelector('[data-cv]'), go: root.querySelector('[data-go]'),
+      mult: root.querySelector('[data-mult]'), sub: root.querySelector('[data-sub]'), cv: root.querySelector('[data-cv]'), go: root.querySelector('[data-go]'), cd: root.querySelector('[data-cd]'),
       coin: root.querySelector('[data-coin]'), rot: root.querySelector('[data-rot]'), hub: root.querySelector('[data-hub]'), ball: root.querySelector('[data-ball]'),
     };
     root.querySelectorAll('[data-saldo]').forEach((e) => (e.textContent = N(S.saldo)));
@@ -364,12 +364,12 @@
     const d = D.crash || { ronda: null, apuestas: [], historial: [] };
     const f = crFase();
     return `<section class="jg-g">
-      <div class="jg-stage jg-cr">
+      <div class="jg-stage jg-cr" data-cr>
         <div class="jg-big num" data-mult>×1,00</div>
         <p class="jg-sub" data-sub></p>
-        <canvas class="jg-cv" data-cv></canvas>
+        <div class="jg-cvw"><canvas class="jg-cv" data-cv></canvas><div class="jg-cd" data-cd hidden><svg viewBox="0 0 220 220" aria-hidden="true"><circle class="t" cx="110" cy="110" r="96"/><circle class="p" data-cdp cx="110" cy="110" r="96"/></svg><div class="jg-cdn"><b data-cdn>10</b><small>segundos</small></div></div></div>
         <div class="jg-hist">${(d.rondas ? d.rondas.map((x) => x.punto) : d.historial).map((p) => `<span class="${clsP(p)}">×${X(p)}</span>`).join('')}</div>
-        ${d.rondas && d.rondas.some((x) => x.gente.length) ? `<span class="lab jg-sec">Últimas rondas</span>${d.rondas.filter((x) => x.gente.length).slice(0, 6).map((x) => `<div class="jg-rr"><b class="num ${clsP(x.punto)}">×${X(x.punto)}</b><span>${x.gente.map((g) => `<span class="jg-rg">${av(g.player)}${g.estado === 'cobrada' ? `<em class="${g.pago > g.stake ? 'win' : ''}">×${X(g.retiro)} ${g.pago > g.stake ? '+' + N(g.pago - g.stake) : ''}</em>` : `<em class="lose">▼ ${N(g.stake)}</em>`}</span>`).join('')}</span></div>`).join('')}` : ''}
+        ${d.rondas && d.rondas.some((x) => x.gente.length) ? `<span class="lab jg-sec">Últimas rondas</span>${d.rondas.filter((x) => x.gente.length).slice(0, 6).map((x) => `<div class="jg-rr ${clsP(x.punto)}"><b class="num">×${X(x.punto)}</b><span>${x.gente.map((g) => `<span class="jg-rg ${g.estado === 'cobrada' ? (g.pago > g.stake ? 'w' : 'e') : 'l'}">${av(g.player)}${g.estado === 'cobrada' ? `<em>×${X(g.retiro)}${g.pago > g.stake ? ' +' + N(g.pago - g.stake) : ''}</em>` : `<em>▼ ${N(g.stake)}</em>`}</span>`).join('')}</span></div>`).join('')}` : ''}
       </div>
       <div class="jg-side">
         ${apuesta()}
@@ -400,57 +400,154 @@
     setT(b.querySelector('[data-bl]'), lab); setT(b.querySelector('[data-bp]'), pay);
     if (b.disabled !== dis) b.disabled = dis;
   }
+  /* ---- efectos del crash: cohete con estela, chispas, explosion y cobro. Todo se dibuja en el canvas y solo mientras hay ronda o efecto vivo ---- */
+  const CRX = { parts: [], boom: null, head: null, t: 0, est: null };
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const PARADAS = [[1, [244, 242, 236]], [2, [242, 193, 78]], [5, [255, 140, 56]], [10, [43, 212, 125]], [30, [77, 224, 255]]];
+  // el multiplicador cambia de color segun sube: blanco, oro, naranja, verde, cian
+  function colorMult(m) {
+    let i = 0; while (i < PARADAS.length - 2 && m >= PARADAS[i + 1][0]) i++;
+    const [a, ca] = PARADAS[i], [b, cb] = PARADAS[i + 1], t = Math.min(1, Math.max(0, (m - a) / (b - a)));
+    return ca.map((v, k) => Math.round(v + (cb[k] - v) * t));
+  }
+  function chispas(x, y, n, cols, vel, grav, vida) {
+    for (let i = 0; i < n; i++) { const a = rnd(0, 6.283), v = rnd(vel * 0.2, vel); CRX.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: grav, r: rnd(1.5, 4), t: 0, vida: rnd(vida * 0.5, vida), c: cols[(Math.random() * cols.length) | 0] }) }
+    if (CRX.parts.length > 260) CRX.parts.splice(0, CRX.parts.length - 260);
+  }
+  function crBoom() {
+    if (quieto()) return;
+    CRX.boom = { t0: performance.now(), nacio: false };
+    const st = root.querySelector('[data-cr]');
+    if (st) st.animate([{ transform: 'translate(0,0)' }, { transform: 'translate(-7px,3px)' }, { transform: 'translate(6px,-4px)' }, { transform: 'translate(-4px,-2px)' }, { transform: 'translate(3px,2px)' }, { transform: 'none' }], { duration: 420, easing: 'ease-out' });
+    if (refs.mult) refs.mult.animate([{ transform: 'scale(1.14)' }, { transform: 'scale(1)' }], { duration: 400, easing: 'cubic-bezier(.2,.8,.3,1)' });
+  }
+  function crCobroFx(pago) {
+    if (quieto()) return;
+    const h = CRX.head, cv = refs.cv; if (!h || !cv) return;
+    chispas(h.x, h.y, 34, ['#2bd47d', '#f2c14e', '#ffdc85', '#f4f2ec'], 240, 260, 0.9);
+    const el = document.createElement('span');
+    const r = cv.getBoundingClientRect();
+    el.className = 'jg-fl'; el.textContent = '+' + N(pago); el.style.left = r.left + h.x + 'px'; el.style.top = r.top + h.y + 'px';
+    document.body.appendChild(el);                                   // fuera de la pantalla de juegos: asi no lo borra un repintado
+    el.animate([{ transform: 'translate(-50%,0) scale(.8)', opacity: 0 }, { transform: 'translate(-50%,-26px) scale(1.1)', opacity: 1, offset: 0.25 }, { transform: 'translate(-50%,-80px) scale(1)', opacity: 0 }], { duration: 1300, easing: 'ease-out' }).onfinish = () => el.remove();
+    if (refs.mult) refs.mult.animate([{ transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 350 });
+  }
+  // la ronda acaba de explotar delante de mis ojos
+  function crTrans(f0, id0) { if (f0 === 'curso' && D.crash.ronda && D.crash.ronda.id === id0 && crFase() === 'fin') crBoom() }
+  const crActivo = (f) => f === 'apuestas' || f === 'curso' || CRX.parts.length > 0 || !!CRX.boom;
   function crFrame(solo) {
     crRaf = 0;
     if (!visible() || S.juego !== 'crash' || !D.crash) return;
     const f = crFase(), r = D.crash.ronda, mia = crMia();
     let m = 1, t = 0, txt = '', cls = 'dim';
-    if (f === 'apuestas') { const s = Math.max(0, Math.ceil((ms(r.arranca) - ahora()) / 1000)); txt = `Arranca en ${s} s · ${D.crash.apuestas.length} dentro` }
-    else if (f === 'curso') { t = crT(); m = crMult(t); cls = m >= 10 ? 'xx' : m >= 2 ? 'hi' : 'on'; txt = mia && mia.estado === 'viva' ? 'Retira antes de que explote' : mia && mia.estado === 'cobrada' ? `Has cobrado ${N(mia.pago)}` : D.crash.apuestas.length ? 'En marcha' : '' }
+    if (f === 'apuestas') { const s = Math.max(0, Math.ceil((ms(r.arranca) - ahora()) / 1000)); txt = D.crash.apuestas.length ? `${D.crash.apuestas.length} dentro` : 'Todavía nadie dentro' }
+    else if (f === 'curso') { t = crT(); m = crMult(t); cls = 'on'; txt = mia && mia.estado === 'viva' ? 'Retira antes de que explote' : mia && mia.estado === 'cobrada' ? `Has cobrado ${N(mia.pago)}` : D.crash.apuestas.length ? 'En marcha' : '' }
     else if (f === 'fin') {
       m = Number(r.punto); t = Math.log(Math.max(1.0001, m)) / K(); cls = 'boom';
       txt = `Explotó en ×${X(m)}` + (mia ? (mia.estado === 'cobrada' ? ` · cobraste ${N(mia.pago)}` : ` · perdiste ${N(mia.stake)}`) : '');
     } else txt = 'Apuesta para abrir una ronda';
-    if (refs.mult) { const v = `×${X(m)}`; if (refs.mult.textContent !== v) refs.mult.textContent = v; const c = 'jg-big num ' + cls; if (refs.mult.className !== c) refs.mult.className = c }
+    if (refs.mult) {
+      const v = `×${X(m)}`; if (refs.mult.textContent !== v) refs.mult.textContent = v;
+      const c = 'jg-big num ' + cls; if (refs.mult.className !== c) refs.mult.className = c;
+      const col = f === 'curso' ? colorMult(m) : null, est = col ? `rgb(${col})|0 0 ${Math.round(Math.min(46, 8 + m * 2.2))}px rgba(${col},.38)` : '';
+      if (refs.mult._e !== est) { refs.mult._e = est; const [a, b] = est ? est.split('|') : ['', '']; refs.mult.style.color = a; refs.mult.style.textShadow = b }
+    }
     setT(refs.sub, txt);
+    crCuenta(f, r);
     crBoton();
     crDibuja(f, t, m);
-    if (!solo && (f === 'apuestas' || f === 'curso')) crRaf = requestAnimationFrame(() => crFrame());
+    if (!solo && crActivo(f)) crRaf = requestAnimationFrame(() => crFrame());
+  }
+  // cuenta atras grande antes de arrancar: anillo que se vacia y numero que late en los ultimos 3 s (elementos fijos, solo cambian sus valores)
+  function crCuenta(f, r) {
+    const cd = refs.cd; if (!cd) return;
+    const ver = f === 'apuestas';
+    if (cd.hidden === ver) cd.hidden = !ver;
+    if (!ver) return;
+    const rem = Math.max(0, (ms(r.arranca) - ahora()) / 1000), n = Math.ceil(rem), hot = rem <= 3, nEl = cd.querySelector('[data-cdn]');
+    if (nEl.textContent !== String(n)) nEl.textContent = n;
+    cd.querySelector('[data-cdp]').style.strokeDashoffset = (603.2 * (1 - Math.min(1, rem / 10))).toFixed(1);
+    if (cd.classList.contains('hot') !== hot) cd.classList.toggle('hot', hot);
+    nEl.style.transform = hot && !quieto() ? `scale(${(1 + 0.26 * Math.pow(rem - Math.floor(rem), 3)).toFixed(3)})` : '';
+  }
+  function cohete(g, x, y, ang, fl) {
+    g.save(); g.translate(x, y); g.rotate(ang); g.scale(1.35, 1.35);
+    const L = 11 + fl * 9, gr = g.createLinearGradient(-9, 0, -9 - L, 0);
+    gr.addColorStop(0, 'rgba(255,230,140,.95)'); gr.addColorStop(0.5, 'rgba(255,140,50,.7)'); gr.addColorStop(1, 'rgba(255,80,40,0)');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(-8, -3.6); g.lineTo(-9 - L, 0); g.lineTo(-8, 3.6); g.closePath(); g.fill();
+    g.fillStyle = '#d8505a';
+    g.beginPath(); g.moveTo(-5, -4); g.lineTo(-12, -9.5); g.lineTo(-1, -4.5); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(-5, 4); g.lineTo(-12, 9.5); g.lineTo(-1, 4.5); g.closePath(); g.fill();
+    g.fillStyle = '#f4f2ec'; g.beginPath(); g.moveTo(14, 0); g.quadraticCurveTo(6, -7, -8, -5); g.lineTo(-8, 5); g.quadraticCurveTo(6, 7, 14, 0); g.fill();
+    g.fillStyle = '#d8505a'; g.beginPath(); g.moveTo(14, 0); g.quadraticCurveTo(10, -4, 6.5, -5.5); g.lineTo(6.5, 5.5); g.quadraticCurveTo(10, 4, 14, 0); g.fill();
+    g.fillStyle = '#4de0ff'; g.beginPath(); g.arc(-1, 0, 2.7, 0, 7); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.arc(-1.8, -0.9, 0.9, 0, 7); g.fill();
+    g.restore();
   }
   function crDibuja(f, t, m) {
     const cv = refs.cv; if (!cv) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1), w = cv.clientWidth, h = cv.clientHeight;
     if (!w || !h) return;
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr) }
-    const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
-    const padL = 6, padR = 14, padT = 14, padB = 22, k = K();
+    const g = cv.getContext('2d'), now = performance.now(), dt = Math.min(0.05, Math.max(0, (now - (CRX.t || now)) / 1000));
+    CRX.t = now;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    if (!CRX.est) CRX.est = Array.from({ length: 46 }, () => ({ x: Math.random(), y: Math.random(), r: rnd(0.5, 1.5), a: rnd(0.12, 0.45) }));
+    g.fillStyle = '#fff'; for (const e of CRX.est) { g.globalAlpha = e.a; g.fillRect(e.x * w, e.y * h, e.r, e.r) } g.globalAlpha = 1;
+    const padL = 8, padR = 22, padT = 18, padB = 24, k = K();
     const tmax = Math.max(10, t * 1.1), ymax = Math.max(2, m * 1.2);
     const px = (tt) => padL + (tt / tmax) * (w - padL - padR), py = (mm) => h - padB - ((mm - 1) / (ymax - 1)) * (h - padT - padB);
-    const hair = 'rgba(255,255,255,.07)', mute = cssVar('--dim', '#6c737e');
-    g.font = '11px JB, monospace'; g.textBaseline = 'bottom'; g.fillStyle = mute; g.strokeStyle = hair; g.lineWidth = 1;
-    for (const v of [1, 2, 3, 5, 10, 20, 50, 100]) { if (v > ymax) break; const y = Math.round(py(v)) + .5; g.beginPath(); g.moveTo(padL, y); g.lineTo(w - padR, y); g.stroke(); if (v > 1) g.fillText(`×${v}`, padL, y - 3) }
-    if (f === 'idle' || f === 'apuestas') return;
-    const col = f === 'fin' ? cssVar('--jg-lose', '#e0646f') : cssVar('--acc', '#f2c14e');
-    const n = 64; g.beginPath();
-    for (let i = 0; i <= n; i++) { const tt = (t * i) / n, x = px(tt), y = py(Math.exp(k * tt)); i ? g.lineTo(x, y) : g.moveTo(x, y) }
-    g.strokeStyle = col; g.lineWidth = 3; g.lineJoin = 'round'; g.lineCap = 'round'; g.stroke();
-    g.lineTo(px(t), h - padB); g.lineTo(px(0), h - padB); g.closePath();
-    const gr = g.createLinearGradient(0, padT, 0, h - padB); gr.addColorStop(0, col + '33'); gr.addColorStop(1, col + '00'); g.fillStyle = gr; g.fill();
-    g.beginPath(); g.arc(px(t), py(Math.exp(k * t)), 5, 0, 7); g.fillStyle = col; g.fill();
+    g.font = '11px JB, monospace'; g.textBaseline = 'bottom'; g.fillStyle = cssVar('--dim', '#6c737e'); g.strokeStyle = 'rgba(255,255,255,.06)'; g.lineWidth = 1;
+    for (const v of [1, 2, 3, 5, 10, 20, 50, 100]) { if (v > ymax) break; const y = Math.round(py(v)) + 0.5; g.beginPath(); g.moveTo(padL, y); g.lineTo(w - padR, y); g.stroke(); if (v > 1) g.fillText('×' + v, padL, y - 3) }
+    const c = f === 'fin' ? [224, 100, 111] : colorMult(m), rgb = c.join(',');
+    let hx = px(0), hy = py(1), ang = -0.62;
+    if (f === 'curso' || f === 'fin') {
+      const n = 72; g.beginPath();
+      for (let i = 0; i <= n; i++) { const tt = (t * i) / n, x = px(tt), y = py(Math.exp(k * tt)); i ? g.lineTo(x, y) : g.moveTo(x, y) }
+      const gt = g.createLinearGradient(px(0), 0, px(t), 0); gt.addColorStop(0, 'rgba(' + rgb + ',0)'); gt.addColorStop(0.55, 'rgba(' + rgb + ',.55)'); gt.addColorStop(1, 'rgb(' + rgb + ')');
+      g.save(); g.strokeStyle = gt; g.lineWidth = 4; g.lineJoin = 'round'; g.lineCap = 'round'; g.shadowColor = 'rgb(' + rgb + ')'; g.shadowBlur = 16; g.stroke(); g.restore();
+      g.lineTo(px(t), h - padB); g.lineTo(px(0), h - padB); g.closePath();
+      const gr = g.createLinearGradient(0, padT, 0, h - padB); gr.addColorStop(0, 'rgba(' + rgb + ',.09)'); gr.addColorStop(1, 'rgba(' + rgb + ',0)'); g.fillStyle = gr; g.fill();
+      hx = px(t); hy = py(Math.exp(k * t));
+      const d0 = Math.max(0, t - 0.25); ang = Math.atan2(hy - py(Math.exp(k * d0)), hx - px(d0));
+    }
+    CRX.head = { x: hx, y: hy };
+    // estela de fuego: sale del cohete mientras sube
+    if (f === 'curso' && !quieto()) for (let i = 0; i < 2; i++) CRX.parts.push({ x: hx - Math.cos(ang) * 16, y: hy - Math.sin(ang) * 16, vx: -Math.cos(ang) * rnd(30, 90) + rnd(-25, 25), vy: -Math.sin(ang) * rnd(30, 90) + rnd(-25, 25), g: 0, r: rnd(1.6, 3.6), t: 0, vida: rnd(0.35, 0.75), c: ['#ffdc85', '#ff9a3c', '#ffd0a0'][(Math.random() * 3) | 0] });
+    if (f === 'fin' && CRX.boom && !CRX.boom.nacio) { CRX.boom.nacio = true; chispas(hx, hy, 84, ['#ffdc85', '#ff8c38', '#e0646f', '#fff'], 330, 320, 1.1) }
+    // particulas
+    for (let i = CRX.parts.length - 1; i >= 0; i--) {
+      const p = CRX.parts[i]; p.t += dt;
+      const kk = 1 - p.t / p.vida; if (kk <= 0) { CRX.parts.splice(i, 1); continue }
+      p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+      g.globalAlpha = Math.min(1, kk * 1.4); g.fillStyle = p.c; g.beginPath(); g.arc(p.x, p.y, p.r * (0.4 + kk * 0.8), 0, 7); g.fill();
+    }
+    g.globalAlpha = 1;
+    // el cohete (en la rampa mientras se apuesta, subiendo mientras corre) o los restos si ha explotado
+    if (f === 'curso' || f === 'apuestas' || f === 'idle') cohete(g, hx, hy, ang, 0.5 + 0.5 * Math.sin(now / 45));
+    else if (f === 'fin') {
+      const b = CRX.boom, age = b ? (now - b.t0) / 1000 : 9;
+      if (age < 0.7) { g.strokeStyle = 'rgba(255,200,120,' + (1 - age / 0.7).toFixed(2) + ')'; g.lineWidth = 3; g.beginPath(); g.arc(hx, hy, age * 170, 0, 7); g.stroke() }
+      if (age < 0.3) { const rg = g.createRadialGradient(hx, hy, 0, hx, hy, 60); rg.addColorStop(0, 'rgba(255,255,255,' + (1 - age / 0.3).toFixed(2) + ')'); rg.addColorStop(1, 'rgba(255,160,60,0)'); g.fillStyle = rg; g.beginPath(); g.arc(hx, hy, 60, 0, 7); g.fill() }
+      if (!b || age > 0.45) { g.strokeStyle = 'rgba(224,100,111,.85)'; g.lineWidth = 2.5; g.lineCap = 'round'; g.beginPath(); g.moveTo(hx - 6, hy - 6); g.lineTo(hx + 6, hy + 6); g.moveTo(hx + 6, hy - 6); g.lineTo(hx - 6, hy + 6); g.stroke() }
+      if (b && age > 1.4 && !CRX.parts.length) CRX.boom = null;
+    }
   }
-  // bucle de la ronda: solo mientras hay una ronda viva con la pantalla a la vista
+  // bucle de la ronda: solo mientras hay una ronda viva (o un efecto en el aire) con la pantalla a la vista
   function crLoop() {
     cancelAnimationFrame(crRaf); clearTimeout(crPoll); crRaf = crPoll = 0;
     if (!visible() || S.juego !== 'crash' || !D.crash) return;
     const f = crFase();
-    if (f === 'apuestas' || f === 'curso') crRaf = requestAnimationFrame(() => crFrame());
+    if (crActivo(f)) crRaf = requestAnimationFrame(() => crFrame());
     if (f === 'curso') crPoll = setTimeout(crSondeo, 700);
     else if (f === 'apuestas') crPoll = setTimeout(crSondeo, Math.max(250, ms(D.crash.ronda.arranca) - ahora() + 400));
   }
   async function crSondeo() {
     crPoll = 0;
     if (!visible() || S.juego !== 'crash') return;
+    const f0 = crFase(), id0 = D.crash && D.crash.ronda && D.crash.ronda.id;
     try { D.crash = await rpc('crash_estado'); S.err = null } catch (e) { S.err = msgErr(e) }
+    if (D.crash) crTrans(f0, id0);
     const fase = crFase();
     if (fase === 'fin' && S.cr.ultima !== D.crash.ronda.id) { S.cr.ultima = D.crash.ronda.id; if (crMia() && ctx.refresh) ctx.refresh() }
     pintaSi(); crLoop();
@@ -458,10 +555,10 @@
   A.crGo = async () => {
     const f = crFase(), mia = crMia();
     if (f === 'curso' && mia && mia.estado === 'viva') {
-      const r = await rpc('crash_retirar');
-      if (r.ok) toast(`Retirado a <b>×${X(r.retiro)}</b> · +${N(r.pago)}`);
+      const id0 = D.crash.ronda.id, r = await rpc('crash_retirar');
+      if (r.ok) { toast(`Retirado a <b>×${X(r.retiro)}</b> · +${N(r.pago)}`); crCobroFx(r.pago) }
       else toast(`Tarde: explotó en <b>×${X(r.punto)}</b>`);
-      D.crash = await rpc('crash_estado'); pintaSi(true); crLoop(); if (ctx.refresh) ctx.refresh();
+      D.crash = await rpc('crash_estado'); crTrans('curso', id0); pintaSi(true); crLoop(); if (ctx.refresh) ctx.refresh();
       return;
     }
     if (!stakeOk()) return;
@@ -605,57 +702,146 @@
   /* =====================================================================
      BLACKJACK
      ===================================================================== */
-  const carta = (c, cls = '') => { const s = Math.floor(c / 13), r = RANK[c % 13]; return `<span class="jg-card ${s === 1 || s === 2 ? 'rd' : ''} ${cls}"><b>${r}</b><i>${SUIT[s]}</i><u>${SUIT[s]}</u></span>` };
-  const dorso = () => '<span class="jg-card back"></span>';
+  // cartas de verdad: indices en las esquinas, puntos en su sitio, figuras con marco y un dorso con dibujo. Se pueden girar (volteo de la tapada).
+  const PIPS = { 2: [[50, 22], [50, 78]], 3: [[50, 22], [50, 50], [50, 78]], 4: [[36, 24], [64, 24], [36, 76], [64, 76]], 5: [[36, 24], [64, 24], [50, 50], [36, 76], [64, 76]], 6: [[36, 24], [64, 24], [36, 50], [64, 50], [36, 76], [64, 76]],
+    7: [[36, 24], [64, 24], [50, 37], [36, 50], [64, 50], [36, 76], [64, 76]], 8: [[36, 24], [64, 24], [50, 37], [36, 50], [64, 50], [50, 63], [36, 76], [64, 76]],
+    9: [[36, 22], [64, 22], [36, 41], [64, 41], [50, 50], [36, 59], [64, 59], [36, 78], [64, 78]], 10: [[36, 22], [64, 22], [50, 31], [36, 41], [64, 41], [36, 59], [64, 59], [50, 69], [36, 78], [64, 78]] };
+  function frente(c) {
+    const s = Math.floor(c / 13), r = c % 13, P = SUIT[s], R = RANK[r];
+    const centro = r === 0 ? `<span class="jg-pp big" style="left:50%;top:50%">${P}</span>`
+      : r >= 10 ? `<span class="jg-fc"><em>${R}</em><u>${P}</u></span>`
+      : PIPS[r + 1].map(([x, y]) => `<span class="jg-pp ${y > 50 ? 'rv' : ''}" style="left:${x}%;top:${y}%">${P}</span>`).join('');
+    const ix = `<span class="jg-ix"><b>${R}</b><i>${P}</i></span>`;
+    return ix + centro + ix.replace('jg-ix', 'jg-ix rv');
+  }
+  const carta = (c, down) => {
+    const s = down ? 0 : Math.floor(c / 13);
+    return `<span class="jg-card ${s === 1 || s === 2 ? 'rd' : ''}"><span class="jg-ci"${down ? ' style="transform:rotateY(180deg)"' : ''}><span class="jg-cfr">${down ? '' : frente(c)}</span><span class="jg-cbk"></span></span></span>`;
+  };
   const bjNb = (m) => m.banca.length + (m.estado === 'curso' ? 1 : 0);
+  const FICHAS = [[100, 'c100'], [50, 'c50'], [25, 'c25'], [10, 'c10'], [5, 'c5'], [1, 'c1']];
+  function fichasN(n) { let k = 0; for (const [v] of FICHAS) while (n >= v && k < 8) { n -= v; k++ } return k }
+  function fichasHtml(n) { let o = '', k = 0; for (const [v, c] of FICHAS) while (n >= v && k < 8) { o += `<i class="jg-ch ${c}" style="--k:${k}"></i>`; n -= v; k++ } return o }
   function vBj() {
     const m = D.blackjack && D.blackjack.mano, curso = m && m.estado === 'curso';
     const gan = m && m.estado === 'fin' ? m.pago - m.apostado : 0;
-    let res = '';
+    let res = m ? '' : 'Haz tu apuesta';
     if (m && m.estado === 'fin') {
       res = m.resultado === 'blackjack' ? `Blackjack · ▲ ${N(gan)}` : m.resultado === 'gana' ? `Ganas ▲ ${N(gan)}` : m.resultado === 'empate' ? 'Empate · te devuelvo la apuesta' : m.valor > 21 ? `Te pasas · ▼ ${N(m.apostado)}` : `Pierdes ▼ ${N(m.apostado)}`;
     }
-    const cls = m && m.estado === 'fin' ? (m.resultado === 'gana' || m.resultado === 'blackjack' ? 'win' : m.resultado === 'empate' ? '' : 'lose') : '';
-    return `<section class="jg-g">
+    const cls = m && m.estado === 'fin' ? (m.resultado === 'gana' || m.resultado === 'blackjack' ? 'win' : m.resultado === 'empate' ? '' : 'lose') : (m ? '' : 'dim');
+    return `<section class="jg-g jg-gbj">
       <div class="jg-stage jg-bj">
-        <div class="jg-hl"><span class="lab">Banca</span><b class="num" data-bv>${m ? (m.valor_banca || '') : ''}</b></div>
-        <div class="jg-hand" data-bj-b>${m ? m.banca.map((c) => carta(c)).join('') + (curso ? dorso() : '') : ''}</div>
-        <div class="jg-hand" data-bj-j>${m ? m.jugador.map((c) => carta(c)).join('') : ''}</div>
-        <div class="jg-hl"><span class="lab">Tú</span><b class="num">${m ? m.valor : ''}</b>${m && m.doblada ? '<em>doblada</em>' : ''}</div>
-        <p class="jg-res ${cls}" data-bj-res>${esc(res)}</p>
+        <div class="jg-felt" data-felt>
+          <div class="jg-dk" data-deck><i></i><i></i><i></i><i></i></div>
+          <div class="jg-zb">
+            <div class="jg-hl"><span class="lab">Banca</span><b class="num" data-bv>${m ? (m.valor_banca || '') : ''}</b></div>
+            <div class="jg-hand" data-bj-b>${m ? m.banca.map((c) => carta(c)).join('') + (curso ? carta(null, true) : '') : ''}</div>
+          </div>
+          <div class="jg-mid">
+            <div class="jg-pot" data-pot>${curso ? `<span class="jg-fs">${fichasHtml(m.apostado)}</span><b class="num jg-pa">${N(m.apostado)}</b>` : ''}</div>
+            <p class="jg-res ${cls}" data-bj-res>${esc(res)}</p>
+          </div>
+          <div class="jg-zb">
+            <div class="jg-hand" data-bj-j>${m ? m.jugador.map((c) => carta(c)).join('') : ''}</div>
+            <div class="jg-hl"><span class="lab">Tú</span><b class="num">${m ? m.valor : ''}</b>${m && m.doblada ? '<em>doblada</em>' : ''}</div>
+          </div>
+          <p class="jg-arco">Blackjack paga 3 a 2</p>
+        </div>
       </div>
       <div class="jg-side">
-        ${curso ? `<span class="lab">En juego</span><div class="jg-pot num">${N(m.apostado)}${coin()}</div>
+        ${curso ? `<span class="lab">En juego</span><div class="jg-pott num">${N(m.apostado)}${coin()}</div>
           <button class="go" data-jg="pedir" data-id="${m.id}">Pedir</button>
           <div class="jg-two"><button class="go ghost" data-jg="plantar" data-id="${m.id}">Plantarse</button>${m.puede_doblar ? `<button class="go ghost" data-jg="doblar" data-id="${m.id}" ${S.saldo < m.stake || (S.bjRest != null && S.bjRest < m.stake) ? 'disabled' : ''}>Doblar</button>` : ''}</div>${bjLim()}${aviso()}`
         : `${apuesta()}<button class="go" data-jg="repartir" data-go ${S.bjRest != null && S.bjRest <= 0 ? 'disabled' : ''}>${m ? 'Otra mano' : 'Repartir'} por <span data-go-n>${N(S.stake)}</span></button>${aviso()}`}
         <p class="jg-rule">Blackjack paga 3 a 2. La banca se planta en 17.</p>
       </div></section>`;
   }
-  // anima solo las cartas nuevas respecto a lo ya pintado de esta mano
+  // confeti contenido: un lienzo encima del anfitrion que solo vive lo que dura el chorro
+  function confeti(host, o = {}) {
+    if (quieto() || !host) return;
+    const cv = document.createElement('canvas'); cv.className = 'jg-fx'; host.appendChild(cv);
+    const w = host.clientWidth, h = host.clientHeight, dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = w * dpr; cv.height = h * dpr;
+    const g = cv.getContext('2d'); g.scale(dpr, dpr);
+    const cols = o.cols || ['#f2c14e', '#ffdc85', '#2bd47d', '#f4f2ec'], ox = o.x == null ? w / 2 : o.x, oy = o.y == null ? h * 0.42 : o.y;
+    const P = Array.from({ length: o.n || 50 }, () => { const a = rnd(-Math.PI * 0.95, -Math.PI * 0.05), v = rnd(180, 520); return { x: ox, y: oy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: rnd(2.5, 5.5), rot: rnd(0, 6), vr: rnd(-9, 9), c: cols[(Math.random() * cols.length) | 0], life: rnd(0.9, 1.7), w: rnd(0.5, 1) } });
+    const t0 = performance.now(); let last = t0;
+    const paso = (now) => {
+      const dt = Math.min(0.04, (now - last) / 1000), el = (now - t0) / 1000; last = now; g.clearRect(0, 0, w, h); let vivo = 0;
+      for (const p of P) {
+        p.vy += 900 * dt; p.vx *= 0.992; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+        const k = 1 - el / p.life; if (k <= 0) continue; vivo++;
+        g.save(); g.globalAlpha = Math.min(1, k * 1.6); g.translate(p.x, p.y); g.rotate(p.rot); g.fillStyle = p.c; g.fillRect(-p.r, -p.r * p.w, p.r * 2, p.r * 2 * p.w); g.restore();
+      }
+      if (vivo && cv.isConnected) requestAnimationFrame(paso); else cv.remove();
+    };
+    requestAnimationFrame(paso);
+  }
+  // anima solo lo nuevo de esta mano: las cartas vuelan desde el mazo, la tapada se voltea, las fichas entran y salen, y al ganar hay brillo y confeti
   function bjPost() {
     const m = D.blackjack && D.blackjack.mano; if (!m) return;
-    const prev = S.bj.id === m.id ? S.bj : { id: m.id, nj: 0, nb: 0, back: false };
+    const felt = root.querySelector('[data-felt]'), deck = root.querySelector('[data-deck]'); if (!felt || !deck) return;
+    const fr = felt.getBoundingClientRect(), dk = deck.getBoundingClientRect();
     const js = [...root.querySelectorAll('[data-bj-j] .jg-card')], bs = [...root.querySelectorAll('[data-bj-b] .jg-card')];
-    const nuevo = { init: true, id: m.id, nj: js.length, nb: bs.length, back: m.estado === 'curso' };
-    const resEl = root.querySelector('[data-bj-res]'), hayAnim = (js.length > prev.nj || bs.length > prev.nb || (prev.back && m.estado === 'fin')) && !quieto();
+    const cx = (el) => { const r = el.getBoundingClientRect(); return r.left - fr.left + r.width / 2 };
+    const prev = S.bj.id === m.id ? S.bj : { id: m.id, nj: 0, nb: 0, back: false, xj: [], xb: [], ap: 0 };
+    const nuevo = { init: true, id: m.id, nj: js.length, nb: bs.length, back: m.estado === 'curso', xj: js.map(cx), xb: bs.map(cx), ap: m.apostado };
+    const inicio = prev.nj === 0 && prev.nb === 0, final = m.estado === 'fin' && (inicio || prev.back);
+    const resEl = root.querySelector('[data-bj-res]'), pot = root.querySelector('[data-pot]');
+    const hayAnim = (js.length > prev.nj || bs.length > prev.nb || final || (m.apostado > prev.ap && prev.ap)) && !quieto();
     if (!hayAnim) { S.bj = nuevo; return }
     let d = 0;
-    const entra = (el, delay) => el.animate([{ opacity: 0, transform: 'translate(70px,-80px) rotate(10deg) scale(.92)' }, { opacity: 1, transform: 'none' }], { duration: 320, delay, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'backwards' });
-    const volteo = (el, delay) => el.animate([{ transform: 'rotateY(90deg)', opacity: .2 }, { transform: 'rotateY(0deg)', opacity: 1 }], { duration: 300, delay, easing: 'ease-out', fill: 'backwards' });
-    const dealer = m.estado === 'fin' && prev.back && prev.id === m.id;           // la banca juega: da la vuelta a su carta y pide
-    if (prev.nj === 0 && prev.nb === 0) {                                          // reparto: tu carta, la suya, la tuya, la suya
-      for (let i = 0; i < Math.max(js.length, bs.length); i++) { if (js[i]) { entra(js[i], d); d += 260 } if (bs[i]) { entra(bs[i], d); d += 260 } }
+    const EASE = 'cubic-bezier(.2,.8,.25,1)';
+    const vuela = (el, delay, flip) => {
+      const r = el.getBoundingClientRect(), dx = dk.left + dk.width / 2 - (r.left + r.width / 2), dy = dk.top + dk.height / 2 - (r.top + r.height / 2);
+      el.animate([{ transform: `translate(${dx}px,${dy}px) rotate(-14deg) scale(.8)` }, { transform: 'none' }], { duration: 440, delay, easing: EASE, fill: 'backwards' });
+      if (flip) el.querySelector('.jg-ci').animate([{ transform: 'rotateY(180deg)' }, { transform: 'rotateY(180deg)', offset: 0.4 }, { transform: 'rotateY(0deg)' }], { duration: 440, delay, easing: 'ease-out', fill: 'backwards' });
+    };
+    const volteo = (el, delay) => {
+      el.querySelector('.jg-ci').animate([{ transform: 'rotateY(180deg)' }, { transform: 'rotateY(0deg)' }], { duration: 520, delay, easing: 'ease-in-out', fill: 'backwards' });
+      el.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-16px) scale(1.06)', offset: 0.5 }, { transform: 'translateY(0)' }], { duration: 520, delay, easing: 'ease-in-out' });
+    };
+    if (!inicio) {                                                                  // las ya puestas se hacen sitio (la fila va centrada)
+      const mueve = (els, xs, nx, n) => els.forEach((el, i) => { if (i < n && xs[i] != null && Math.abs(xs[i] - nx[i]) > 1) el.animate([{ transform: `translateX(${xs[i] - nx[i]}px)` }, { transform: 'none' }], { duration: 300, easing: EASE }) });
+      mueve(js, prev.xj, nuevo.xj, prev.nj); mueve(bs, prev.xb, nuevo.xb, prev.nb);
+    }
+    const dealer = m.estado === 'fin' && prev.back && prev.id === m.id;             // la banca juega: voltea su carta y pide
+    if (inicio) {                                                                   // reparto: tu carta, la suya, la tuya, la suya (tapada si se sigue jugando)
+      for (let i = 0; i < Math.max(js.length, bs.length); i++) {
+        if (js[i]) { vuela(js[i], d, true); d += 300 }
+        if (bs[i]) { vuela(bs[i], d, !(m.estado === 'curso' && i === 1)); d += 300 }
+      }
+      if (fichasN(m.apostado) && !final && pot) pot.querySelectorAll('.jg-ch').forEach((c, k) => c.animate([{ transform: 'translateY(200px) scale(.8)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 400, delay: k * 70, easing: EASE, fill: 'backwards' }));
     } else {
-      for (let i = prev.nj; i < js.length; i++) { entra(js[i], d); d += 280 }
+      for (let i = prev.nj; i < js.length; i++) { vuela(js[i], d, true); d += 400 }
       if (dealer) {
-        if (bs.length > 1) { volteo(bs[1], d); d += 420 }
-        for (let i = 2; i < bs.length; i++) { entra(bs[i], d); d += 460 }
+        if (bs.length > 1) { volteo(bs[1], d); d += 620 }
+        for (let i = 2; i < bs.length; i++) { vuela(bs[i], d, true); d += 560 }
+      }
+      if (m.apostado > prev.ap && prev.ap && pot) pot.querySelectorAll('.jg-ch').forEach((c, k) => { if (k >= fichasN(prev.ap)) c.animate([{ transform: 'translateY(200px) scale(.8)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 400, delay: k * 60, easing: EASE, fill: 'backwards' }) });
+    }
+    if (final && pot) {                                                             // las fichas se van: al jugador si gana o empata, a la banca si pierde
+      const gana = m.resultado === 'gana' || m.resultado === 'blackjack', empate = m.resultado === 'empate', tf = d + 200;
+      const tmp = document.createElement('div'); tmp.className = 'jg-tmp';
+      tmp.innerHTML = `<span class="jg-fs">${fichasHtml(m.apostado)}</span>${gana ? `<span class="jg-fs jg-fs2">${fichasHtml(m.pago - m.apostado)}</span>` : ''}`;
+      pot.appendChild(tmp);
+      const dir = gana || empate ? 230 : -230;
+      [...tmp.querySelectorAll('.jg-ch')].forEach((c, k) => {
+        const premio = c.parentElement.classList.contains('jg-fs2');
+        if (premio) c.animate([{ transform: 'translateY(-200px) scale(.8)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 420, delay: tf + k * 60, easing: EASE, fill: 'backwards' });
+        c.animate([{ transform: 'none', opacity: 1 }, { transform: `translateY(${dir}px) scale(.85)`, opacity: 0 }], { duration: 560, delay: tf + (premio ? 620 : 380) + k * 40, easing: 'cubic-bezier(.5,0,.8,.4)', fill: 'both' });
+      });
+      d = tf + (gana ? 1600 : 950);
+      setTimeout(() => tmp.remove(), d + 100);
+      if (gana) {
+        const big = m.resultado === 'blackjack';
+        setTimeout(() => { if (felt.isConnected) { confeti(felt, { n: big ? 110 : 55, cols: big ? ['#f2c14e', '#ffdc85', '#fff'] : undefined }); felt.animate([{ filter: 'brightness(1)' }, { filter: 'brightness(1.3)' }, { filter: 'brightness(1)' }], { duration: 900 }) } }, tf + 380);
       }
     }
-    if (resEl && m.estado === 'fin') resEl.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 320, delay: d + 80, fill: 'backwards' });
-    // hasta que la banca acaba, el saldo de la cabecera no se mueve
-    const vb = root.querySelector('[data-bv]'); if (vb && dealer) { const real = m.valor_banca; vb.textContent = ''; setTimeout(() => { const v2 = root && root.querySelector('[data-bv]'); if (v2) v2.textContent = real }, Math.max(0, d - 100)) }
+    if (resEl && m.estado === 'fin') resEl.animate([{ opacity: 0, transform: 'scale(.7)' }, { opacity: 1, transform: 'scale(1.12)', offset: 0.6 }, { opacity: 1, transform: 'none' }], { duration: 520, delay: Math.max(0, d - 700), easing: EASE, fill: 'backwards' });
+    // hasta que la banca acaba, el valor de la banca y el saldo de la cabecera no se mueven
+    const vb = root.querySelector('[data-bv]'); if (vb && (dealer || final)) { const real = m.valor_banca; vb.textContent = ''; setTimeout(() => { const v2 = root && root.querySelector('[data-bv]'); if (v2) v2.textContent = real }, Math.max(0, d - 900)) }
     S.bj = nuevo;
     S.busy++; setTimeout(libera, d + 450);
   }
@@ -763,7 +949,8 @@
       root.querySelectorAll('[data-saldo]').forEach((e) => (e.textContent = N(S.saldo)));
       if (nueva) { root.classList.remove('jg-in'); void root.offsetWidth; root.classList.add('jg-in'); setTimeout(() => root.classList.remove('jg-in'), 600) }
       if (!root.firstChild) pinta();
-      if (nueva || !D[S.juego] || Date.now() - ultima > 1200) cargar(); else { post(); reanuda() }
+      if (nueva || !D[S.juego] || Date.now() - ultima > 1200) cargar();
+      else { post(); reanuda(); clearTimeout(tCarga); tCarga = setTimeout(cargar, 1250 - (Date.now() - ultima)) }      // pulso pegado al anterior: no se pierde, se pide un poco despues
     },
     // true mientras una animacion esconde un resultado: la app no debe repintar el saldo todavia (llamara a refresh() sola al acabar)
     ocupado: () => S.busy > 0,
