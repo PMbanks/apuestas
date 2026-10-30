@@ -65,6 +65,7 @@ const R = { partidos, apuestas, colegas, liga, chat, monedero, juegos, perfil };
 'Dentro': 'In', 'dentro': 'in', 'En marcha': 'Running', 'Retirado': 'Cashed out', 'Perdida': 'Lost', 'En la ronda': 'In the round', 'Últimas rondas': 'Last rounds',
 'Ranking': 'Leaderboard', 'De siempre': 'All time', 'Esta semana': 'This week', 'Ver todos': 'See all', 'Ocultar': 'Hide', 'Todavía no ha jugado nadie': 'Nobody has played yet',
 'Ese juego no tiene ranking': 'That game has no leaderboard', 'Elige siempre o semana': 'Pick all time or this week',
+'Más ganado': 'Most won', 'Mayor ×': 'Biggest ×', 'Mayor premio': 'Biggest win', 'Todavía no ha ganado nadie': 'Nobody has won yet', 'Explotado': 'Crashed',
 'Todavía nadie dentro': 'Nobody in yet', 'segundos': 'seconds', 'Apuesta para abrir una ronda': 'Bet to open a round', 'Retira antes de que explote': 'Cash out before it blows',
 'Banca': 'Dealer', 'Haz tu apuesta': 'Place your bet', 'En juego': 'In play', 'Pedir': 'Hit', 'Plantarse': 'Stand', 'Doblar': 'Double', 'doblada': 'doubled',
 'Repartir por': 'Deal for', 'Otra mano por': 'Another hand for', 'Hoy te quedan': 'Today you have', 'por arriesgar': 'left to risk',
@@ -85,10 +86,10 @@ const R = { partidos, apuestas, colegas, liga, chat, monedero, juegos, perfil };
 'Los juegos aún no están en la base: falta cargar db/010_juegos.sql': 'The games are not in the database yet: db/010_juegos.sql is missing',
 
 // ---- R: con numeros o nombres (añadir a la lista de reglas) ----
-[/^Apostar ([\d.]+)$/, 'Bet $1'], [/^Retirar ×([\d,]+)$/, 'Cash out ×$1'],
-[/^([\d.]+) dentro$/, '$1 in'], [/^sale en ×([\d,]+)$/, 'exits at ×$1'],
-[/^Has cobrado ([\d.]+)$/, 'You cashed $1'], [/^Explotó en ×([\d,]+)/, 'Crashed at ×$1'], [/ · cobraste ([\d.]+)$/, ' · you cashed $1'], [/ · perdiste ([\d.]+)$/, ' · you lost $1'],
-[/^Retirado a ×([\d,]+) · \+([\d.]+)$/, 'Cashed out at ×$1 · +$2'], [/^Tarde: explotó en ×([\d,]+)$/, 'Too late: it crashed at ×$1'],
+[/^Apostar ([\d.]+)$/, 'Bet $1'], [/^Retirar ×([\d.,]+)$/, 'Cash out ×$1'],
+[/^([\d.]+) dentro$/, '$1 in'], [/^sale en ×([\d.,]+)$/, 'exits at ×$1'],
+[/^Has cobrado ([\d.]+)$/, 'You cashed $1'], [/^Explotó en ×([\d.,]+)/, 'Crashed at ×$1'], [/ · cobraste ([\d.]+)$/, ' · you cashed $1'], [/ · perdiste ([\d.]+)$/, ' · you lost $1'],
+[/^Retirado a ×([\d.,]+) · \+([\d.]+)$/, 'Cashed out at ×$1 · +$2'], [/^Tarde: explotó en ×([\d.,]+)$/, 'Too late: it crashed at ×$1'],
 [/^Reto lanzado por ([\d.]+)$/, 'Challenge sent for $1'], [/^Reto retirado: te devuelvo ([\d.]+)$/, 'Challenge withdrawn: your $1 is back'],
 [/^No tienes tanto: te quedan ([\d.]+)$/, 'You do not have that much: you have $1 left'],
 [/^No tienes saldo suficiente: te quedan ([\d.]+)$/, 'Not enough balance: you have $1 left'],
@@ -101,7 +102,7 @@ const R = { partidos, apuestas, colegas, liga, chat, monedero, juegos, perfil };
 [/^Hoy solo puedes arriesgar ([\d.]+) más en el blackjack$/, 'Today you can only risk $1 more in blackjack'],
 [/^Hoy ya has perdido 100 en el blackjack\. Vuelve mañana$/, 'You have already lost 100 today in blackjack. Come back tomorrow'],
 [/^(\d+)º$/, '$1th'],
-[/×(\d+),(\d\d)/g, '×$1.$2'],   // decimales con punto: este va el ultimo de la lista
+[/×(\d+),(\d\d)/g, '×$1.$2'],   // decimales con punto (juegos.js ya los pinta con punto en ingles; esta regla solo es por si acaso): va el ultimo
 ```
 
   Notas: `Blackjack · ▲ N` se queda igual en ingles. La cuenta atras del crash, las fichas y los puntos de explosion llevan numeros solos (no se traducen). El letrero de la mesa ("Blackjack paga 3 a 2") es un elemento normal, traducible con la frase de `D`. `Retar por`, `Repartir por` y `Otra mano por` llevan la cifra en un `<span>` aparte, por eso van en `D` sin cifra. Ruleta y plinko siguen en el codigo con sus frases (Rojo, Negro, Verde, Girando, Riesgo, Soltar bola...) pero ya no se ven.

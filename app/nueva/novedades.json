@@ -2,6 +2,32 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "crash-velas-1305",
+   "fecha": "2026-10-30",
+   "hora": "13:05",
+   "titulo": "Crash de velas",
+   "texto": "Velas de bolsa con sustos al azar: puede caer de x2 a x1,5 y luego subir más rápido. Retirarte en plena caída paga lo que ves. Ranking con Más ganado y Mayor ×.",
+   "img": [
+    "novedades/crash-velas.webp"
+   ],
+   "ir": "juegos",
+   "titulo_en": "Candle crash",
+   "texto_en": "Stock market candles with random scares: it can drop from x2 to x1.5 and then climb faster. Cashing out mid drop pays what you see. Leaderboard with Most won and Biggest ×."
+  },
+  {
+   "id": "cajas-nuevas-1305",
+   "fecha": "2026-10-30",
+   "hora": "13:05",
+   "titulo": "Cajas con otra cara",
+   "texto": "Tarjetas nuevas para Skins y Lujo: el objeto estrella grande con brillo, precio en pastilla y la probabilidad de cada premio dentro de la caja.",
+   "img": [
+    "novedades/cajas-nuevas.webp"
+   ],
+   "ir": "cajas",
+   "titulo_en": "Boxes with a new look",
+   "texto_en": "New cards for Skins and Luxury: the star item big with a glow, price pill and the chance of every prize inside the box."
+  },
+  {
    "id": "mercado-1222",
    "fecha": "2026-10-30",
    "hora": "12:22",

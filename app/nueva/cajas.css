@@ -597,3 +597,57 @@ html.sin-anim .bv-it.nuevo{animation:none}
 .cj-top-p.p1 .v{color:var(--acc)}
 .cj-top-p small{font:11px var(--mono);color:var(--dim)}
 .cj-todo{margin-left:auto;color:#ff8f98}.cj-todo.on{background:rgba(224,100,111,.18);color:#ffd0d4}
+
+/* ===== Cajas al estilo de las paginas de cajas (EmpireDrops y parecidas), PM 30-10 =====
+   Tarjeta: arte grande con el brillo del color de la caja detras (--g), nombre y el precio en una pastilla con la moneda.
+   Pagina de la caja: arte grande con luz detras, precio, probabilidades por rareza, boton de abrir y lo que trae con la probabilidad de cada objeto.
+   Las animaciones de abrir y de las batallas (ruleta, repeticion) no se tocan. */
+.cj-cases{display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:20px;max-width:1180px;margin:0 auto;justify-content:stretch}
+.cj-case{--g:#f2c14e;position:relative;flex:none;overflow:hidden;padding:0 0 20px;border-radius:24px;
+  background:radial-gradient(86% 60% at 50% 36%,color-mix(in srgb,var(--g) 30%,transparent),transparent 72%),linear-gradient(180deg,#262c39,#1b2029);
+  box-shadow:0 16px 36px rgba(0,0,0,.3);transition:transform .28s var(--ease),box-shadow .28s,background .28s}
+.cj-case::after{content:"";position:absolute;left:14%;right:14%;top:0;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--g),transparent);opacity:.8}
+.cj-case:hover{transform:translateY(-5px);background:radial-gradient(92% 66% at 50% 36%,color-mix(in srgb,var(--g) 46%,transparent),transparent 74%),linear-gradient(180deg,#2a313f,#1d222c);
+  box-shadow:0 26px 48px rgba(0,0,0,.42),0 0 0 1px color-mix(in srgb,var(--g) 45%,transparent)}
+.cj-case-img{width:100%;aspect-ratio:4/3;padding:16px 8px 0}
+.cj-case-img::before{display:none}
+.cj-case img,.cj-case:hover img{width:100%;max-width:none;filter:drop-shadow(0 16px 18px rgba(0,0,0,.5));transform:none}
+.cj-case:hover .cj-case-img img{transform:scale(1.05)}
+.cj-case-own{top:12px;right:14px}
+.cj-case-n{margin-top:8px;padding:0 14px;font:700 17px/1.2 var(--sans);letter-spacing:-.01em;color:var(--ink)}
+.cj-case-p{margin-top:12px;padding:8px 18px;border-radius:999px;background:rgba(0,0,0,.36);font:600 16px var(--mono);color:var(--ink)}
+.cj-case-p .cn{--s:17px;margin-left:8px}
+/* la caja abierta: arte grande con luz detras */
+.cj-hero{--g:#f2c14e;max-width:780px}
+.cj-hero-img{width:min(560px,94vw);aspect-ratio:4/3;margin-top:-6px}
+.cj-hero-img::before{inset:-4% -12%;background:radial-gradient(closest-side,color-mix(in srgb,var(--g) 34%,transparent),transparent 76%)}
+.cj-hero-img img{width:100%;filter:drop-shadow(0 26px 28px rgba(0,0,0,.5))}
+.cj-hero h2{margin-top:6px}
+.cj-hero-p{margin-top:16px;padding:9px 20px;border-radius:999px;background:rgba(0,0,0,.34)}
+.cj-hero-p b{color:var(--ink)}
+.cj-odds{gap:14px 10px}
+.cj-odds span{padding:12px 6px 0;border-radius:16px;background:linear-gradient(180deg,color-mix(in srgb,var(--c) 14%,transparent),transparent)}
+/* lo que trae: cada objeto con el brillo de su rareza y su probabilidad */
+.cj-it-img{background:radial-gradient(74% 74% at 50% 56%,color-mix(in srgb,var(--c) 32%,transparent),transparent 74%),linear-gradient(180deg,#262c39,#1d222b);box-shadow:none;overflow:hidden}
+.cj-it-img::after{content:"";position:absolute;left:18%;right:18%;top:0;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--c),transparent)}
+.cj-it-img img{position:absolute;inset:0;box-sizing:border-box;width:100%;height:100%;object-fit:contain;padding:8%}
+button.cj-it:hover .cj-it-img,.cj-it.on .cj-it-img{box-shadow:0 0 0 1px color-mix(in srgb,var(--c) 55%,transparent),0 12px 28px rgba(0,0,0,.28)}
+.cj-pct{margin-top:2px;font:600 11px var(--mono);letter-spacing:.02em;color:var(--c)}
+.cj-fd-img{position:relative}
+.cj-fd-img img{position:absolute;inset:0;box-sizing:border-box;width:100%;height:100%;object-fit:contain;padding:4%}
+@media (max-width:860px){
+  .cj-cases{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .cj-case{padding:0 0 14px;border-radius:20px}
+  .cj-case-img{padding:12px 4px 0}
+  .cj-case-n{margin-top:4px;padding:0 8px;font-size:14px}
+  .cj-case-p{margin-top:8px;padding:6px 13px;font-size:14px}
+  .cj-hero-img{width:min(380px,96vw);margin-top:0}
+  .cj-hero h2{margin-top:2px}
+  .cj-hero-p{margin-top:10px;padding:7px 16px}
+  .cj-odds{gap:6px}
+  .cj-odds span{padding-top:9px}
+}
+@media (hover:none){
+  .cj-case:hover{transform:none;box-shadow:0 16px 36px rgba(0,0,0,.3);background:radial-gradient(86% 60% at 50% 36%,color-mix(in srgb,var(--g) 30%,transparent),transparent 72%),linear-gradient(180deg,#262c39,#1b2029)}
+  .cj-case:hover .cj-case-img img{transform:none}
+}

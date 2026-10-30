@@ -344,3 +344,44 @@ html.sin-anim .jg *{transition:none!important}html.sin-anim .jg.jg-in{animation:
 .jg-mo-a .jg-sec:not(:first-child){margin-top:18px}
 @media (min-width:1360px){.jg-felt{max-height:700px;align-self:center}}
 @media (min-width:1360px){.jg-mo-l{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* ranking: modo (mas ganado / mayor jugada) y periodo en dos filas */
+.jg-rk-h{flex-direction:column;align-items:flex-start;gap:8px}
+.jg-rk-h .chips{margin-top:0}
+.jg-rk-p{margin-top:2px;gap:16px}
+.jg-rk-p .chip{font-size:12px;color:var(--dim)}.jg-rk-p .chip.on{color:var(--soft)}
+
+/* "En la ronda": un sitio propio bajo la grafica, con columnas fijas para que nada se corte */
+.jg-ron{margin-top:14px;flex:none}
+.jg-ron-h{display:flex;align-items:baseline;gap:10px;margin-bottom:2px}
+.jg-ron-h i{font:500 11px var(--mono);font-style:normal;color:var(--dim)}
+.jg-ro{display:grid;grid-template-columns:28px minmax(84px,1fr) 62px 70px 88px 92px;align-items:center;gap:10px;min-height:40px;padding:0 8px;margin:0 -8px;border-top:1px solid var(--hair);border-radius:8px}
+.jg-ro .av{width:28px;height:28px;font-size:10px}
+.jg-ro-n{display:grid;min-width:0;font:600 14px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jg-ro-n em{font:10px var(--mono);font-style:normal;color:var(--mute);overflow:hidden;text-overflow:ellipsis}
+.jg-ro .num{font-size:14px;font-weight:500;white-space:nowrap}
+.jg-ro .rap{color:var(--mute);text-align:right}
+.jg-ro .rcx,.jg-ro .rcv{text-align:right;white-space:nowrap;min-width:0}
+.jg-ro .jg-live{font-size:15px;font-weight:600}
+.jg-ro .jg-livex{color:var(--mute)}
+.jg-ro.ok{background:linear-gradient(90deg,rgba(43,212,125,.1),rgba(43,212,125,0) 85%)}
+.jg-ro.ko{background:linear-gradient(90deg,rgba(224,100,111,.1),rgba(224,100,111,0) 85%)}
+.jg-chp{justify-self:end;padding:4px 10px;border-radius:999px;font:600 11px var(--mono);white-space:nowrap;background:rgba(255,255,255,.07);color:var(--soft)}
+.jg-chp.y{background:rgba(242,193,78,.14);color:var(--acc)}.jg-chp.g{background:rgba(43,212,125,.16);color:#5be8a0}.jg-chp.r{background:rgba(224,100,111,.16);color:#ff8b95}
+/* ultimas rondas, pequeñas, en la columna de los controles */
+.jg-rr{grid-template-columns:62px minmax(0,1fr);padding:6px 0 6px 14px;gap:8px}
+.jg-rr>b{font-size:17px}
+.jg-rav{display:flex;align-items:center;flex-wrap:nowrap;padding-left:4px}
+.jg-ra{display:inline-flex;margin-left:-3px;border-radius:50%;padding:2px;background:var(--bg)}
+.jg-ra.w{box-shadow:0 0 0 2px var(--win)}.jg-ra.l{box-shadow:0 0 0 2px var(--jg-lose)}.jg-ra.e{box-shadow:0 0 0 2px var(--dim)}
+.jg-ra .av{width:22px;height:22px;font-size:8px}
+.jg-rr::before{top:6px;bottom:6px}
+@media (max-width:560px){
+  .jg-ro{grid-template-columns:28px minmax(0,1fr) auto auto;gap:8px}
+  .jg-ro .rap,.jg-ro .rcx{display:none}
+}
+.jg-ro>*{align-self:center}
+.jg-ro .rcx,.jg-ro .rcv{display:flex;justify-content:flex-end;align-items:center}
+.jg-rr>.jg-rav{display:flex;flex-wrap:nowrap;gap:0}
+.jg-ra .av{width:20px;height:20px}
+@media (max-width:560px){.jg-ro .rap,.jg-ro .rcx{display:none}.jg-ro{grid-template-columns:28px minmax(0,1fr) auto auto}}

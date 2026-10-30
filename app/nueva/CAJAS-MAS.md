@@ -35,10 +35,10 @@ Falta, en `cajas.js`:
 
 ## 3. Como pintar lo de Lujo
 
-**Imagen de cada caja** (`cs_cases.image`): 460x480 con transparencia. Es una caja 3D de CS2 recolorada (oro relojes, verde zapatillas, azul tecnologia, morado moda, rojo motos y coches)
-con un poco de aura de luz detras de la caja, y en el centro de la cara de delante, dentro de un marco con luz de su color, tres de los objetos que trae: el mas raro, grande, en medio y uno a cada lado.
-No hay sello ni estrella, y nada sale por encima de la tapa. La caja ocupa ~440 de ancho y ~330 de alto en el lienzo (arriba hay ~118 px y debajo ~30 de aura y sombra, sin fondo): en la rejilla ponle
-`object-fit: contain` en una celda de relacion 24:25, o recortala con `object-position` si la quieres mas apretada.
+**Imagen de cada caja** (`cs_cases.image`): 640x480 (4:3 como las de CS2) con transparencia: el objeto estrella, grande y recortado, en medio, otros dos objetos de la caja a los lados, algo girados,
+y un brillo del color de la categoria detras (oro relojes, verde zapatillas, azul tecnologia, morado moda, rojo motos y coches). Sin caja dibujada. La tarjeta de `cajas.css` pone el resto: fondo con el mismo
+color (`--g`, sale de `GLOW` en cajas.js por id de caja; las de skins, dorado), nombre y el precio en una pastilla con la moneda. Las fotos de los objetos ya no llevan la clase `foto` (marco claro redondeado): son
+recortes transparentes como las skins.
 
 **Objetos**: webp con transparencia (como las skins de CS2), recortados y encuadrados sin bordes, el lado largo a 512 px, asi que todos tienen un tamaño aparente parecido pero no la misma
 forma (un reloj es alto, un coche ancho). Misma orientacion por categoria: coches y motos de lado mirando a la derecha (los que miraban a la izquierda estan volteados), zapatillas de lado con la

@@ -4,7 +4,7 @@ Las fotos de los objetos salen de Wikimedia Commons con licencia libre (dominio 
 se les quito el fondo con rembg (modelo isnet-general-use), se encuadraron sin bordes vacios y se guardaron aqui como webp con transparencia de 512 px como mucho.
 La foto recortada es una obra derivada: mantiene la licencia de la original. Las CC BY y CC BY-SA piden citar al autor: esta tabla es esa cita.
 
-Las imagenes de las cajas (`cajas/*.webp`, 460x480 transparentes) las dibuja `sync/lujo-cajas.py`: la caja es el arte de la Horizon Case de CS2 (de Valve, la misma CDN de Steam que ya usa la app para las cajas) recolorada, con aura de luz, destellos y el objeto estrella (foto recortada de esta tabla) saliendo por la tapa.
+Las imagenes de las cajas (`cajas/*.webp`, 640x480 transparentes) las dibuja `sync/lujo-cajas.py` con las fotos recortadas de esta tabla: el objeto estrella grande en medio, otros dos de la caja a los lados y un brillo del color de la categoria detras (las tarjetas de la app ponen el resto del fondo).
 
 | Foto | Objeto | Cajas | Pagina en Commons | Autor | Licencia |
 |---|---|---|---|---|---|

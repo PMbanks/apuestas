@@ -19,7 +19,7 @@
   let ctx = null, root = null;
   const S = {
     juego: (() => { const j = lee('jg-juego'); return JUEGOS.some((x) => x[0] === j) ? j : 'crash' })(), stake: Math.max(1, parseInt(lee('jg-stake'), 10) || 100), saldo: 0,
-    lado: 'cara', para: null, riesgo: 'medio', color: 'rojo', auto: '', busy: 0, err: null, ocupa: false, rk: { periodo: lee('jg-rk-p') === 'semana' ? 'semana' : 'siempre', todos: false, d: {} }, aviso: '', pd: 0, bjRest: null,
+    lado: 'cara', para: null, riesgo: 'medio', color: 'rojo', auto: '', busy: 0, err: null, ocupa: false, rk: { modo: lee('jg-rk-m') === 'mayor' ? 'mayor' : 'neto', periodo: lee('jg-rk-p') === 'semana' ? 'semana' : 'siempre', todos: false, d: {} }, aviso: '', pd: 0, bjRest: null,
     mo: { vistos: parseInt(lee('jg-mo-visto'), 10) || null, lado: 'cara', msg: '' },
     cr: { ultima: null },
     ru: { ang: 0, spin: null, hecho: null, msg: '' },
@@ -35,7 +35,7 @@
   function lee(k) { try { return localStorage.getItem(k) } catch { return null } }
   function guarda(k, v) { try { localStorage.setItem(k, String(v)) } catch {} }
   const N = (x) => String(Math.round(x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  const X = (m) => Number(m).toFixed(2).replace('.', ',');
+  const X = (m) => { const t = Number(m).toFixed(2); return window.GM_LANG && GM_LANG.get && GM_LANG.get() === 'en' ? t : t.replace('.', ',') };   // en ingles, decimales con punto
   const M1 = (m) => String(m).replace('.', ',');
   const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const coin = () => '<span class="cn"></span>';
@@ -96,7 +96,7 @@
   }
   function firma() {
     const d = D[S.juego] || {}, r = D.res || {};
-    const base = [S.juego, S.err, r.crash && r.crash.id, r.ruleta && r.ruleta.estado, r.moneda, r.bj, S.bjRest, S.lado, S.para, S.riesgo, S.color, S.rk.d[S.juego], S.rk.todos, S.rk.periodo, S.mo.lado, S.mo.msg, S.ru.msg, S.pl.msg];
+    const base = [S.juego, S.err, r.crash && r.crash.id, r.ruleta && r.ruleta.estado, r.moneda, r.bj, S.bjRest, S.lado, S.para, S.riesgo, S.color, S.rk.d[S.juego], S.rk.todos, S.rk.periodo, S.rk.modo, S.mo.lado, S.mo.msg, S.ru.msg, S.pl.msg];
     return JSON.stringify([base, d, S.juego === 'crash' ? crFase() : S.juego === 'ruleta' ? ruFase() : 0], (k, v) => (k === 'now' ? undefined : v));
   }
   // lo propio de cada juego al llegar datos nuevos
@@ -192,13 +192,22 @@
 
   /* ---------- ranking: podio con los 3 primeros y "Ver todos" (la base lo da ya agregado: db/017b) ---------- */
   function rankingHtml() {
-    const j = S.juego, rk = S.rk.d[j];
-    if (!CON_RANKING.includes(j) || !rk) return '';
-    const top = rk.slice(0, 3), resto = rk.slice(3), crash = j === 'crash';
+    const j = S.juego, rk0 = S.rk.d[j];
+    if (!CON_RANKING.includes(j) || !rk0) return '';
+    const crash = j === 'crash', mayor = S.rk.modo === 'mayor';
+    // "Mas ganado": ganancia neta (como llega). "Mayor ×" (crash) o "Mayor premio": la mejor jugada suelta de cada uno
+    const val = (x) => (crash ? x.mejor : x.mayor);
+    const rk = mayor ? rk0.filter((x) => val(x) > 0).sort((a, b) => val(b) - val(a)) : rk0;
+    const top = rk.slice(0, 3), resto = rk.slice(3);
     const neto = (n) => (n >= 0 ? '+' + N(n) : '▼ ' + N(-n));
-    const fil = (x, i, clase) => `<div class="jg-pd ${clase}"><b class="jg-pn num">${i + 1}</b>${av(x.player, 'xl')}<span class="jg-pnm">${esc(nom(x.player))}${crash && x.mejor ? `<em class="jg-pm">×${X(x.mejor)}</em>` : ''}</span><span class="jg-pg num ${x.neto >= 0 ? 'win' : 'lose'}">${neto(x.neto)}</span></div>`;
-    const cab = `<div class="jg-rk-h"><span class="lab">Ranking</span><div class="chips"><button class="chip ${S.rk.periodo === 'siempre' ? 'on' : ''}" data-jg="rkP" data-v="siempre">De siempre</button><button class="chip ${S.rk.periodo === 'semana' ? 'on' : ''}" data-jg="rkP" data-v="semana">Esta semana</button></div></div>`;
-    if (!rk.length) return `<aside class="jg-rk">${cab}<p class="jg-rk-v">Todavía no ha jugado nadie</p></aside>`;
+    const fil = (x, i, clase) => {
+      const nombre = esc(nom(x.player)) + (mayor ? (crash ? '' : x.mayor_x ? `<em class="jg-pm">×${X(x.mayor_x)}</em>` : '') : crash && x.mejor ? `<em class="jg-pm">×${X(x.mejor)}</em>` : '');
+      const dcha = mayor ? (crash ? `<span class="jg-pg num win">×${X(x.mejor)}</span>` : `<span class="jg-pg num win">+${N(x.mayor)}</span>`) : `<span class="jg-pg num ${x.neto >= 0 ? 'win' : 'lose'}">${neto(x.neto)}</span>`;
+      return `<div class="jg-pd ${clase}"><b class="jg-pn num">${i + 1}</b>${av(x.player, 'xl')}<span class="jg-pnm">${nombre}</span>${dcha}</div>`;
+    };
+    const cab = `<div class="jg-rk-h"><span class="lab">Ranking</span><div class="chips"><button class="chip ${!mayor ? 'on' : ''}" data-jg="rkM" data-v="neto">Más ganado</button><button class="chip ${mayor ? 'on' : ''}" data-jg="rkM" data-v="mayor">${crash ? 'Mayor ×' : 'Mayor premio'}</button></div></div>
+      <div class="chips jg-rk-p"><button class="chip ${S.rk.periodo === 'siempre' ? 'on' : ''}" data-jg="rkP" data-v="siempre">De siempre</button><button class="chip ${S.rk.periodo === 'semana' ? 'on' : ''}" data-jg="rkP" data-v="semana">Esta semana</button></div>`;
+    if (!rk.length) return `<aside class="jg-rk">${cab}<p class="jg-rk-v">${mayor ? 'Todavía no ha ganado nadie' : 'Todavía no ha jugado nadie'}</p></aside>`;
     return `<aside class="jg-rk">${cab}
       <div class="jg-pod">${top.map((x, i) => fil(x, i, 'p' + (i + 1))).join('')}</div>
       ${resto.length ? `<button class="jg-vt" data-jg="rkT">${S.rk.todos ? 'Ocultar' : 'Ver todos'} <i>${resto.length}</i></button>${S.rk.todos ? `<div class="jg-rk-l jg-pod">${resto.map((x, i) => fil(x, i + 3, 'pr')).join('')}</div>` : ''}` : ''}
@@ -237,6 +246,8 @@
   };
   A.rkP = ({ v }) => { S.rk.periodo = v === 'semana' ? 'semana' : 'siempre'; guarda('jg-rk-p', S.rk.periodo); cargaRank() };
   A.rkP.libre = true;
+  A.rkM = ({ v }) => { S.rk.modo = v === 'mayor' ? 'mayor' : 'neto'; guarda('jg-rk-m', S.rk.modo); pintaSi(true) };
+  A.rkM.libre = true;
   A.rkT = () => { S.rk.todos = !S.rk.todos; pintaSi(true) };
   A.rkT.libre = true;
   A.q = ({ v }) => {
@@ -374,7 +385,21 @@
      CRASH
      ===================================================================== */
   const K = () => (D.crash && D.crash.k) || 0.06;
-  const crMult = (t) => Math.min(1000, Math.floor(Math.exp(K() * Math.max(0, t)) * 100) / 100);
+  // m(t) = p(t) * f(t): la curva de siempre por el factor de los retrocesos falsos de la ronda. MISMA formula que crash_f / crash_m de db/023.
+  const crRetro = () => (D.crash && D.crash.ronda && D.crash.ronda.retro) || [];
+  function crF(t, retro) {
+    for (const e of retro) {
+      const u = t - e.t0;
+      if (u <= 0 || u >= e.td + e.tr) continue;
+      if (u < e.td) { const x = u / e.td; return 1 - (1 - e.d) * (x * x * (3 - 2 * x)) }
+      const x = (u - e.td) / e.tr;
+      return e.d + (1 - e.d) * (x * x * (3 - 2 * x));
+    }
+    return 1;
+  }
+  const crMr = (t) => Math.exp(0.06 * Math.max(t, 0)) * crF(t, crRetro());
+  const crMult = (t) => Math.min(1000, Math.floor(crMr(t) * 100) / 100);
+  const ROJO = [224, 100, 111];
   function crFase() {
     const r = D.crash && D.crash.ronda;
     if (!r) return 'idle';
@@ -393,22 +418,28 @@
         <p class="jg-sub" data-sub></p>
         <div class="jg-cvw"><canvas class="jg-cv" data-cv></canvas><div class="jg-cd" data-cd hidden><svg viewBox="0 0 220 220" aria-hidden="true"><circle class="t" cx="110" cy="110" r="96"/><circle class="p" data-cdp cx="110" cy="110" r="96"/></svg><div class="jg-cdn"><b data-cdn>10</b><small>segundos</small></div></div></div>
         <div class="jg-hist">${(d.rondas ? d.rondas.map((x) => x.punto) : d.historial).map((p) => `<span class="${clsP(p)}">×${X(p)}</span>`).join('')}</div>
-        ${d.rondas && d.rondas.some((x) => x.gente.length) ? `<span class="lab jg-sec">Últimas rondas</span>${d.rondas.filter((x) => x.gente.length).slice(0, 5).map((x, i) => `<div class="jg-rr ${clsP(x.punto)}${i > 2 ? ' mas' : ''}"><b class="num">×${X(x.punto)}</b><span>${x.gente.map((g) => `<span class="jg-rg ${g.estado === 'cobrada' ? (g.pago > g.stake ? 'w' : 'e') : 'l'}">${av(g.player)}${g.estado === 'cobrada' ? `<em>×${X(g.retiro)}${g.pago > g.stake ? ' +' + N(g.pago - g.stake) : ''}</em>` : `<em>▼ ${N(g.stake)}</em>`}</span>`).join('')}</span></div>`).join('')}` : ''}
+        ${d.apuestas.length ? `<div class="jg-ron"><div class="jg-ron-h"><span class="lab">En la ronda</span><i class="num">${d.apuestas.length}</i></div>${d.apuestas.map((a) => crFila(a, f, d.ronda)).join('')}</div>` : ''}
       </div>
       <div class="jg-side">
         ${apuesta()}
         <div class="jg-gap"><span class="lab">Retirar solo en</span><label class="jg-auto"><span>×</span><input data-auto inputmode="decimal" autocomplete="off" placeholder="sin límite" value="${esc(S.auto)}" aria-label="Retirada automática"></label></div>
         <button class="go" data-jg="crGo" data-go><span data-bl>Apostar</span><span class="jg-pay" data-bp></span></button>${aviso()}
-        ${d.apuestas.length ? `<span class="lab jg-sec">En la ronda</span>${d.apuestas.map((a) => crFila(a, f)).join('')}` : ''}
+        ${rondasHtml(d)}
       </div></section>`;
   }
-  function crFila(a, f) {
-    let est = '<em>dentro</em>';
-    // mientras corre la ronda, los que siguen dentro enseñan lo que cobrarian ahora mismo (se actualiza en cada fotograma sin repintar la fila)
-    if (a.estado === 'viva' && f === 'curso') est = `<b class="num jg-live" data-live="${a.stake}">${N(a.stake)}</b>`;
-    else if (a.estado === 'cobrada') est = `<b class="num win">×${X(a.retiro)}</b><em class="win">+${N(a.pago)}</em>`;
-    else if (a.estado === 'perdida') est = `<em class="lose">▼ ${N(a.stake)}</em>`;
-    return fila(a.estado === 'cobrada' ? 'ok' : a.estado === 'perdida' ? 'ko' : '', av(a.player), `${esc(nom(a.player))}${a.auto ? `<em>sale en ×${X(a.auto)}</em>` : ''}`, `<b class="num ${a.estado === 'viva' ? '' : 'dim'}">${N(a.stake)}</b>`, `<span class="jg-st">${est}</span>`, `data-pl="${a.player}" data-est="${a.estado}"`);
+  // las ultimas rondas, en pequeño: el punto de explosion y un avatar por jugador con un aro verde (cobro) o rojo (explotado)
+  function rondasHtml(d) {
+    const rs = (d.rondas || []).filter((x) => x.gente.length).slice(0, 5);
+    if (!rs.length) return '';
+    return `<span class="lab jg-sec">Últimas rondas</span>${rs.map((x) => `<div class="jg-rr ${clsP(x.punto)}"><b class="num">×${X(x.punto)}</b><span class="jg-rav">${x.gente.slice(0, 5).map((g) => `<span class="jg-ra ${g.estado === 'cobrada' ? (g.pago > g.stake ? 'w' : 'e') : 'l'}" title="${esc(nom(g.player))} ${g.estado === 'cobrada' ? '×' + X(g.retiro) + ' +' + N(g.pago) : '▼ ' + N(g.stake)}">${av(g.player)}</span>`).join('')}</span></div>`).join('')}`;
+  }
+  // una linea de "En la ronda": avatar, nombre, apuesta, ×, lo que gana (en vivo mientras sigue dentro) y el estado
+  function crFila(a, f, ronda) {
+    const viva = a.estado === 'viva', cob = a.estado === 'cobrada', per = a.estado === 'perdida', vivo = viva && f === 'curso';
+    const x = cob ? `<b class="num win">×${X(a.retiro)}</b>` : vivo ? '<b class="num jg-livex" data-livex>×1,00</b>' : per ? `<b class="num lose">×${X(ronda && ronda.punto)}</b>` : '';
+    const val = cob ? `<b class="num win">+${N(a.pago)}</b>` : vivo ? `<b class="num jg-live" data-live="${a.stake}">${N(a.stake)}</b>` : per ? `<b class="num lose">▼ ${N(a.stake)}</b>` : '';
+    const chip = cob ? '<span class="jg-chp g">Retirado</span>' : per ? '<span class="jg-chp r">Explotado</span>' : '<span class="jg-chp y">En juego</span>';
+    return `<div class="jg-ro ${cob ? 'ok' : per ? 'ko' : ''}" data-pl="${a.player}" data-est="${a.estado}">${av(a.player)}<span class="jg-ro-n">${esc(nom(a.player))}${a.auto ? `<em>sale en ×${X(a.auto)}</em>` : ''}</span><b class="num rap">${N(a.stake)}</b><span class="rcx">${x}</span><span class="rcv">${val}</span>${chip}</div>`;
   }
   // el boton principal segun la fase: apostar / dentro / retirar con lo que cobrarias
   function crBoton() {
@@ -482,19 +513,21 @@
     if (f === 'apuestas') { const s = Math.max(0, Math.ceil((ms(r.arranca) - ahora()) / 1000)); txt = D.crash.apuestas.length ? `${D.crash.apuestas.length} dentro` : 'Todavía nadie dentro' }
     else if (f === 'curso') { t = crT(); m = crMult(t); cls = 'on'; txt = mia && mia.estado === 'viva' ? 'Retira antes de que explote' : mia && mia.estado === 'cobrada' ? `Has cobrado ${N(mia.pago)}` : D.crash.apuestas.length ? 'En marcha' : '' }
     else if (f === 'fin') {
-      m = Number(r.punto); t = Math.log(Math.max(1.0001, m)) / K(); cls = 'boom';
+      m = Number(r.punto); t = r.fin_at ? Math.max(0, (ms(r.fin_at) - ms(r.arranca)) / 1000) : Math.log(Math.max(1.0001, m)) / K(); cls = 'boom';
       txt = `Explotó en ×${X(m)}` + (mia ? (mia.estado === 'cobrada' ? ` · cobraste ${N(mia.pago)}` : ` · perdiste ${N(mia.stake)}`) : '');
     } else txt = 'Apuesta para abrir una ronda';
     if (refs.mult) {
       const v = `×${X(m)}`; if (refs.mult.textContent !== v) refs.mult.textContent = v;
       const c = 'jg-big num ' + cls; if (refs.mult.className !== c) refs.mult.className = c;
-      const col = f === 'curso' ? colorMult(m) : null, est = col ? `rgb(${col})|0 0 ${Math.round(Math.min(46, 8 + m * 2.2))}px rgba(${col},.38)` : '';
+      const col = f === 'curso' ? (crF(t, crRetro()) < 0.985 ? [255, 107, 94] : colorMult(m)) : null, est = col ? `rgb(${col})|0 0 ${Math.round(Math.min(46, 8 + m * 2.2))}px rgba(${col},.38)` : '';
       if (refs.mult._e !== est) { refs.mult._e = est; const [a, b] = est ? est.split('|') : ['', '']; refs.mult.style.color = a; refs.mult.style.textShadow = b }
     }
     setT(refs.sub, txt);
     if (f === 'curso') {
       if (!refs.live) refs.live = [...root.querySelectorAll('[data-live]')];
       for (const el of refs.live) { const v = Math.floor(+el.dataset.live * m); if (el._v !== v) { el._v = v; el.textContent = N(v) } }
+      if (!refs.livex) refs.livex = [...root.querySelectorAll('[data-livex]')];
+      const tx = '×' + X(m); for (const el of refs.livex) if (el._v !== tx) { el._v = tx; el.textContent = tx }
     }
     crCuenta(f, r);
     crBoton();
@@ -513,20 +546,20 @@
     if (cd.classList.contains('hot') !== hot) cd.classList.toggle('hot', hot);
     nEl.style.transform = hot && !quieto() ? `scale(${(1 + 0.26 * Math.pow(rem - Math.floor(rem), 3)).toFixed(3)})` : '';
   }
-  function cohete(g, x, y, ang, fl) {
-    g.save(); g.translate(x, y); g.rotate(ang); g.scale(1.35, 1.35);
-    const L = 11 + fl * 9, gr = g.createLinearGradient(-9, 0, -9 - L, 0);
-    gr.addColorStop(0, 'rgba(255,230,140,.95)'); gr.addColorStop(0.5, 'rgba(255,140,50,.7)'); gr.addColorStop(1, 'rgba(255,80,40,0)');
-    g.fillStyle = gr; g.beginPath(); g.moveTo(-8, -3.6); g.lineTo(-9 - L, 0); g.lineTo(-8, 3.6); g.closePath(); g.fill();
-    g.fillStyle = '#d8505a';
-    g.beginPath(); g.moveTo(-5, -4); g.lineTo(-12, -9.5); g.lineTo(-1, -4.5); g.closePath(); g.fill();
-    g.beginPath(); g.moveTo(-5, 4); g.lineTo(-12, 9.5); g.lineTo(-1, 4.5); g.closePath(); g.fill();
-    g.fillStyle = '#f4f2ec'; g.beginPath(); g.moveTo(14, 0); g.quadraticCurveTo(6, -7, -8, -5); g.lineTo(-8, 5); g.quadraticCurveTo(6, 7, 14, 0); g.fill();
-    g.fillStyle = '#d8505a'; g.beginPath(); g.moveTo(14, 0); g.quadraticCurveTo(10, -4, 6.5, -5.5); g.lineTo(6.5, 5.5); g.quadraticCurveTo(10, 4, 14, 0); g.fill();
-    g.fillStyle = '#4de0ff'; g.beginPath(); g.arc(-1, 0, 2.7, 0, 7); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.arc(-1.8, -0.9, 0.9, 0, 7); g.fill();
-    g.restore();
+  /* ---- velas: cada vela es una ventana de 0,34 s de la curva real m(t) (con sus retrocesos); es una funcion del tiempo, asi que
+         al entrar a mitad de ronda se dibuja entera. Solo se calcula lo visible. ---- */
+  const DTC = 0.34, VIS = 30;
+  const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+  const ruido = (i, k) => { const x = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453; return x - Math.floor(x) };      // 0..1, estable
+  function vela(i, tMax) {
+    const t0 = i * DTC, t1 = Math.min(tMax, t0 + DTC), prog = clamp((t1 - t0) / DTC, 0, 1);
+    const eo = (ruido(i - 1, 1) - 0.5) * 0.016, ec = (ruido(i, 1) - 0.5) * 0.016 * prog * prog;
+    const o = i === 0 ? 1 : crMr(t0) * (1 + eo), c = crMr(t1) * (1 + ec);
+    let hi = Math.max(o, c), lo = Math.min(o, c);
+    for (let s = 1; s < 6; s++) { const v = crMr(t0 + ((t1 - t0) * s) / 6); if (v > hi) hi = v; if (v < lo) lo = v }
+    return { o, c, h: hi * (1 + 0.007 * ruido(i, 2) * (0.4 + prog)), l: lo * (1 - 0.007 * ruido(i, 3) * (0.4 + prog)) };
   }
+  const VERDE = '#2bd47d', ROJOV = '#e0646f';
   function crDibuja(f, t, m) {
     const cv = refs.cv; if (!cv) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1), w = cv.clientWidth, h = cv.clientHeight;
@@ -535,30 +568,66 @@
     const g = cv.getContext('2d'), now = performance.now(), dt = Math.min(0.05, Math.max(0, (now - (CRX.t || now)) / 1000));
     CRX.t = now;
     g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
-    if (!CRX.est) CRX.est = Array.from({ length: 46 }, () => ({ x: Math.random(), y: Math.random(), r: rnd(0.5, 1.5), a: rnd(0.12, 0.45) }));
-    g.fillStyle = '#fff'; for (const e of CRX.est) { g.globalAlpha = e.a; g.fillRect(e.x * w, e.y * h, e.r, e.r) } g.globalAlpha = 1;
-    const padL = 8, padR = 22, padT = 18, padB = 24, k = K();
-    const tmax = Math.max(10, t * 1.1), ymax = Math.max(2, m * 1.2);
-    const px = (tt) => padL + (tt / tmax) * (w - padL - padR), py = (mm) => h - padB - ((mm - 1) / (ymax - 1)) * (h - padT - padB);
-    g.font = '11px JB, monospace'; g.textBaseline = 'bottom'; g.fillStyle = cssVar('--dim', '#6c737e'); g.strokeStyle = 'rgba(255,255,255,.06)'; g.lineWidth = 1;
-    for (const v of [1, 2, 3, 5, 10, 20, 50, 100]) { if (v > ymax) break; const y = Math.round(py(v)) + 0.5; g.beginPath(); g.moveTo(padL, y); g.lineTo(w - padR, y); g.stroke(); if (v > 1) g.fillText('×' + v, padL, y - 3) }
-    const c = f === 'fin' ? [224, 100, 111] : colorMult(m), rgb = c.join(',');
-    let hx = px(0), hy = py(1), ang = -0.62;
-    if (f === 'curso' || f === 'fin') {
-      const n = 72; g.beginPath();
-      for (let i = 0; i <= n; i++) { const tt = (t * i) / n, x = px(tt), y = py(Math.exp(k * tt)); i ? g.lineTo(x, y) : g.moveTo(x, y) }
-      const gt = g.createLinearGradient(px(0), 0, px(t), 0); gt.addColorStop(0, 'rgba(' + rgb + ',0)'); gt.addColorStop(0.55, 'rgba(' + rgb + ',.55)'); gt.addColorStop(1, 'rgb(' + rgb + ')');
-      g.save(); g.strokeStyle = gt; g.lineWidth = 4; g.lineJoin = 'round'; g.lineCap = 'round'; g.shadowColor = 'rgb(' + rgb + ')'; g.shadowBlur = 16; g.stroke(); g.restore();
-      g.lineTo(px(t), h - padB); g.lineTo(px(0), h - padB); g.closePath();
-      const gr = g.createLinearGradient(0, padT, 0, h - padB); gr.addColorStop(0, 'rgba(' + rgb + ',.09)'); gr.addColorStop(1, 'rgba(' + rgb + ',0)'); g.fillStyle = gr; g.fill();
-      hx = px(t); hy = py(Math.exp(k * t));
-      const d0 = Math.max(0, t - 0.25); ang = Math.atan2(hy - py(Math.exp(k * d0)), hx - px(d0));
+    const padL = 10, padR = 78, padT = 20, padB = 24;
+    const corre = f === 'curso' || f === 'fin';
+    // velas visibles: la de ahora y las VIS anteriores (tras explotar se añade la vela roja que cae al suelo)
+    const tF = t / DTC, nUlt = corre ? Math.floor(tF) : -1, extra = f === 'fin' ? 1 : 0;
+    const lista = [];
+    for (let i = Math.max(0, nUlt - VIS + 1 + extra); i <= nUlt; i++) lista.push([i, vela(i, t)]);
+    let pico = Math.max(m, 1.6), valle = 1;
+    for (const [, v] of lista) { pico = Math.max(pico, v.h); valle = Math.min(valle, v.l) }
+    const yt = Math.max(2, pico * 1.14), yb = Math.min(0.9, valle * 0.9);
+    if (CRX.rid !== (D.crash.ronda && D.crash.ronda.id) || CRX.yt == null) { CRX.rid = D.crash.ronda && D.crash.ronda.id; CRX.yt = yt; CRX.yb = yb }
+    const q = Math.min(1, dt * 6); CRX.yt += (yt - CRX.yt) * q; CRX.yb += (yb - CRX.yb) * q;
+    const lt = Math.log(CRX.yt), lb = Math.log(CRX.yb), py = (v) => h - padB - ((Math.log(Math.max(v, CRX.yb * 0.5)) - lb) / (lt - lb)) * (h - padT - padB);
+    const paso = (w - padL - padR) / VIS, base = Math.max(0, tF + 1 + extra - VIS), px = (i) => padL + (i - base) * paso + paso / 2;
+    // fondo y rejilla suave
+    const bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#10131a'); bg.addColorStop(1, '#0b0d12'); g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    g.lineWidth = 1; g.font = '11px JB, ui-monospace, monospace'; g.textBaseline = 'middle';
+    g.strokeStyle = 'rgba(255,255,255,.035)';
+    for (let i = Math.ceil(base / 5) * 5; px(i) < w - padR; i += 5) { const x = Math.round(px(i)) + 0.5; g.beginPath(); g.moveTo(x, padT); g.lineTo(x, h - padB); g.stroke() }
+    for (const v of [0.5, 1, 1.5, 2, 3, 5, 7, 10, 15, 20, 30, 50, 100, 200, 500]) {
+      if (v < CRX.yb || v > CRX.yt) continue;
+      const y = Math.round(py(v)) + 0.5; g.strokeStyle = v === 1 ? 'rgba(255,255,255,.1)' : 'rgba(255,255,255,.05)'; g.beginPath(); g.moveTo(padL, y); g.lineTo(w - padR, y); g.stroke();
+      g.fillStyle = '#6c737e'; g.fillText('×' + String(v).replace('.', ','), w - padR + 10, y);
     }
-    CRX.head = { x: hx, y: hy };
-    // estela de fuego: sale del cohete mientras sube
-    if (f === 'curso' && !quieto()) for (let i = 0; i < 2; i++) CRX.parts.push({ x: hx - Math.cos(ang) * 16, y: hy - Math.sin(ang) * 16, vx: -Math.cos(ang) * rnd(30, 90) + rnd(-25, 25), vy: -Math.sin(ang) * rnd(30, 90) + rnd(-25, 25), g: 0, r: rnd(1.6, 3.6), t: 0, vida: rnd(0.35, 0.75), c: ['#ffdc85', '#ff9a3c', '#ffd0a0'][(Math.random() * 3) | 0] });
-    if (f === 'fin' && CRX.boom && !CRX.boom.nacio) { CRX.boom.nacio = true; chispas(hx, hy, 84, ['#ffdc85', '#ff8c38', '#e0646f', '#fff'], 330, 320, 1.1) }
-    // particulas
+    const caida = corre && f === 'curso' && crF(t, crRetro()) < 0.985;
+    const col = f === 'fin' ? ROJO : caida ? [255, 107, 94] : colorMult(m), rgb = col.join(',');
+    // velas
+    let ultX = px(0), ultY = py(1), x2 = null;
+    for (const [i, v] of lista) {
+      const x = px(i), sube = v.c >= v.o, c = sube ? VERDE : ROJOV, bw = Math.max(3, paso * 0.62), vivo = f === 'curso' && i === nUlt;
+      g.strokeStyle = c; g.fillStyle = c; g.lineWidth = 1.6;
+      if (vivo) { g.save(); g.shadowColor = c; g.shadowBlur = 14 }
+      g.beginPath(); g.moveTo(x, py(v.h)); g.lineTo(x, py(v.l)); g.stroke();
+      const y1 = py(Math.max(v.o, v.c)), y2 = py(Math.min(v.o, v.c)); g.fillRect(x - bw / 2, y1, bw, Math.max(2, y2 - y1));
+      if (vivo) g.restore();
+      ultX = x; ultY = py(v.c);
+    }
+    // la vela roja enorme que cae al suelo cuando explota
+    if (f === 'fin') {
+      const b = CRX.boom, age = b ? (now - b.t0) / 1000 : 9, k = clamp(age / 0.3, 0, 1), x = px(nUlt + 1), top = lista.length ? lista[lista.length - 1][1].c : m;
+      const yTop = py(top), yBajo = yTop + (py(CRX.yb * 0.97) - yTop) * (1 - Math.pow(1 - k, 3)), bw = Math.max(5, paso * 0.8);
+      g.save(); g.shadowColor = 'rgba(224,100,111,.9)'; g.shadowBlur = 22 * (1 - clamp(age / 1.4, 0, 1)) + 6;
+      g.strokeStyle = ROJOV; g.fillStyle = ROJOV; g.lineWidth = 2; g.beginPath(); g.moveTo(x, yTop - 4); g.lineTo(x, yBajo + 6); g.stroke(); g.fillRect(x - bw / 2, yTop, bw, Math.max(3, yBajo - yTop)); g.restore();
+      ultX = x; ultY = yTop; x2 = x;
+      if (b && !b.nacio) { b.nacio = true; chispas(x, yTop, 70, ['#ffdc85', '#ff8c38', '#e0646f', '#fff'], 300, 340, 1.1) }
+      if (b && age < 0.35) { g.fillStyle = `rgba(255,255,255,${0.22 * (1 - age / 0.35)})`; g.fillRect(0, 0, w, h) }
+      if (b && age < 0.7) { g.strokeStyle = `rgba(255,200,120,${1 - age / 0.7})`; g.lineWidth = 3; g.beginPath(); g.arc(x, yTop, age * 190, 0, 7); g.stroke() }
+      if (b && age > 1.4 && !CRX.parts.length) CRX.boom = null;
+    }
+    CRX.head = { x: ultX, y: ultY };
+    // linea punteada del precio y su etiqueta a la derecha
+    const yP = clamp(py(f === 'fin' ? m : m), padT, h - padB);
+    if (corre || f === 'apuestas' || f === 'idle') {
+      const yy = f === 'apuestas' || f === 'idle' ? py(1) : yP;
+      g.save(); g.strokeStyle = `rgba(${rgb},.7)`; g.lineWidth = 1.2; g.setLineDash([5, 5]); g.beginPath(); g.moveTo(padL, yy); g.lineTo(w - padR + 4, yy); g.stroke(); g.restore();
+      const txt = '×' + X(f === 'apuestas' || f === 'idle' ? 1 : m);
+      g.save(); g.shadowColor = `rgba(${rgb},.55)`; g.shadowBlur = 10; g.fillStyle = `rgb(${rgb})`;
+      const rx = w - padR + 6, rw = padR - 12, rh = 24, rr = 6; g.beginPath(); g.moveTo(rx + rr, yy - rh / 2); g.arcTo(rx + rw, yy - rh / 2, rx + rw, yy + rh / 2, rr); g.arcTo(rx + rw, yy + rh / 2, rx, yy + rh / 2, rr); g.arcTo(rx, yy + rh / 2, rx, yy - rh / 2, rr); g.arcTo(rx, yy - rh / 2, rx + rw, yy - rh / 2, rr); g.closePath(); g.fill(); g.restore();
+      g.fillStyle = '#12100a'; g.font = '700 12px JB, ui-monospace, monospace'; g.textAlign = 'center'; g.fillText(txt, rx + rw / 2, yy + 1); g.textAlign = 'left';
+    }
+    // particulas (cobro y explosion)
     for (let i = CRX.parts.length - 1; i >= 0; i--) {
       const p = CRX.parts[i]; p.t += dt;
       const kk = 1 - p.t / p.vida; if (kk <= 0) { CRX.parts.splice(i, 1); continue }
@@ -566,15 +635,6 @@
       g.globalAlpha = Math.min(1, kk * 1.4); g.fillStyle = p.c; g.beginPath(); g.arc(p.x, p.y, p.r * (0.4 + kk * 0.8), 0, 7); g.fill();
     }
     g.globalAlpha = 1;
-    // el cohete (en la rampa mientras se apuesta, subiendo mientras corre) o los restos si ha explotado
-    if (f === 'curso' || f === 'apuestas' || f === 'idle') cohete(g, hx, hy, ang, 0.5 + 0.5 * Math.sin(now / 45));
-    else if (f === 'fin') {
-      const b = CRX.boom, age = b ? (now - b.t0) / 1000 : 9;
-      if (age < 0.7) { g.strokeStyle = 'rgba(255,200,120,' + (1 - age / 0.7).toFixed(2) + ')'; g.lineWidth = 3; g.beginPath(); g.arc(hx, hy, age * 170, 0, 7); g.stroke() }
-      if (age < 0.3) { const rg = g.createRadialGradient(hx, hy, 0, hx, hy, 60); rg.addColorStop(0, 'rgba(255,255,255,' + (1 - age / 0.3).toFixed(2) + ')'); rg.addColorStop(1, 'rgba(255,160,60,0)'); g.fillStyle = rg; g.beginPath(); g.arc(hx, hy, 60, 0, 7); g.fill() }
-      if (!b || age > 0.45) { g.strokeStyle = 'rgba(224,100,111,.85)'; g.lineWidth = 2.5; g.lineCap = 'round'; g.beginPath(); g.moveTo(hx - 6, hy - 6); g.lineTo(hx + 6, hy + 6); g.moveTo(hx + 6, hy - 6); g.lineTo(hx - 6, hy + 6); g.stroke() }
-      if (b && age > 1.4 && !CRX.parts.length) CRX.boom = null;
-    }
   }
   // bucle de la ronda: solo mientras hay una ronda viva (o un efecto en el aire) con la pantalla a la vista
   function crLoop() {

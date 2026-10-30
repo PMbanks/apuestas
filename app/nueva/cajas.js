@@ -41,8 +41,8 @@
   const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const coin = () => '<span class="cn"></span>';
   const src = (p, s) => (!p ? '' : /^https?:/.test(p) ? p : `${CDN}${p}/${s}fx${s}f`);
-  // una foto (las de lujo) lleva la clase foto: esquinas redondas en vez de la silueta de una skin
-  const pic = (p, s, cls = '', eager = false) => p ? `<img class="${cls}${/^https?:/.test(p) && !/steamstatic/.test(p) ? ' foto' : ''}" src="${esc(src(p, s))}" alt="" ${eager ? '' : 'loading="lazy" '}decoding="async" onerror="this.style.visibility='hidden'">` : '';
+  // las imagenes de lujo (cajas y objetos) son webp recortados con transparencia, igual que las skins: no llevan marco ni fondo
+  const pic = (p, s, cls = '', eager = false) => p ? `<img class="${cls}" src="${esc(src(p, s))}" alt="" ${eager ? '' : 'loading="lazy" '}decoding="async" onerror="this.style.visibility='hidden'">` : '';
   const color = (r) => (RAR[r] || RAR.mil)[1];
   const espera = (ms) => new Promise((ok) => setTimeout(ok, anim && anim.saltar ? 0 : ms));
   // PM, 30-10: "no funcionan ni las animaciones". Con "quitar animaciones" en el sistema (en Android lo pone la escala de
@@ -60,6 +60,10 @@
     return [w.replace(/^★ /, ''), (k || 'Original') + (it.phase ? ' · ' + it.phase : '')];
   }
   const nombre = (it) => { const p = partes(it); return p.length > 1 ? { top: p[0], main: p[1] } : { top: '', main: p[0] } };
+  // el brillo de cada caja de lujo (el color de su categoria, el mismo de su imagen); las de skins, dorado
+  const GLOW = { 'lujo-relojes-calle': '#ffc43a', 'lujo-relojes': '#ffc43a', 'lujo-zapatillas-basicas': '#3ee270', 'lujo-zapatillas': '#3ee270', 'lujo-tecnologia-basica': '#48a0ff', 'lujo-tecnologia': '#48a0ff',
+    'lujo-moda-calle': '#c060ff', 'lujo-moda-joyas': '#c060ff', 'lujo-motos': '#ff4848', 'lujo-coches': '#ff4848' };
+  const brillo = (c) => GLOW[c && c.id] || '#f2c14e';
   const esLujo = (id) => /^(lujo|cos)-/.test(String(id || ''));
   const catDe = (c) => { const k = c && (c.cat || c.category || c.categoria); return k ? (/lujo/i.test(k) ? 'lujo' : /cosm/i.test(k) ? 'cosmeticos' : 'skins') : /^cos-/.test(String((c && c.id) || '')) ? 'cosmeticos' : esLujo(c && c.id) ? 'lujo' : 'skins' };
   const caja = (id) => (D.cases && D.cases.find((c) => c.id === id)) || D.caja.get(id) || {};
@@ -114,6 +118,10 @@
     for (const r of hay) o[r] = ((PESO[r] / tot) * 100).toFixed(2).replace(/\.?0+$/, '').replace('.', ',') + ' %';
     return o;
   }
+
+  // probabilidad de cada rareza (fraccion) y de cada objeto dentro de ella, para "lo que trae"
+  function probN(info) { const PESO = D.cases && D.cases.some((c) => c.cat != null) ? PESO_012 : PESO_007, hay = info ? ORDEN.filter((r) => info.por[r]) : ORDEN, tot = hay.reduce((a, r) => a + PESO[r], 0), o = {}; for (const r of hay) o[r] = PESO[r] / tot; return o }
+  const pctTxt = (f) => { const v = f * 100, t = (v >= 10 ? v.toFixed(1) : v >= 0.1 ? v.toFixed(2) : v.toFixed(3)).replace('.', ','); return t.replace(/(,\d*?)0+$/, '$1').replace(/,$/, '') + ' %' };
 
   /* ---------- datos ---------- */
   async function rpc(fn, args) { const { data, error } = await ctx.db.rpc(fn, args); if (error) throw error; return data }
@@ -217,6 +225,7 @@
       <span class="cj-it-t">${top ? `<span class="lab" data-notr>${esc(top)}</span>` : ''}
         <b data-notr>${it.rarity === 'esp' && n.top ? '★ ' : ''}${esc(main)}</b>
         ${ex.meta ? `<em>${ex.meta}</em>` : ''}
+        ${ex.pct != null ? `<span class="cj-pct">${pctTxt(ex.pct)}</span>` : ''}
         ${ex.valor != null ? `<span class="v">${ex.desde ? '<i>desde</i>' : ''}${N(ex.valor)}${coin()}</span>` : ''}</span>
     </${tag}>`;
   }
@@ -239,7 +248,7 @@
     const hay = new Set(D.cases.map(catDe)), dos = hay.size > 1;
     const lista = dos ? D.cases.filter((x) => catDe(x) === S.cat) : D.cases;
     return `${dos ? seg('cat', CATS, S.cat, 'cj-cat') : ''}
-      <section class="cj-cases">${lista.map((x) => `<button class="cj-case ${catDe(x)}" data-cj="caja" data-v="${esc(x.id)}">
+      <section class="cj-cases">${lista.map((x) => `<button class="cj-case ${catDe(x)}" data-cj="caja" data-v="${esc(x.id)}" style="--g:${brillo(x)}">
         <span class="cj-case-img">${pic(x.image, 256)}${mias(x.id).length ? `<i class="cj-case-own" title="Tuyas sin abrir">${mias(x.id).length}</i>` : ''}</span>
         <span class="cj-case-n" data-notr>${esc(x.name)}</span>
         <span class="cj-case-p">${N(x.price)}${coin()}</span></button>`).join('')}</section>
@@ -247,7 +256,7 @@
   }
   function vHero(c, info) {
     const total = c.price * S.n, falta = ctx.saldo < total, pr = probs(info), tuyas = mias(c.id);
-    return `<div class="cj-hero">
+    return `<div class="cj-hero" style="--g:${brillo(c)}">
       <div class="cj-hero-img">${pic(c.image, 360, '', true)}</div>
       <h2 data-notr>${esc(c.name)}</h2>
       <p class="cj-hero-p"><b class="num">${N(c.price)}</b>${coin()}<em>por caja</em></p>
@@ -288,18 +297,19 @@
     </div>`;
   }
   function vContenido(info) {
-    const pr = probs(info), out = [];
+    const pr = probs(info), pn = probN(info), out = [];
     for (const r of ORDEN) {
       const list = info.por[r]; if (!list) continue;
       let tiles, mas = '';
+      const wsum = list.reduce((a, it) => a + (it.weight || 100), 0) || 1;
       if (r === 'esp') {
         // las fases de un Doppler cuentan como una: se pinta una y "desde" lo que vale la mas barata
         const por = new Map();
-        for (const it of list) { const v = tipico(it), p = por.get(it.name); if (!p) por.set(it.name, { it, v, n: 1 }); else { p.n++; if (v != null && (p.v == null || v < p.v)) p.v = v } }
+        for (const it of list) { const v = tipico(it), w = it.weight || 100, p = por.get(it.name); if (!p) por.set(it.name, { it, v, n: 1, w }); else { p.n++; p.w += w; if (v != null && (p.v == null || v < p.v)) p.v = v } }
         const todos = [...por.values()].sort((a, b) => (b.v || 0) - (a.v || 0)), ver = S.espTodo === info.id ? todos : todos.slice(0, ESP_VER);
-        tiles = ver.map((p) => tile({ ...p.it, phase: null }, { valor: p.v, desde: p.n > 1 })).join('');
+        tiles = ver.map((p) => tile({ ...p.it, phase: null }, { valor: p.v, desde: p.n > 1, pct: pn[r] * p.w / wsum })).join('');
         if (todos.length > ver.length) mas = `<div class="cj-more"><button class="chip" data-cj="esptodo" data-v="${esc(info.id)}">Ver los ${todos.length}</button></div>`;
-      } else tiles = [...list].sort((a, b) => (tipico(b) || 0) - (tipico(a) || 0)).map((it) => tile(it, { valor: tipico(it) })).join('');
+      } else tiles = [...list].sort((a, b) => (tipico(b) || 0) - (tipico(a) || 0)).map((it) => tile(it, { valor: tipico(it), pct: pn[r] * (it.weight || 100) / wsum })).join('');
       out.push(`<div class="cj-grp" style="--c:${color(r)}"><h4 class="cj-grp-h"><i></i><span>${r === 'esp' ? '★ Objeto especial' : RAR[r][0]}</span><b>${pr[r] || ''}</b></h4>
         <div class="cj-grid fit ${r === 'esp' ? 'esp' : ''}">${tiles}</div>${mas}</div>`);
     }

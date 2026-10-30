@@ -17,6 +17,33 @@
 })();
 (function () {
   const D = {
+    // juegos (crash de velas, rankings, en la ronda; 30-10)
+    'Cara o cruz': 'Heads or tails', 'Crash': 'Crash', 'Blackjack': 'Blackjack',
+    'Contra': 'Against', 'Cualquiera': 'Anyone', 'Tu lado': 'Your side', 'Cara': 'Heads', 'Cruz': 'Tails', 'cara': 'heads', 'cruz': 'tails',
+    'Apuesta': 'Bet', 'Todo': 'All', 'Máx': 'Max', 'Retar por': 'Challenge for', 'Abiertos': 'Open', 'Tus retos': 'Your challenges', 'Últimos': 'Latest',
+    'Aceptar': 'Accept', 'Retirar': 'Withdraw', 'Tú': 'You', 'ti': 'you',
+    'Retirar solo en': 'Cash out only at', 'sin límite': 'no limit', 'Retirada automática': 'Auto cash out',
+    'Dentro': 'In', 'dentro': 'in', 'En marcha': 'Running', 'Retirado': 'Cashed out', 'Perdida': 'Lost', 'En la ronda': 'In the round', 'Últimas rondas': 'Last rounds',
+    'Ranking': 'Leaderboard', 'De siempre': 'All time', 'Esta semana': 'This week', 'Ver todos': 'See all', 'Ocultar': 'Hide', 'Todavía no ha jugado nadie': 'Nobody has played yet',
+    'Ese juego no tiene ranking': 'That game has no leaderboard', 'Elige siempre o semana': 'Pick all time or this week',
+    'Más ganado': 'Most won', 'Mayor ×': 'Biggest ×', 'Mayor premio': 'Biggest win', 'Todavía no ha ganado nadie': 'Nobody has won yet', 'Explotado': 'Crashed',
+    'Todavía nadie dentro': 'Nobody in yet', 'segundos': 'seconds', 'Apuesta para abrir una ronda': 'Bet to open a round', 'Retira antes de que explote': 'Cash out before it blows',
+    'Banca': 'Dealer', 'Haz tu apuesta': 'Place your bet', 'En juego': 'In play', 'Pedir': 'Hit', 'Plantarse': 'Stand', 'Doblar': 'Double', 'doblada': 'doubled',
+    'Repartir por': 'Deal for', 'Otra mano por': 'Another hand for', 'Hoy te quedan': 'Today you have', 'por arriesgar': 'left to risk',
+    'Hoy ya has perdido 100. Vuelve mañana': 'You have already lost 100 today. Come back tomorrow',
+    'Blackjack paga 3 a 2': 'Blackjack pays 3 to 2', 'Blackjack paga 3 a 2. La banca se planta en 17.': 'Blackjack pays 3 to 2. The dealer stands on 17.',
+    'Empate · te devuelvo la apuesta': 'Push · your bet is returned',
+    'Pon una cantidad': 'Enter an amount', 'Este juego está cerrado ahora mismo': 'This game is closed right now',
+    'La retirada automática va de ×1,01 a ×1000': 'Auto cash out goes from ×1.01 to ×1000',
+    'Tienes que entrar primero': 'You need to log in first', 'La apuesta mínima es 1': 'The minimum bet is 1', 'La apuesta máxima es 100.000': 'The maximum bet is 100,000',
+    'Elige cara o cruz': 'Pick heads or tails', 'Elige a un colega': 'Pick a friend', 'Ya tienes 5 retos abiertos: retira alguno': 'You already have 5 open challenges: withdraw one',
+    'Ese reto no existe': 'That challenge does not exist', 'Ese reto ya no está abierto': 'That challenge is no longer open', 'No puedes aceptar tu propio reto': 'You cannot accept your own challenge',
+    'Ese reto es para otro': 'That challenge is for someone else', 'Ese reto no es tuyo': 'That challenge is not yours', 'Ese reto ya no se puede retirar': 'That challenge can no longer be withdrawn',
+    'La ronda ya ha arrancado: espera a la siguiente': 'The round has already started: wait for the next one', 'Ya estás dentro de esta ronda': 'You are already in this round',
+    'No hay ninguna ronda': 'There is no round', 'No estás en esta ronda': 'You are not in this round', 'La ronda aún no ha arrancado': 'The round has not started yet',
+    'Ya tienes una mano en juego': 'You already have a hand in play', 'Esa mano no es tuya': 'That hand is not yours', 'Esa mano ya ha terminado': 'That hand has already ended',
+    'Solo puedes doblar con las dos primeras cartas': 'You can only double on your first two cards',
+    'Los juegos aún no están en la base: falta cargar db/010_juegos.sql': 'The games are not in the database yet: db/010_juegos.sql is missing',
     'En mantenimiento': 'Under maintenance', 'El Mercado está casi listo. Intercambios, ventas, contratos y jackpot llegan pronto.': 'The Market is almost ready. Trades, sales, contracts and jackpot are coming soon.',
     // menú y cabeceras
     'Partidos': 'Matches', 'Mis apuestas': 'My bets', 'Apuestas de todos': 'All bets', 'Todos': 'All', 'Apuestas': 'Bets', 'Colegas': 'Friends', 'Liga': 'League', 'Monedero': 'Wallet', 'Perfil': 'Profile',
@@ -237,9 +264,29 @@
     'Bote de la semana': 'Pot of the week', 'Más dinero de la semana': 'Most money of the week', 'Mejor ratio de la semana': 'Best ratio of the week',
     // mercado y extras 2: frases de la app nueva
     'Mercado': 'Market',
+    // tarjeta en vivo nueva (30-10)
+    'Vas con el empate': 'You back the draw', '▲ Ganando': '▲ Winning', '▼ Perdiendo': '▼ Losing',
   };
   const DIAS = { LUN: 'MON', 'MIÉ': 'WED', JUE: 'THU', VIE: 'FRI', 'SÁB': 'SAT', DOM: 'SUN', HOY: 'TODAY', ENE: 'JAN', ABR: 'APR', AGO: 'AUG', DIC: 'DEC' };
   const R = [
+    // juegos (30-10)
+    [/^Apostar ([\d.]+)$/, 'Bet $1'], [/^Retirar ×([\d.,]+)$/, 'Cash out ×$1'],
+    [/^([\d.]+) dentro$/, '$1 in'], [/^sale en ×([\d.,]+)$/, 'exits at ×$1'],
+    [/^Has cobrado ([\d.]+)$/, 'You cashed $1'], [/^Explotó en ×([\d.,]+)/, 'Crashed at ×$1'], [/ · cobraste ([\d.]+)$/, ' · you cashed $1'], [/ · perdiste ([\d.]+)$/, ' · you lost $1'],
+    [/^Retirado a ×([\d.,]+) · \+([\d.]+)$/, 'Cashed out at ×$1 · +$2'], [/^Tarde: explotó en ×([\d.,]+)$/, 'Too late: it crashed at ×$1'],
+    [/^Reto lanzado por ([\d.]+)$/, 'Challenge sent for $1'], [/^Reto retirado: te devuelvo ([\d.]+)$/, 'Challenge withdrawn: your $1 is back'],
+    [/^No tienes tanto: te quedan ([\d.]+)$/, 'You do not have that much: you have $1 left'],
+    [/^No tienes saldo suficiente: te quedan ([\d.]+)$/, 'Not enough balance: you have $1 left'],
+    [/^Salió (cara|cruz)\. Ganas ([\d.]+)$/, 'It came up $1. You win $2'], [/^Salió (cara|cruz)\. Pierdes ([\d.]+)$/, 'It came up $1. You lose $2'],
+    [/^Salió (cara|cruz)\. (.+) aceptó y ganas ([\d.]+)$/, 'It came up $1. $2 accepted and you win $3'], [/^Salió (cara|cruz)\. (.+) aceptó y pierdes ([\d.]+)$/, 'It came up $1. $2 accepted and you lose $3'],
+    [/^It came up cara/, 'It came up heads'], [/^It came up cruz/, 'It came up tails'],
+    [/^te reta, va a cara$/, 'challenges you, goes for heads'], [/^te reta, va a cruz$/, 'challenges you, goes for tails'], [/^va a cara$/, 'goes for heads'], [/^va a cruz$/, 'goes for tails'],
+    [/^le gana a (.+) · (cara|cruz)$/, 'beats $1 · $2'], [/^le ganas a (.+) · (cara|cruz)$/, 'you beat $1 · $2'], [/^(beats|you beat) (.+) · cara$/, '$1 $2 · heads'], [/^(beats|you beat) (.+) · cruz$/, '$1 $2 · tails'], [/^beats ti · /, 'beats you · '],
+    [/^Ganas ▲ ([\d.]+)$/, 'You win ▲ $1'], [/^Te pasas · ▼ ([\d.]+)$/, 'Bust · ▼ $1'], [/^Pierdes ▼ ([\d.]+)$/, 'You lose ▼ $1'],
+    [/^Hoy solo puedes arriesgar ([\d.]+) más en el blackjack$/, 'Today you can only risk $1 more in blackjack'],
+    [/^Hoy ya has perdido 100 en el blackjack\. Vuelve mañana$/, 'You have already lost 100 today in blackjack. Come back tomorrow'],
+    [/^(\d+)º$/, '$1th'],
+    [/×(\d+),(\d\d)/g, '×$1.$2'],   // decimales con punto (juegos.js ya los pinta con punto en ingles; esta regla solo es por si acaso): va el ultimo
     // mercado (30-10)
     [/^Pides a (.+)$/, 'You ask $1 for'], [/^Lo que pides a (.+)$/, 'What you ask $1 for'], [/^(.+) te propone$/, '$1 offers you a trade'], [/^Le propones a (.+)$/, 'You offer $1 a trade'], [/^Tú a (.+)$/, 'You to $1'], [/^(.+) a ti$/, '$1 to you'],
     [/^Trato propuesto a (.+)$/, 'Trade offered to $1'], [/^A la venta por ([\d.]+)$/, 'For sale at $1'], [/^Comprado por ([\d.]+)$/, 'Bought for $1'],
@@ -359,6 +406,8 @@
     [/^Las 3 skins que (.+) enseña a los demás\.$/, 'The 3 skins $1 shows to everyone.'], [/^Elige hasta 3 · el orden es el de los números · (\d) de 3$/, 'Pick up to 3 · the order is the numbers · $1 of 3'],
     [/^(\d+) mes$/, '$1 month'], [/^(\d+) meses$/, '$1 months'], [/^(\d+) bote$/, '$1 pot'], [/^(\d+) botes$/, '$1 pots'], [/^(\d+) premio$/, '$1 prize'], [/^(\d+) premios$/, '$1 prizes'],
     [/, de momento: $/, ', so far: '], [/^Semana del (.+)$/, 'Week of $1'],
+    // tarjeta en vivo nueva (30-10)
+    [/^Mapa (\d+) de (\d+) · (.+)$/, 'Map $1 of $2 · $3'], [/^Mapa (\d+) de (\d+)$/, 'Map $1 of $2'], [/^(\d+) en vivo$/, '$1 live'],
     // decimales con punto en ingles (x1,25 a x1.25): esta va la ultima de la lista
     [/×(\d+),(\d\d)/g, '×$1.$2'],
   ];
