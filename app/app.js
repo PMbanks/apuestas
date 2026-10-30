@@ -1613,9 +1613,27 @@ function ajustes() {
       <div class="pf-pass" ${S.pw ? '' : 'hidden'}><input type="password" id="newpass" autocomplete="new-password" placeholder="Contraseña nueva (8 o más)" minlength="8"><button class="go" data-act="setpass">Guardar</button></div></section>
   </div>`;
 }
+// PM, 31-10: "que se vea cuanto has ganado en boxes, cuanto en bets, en que bets". El monedero (ledger) solo lo ve su dueno;
+// las apuestas sueltas las ven todos (beneficio por tipo: antes del partido, canceladas en directo).
+function dinero(f) {
+  const grupos = [['apuestas', 'Apuestas', 'Sueltas, combinadas, predicciones y cancelaciones'], ['cajas', 'Cajas y skins', 'Cajas abiertas, skins vendidas y batallas'], ['juegos', 'Juegos', 'Blackjack, crash y los demás'], ['pagas', 'Pagas y premios', 'Paga del lunes, recompensas, bote y premios']];
+  let h = '';
+  if (f.me) {
+    const v = Object.fromEntries(grupos.map(([k]) => [k, 0])); for (const m of LEDGER) v[movTipo(m.kind)] = (v[movTipo(m.kind)] || 0) + m.a;
+    const mx = Math.max(1, ...grupos.map(([k]) => Math.abs(v[k])));
+    h += `<section class="cs"><div class="cs-h"><div><h3>Dónde ganas y pierdes</h3><p>Lo que te ha dado o quitado cada cosa desde el principio.</p></div></div>
+      ${grupos.map(([k, n, s]) => `<div class="dn-r"><span class="dn-n"><b>${n}</b><small>${s}</small></span><span class="dn-b"><i class="${v[k] < 0 ? 'dn' : 'up'}" style="width:${((Math.abs(v[k]) / mx) * 100).toFixed(1)}%"></i></span><b class="dn-v ${v[k] < 0 ? 'dn' : v[k] > 0 ? 'up' : ''}">${v[k] > 0 ? '▲' : v[k] < 0 ? '▼' : ''}${N(Math.abs(v[k]))}${coin()}</b></div>`).join('')}</section>`;
+  } else h += `<p class="hint" style="margin:8px 0 18px">Cuánto gana o pierde en cajas, juegos y premios solo lo ve ${esc(f.n)}. Sus apuestas sí las ves todos.</p>`;
+  const mias = ALL.filter((b) => b.k === f.id && ['won', 'lost'].includes(b.st)), net = (l) => l.reduce((t, b) => t + (b.st === 'won' ? b.pay - b.stake : -perd(b)), 0);
+  const tipos = [['Antes del partido', mias.filter((b) => !b.cash)], ['Canceladas en directo', mias.filter((b) => b.cash)]].filter(([, l]) => l.length);
+  if (tipos.length) h += `<section class="cs"><div class="cs-h"><div><h3>${f.me ? 'Tus apuestas sueltas' : 'Sus apuestas sueltas'}</h3><p>Beneficio de las resueltas, por tipo.</p></div></div>
+    ${tipos.map(([n, l]) => { const v = net(l); return `<div class="dn-r"><span class="dn-n"><b>${n}</b><small>${l.length} ${l.length === 1 ? 'apuesta' : 'apuestas'} · ${l.filter((b) => b.st === 'won').length} ganadas</small></span><span></span><b class="dn-v ${v < 0 ? 'dn' : v > 0 ? 'up' : ''}">${v > 0 ? '▲' : v < 0 ? '▼' : ''}${N(Math.abs(v))}${coin()}</b></div>` }).join('')}</section>`;
+  return h;
+}
 function perfil() {
   const f = fr(S.prof), mine = !!f.me, rank = [...F].sort((a, b) => b.s - a.s), pos = rank.indexOf(f) + 1, op = openOf(f.id);
   const aw = AW.filter((a) => a[2] === f.id), wins = [...f.last].filter((c) => c === 'W').length, h2h = Object.entries(H2H[f.id] || {});
+  const pt = ['resumen', 'dinero', 'apuestas', 'premios'].includes(S.pft) ? S.pft : 'resumen', tab = (k) => (pt === k ? '' : ' hidden');
   return `<div class="pf" style="--fc:var(--f-${f.id});--ring:var(--f-${f.id})">
     <button class="pf-back" data-act="back">← Volver</button>
     <header class="pf-hero mk-bg-${f.id}">
@@ -1628,6 +1646,8 @@ function perfil() {
         ${mine ? `<div class="pf-act"><button class="q" data-scr="ajustes">Ajustes</button></div>` : ''}</div>
       <div class="pf-bal"><span class="lab">Saldo</span><b>${N(f.s)}${coin()}</b>${net(f)}</div>
     </header>
+    <nav class="pf-tb">${[['resumen', 'Resumen'], ['dinero', 'Dinero'], ['apuestas', 'Apuestas'], ['premios', 'Duelos y premios']].map(([k, n]) => `<button class="chip ${pt === k ? 'on' : ''}" data-pft="${k}">${n}</button>`).join('')}</nav>
+    <div class="pf-tp"${tab('resumen')}>
     <div class="kpis">
       <div class="kpi"><span class="lab">Aciertos</span><b>${f.ac}</b><span>${f.acn}</span></div>
       <div class="kpi"><span class="lab">En juego</span><b>${N(op.reduce((a, b) => a + b.stake, 0))}${coin()}</b><span>${op.length} apuestas abiertas</span></div>
@@ -1635,7 +1655,6 @@ function perfil() {
       <div class="kpi"><span class="lab">Mejor premio</span><b>${N(f.best)}${coin()}</b><span>de una vez</span></div>
       <div class="kpi"><span class="lab">Cuota media</span><b>${f.avgO ? O(f.avgO) : '·'}</b><span>${!f.avgO ? 'sin apuestas' : f.avgO > 2.2 ? 'arriesga mucho' : f.avgO > 1.8 ? 'término medio' : 'juega seguro'}</span></div>
     </div>
-    ${rendimiento(f)}
     <div class="pf-2">
       <section class="cs"><div class="cs-h"><div><h3>${mine ? 'Tu saldo' : 'Su saldo'}</h3><p>Por encima de la línea discontinua va ganando.</p></div></div><div class="chart">${chLines([f], 640, 250, 44, 600, false)}</div></section>
       <section class="cs"><div class="cs-h"><div><h3>Por deporte</h3><p>Apuestas acertadas de las resueltas.</p></div></div>
@@ -1643,16 +1662,23 @@ function perfil() {
         ${f.last ? `<div class="sb"><span></span><strong>Últimas ${f.last.length}</strong><em>${wins} de ${f.last.length}</em><span class="dots" style="grid-column:1/4">${[...f.last].map((c) => `<i class="${c === 'W' ? 'w' : 'l'}" style="--c:var(--f-${f.id})"></i>`).join('')}</span></div>` : ''}
       </section>
     </div>
+    </div>
+    <div class="pf-tp"${tab('dinero')}>${dinero(f)}${rendimiento(f)}</div>
+    <div class="pf-tp"${tab('premios')}>
     ${h2h.some(([, [a, b]]) => a + b > 0) ? `<section class="cs"><div class="cs-h"><div><h3>${mine ? 'Tus duelos' : 'Duelos'}</h3><p>Partidos en los que apostasteis a cosas distintas: quién acertó.</p></div></div>
       ${h2h.map(([o, [a, b]]) => `<div class="hh2"><span style="display:flex;align-items:center;gap:12px">${av(f.id, 'xl')}<strong style="font:600 15px var(--sans)">${esc(f.n)}</strong></span>
         <div class="sc">${a}<i>:</i>${b}<small>${a > b ? esc(f.n) + ' gana' : a < b ? esc(fr(o).n) + ' gana' : 'empate'} el cara a cara</small></div>
         <span style="display:flex;align-items:center;gap:12px;justify-self:end"><strong style="font:600 15px var(--sans)">${esc(fr(o).n)}</strong>${av(o, 'xl')}</span></div>`).join('')}</section>` : ''}
-    ${f.favs.length ? `<section class="cs"><div class="cs-h"><div><h3>Sigue a</h3></div></div><div class="favs">${f.favs.map((x) => { const o = Array.isArray(x) ? { img: x[0], n: x[1], face: x[2] } : x || {}; return /^pa:/.test(o.k || '') ? `<span class="fav"><span class="fav-pa">${IC_FAV}</span>${esc(o.n)}</span>` : `<span class="fav">${img(o.img, o.face ? 'face' : 'tl')}${esc(o.n)}</span>` }).join('')}</div></section>` : ''}
-    <section class="cs"><div class="cs-h"><div><h3>En juego</h3><p>${op.length} apuestas · toca una para ver el partido.</p></div></div>
-      <div class="pf-bets">${op.map((b) => betCard(f, b)).join('') || '<p class="hint">Nada en juego ahora mismo.</p>'}</div></section>
-    ${historial(f)}
     <section class="cs"><div class="cs-h"><div><h3>Premios</h3></div></div>
       ${aw.length ? `<div class="pf-aw">${aw.map(([k, v, , d]) => `<div><span class="lab">${k}</span><b>${v}</b><span class="dd">${esc(d)}</span></div>`).join('')}</div>` : '<p class="hint">Aún sin premios esta temporada.</p>'}</section>
+    ${f.favs.length ? `<section class="cs"><div class="cs-h"><div><h3>Sigue a</h3></div></div><div class="favs">${f.favs.map((x) => { const o = Array.isArray(x) ? { img: x[0], n: x[1], face: x[2] } : x || {}; return /^pa:/.test(o.k || '') ? `<span class="fav"><span class="fav-pa">${IC_FAV}</span>${esc(o.n)}</span>` : `<span class="fav">${img(o.img, o.face ? 'face' : 'tl')}${esc(o.n)}</span>` }).join('')}</div></section>` : ''}
+    </div>
+    <div class="pf-tp"${tab('apuestas')}>
+    <section class="cs"><div class="cs-h"><div><h3>En juego</h3><p>${op.length} apuestas · toca una para ver el partido.</p></div></div>
+      <div class="pf-bets">${op.map((b) => betCard(f, b)).join('') || '<p class="hint">Nada en juego ahora mismo.</p>'}</div></section>
+    <div id="cmb-perfil-ap"></div>
+    ${historial(f)}
+    </div>
   </div>`;
 }
 
@@ -1905,7 +1931,7 @@ document.addEventListener('click', (e) => { const b = e.target.closest('[data-la
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lga]'); if (!b) return; const n = document.querySelector('[data-lgs]'); n?.scrollBy({ left: +b.dataset.lga * n.clientWidth * 0.8, behavior: 'smooth' }) });
 document.addEventListener('click', async (e) => {
   if (S.onl && !e.target.closest('.onl')) { S.onl = false; pintaOnline() }
-  const t = e.target.closest('[data-jugmas],[data-abf],[data-abpg],[data-eqv],[data-eqtab],[data-eqpg],[data-vivo],[data-fav],[data-nov],[data-ct],[data-ft],[data-tclaim],[data-bsp],[data-bp],[data-side],[data-bm],[data-dv],[data-dtv],[data-mt],[data-mp],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
+  const t = e.target.closest('[data-pft],[data-jugmas],[data-abf],[data-abpg],[data-eqv],[data-eqtab],[data-eqpg],[data-vivo],[data-fav],[data-nov],[data-ct],[data-ft],[data-tclaim],[data-bsp],[data-bp],[data-side],[data-bm],[data-dv],[data-dtv],[data-mt],[data-mp],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
   const d = t.dataset;
   if (d.side && t.matches('[data-side]')) { S.shTodos = false; S.side = d.side; document.querySelector('.det')?.scrollTo?.(0, 0); return render() }
   if (d.act === 'sheet-back') { S.side = null; return render() }
@@ -1946,6 +1972,7 @@ document.addEventListener('click', async (e) => {
   if (d.ct) { S.ct = d.ct; return render() }
   if (d.ft) { S.ft = d.ft; S.fdN = 60; return render() }
   if (d.act === 'fd-mas') { S.fdN = (S.fdN || 60) + 60; return render() }
+  if (d.pft) { S.pft = d.pft; return render() }
   if (d.act === 'sonido') { if (window.GM_SONIDOS) GM_SONIDOS.alterna(); return render() }
   if (d.act === 'mon') { if (window.GM_MONEDA) GM_MONEDA.set(d.mon); return render() }
   if (d.act === 'soloJug') { S.soloJug = !S.soloJug; document.getElementById('view').scrollTop = 0; const pb = document.querySelector('[data-keep=pb]'); if (pb) pb.scrollTop = 0; return render() }

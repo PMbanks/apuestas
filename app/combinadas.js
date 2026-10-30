@@ -12,6 +12,20 @@
   const traduce = (el) => { if (window.GM_LANG && el) { try { GM_LANG.traduce(el) } catch {} } };
   const IC_X = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>';
   const C = { t: 0, list: null, vivo: false, sure: 0, busy: false, err: '' };
+  // cancelar en directo (db/033): lo que vale cada combinada tuya abierta con algun partido empezado, cada 20 s
+  const CQ = { t: 0, q: new Map(), vivo: false, sure: 0, busy: false };
+  async function cargaCQ(forzar) {
+    if (CQ.vivo || (!forzar && Date.now() - CQ.t < 20e3)) return;
+    CQ.vivo = true;
+    try { const { data, error } = await db.rpc('combo_cash_quotes'); if (error) throw error; CQ.q = new Map((data || []).map((x) => [x.combo, x])) } catch { }
+    CQ.t = Date.now(); CQ.vivo = false; pinta(true);
+  }
+  function botonCQ(c) {
+    const q = CQ.q.get(c.id); if (!q || q.mode === 'pre') return '';
+    if (!q.ok) return `<button class="xc-btn off" disabled title="${esc(q.why || '')}">Cancelar no disponible</button>`;
+    const sure = CQ.sure === c.id, dif = q.value - c.stake;
+    return `<button class="xc-btn ${sure ? 'sure' : ''} ${dif < 0 ? 'neg' : 'pos'}" data-cmb-co="${c.id}" data-v="${q.value}">${sure ? `¿Seguro? Cobras <b>${N(q.value)}</b>${coin()}<span>, ${dif < 0 ? 'pierdes' : 'ganas'} ${N(Math.abs(dif))}</span>` : `Cancelar · cobras <b>${N(q.value)}</b>${coin()}`}</button>`;
+  }
 
   async function carga(forzar) {
     const me = g(() => ME); if (!me || C.vivo || (!forzar && Date.now() - C.t < 30e3)) return;
@@ -25,6 +39,7 @@
       C.todas = data || []; C.list = C.todas.filter((c) => c.player === me); C.err = '';
     } catch (e) { C.err = /does not exist|PGRST/.test(String(e && (e.message || e.code))) ? '' : 'No se han podido cargar tus combinadas'; if (!C.list) C.list = [] }
     C.t = Date.now(); C.vivo = false; pinta(true);
+    if (C.list.some((c) => c.status === 'open' && (c.combo_legs || []).some((l) => l.matches && empezado(l.matches)))) cargaCQ();
   }
 
   const nombre = (m, p) => (p === '1' ? m.home : p === '2' ? m.away : 'Empate');
@@ -41,7 +56,7 @@
   function tarjeta(c) {
     const legs = (c.combo_legs || []).slice().sort((a, b) => Date.parse(a.matches?.starts_at || 0) - Date.parse(b.matches?.starts_at || 0));
     const puede = c.status === 'open' && legs.length && legs.every((l) => l.matches && !empezado(l.matches));
-    const sello = { open: '', won: `<span class="cmb-sello won">COBRADA<b>${N(c.payout)}${coin()}</b></span>`, lost: '<span class="cmb-sello lost">PERDIDA</span>', void: `<span class="cmb-sello void">DEVUELTA<b>${N(c.payout || c.stake)}${coin()}</b></span>` }[c.status] || '';
+    const sello = { open: '', won: `<span class="cmb-sello won">COBRADA<b>${N(c.payout)}${coin()}</b></span>`, lost: '<span class="cmb-sello lost">PERDIDA</span>', void: `<span class="cmb-sello void">DEVUELTA<b>${N(c.payout || c.stake)}${coin()}</b></span>`, cashout: `<span class="cmb-sello ${c.payout >= c.stake ? 'won' : 'void'}">CANCELADA<b>${N(c.payout)}${coin()}</b></span>` }[c.status] || '';
     const hechas = legs.filter((l) => l.result === 'won').length;
     const sure = C.sure === c.id;
     return `<article class="cmb ${c.status}">
@@ -51,7 +66,7 @@
         <span class="cmb-o">${O(l.odds)}${tx ? `<small>${tx}</small>` : ''}</span></div>` }).join('')}</div>
       <div class="cmb-n"><span><small>Cuota</small><b>${O(c.odds)}</b></span><span><small>Apostado</small><b>${N(c.stake)}${coin()}</b></span>
         ${c.status === 'open' ? `<span class="cmb-co"><small>Cobrarías</small><b>${N(c.stake * c.odds)}${coin()}</b></span>` : sello}
-        ${puede ? `<button class="x-cancel ${sure ? 'sure' : ''}" data-cmb-cancel="${c.id}">${IC_X}${sure ? `¿Seguro? Te devuelvo ${N(c.stake)}` : 'Cancelar combinada'}</button>` : ''}</div>
+        ${puede ? `<button class="x-cancel ${sure ? 'sure' : ''}" data-cmb-cancel="${c.id}">${IC_X}${sure ? `¿Seguro? Te devuelvo ${N(c.stake)}` : 'Cancelar combinada'}</button>` : c.status === 'open' && c.player === g(() => ME) ? botonCQ(c) : ''}</div>
     </article>`;
   }
   /* ---------- Apuestas de todos y el perfil (PM 31-10: "que salgan en Apuestas de todos y en el perfil") ---------- */
@@ -59,7 +74,7 @@
   const ava = (f) => (f ? g(() => av(f.id, 'sm')) || '' : '');
   function filaTodos(c) {
     const f = quien(c.player), legs = (c.combo_legs || []).slice().sort((a, b) => Date.parse(a.matches?.starts_at || 0) - Date.parse(b.matches?.starts_at || 0));
-    const fin = c.status === 'won' ? `<em class="up">+${N(c.payout)}${coin()}</em>` : c.status === 'lost' ? '<em class="dn">perdida</em>' : c.status === 'void' ? '<em>devuelta</em>' : `<em>→ ${N(c.stake * c.odds)}${coin()}</em>`;
+    const fin = c.status === 'won' ? `<em class="up">+${N(c.payout)}${coin()}</em>` : c.status === 'lost' ? '<em class="dn">perdida</em>' : c.status === 'void' ? '<em>devuelta</em>' : c.status === 'cashout' ? `<em>cancelada · ${N(c.payout)}${coin()}</em>` : `<em>→ ${N(c.stake * c.odds)}${coin()}</em>`;
     return `<div class="cmt ${c.status}" style="--c:var(--f-${f ? f.id : 'pm'})">${ava(f)}<div class="cmt-b"><p><b>${esc(f ? f.n : '?')}</b> <span>Combinada de ${legs.length} · cuota ${O(c.odds)}</span></p>
       <p class="cmt-ls">${legs.map((l) => { const [k, ic] = estadoPata(l); return `<span class="cmt-l ${k}"><i>${ic || '·'}</i>${esc(nombre(l.matches || {}, l.pick))}</span>` }).join('')}</p></div>
       <span class="cmt-v"><b>${N(c.stake)}${coin()}</b>${fin}</span></div>`;
@@ -100,7 +115,7 @@
     const slot = document.getElementById('cmb-slot'); if (!slot) return;
     if (!C.list) { carga(); return }
     const abiertas = C.list.filter((c) => c.status === 'open'), cerradas = C.list.filter((c) => c.status !== 'open').slice(0, 6);
-    const f = JSON.stringify([C.list.map((c) => [c.id, c.status, (c.combo_legs || []).map((l) => l.result + (l.matches && l.matches.status))]), C.sure, C.err, document.documentElement.lang]);
+    const f = JSON.stringify([C.list.map((c) => [c.id, c.status, (c.combo_legs || []).map((l) => l.result + (l.matches && l.matches.status))]), C.sure, C.err, document.documentElement.lang, [...CQ.q.values()].map((x) => [x.combo, x.ok, x.value]), CQ.sure, CQ.busy]);
     if (!todo && f === firma && slot.childElementCount) return;
     firma = f;
     slot.innerHTML = !C.list.length ? '' : `<div class="sec-h mb-h"><h2>Combinadas</h2><i>${abiertas.length}</i></div>
@@ -120,6 +135,16 @@
     C.busy = false; await carga(true); g(() => refresh());
   }, true);
   window.addEventListener('gm:combo', () => carga(true));
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-cmb-co]'); if (!b) return;
+    e.stopPropagation(); e.preventDefault();
+    const id = +b.dataset.cmbCo; if (CQ.busy) return;
+    if (CQ.sure !== id) { CQ.sure = id; pinta(true); setTimeout(() => { if (CQ.sure === id) { CQ.sure = 0; pinta(true) } }, 6000); return }
+    CQ.sure = 0; CQ.busy = true; pinta(true);
+    try { const { data, error } = await db.rpc('combo_cash_out', { p_id: id, p_min: +b.dataset.v }); if (error) throw error; g(() => toast(`Combinada cancelada: cobras <b>${N(data.value)}</b>`)) }
+    catch (err) { const t = String((err && err.message) || ''); g(() => toast(esc(!t || /Failed to fetch|NetworkError/i.test(t) ? 'Sin conexión: no se ha cancelado' : t.replace(/^(Error|P0001):\s*/i, '')))) }
+    CQ.busy = false; await carga(true); await cargaCQ(true); g(() => refresh());
+  }, true);
 
   // cada vez que la app pinta Mis apuestas, el hueco vuelve vacio: se rellena con lo que ya hay y se refresca si es viejo
   let pendiente = false;

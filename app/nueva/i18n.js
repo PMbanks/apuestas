@@ -19,6 +19,14 @@
   const D = {
     // apostar en directo (31-10): frases enteras, antes de que las reglas sueltas cambien palabras sueltas
     'la cuota se mueve con el marcador': 'odds move with the score', 'Combinada de la semana': 'Parlay of the week', 'CANCELADA': 'CANCELLED', 'Combinada cancelada: cobras': 'Parlay cancelled: you get',
+    // perfil con pestanas (31-10)
+    'Resumen': 'Summary', 'Dinero': 'Money', 'Duelos y premios': 'Duels and prizes', 'Dónde ganas y pierdes': 'Where you win and lose',
+    'Lo que te ha dado o quitado cada cosa desde el principio.': 'What each thing has given or taken from you since the start.',
+    'Sueltas, combinadas, predicciones y cancelaciones': 'Singles, parlays, predictions and cancellations', 'Cajas y skins': 'Cases and skins',
+    'Cajas abiertas, skins vendidas y batallas': 'Cases opened, skins sold and battles', 'Blackjack, crash y los demás': 'Blackjack, crash and the rest',
+    'Pagas y premios': 'Pay and prizes', 'Paga del lunes, recompensas, bote y premios': 'Monday pay, rewards, pot and prizes',
+    'Tus apuestas sueltas': 'Your single bets', 'Sus apuestas sueltas': 'Their single bets', 'Beneficio de las resueltas, por tipo.': 'Profit of settled bets, by type.',
+    'Antes del partido': 'Before the match', 'Canceladas en directo': 'Cancelled live',
     // Ajustes, moneda y ya jugados (30-10 noche)
     'Ajustes': 'Settings', 'Sonido y movimiento': 'Sound and motion', 'Sonidos': 'Sounds', 'Botones, ruletas, premios y mensajes': 'Buttons, spins, prizes and messages',
     'Ruletas, confeti y transiciones': 'Spins, confetti and transitions', 'Moneda': 'Currency', 'Cambia el logo y el nombre. Lo que tienes es lo mismo.': 'Changes the logo and the name. What you have stays the same.',
