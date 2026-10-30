@@ -43,6 +43,35 @@ export function embedApuesta(a) {
     ],
   };
 }
+// 030 (31-10): apuesta cancelada durante el partido (cash out de 024): cobra lo que valia en ese momento
+export function embedRetirada(a) {
+  const neto = a.payout - a.stake;
+  return {
+    title: `${a.jugador} cancela y ${neto >= 0 ? 'se lleva ' + N(neto) : 'pierde ' + N(-neto)}`,
+    description: `Canceló en directo **${a.pick}** a ×${O(a.odds)} en ${a.home} vs ${a.away}`,
+    color: neto >= 0 ? COLOR.gana : COLOR.pierde,
+    thumbnail: url(a.logo),
+    fields: [
+      { name: 'Apostó', value: `${N(a.stake)} V-Bucks`, inline: true },
+      { name: 'Cobra', value: `${N(a.payout)} V-Bucks`, inline: true },
+      { name: 'Liga', value: corta(a.liga, 100), inline: true },
+    ],
+  };
+}
+// 030 (31-10): combinada resuelta (029), con cada partido y como salio
+export function embedCombo(c) {
+  const gana = c.estado === 'won', patas = c.patas || [], ic = { won: '✅', lost: '❌', void: '➖' };
+  return {
+    title: gana ? `${c.jugador} acierta una combinada de ${patas.length} y se lleva ${N(c.payout - c.stake)}` : `${c.jugador} falla una combinada de ${patas.length} y pierde ${N(c.stake)}`,
+    description: corta(patas.map((l) => `${ic[l.res] || '⏳'} **${l.pick}** · ${l.home} vs ${l.away}`).join('\n'), 3500),
+    color: gana ? COLOR.oro : COLOR.pierde,
+    fields: [
+      { name: 'Cuota', value: `×${O(c.odds)}`, inline: true },
+      { name: 'Apostó', value: `${N(c.stake)} V-Bucks`, inline: true },
+      ...(gana ? [{ name: 'Cobra', value: `${N(c.payout)} V-Bucks`, inline: true }] : []),
+    ],
+  };
+}
 export function embedSkin(s) {
   const nombre = s.nombre + (s.fase ? ` ${s.fase}` : '');
   const fuente = s.batalla ? 'en una batalla de cajas' : s.caja ? `en ${s.caja}` : 'en una caja';
@@ -85,6 +114,8 @@ export async function avisos({ rpc, secret, hook, fetchFn = fetch }) {
   const lotes = [
     ...(d.partidos || []).map((p) => [p.clave, embedPartido(p)]),
     ...(d.apuestas || []).map((a) => [a.clave, embedApuesta(a)]),
+    ...(d.retiradas || []).map((a) => [a.clave, embedRetirada(a)]),
+    ...(d.combinadas || []).map((c) => [c.clave, embedCombo(c)]),
     ...(d.skins || []).map((s) => [s.clave, embedSkin(s)]),
     ...(d.resumen ? [[d.resumen.clave, embedResumen(d.resumen)]] : []),
   ];
