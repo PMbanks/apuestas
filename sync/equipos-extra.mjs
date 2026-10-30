@@ -1,0 +1,502 @@
+// Fichas ampliadas de equipos y luchadores (PM, 30-10: "que salgan registros de victorias de torneos, earnings y tal de cada persona").
+// Se guardan en teams.extra (db/025_equipos_extra.sql) y las pinta la ventana "Todo sobre el equipo". Formato: app/nueva/EQUIPOS-DATOS.md.
+//
+// Lo llama sync.mjs con UNA linea (despues de fichasEsports): equiposExtra({ rows, rpc, secret, dry, ps }).
+// Reparte el trabajo entre pasadas (cada pasada es un proceso nuevo, cada 5 minutos): pocos equipos por pasada, primero los de partidos
+// cercanos y los que tienen apuestas abiertas, cada equipo como mucho cada 3 dias, y si una fuente falla se apunta y se sigue.
+//
+// Fuentes, todas gratis:
+//   Valorant y CS2 -> Liquipedia (MediaWiki, CC BY-SA 3.0): palmares, ganancias del equipo, plantilla con fecha de llegada, ex jugadores, staff.
+//                     Sus reglas: User-Agent propio con contacto, gzip, 1 peticion cada 2 s y action=parse 1 cada 30 s (aqui 32 s), cachear.
+//                     PandaScore pone foto, rol, nombre y pais de los jugadores; vlr.gg (vlr.orlandomm.net) los equipos anteriores
+//                     de los de Valorant y el palmares de reserva si Liquipedia no responde.
+//   Futbol         -> ESPN (apodo, estadio) + Wikidata (identifica el club) + Wikipedia (seccion Honours: titulos de liga y copa).
+//   UFC            -> ESPN (record, KO, sumisiones, cinturones, ranking, defensas, combates por el titulo).
+// Lo que ninguna fuente gratis da (ganancias por jugador, titulos del club completos) NO se inventa: el campo se queda en null o no sale.
+const CONTACTO = process.env.EQUIPOS_CONTACTO || 'https://github.com/PMbanks/apuestas';
+const UA_LP = `GamblingAddictsApp/1.0 (https://pmbanks.github.io/apuestas/; ${CONTACTO})`;
+const DAY = 864e5;
+
+export const CFG = {
+  vida: 3 * DAY,                 // una ficha no se rehace antes de 3 dias
+  presupuestoMs: 170e3,          // lo maximo que puede alargar una pasada
+  maxEsports: 3,                 // equipos de Valorant y CS2 por pasada (1 action=parse cada 32 s)
+  maxFutbol: 8,
+  maxUfc: 4,
+  ventana: 14 * DAY,             // solo equipos con partido en las proximas 2 semanas
+  gapQuery: 2200, gapParse: 32e3, gapWeb: 300,
+  tamMax: 140000,                // db/025 rechaza mas de 150 KB
+};
+
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+const iso2 = (t) => (t ? new Date(t).toISOString() : null);
+
+// ---------- red ----------
+async function pedir(url, { headers = {}, json = true, intentos = 2 } = {}) {
+  let ult = null;
+  for (let i = 0; i < intentos; i++) {
+    try {
+      const r = await fetch(url, { headers: { 'accept-encoding': 'gzip', ...headers } });
+      if (r.ok) return json ? await r.json() : await r.text();
+      ult = new Error(`${r.status} ${url.slice(0, 80)}`);
+      if (r.status < 500 && r.status !== 429) break;
+    } catch (e) { ult = e; }
+    await sleep(1500 * (i + 1));
+  }
+  throw ult || new Error('sin respuesta');
+}
+const qs = (o) => Object.entries(o).filter(([, v]) => v != null).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+
+// Liquipedia: un solo reloj para todo el proceso
+let lpUltQ = 0, lpUltParse = 0;
+async function lp(wiki, params, esParse) {
+  const gap = esParse ? CFG.gapParse : CFG.gapQuery;
+  const ult = esParse ? lpUltParse : lpUltQ;
+  const espera = Math.max(lpUltQ + CFG.gapQuery, ult + gap) - Date.now();
+  if (espera > 0) await sleep(espera);
+  const j = await pedir(`https://liquipedia.net/${wiki}/api.php?${qs({ format: 'json', formatversion: 2, ...params })}`, { headers: { 'user-agent': UA_LP } });
+  lpUltQ = Date.now(); if (esParse) lpUltParse = lpUltQ;
+  if (j?.error) throw new Error(`Liquipedia: ${j.error.code || j.error.info}`);
+  return j;
+}
+let webUlt = 0;
+async function web(url, headers = {}) {
+  const espera = webUlt + CFG.gapWeb - Date.now(); if (espera > 0) await sleep(espera);
+  try { return await pedir(url, { headers: { 'user-agent': UA_LP, ...headers } }); } finally { webUlt = Date.now(); }
+}
+
+// ---------- texto y HTML ----------
+const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', ndash: '–', mdash: '—' };
+const dec = (s) => String(s).replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n)).replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+  .replace(/&([a-z]+);/gi, (m, n) => ENT[n.toLowerCase()] ?? m);
+const limpio = (h) => dec(String(h).replace(/<style[\s\S]*?<\/style>/g, '').replace(/<sup[\s\S]*?<\/sup>/g, '').replace(/<br\s*\/?>/g, ' ').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+const base = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const norm = (s) => base(s).replace(/\b(esports?|gaming|team|club|fc|cf|afc|a\.f\.c\.)\b/g, '').replace(/[^a-z0-9]/g, '');
+const normFuerte = (s) => base(s).replace(/[^a-z0-9]/g, '');
+
+function tablas(html) {
+  const out = [];
+  for (const m of html.matchAll(/<table[\s\S]*?<\/table>/g)) {
+    const filas = m[0].split(/<tr[\s>]/).slice(1).map((r) => {
+      const celdas = [];
+      for (const c of r.matchAll(/<t([dh])([^>]*)>([\s\S]*?)<\/t\1>/g)) celdas.push({ th: c[1] === 'h', attrs: c[2], html: c[3], txt: limpio(c[3]) });
+      return celdas;
+    }).filter((f) => f.length);
+    out.push({ pos: m.index, filas });
+  }
+  return out;
+}
+const numero = (s) => { const m = String(s || '').replace(/[, ]/g, '').match(/-?\d+(?:\.\d+)?/); return m ? Number(m[0]) : null; };
+const fechaLp = (s) => (String(s || '').match(/\d{4}-\d{2}-\d{2}/) || String(s || '').match(/\d{4}-\d{2}/) || [null])[0];
+const banderaLp = (h) => { const m = String(h).match(/\/([A-Za-z]{2}(?:-[A-Za-z]+)?)_hd\.png/); return m ? m[1].toUpperCase() : null; };
+const imgLp = (h) => {
+  const oscuro = String(h).match(/darkmode[\s\S]*?<img[^>]+src="([^"]+)"/);
+  const m = oscuro || String(h).match(/<img[^>]+src="([^"]+)"/);
+  return m ? (m[1].startsWith('http') ? m[1] : 'https://liquipedia.net' + dec(m[1])) : null;
+};
+const puestoEs = (t) => String(t || '').replace(/(\d+)(?:st|nd|rd|th)/gi, '$1º').replace(/\s*-\s*/g, ' a ');
+const ordinal = (txt, sortVal) => {
+  const n = numero(String(sortVal || '').split('-')[0]) ?? numero(txt);
+  return n && n > 0 && n < 1000 ? n : null;
+};
+
+// ---------- Liquipedia: pagina de un equipo ----------
+export function leerPaginaLp(html, wiki) {
+  const t = tablas(html);
+  const posOrg = html.search(/id="Organi[sz]ation"/), posRes = html.search(/id="Results"/);
+  const out = { palmares: [], activos: [], antiguos: [], staff: [], total: null, porAno: null };
+
+  // ganancias del equipo ("Approx. Total Winnings: $13,732,460"; incluye lo que ganaron los jugadores mientras representaban al equipo)
+  const g = html.match(/Total Winnings[\s\S]{0,200}?<div>\s*(?:<[^>]+>)*\s*\$\s*([\d,]+(?:\.\d+)?)/);
+  if (g) out.total = Number(g[1].replace(/,/g, ''));
+  // ganancias por ano: el grafico de barras lleva un JSON en <template class="charts-barchart">
+  const ch = html.match(/<template[^>]*charts-barchart[^>]*>([\s\S]*?)<\/template>/);
+  if (ch) {
+    try {
+      const d = JSON.parse(dec(ch[1])).data;
+      const porAno = d.map((x) => ({ ano: +x.name, usd: Math.round((x.values || []).reduce((a, v) => a + (+v.y || 0), 0)) })).filter((x) => x.ano > 1990 && x.ano < 2100);
+      if (porAno.length) out.porAno = porAno;
+    } catch {}
+  }
+
+  for (const tb of t) {
+    const cab = tb.filas[0].map((c) => c.txt);
+    // palmares: Date | Place | Tier | ... | Tournament | Result | Prize
+    if (cab.includes('Date') && cab.includes('Place') && cab.includes('Prize') && !cab.includes('Opponent')) {
+      for (const f of tb.filas.slice(1)) {
+        const n = f.length; if (n < 7) continue;
+        const fecha = fechaLp(f[0].txt); if (!fecha) continue;
+        const nombre = f[n - 4].txt || f[n - 5].txt;
+        const enlace = (f[n - 4].html.match(/href="([^"]+)"/) || f[n - 5].html.match(/href="([^"]+)"/) || [])[1];
+        const premioTxt = f[n - 1].txt, premio = /\d/.test(premioTxt) ? numero(premioTxt) : null;
+        out.palmares.push({
+          torneo: nombre, puesto: puestoEs(f[1].txt), puesto_n: ordinal(f[1].txt, (f[1].attrs.match(/data-sort-value="([^"]*)"/) || [])[1]),
+          fecha, premio, tier: f[2].txt.replace(/-Tier$/, '') || null,
+          logo: imgLp(f[n - 5].html), rival: f[n - 2].txt || null, marcador: f[n - 3].txt.replace(/\s*:\s*/g, ':') || null,
+          url: enlace ? 'https://liquipedia.net' + dec(enlace) : null,
+        });
+      }
+      continue;
+    }
+    // plantillas: ID | Name | [rol] | Join Date | [Inactive Date] | [Leave Date] | [New Team]
+    if (cab[0] === 'ID' && cab.includes('Join Date')) {
+      const iId = 0, iNom = cab.indexOf('Name'), iJoin = cab.indexOf('Join Date'), iLeave = cab.indexOf('Leave Date'), iNew = cab.indexOf('New Team');
+      const iRol = cab.findIndex((c, i) => c === '' && i > 0);
+      const region = tb.pos > posRes && posRes > 0 ? 'despues' : posOrg > 0 && tb.pos > posOrg ? 'org' : 'jugadores';
+      if (region === 'despues') continue;
+      for (const f of tb.filas.slice(1)) {
+        if (f.length < 3) continue;
+        const p = {
+          id: limpio(f[iId].html), pais: banderaLp(f[iId].html), nombre: iNom >= 0 ? f[iNom]?.txt || null : null,
+          rol: iRol >= 0 ? f[iRol]?.txt || null : null, desde: fechaLp(f[iJoin]?.txt), hasta: iLeave >= 0 ? fechaLp(f[iLeave]?.txt) : null,
+          nuevo: iNew >= 0 ? f[iNew]?.txt || null : null,
+        };
+        if (!p.id && !p.nombre) continue;
+        const rol = (p.rol || '').toLowerCase();
+        const esStaff = region === 'org' || /coach|analyst|manager|director|owner|ceo|founder|streamer|caster|chairman|president/.test(rol);
+        if (p.hasta || iLeave >= 0) { if (esStaff) continue; out.antiguos.push(p); }
+        else if (esStaff) out.staff.push(p);
+        else out.activos.push(p);
+      }
+    }
+  }
+  out.antiguos.sort((a, b) => String(b.hasta || '').localeCompare(String(a.hasta || '')));
+  return out;
+}
+
+async function lpTitulo(wiki, nombre) {
+  const q = await lp(wiki, { action: 'query', titles: nombre, redirects: 1, prop: 'info' });
+  const p = q.query?.pages?.find((x) => !x.missing);
+  if (p) return p.title;
+  const s = await lp(wiki, { action: 'query', list: 'search', srsearch: nombre, srlimit: 5, srnamespace: 0 });
+  const ok = (s.query?.search || []).find((x) => norm(x.title) === norm(nombre));
+  return ok ? ok.title : null;
+}
+
+// ---------- PandaScore: jugadores ----------
+async function jugadoresPS(game, id, ps) {
+  if (!ps) return [];
+  const ts = await pedir(`https://api.pandascore.co/${game}/teams?filter[id]=${id}&per_page=1`, { headers: { authorization: `Bearer ${ps}` } });
+  const t = ts?.[0]; if (!t) return [];
+  jugadoresPS.equipo = { pais: t.location || null, siglas: t.acronym || null, logo: t.image_url || null };
+  return (t.players || []).filter((p) => p.active !== false).map((p) => ({
+    nick: p.name, nombre_real: [p.first_name, p.last_name].filter(Boolean).join(' ') || null, pais: p.nationality || null,
+    rol: p.role || null, foto: p.image_url || null, edad: p.age || null,
+  }));
+}
+
+// ---------- vlr.gg (API abierta de orlandomm): equipos anteriores y palmares de reserva de Valorant ----------
+const VLR = 'https://vlr.orlandomm.net/api/v1';
+let vlrLista = null;
+async function vlrEquipo(nombre, acr) {
+  if (!vlrLista) vlrLista = (await web(`${VLR}/teams?limit=all&region=all`)).data || [];
+  const n = norm(nombre);
+  const t = vlrLista.find((x) => norm(x.name) === n) || (acr ? vlrLista.find((x) => norm(x.name) === norm(acr)) : null);
+  if (!t) return null;
+  return (await web(`${VLR}/teams/${t.id}`)).data || null;
+}
+const mesesIng = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+function fechaVlr(txt) {   // "joined in January 2024" -> "2024-01"
+  const m = String(txt || '').toLowerCase().match(/(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/);
+  return m ? `${m[2]}-${String(mesesIng.indexOf(m[1]) + 1).padStart(2, '0')}` : (String(txt || '').match(/\d{4}/) || [null])[0];
+}
+async function vlrAnteriores(equipoVlr, nicks) {
+  const res = new Map();
+  const lista = [...(equipoVlr.players || []), ...(equipoVlr.staff || [])];
+  for (const nick of nicks.slice(0, 7)) {
+    const p = lista.find((x) => normFuerte(x.user) === normFuerte(nick)); if (!p) continue;
+    try {
+      const d = (await web(`${VLR}/players/${p.id}`)).data;
+      res.set(nick, { desde_vlr: fechaVlr(d?.team?.joined), anteriores: (d?.pastTeams || []).filter((x) => x.name).slice(0, 6).map((x) => ({ equipo: x.name, hasta: fechaVlr(x.info), nota: x.info || null })) });
+    } catch {}
+  }
+  return res;
+}
+function palmaresVlr(equipoVlr) {
+  const sirve = /playoffs?|main event|finals?|knockout|bracket|grand/i;
+  const out = [];
+  for (const e of equipoVlr.events || []) {
+    let mejor = null;
+    for (const r of e.results || []) {
+      if (!sirve.test(r)) continue;
+      const m = r.match(/(\d+)(?:st|nd|rd|th)(?:\s*[–-]\s*(\d+)(?:st|nd|rd|th))?/); if (!m) continue;
+      const n = +m[1]; if (!mejor || n < mejor.n) mejor = { n, txt: m[2] ? `${m[1]}º a ${m[2]}º` : `${m[1]}º` };
+    }
+    if (mejor) out.push({ torneo: e.name, puesto: mejor.txt, puesto_n: mejor.n, fecha: e.year || null, premio: null, tier: null, logo: null, url: e.url || null });
+  }
+  return out.sort((a, b) => a.puesto_n - b.puesto_n || String(b.fecha).localeCompare(String(a.fecha))).slice(0, 12);
+}
+
+// ---------- una ficha de Valorant o CS2 ----------
+export async function fichaEsports(c, ps) {
+  const wiki = c.game === 'valorant' ? 'valorant' : 'counterstrike';
+  const fuente = [], atribucion = [];
+  const extra = { v: 1, tipo: c.game === 'valorant' ? 'v' : 'c', nombre: c.nombre, fuente, atribucion, actualizado: iso2(Date.now()), palmares: [], ganancias: null, jugadores: [], exjugadores: [], staff: [] };
+  jugadoresPS.equipo = null;
+  const psJug = await jugadoresPS(c.game, c.id, ps).catch(() => []);
+  if (jugadoresPS.equipo) extra.equipo = jugadoresPS.equipo;
+  if (psJug.length) fuente.push('PandaScore');
+  const nicks = new Map(psJug.map((p) => [normFuerte(p.nick), p]));
+
+  let lpOk = false, titulo = null;
+  try {
+    titulo = await lpTitulo(wiki, c.nombre);
+    if (titulo) {
+      const r = await lp(wiki, { action: 'parse', page: titulo, prop: 'text', redirects: 1, disablelimitreport: 1, disabletoc: 1 }, true);
+      const pag = leerPaginaLp(r.parse.text, wiki);
+      const solapan = pag.activos.some((p) => nicks.has(normFuerte(p.id)));
+      const exacto = norm(titulo) === norm(c.nombre);
+      if (pag.activos.length || pag.palmares.length || pag.total != null) {
+        if (!psJug.length && !exacto) throw new Error(`la pagina "${titulo}" no se puede confirmar`);
+        if (psJug.length && pag.activos.length && !solapan && !exacto) throw new Error(`la pagina "${titulo}" no coincide con la plantilla`);
+        lpOk = true;
+        extra.palmares = pag.palmares.slice(0, 12);
+        extra.ganancias = pag.total != null ? { total: pag.total, moneda: 'USD', por_ano: pag.porAno, nota: 'Aproximado; incluye lo que ganaron los jugadores mientras representaban al equipo' } : null;
+        extra.jugadores = pag.activos.map((p) => {
+          const q = nicks.get(normFuerte(p.id));
+          return { nombre: p.id, nombre_real: p.nombre || q?.nombre_real || null, pais: (q?.pais || p.pais || null), rol: q?.rol || null, estado: p.rol || null,
+            desde: p.desde, foto: q?.foto || null, edad: q?.edad || null, ganancias: null, anteriores: null };
+        });
+        extra.exjugadores = pag.antiguos.slice(0, 25).map((p) => ({ nombre: p.id, pais: p.pais, desde: p.desde, hasta: p.hasta, nuevo_equipo: p.nuevo || null }));
+        extra.staff = pag.staff.slice(0, 12).map((p) => ({ nombre: p.id, nombre_real: p.nombre || null, rol: p.rol || null, pais: p.pais, desde: p.desde }));
+        fuente.push('Liquipedia');
+        atribucion.push({ fuente: 'Liquipedia', texto: 'Datos de Liquipedia', url: `https://liquipedia.net/${wiki}/${encodeURIComponent(titulo.replace(/ /g, '_'))}`, licencia: 'CC BY-SA 3.0', licencia_url: 'https://creativecommons.org/licenses/by-sa/3.0/' });
+      }
+    }
+  } catch (e) { extra.aviso_liquipedia = String(e.message || e).slice(0, 120); }
+
+  if (!extra.jugadores.length && psJug.length) {
+    extra.jugadores = psJug.map((q) => ({ nombre: q.nick, nombre_real: q.nombre_real, pais: q.pais, rol: q.rol, estado: null, desde: null, foto: q.foto, edad: q.edad, ganancias: null, anteriores: null }));
+  }
+
+  if (c.game === 'valorant') {   // vlr.gg: equipos anteriores de cada jugador, y palmares de reserva
+    try {
+      const ev = await vlrEquipo(c.nombre, c.acr);
+      if (ev) {
+        const ant = await vlrAnteriores(ev, extra.jugadores.map((j) => j.nombre));
+        for (const j of extra.jugadores) { const a = ant.get(j.nombre); if (a) { j.anteriores = a.anteriores; if (!j.desde && a.desde_vlr) j.desde = a.desde_vlr; } }
+        if (!extra.palmares.length) extra.palmares = palmaresVlr(ev);
+        if (ant.size || extra.palmares.length) { fuente.push('vlr.gg'); atribucion.push({ fuente: 'vlr.gg', texto: 'Datos de vlr.gg', url: ev.info?.name ? 'https://www.vlr.gg/' : null }); }
+      }
+    } catch (e) { extra.aviso_vlr = String(e.message || e).slice(0, 120); }
+  }
+  if (psJug.length) atribucion.push({ fuente: 'PandaScore', texto: 'Fotos y datos de jugadores: PandaScore', url: 'https://pandascore.co' });
+
+  extra.resumen = resumenPalmares(extra.palmares);
+  if (!extra.palmares.length && !extra.jugadores.length && !extra.ganancias) throw new Error('ninguna fuente dio datos');
+  return extra;
+}
+function resumenPalmares(p) {
+  const n = (k) => p.reduce((a, x) => a + (x.puesto_n === k ? (x.veces || 1) : 0), 0);
+  return { oros: n(1), platas: n(2), bronces: n(3), premios: p.reduce((a, x) => a + (x.premio || 0), 0) || null };
+}
+
+// ---------- futbol: ESPN + Wikidata + Wikipedia ----------
+const tipoClub = /football club|soccer club|association football|football team|football association/i;
+async function wikidataClub(nombres) {
+  for (const nombre of nombres) {
+    const j = await web(`https://www.wikidata.org/w/api.php?${qs({ action: 'wbsearchentities', search: nombre, language: 'en', type: 'item', limit: 8, format: 'json' })}`);
+    const buenos = (j.search || []).filter((x) => tipoClub.test(x.description || '') && !/women|ladies|youth|reserves|under-\d+|u\d\d/i.test(`${x.label} ${x.description}`));
+    const nn = normFuerte(nombre);
+    const x = buenos.find((b) => normFuerte(b.label) === nn) || buenos.find((b) => { const l = normFuerte(b.label); return l.includes(nn) || nn.includes(l); }) || null;
+    if (x) return x;
+  }
+  return null;
+}
+async function wikipediaHonours(titulo) {
+  const api = 'https://en.wikipedia.org/w/api.php';
+  const sec = await web(`${api}?${qs({ action: 'parse', page: titulo, prop: 'sections', format: 'json', formatversion: 2, redirects: 1 })}`);
+  const s = (sec.parse?.sections || []).find((x) => /^(honou?rs|trophies|titles|palmar[eè]s|achievements|major honou?rs)$/i.test(x.line.replace(/<[^>]+>/g, '').trim()) && x.toclevel <= 2);
+  if (!s) return null;
+  const j = await web(`${api}?${qs({ action: 'parse', page: titulo, prop: 'text', section: s.index, format: 'json', formatversion: 2, redirects: 1 })}`);
+  return j.parse?.text || null;
+}
+const anios = (s) => [...String(s).matchAll(/\b(1[89]\d\d|20\d\d)(?:\s*[–-]\s*(\d{2,4}))?/g)].map((m) => (m[2] ? `${m[1]}–${m[2].slice(-2)}` : m[1]));
+const esSub = /^runners?[- ]up/i;
+// lee tablas (Type | Competition | Titles | Seasons) y listas anidadas (Competicion > Champions: anos)
+export function leerHonoursHtml(html) {
+  const out = [];
+  const poner = (torneo, puesto_n, veces, lista) => {
+    torneo = torneo.replace(/\s*\(level \d+\)/i, '').replace(/\s+/g, ' ').trim();
+    if (!torneo || (!lista.length && !veces)) return;
+    out.push({ torneo, puesto: puesto_n === 1 ? 'Campeón' : 'Subcampeón', puesto_n, veces: veces ?? lista.length, anios: lista.slice(-15) });
+  };
+  for (const tb of tablas(html)) {
+    const cab = tb.filas[0].map((c) => c.txt.toLowerCase());
+    if (!cab.some((c) => /titles|winners|won/.test(c))) continue;
+    for (const f of tb.filas.slice(1)) {
+      if (f.length < 3) continue;
+      const [comp, tit, temp] = f.slice(-3);
+      if (/^total/i.test(comp.txt) || !/^\d/.test(tit.txt)) continue;
+      poner(comp.txt, 1, numero(tit.txt), anios(temp.txt));
+    }
+  }
+  if (out.length) return out;
+  // listas: <li>Competicion<ul><li>Champions: 1932-33, ...</li><li>Runners-up: ...</li></ul></li>
+  const lineas = [];
+  const resto = html.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<sup[\s\S]*?<\/sup>/g, '');
+  for (const m of resto.matchAll(/<(\/?)(\w+)[^>]*>|([^<]+)/g)) {
+    if (m[2]) {
+      const et = m[2].toLowerCase();
+      if (!m[1] && /^(li|p|dd|dt|h[2-6])$/.test(et)) lineas.push('');
+      else if (et === 'br' && lineas.length) lineas[lineas.length - 1] += ' ';
+    } else if (lineas.length) lineas[lineas.length - 1] += m[3];
+  }
+  let comp = null;
+  for (const linea of lineas) {
+    const t = dec(linea).replace(/\s+/g, ' ').trim(); if (!t) continue;
+    const m = t.match(/^(.*?)\s*[:–-]\s*(champions?|winners?|runners?[- ]up)\s*(?:\((\d+)\))?\s*[:–-]?\s*(.*)$/i);
+    const m2 = t.match(/^(champions?|winners?|runners?[- ]up|play-?offs? winners)\s*(?:\((\d+)\))?\s*:\s*(.*)$/i);
+    if (m2 && comp) {
+      const nombre = /play-?offs? winners/i.test(m2[1]) ? comp + ' (play-off)' : comp;
+      poner(nombre, /runner/i.test(m2[1]) ? 2 : 1, m2[2] ? +m2[2] : null, anios(m2[3]));
+    } else if (m && m[1] && m[1].length < 80) {
+      poner(m[1], /runner/i.test(m[2]) ? 2 : 1, m[3] ? +m[3] : null, anios(m[4]));
+    } else if (t.length < 90 && !/^(source|note)/i.test(t) && !/^(league|cup|domestic|european|international|other|worldwide|friendly|doubles?)$/i.test(t)) {
+      comp = t.replace(/:$/, '');
+    }
+  }
+  return out;
+}
+export async function fichaFutbol(c) {
+  const fuente = ['ESPN'], atribucion = [{ fuente: 'ESPN', texto: 'Datos de ESPN', url: null }];
+  const extra = { v: 1, tipo: 'f', nombre: c.nombre, fuente, atribucion, actualizado: iso2(Date.now()), palmares: [], club: {}, ganancias: null };
+  let nombres = [c.nombre];
+  try {
+    const e = await web(`https://sports.core.api.espn.com/v2/sports/soccer/leagues/${c.liga}/teams/${c.id.slice(2)}`);
+    nombres = [...new Set([e.displayName, e.location, c.nombre].filter(Boolean))];
+    extra.club = { nombre: e.displayName || null, apodo: e.nickname || null, estadio: e.venue?.fullName || null, ciudad: e.venue?.address?.city || null, pais: e.venue?.address?.country || null, logo: e.logos?.[0]?.href || null };
+    extra.nombre = e.displayName || c.nombre;
+  } catch {}
+  const x = await wikidataClub(nombres);
+  if (!x) throw new Error(`Wikidata no encuentra el club "${nombres[0]}"`);
+  const ent = (await web(`https://www.wikidata.org/w/api.php?${qs({ action: 'wbgetentities', ids: x.id, props: 'sitelinks|claims', sitefilter: 'enwiki', format: 'json' })}`)).entities?.[x.id];
+  const tituloWp = ent?.sitelinks?.enwiki?.title;
+  const ano = ent?.claims?.P571?.[0]?.mainsnak?.datavalue?.value?.time?.match(/\+(\d{4})/)?.[1];
+  if (ano) extra.club.fundado = +ano;
+  extra.club.wikidata = x.id;
+  if (tituloWp) {
+    const html = await wikipediaHonours(tituloWp).catch(() => null);
+    if (html) extra.palmares = leerHonoursHtml(html).slice(0, 40);
+    fuente.push('Wikipedia');
+    atribucion.push({ fuente: 'Wikipedia', texto: 'Datos de Wikipedia', url: `https://en.wikipedia.org/wiki/${encodeURIComponent(tituloWp.replace(/ /g, '_'))}`, licencia: 'CC BY-SA 4.0', licencia_url: 'https://creativecommons.org/licenses/by-sa/4.0/' });
+  }
+  if (!extra.palmares.length) {   // plan B: Wikidata, mas corto pero estructurado (temporadas con "ganador" = el club)
+    const q = `SELECT ?sLabel ?compLabel ?start WHERE { ?s wdt:P1346 wd:${x.id} . OPTIONAL{?s wdt:P3450 ?comp} OPTIONAL{?s wdt:P580 ?start} SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } }`;
+    try {
+      const j = await web(`https://query.wikidata.org/sparql?${qs({ query: q, format: 'json' })}`, { accept: 'application/sparql-results+json' });
+      const g = new Map();
+      for (const b of j.results.bindings) { const k = b.compLabel?.value || b.sLabel?.value; if (!k) continue; const a = (b.sLabel?.value.match(/\b(1[89]\d\d|20\d\d)(?:[–-]\d{2,4})?/) || [''])[0]; if (!g.has(k)) g.set(k, []); if (a) g.get(k).push(a); }
+      extra.palmares = [...g.entries()].map(([torneo, l]) => ({ torneo, puesto: 'Campeón', puesto_n: 1, veces: l.length || 1, anios: l.sort().slice(-15) })).sort((a, b) => b.veces - a.veces).slice(0, 20);
+      if (extra.palmares.length) { fuente.push('Wikidata'); atribucion.push({ fuente: 'Wikidata', texto: 'Datos de Wikidata (CC0)', url: `https://www.wikidata.org/wiki/${x.id}` }); }
+    } catch {}
+  }
+  extra.resumen = { oros: extra.palmares.filter((p) => p.puesto_n === 1).reduce((a, p) => a + (p.veces || 1), 0), platas: extra.palmares.filter((p) => p.puesto_n === 2).reduce((a, p) => a + (p.veces || 1), 0) };
+  if (!extra.palmares.length && !extra.club.estadio) throw new Error('ninguna fuente dio datos');
+  return extra;
+}
+
+// ---------- UFC (ESPN) ----------
+export async function fichaUfc(c) {
+  const core = 'https://sports.core.api.espn.com/v2/sports/mma';
+  const a = await web(`${core}/athletes/${c.id.slice(2)}`);
+  const extra = { v: 1, tipo: 'u', nombre: a.fullName || c.nombre, fuente: ['ESPN'], atribucion: [{ fuente: 'ESPN', texto: 'Datos de ESPN', url: a.links?.find((l) => l.rel?.includes('playercard'))?.href || null }],
+    actualizado: iso2(Date.now()), palmares: [], ganancias: null,
+    ficha: { apodo: a.nickname || null, edad: a.age || null, nacimiento: (a.dateOfBirth || '').slice(0, 10) || null, pais: a.citizenship || null, categoria: a.weightClass?.text || null, altura: a.displayHeight || null,
+      peso: a.displayWeight || null, alcance: a.displayReach || null, postura: a.stance?.text || null, gimnasio: a.association?.name || null, activo: a.active ?? null },
+    cinturones: (a.accolades || []).map((x) => ({ nombre: x.name, tipo: x.type })) };
+  try {
+    const rec = (await web(`${core}/athletes/${c.id.slice(2)}/records`)).items?.[0];
+    if (rec) {
+      const s = Object.fromEntries((rec.stats || []).map((x) => [x.name, x.value]));
+      extra.record = { resumen: rec.summary, victorias: s.wins ?? null, derrotas: s.losses ?? null, empates: s.draws ?? null, sin_resultado: s.noContests ?? null,
+        por_ko: s.tkos ?? null, por_sumision: s.submissions ?? null, por_decision: s.wins != null ? s.wins - (s.tkos || 0) - (s.submissions || 0) : null,
+        derrotas_ko: s.tkoLosses ?? null, derrotas_sumision: s.submissionLosses ?? null,
+        titulo: { victorias: s.titleWins ?? 0, derrotas: s.titleLosses ?? 0, empates: s.titleDraws ?? 0 } };
+    }
+  } catch {}
+  try {
+    const r = a.ranks?.$ref ? (await web(a.ranks.$ref.replace(/^http:/, 'https:'))).items?.[0]?.$ref : null;
+    if (r) { const k = await web(r.replace(/^http:/, 'https:')); extra.ranking = { posicion: k.rank?.current ?? null, categoria: k.weightClass?.text || k.shortName || null, defensas: k.rank?.defenses ?? null, campeon: k.rank?.hasAccolade ?? null }; }
+  } catch {}
+  // ultimos combates por el titulo (hasta 5): fecha, evento, rival y resultado
+  try {
+    const ov = await web(`https://site.web.api.espn.com/apis/common/v3/sports/mma/ufc/athletes/${c.id.slice(2)}/overview`);
+    for (const uid of (ov.titleFights || []).slice(0, 5)) {
+      const m = String(uid).match(/e:(\d+)~c:(\d+)/); if (!m) continue;
+      try {
+        const comp = await web(`${core}/leagues/ufc/events/${m[1]}/competitions/${m[2]}`);
+        const yo = (comp.competitors || []).find((x) => String(x.id) === c.id.slice(2)), otro = (comp.competitors || []).find((x) => String(x.id) !== c.id.slice(2));
+        const ev = await web(`${core}/leagues/ufc/events/${m[1]}`).catch(() => null);
+        const rival = otro ? (await web(`${core}/athletes/${otro.id}`).catch(() => null))?.fullName : null;
+        extra.palmares.push({ torneo: ev?.name || 'Combate por el título', puesto: yo?.winner ? 'Victoria' : 'Derrota', puesto_n: yo?.winner ? 1 : 0,
+          fecha: (comp.date || '').slice(0, 10), premio: null, tier: comp.type?.text || null, logo: null, rival: rival || null, marcador: null, url: null });
+      } catch {}
+    }
+  } catch {}
+  if (!extra.record && !extra.cinturones.length && !extra.ficha.pais) throw new Error('ESPN no dio datos del luchador');
+  extra.resumen = { oros: extra.record?.titulo?.victorias ?? 0, platas: extra.record?.titulo?.derrotas ?? 0 };
+  return extra;
+}
+
+// ---------- reparto entre pasadas ----------
+export function candidatos(rows, apuestas = {}, ahora = Date.now()) {
+  const mapa = new Map();
+  for (const r of rows) {
+    if (r.status !== 'scheduled' && r.status !== 'live') continue;
+    const t = Date.parse(r.starts_at); if (!t || t > ahora + CFG.ventana) continue;
+    for (const lado of ['a', 'b']) {
+      const nombre = lado === 'a' ? r.home : r.away, logo = lado === 'a' ? r.home_logo : r.away_logo;
+      let c = null;
+      if ((r.sport === 'v' || r.sport === 'c') && r.details?.ids?.[lado]) { const game = r.details.game; c = { clave: `${game}:${r.details.ids[lado]}`, tipo: 'esports', game, id: String(r.details.ids[lado]), nombre, logo }; }
+      else if (r.sport === 'f' && r.details?.espn?.ids?.[lado]) c = { clave: `f:${r.details.espn.ids[lado]}`, id: `f:${r.details.espn.ids[lado]}`, tipo: 'futbol', liga: r.details.espn.league, nombre, logo };
+      else if (r.sport === 'u' && r.details?.espn?.ids?.[lado]) c = { clave: `u:${r.details.espn.ids[lado]}`, id: `u:${r.details.espn.ids[lado]}`, tipo: 'ufc', nombre, logo };
+      if (!c) continue;
+      c.apuestas = apuestas[r.id] || 0; c.t = t;
+      const antes = mapa.get(c.clave);
+      if (!antes) mapa.set(c.clave, c);
+      else { antes.apuestas += c.apuestas; antes.t = Math.min(antes.t, c.t); }
+    }
+  }
+  return [...mapa.values()].sort((a, b) => (b.apuestas > 0) - (a.apuestas > 0) || a.t - b.t);
+}
+// toca si nunca se hizo, si pasaron 3 dias, y no si se intento hace poco (espera 1 h, 2 h, 4 h... hasta 24 h tras fallos seguidos)
+export function toca(c, cache, ahora = Date.now()) {
+  const k = cache?.[c.clave];
+  if (!k) return true;
+  if (k.i) { const espera = Math.min(24, 2 ** (k.f || 0)) * 3600e3; if (ahora - k.i < (k.f ? espera : 3600e3)) return false; }
+  return !k.t || ahora - k.t > CFG.vida;
+}
+
+export async function equiposExtra({ rows, rpc, secret, dry = false, ps = process.env.PANDASCORE_KEY, log = console.log, cache: cacheFija, apuestas: apFija } = {}) {
+  const t0 = Date.now(), limite = t0 + CFG.presupuestoMs;
+  let apuestas = apFija || {}, cache = cacheFija || {};
+  if (rpc && secret && !apFija) { try { apuestas = (await rpc('sync_equipos_extra_apuestas', { p_secret: secret })) || {}; } catch (e) { log('equipos extra: no pude leer las apuestas', e.message); } }
+  const cands = candidatos(rows, apuestas);
+  if (rpc && secret && !cacheFija) { try { cache = (await rpc('sync_equipos_extra_get', { p_secret: secret, p_ids: cands.map((c) => c.clave) })) || {}; } catch (e) { log('equipos extra: no pude leer lo guardado', e.message); return; } }
+  const pend = cands.filter((c) => toca(c, cache));
+  const carril = (tipo, max) => pend.filter((c) => c.tipo === tipo).slice(0, max);
+  const lista = { esports: carril('esports', CFG.maxEsports), otros: [...carril('futbol', CFG.maxFutbol), ...carril('ufc', CFG.maxUfc)] };
+  const hechos = { ok: 0, fallo: 0 };
+  const guardar = async (c, extra, error) => {
+    if (error) { hechos.fallo++; log(`equipos extra: ${c.clave} (${c.nombre}) fallo: ${error}`); }
+    else { hechos.ok++; }
+    if (!rpc || !secret || dry) return;
+    let fila = error ? { id: c.clave, fallo: true } : { id: c.clave, extra };
+    if (!error && JSON.stringify(extra).length > CFG.tamMax) { extra.exjugadores = (extra.exjugadores || []).slice(0, 10); extra.palmares = extra.palmares.slice(0, 8); fila = { id: c.clave, extra }; }
+    try { await rpc('sync_equipos_extra_put', { p_secret: secret, p_rows: [fila] }); } catch (e) { log('equipos extra: no pude guardar', c.clave, e.message); }
+  };
+  const correr = async (cs) => {
+    for (const c of cs) {
+      if (Date.now() > limite - (c.tipo === 'esports' ? CFG.gapParse : 5000)) break;
+      try {
+        const extra = c.tipo === 'esports' ? await fichaEsports(c, ps) : c.tipo === 'futbol' ? await fichaFutbol(c) : await fichaUfc(c);
+        await guardar(c, extra);
+        if (log && process.env.EQUIPOS_VER) log(JSON.stringify({ [c.clave]: extra }));
+      } catch (e) { await guardar(c, null, String(e.message || e).slice(0, 160)); }
+    }
+  };
+  await Promise.all([correr(lista.esports), correr(lista.otros)]);
+  log(`fichas ampliadas: ${cands.length} equipos con partido · ${pend.length} por hacer · ${hechos.ok} hechas · ${hechos.fallo} con fallo · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  return hechos;
+}

@@ -5,6 +5,7 @@
 //   DISCORD_WEBHOOK (opcional): si existe, avisos en Discord (sync/discord.mjs, db/021_discord.sql)
 // Con SOLO_DISCORD=1 hace nada mas que los avisos de Discord (para probarlos).
 import { avisos } from './discord.mjs';
+import { equiposExtra } from './equipos-extra.mjs';
 
 const SB = process.env.SUPABASE_URL, ANON = process.env.SUPABASE_ANON_KEY, SECRET = process.env.SYNC_SECRET, PS = process.env.PANDASCORE_KEY;
 const DRY = !!process.env.DRY;
@@ -505,6 +506,7 @@ async function main() {
   let res = { pagadas: 0 }, total = { revelados: 0, pagadas: 0, pagas: 0 };
   do { res = await rpc('sync_close', { p_secret: SECRET }); for (const k in total) total[k] += res[k] || 0 } while (res.pagadas >= 60);
   console.log(`guardados ${saved} · reveladas ${total.revelados} · apuestas pagadas ${total.pagadas} · pagas ${total.pagas} · ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  equiposExtra({ rows, rpc, secret: SECRET, dry: DRY, ps: PS }).catch((e) => console.log('equipos extra:', e.message || e));   // fichas ampliadas (db/025): corre a la vez que extras() y no la espera
   await extras(v, f, c).catch((e) => console.log('extras:', e.message || e));        // cuota mejorada, predicciones rapidas y trofeos (db/022)
   // avisos en Discord: nunca hacen fallar la sincronizacion
   if (process.env.DISCORD_WEBHOOK) { try { await avisos({ rpc, secret: SECRET, hook: process.env.DISCORD_WEBHOOK }) } catch (e) { console.log(`discord: ${e.message || e}`) } }
