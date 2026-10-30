@@ -117,7 +117,7 @@ async function soccer() {
             const ppg = (r) => (r && r.w + r.d + r.l ? (3 * r.w + r.d) / (r.w + r.d + r.l) : 1.35);
             o = soccerModel(ppg(rh), ppg(ra)); row.odds_src = 'modelo';
           }
-          [row.odds_1, row.odds_x, row.odds_2] = o;
+          [row.odds_1, row.odds_x, row.odds_2] = o.map(sube);
         }
         out.push(row);
       }
@@ -154,7 +154,7 @@ async function ufc() {
       };
       if (status === 'scheduled') {
         const pct = (r) => (r ? (r.w + 1) / (r.w + r.l + r.d + 2) : 0.5);
-        [row.odds_1, row.odds_x, row.odds_2] = twoWay(pct(rx), pct(ry));
+        [row.odds_1, row.odds_x, row.odds_2] = twoWay(pct(rx), pct(ry)).map(sube);
         row.odds_src = 'modelo';
       }
       out.push(row);
@@ -313,7 +313,7 @@ async function fichasEsports(rows) {
     if (fa?.f || fb?.f) r.details.tape.push([fa?.f ? 'F:' + fa.f : '', 'Forma', fb?.f ? 'F:' + fb.f : '']);
     if (r.status === 'scheduled') {
       const pct = (f) => (f?.g ? (f.w + 1) / (f.g + 2) : 0.5);
-      [r.odds_1, r.odds_x, r.odds_2] = twoWay(pct(fa), pct(fb));
+      [r.odds_1, r.odds_x, r.odds_2] = twoWay(pct(fa), pct(fb)).map(sube);
       r.odds_src = 'modelo';
     }
   }
@@ -361,7 +361,7 @@ function rondaGanador(d, ref, n, pick, home) {
 }
 // lo que va por cada mapa en directo
 async function obsValorant(vrows) {
-  const out = [];
+  const out = [], live = [];
   for (const r of vrows.filter((x) => x.status === 'live')) {
     const d = await vlrBuscar(r.home, r.away, Date.parse(r.starts_at));
     if (!d || String(d.status).toLowerCase() !== 'live') continue;
@@ -369,9 +369,51 @@ async function obsValorant(vrows) {
     const vivos = maps.filter((m) => m.status === 'live');
     for (const m of vivos) out.push({ match: r.id, ref: String(m.name).toLowerCase(), n: n(m) });
     if (!vivos.length) { const sig = maps.find((m) => !n(m)); if (sig) out.push({ match: r.id, ref: String(sig.name).toLowerCase(), n: 0 }); }
+    // estado para el cash out: mapas de cada uno y rondas del mapa en juego (en el orden local, visitante de la base)
+    const ih = parecido(d.teams?.[0]?.name, r.home) ? 0 : 1, sc = (i) => Number(d.teams?.[i]?.score) || 0;
+    let ra = null, rb = null;
+    if (vivos[0]) { const rs = (vivos[0].rounds || []).filter((x) => x.score), last = rs[rs.length - 1], [p, q] = last ? String(last.score).split('-').map(Number) : [0, 0]; ra = ih === 0 ? p : q; rb = ih === 0 ? q : p; }
+    live.push({ match: r.id, data: { k: 's', a: sc(ih), b: sc(1 - ih), bo: Number(/\d+/.exec(d.format || '')?.[0]) || r.bo || 3, ra, rb } });
   }
   if (out.length) await rpc('sync_ex_pred_put', { p_secret: SECRET, p_rows: out });
+  await ponLive(live);
   return out.length;
+}
+// estado en vivo para el cash out (db/024_cashout.sql). Si 024 aun no esta cargada, avisa una vez y sigue
+let liveAvisado = false;
+async function ponLive(rows) {
+  if (!rows.length) return 0;
+  try { await rpc('sync_ex_live_put', { p_secret: SECRET, p_rows: rows }); return rows.length; }
+  catch (e) { if (!liveAvisado) { liveAvisado = true; console.log('cash out: falta cargar db/024_cashout.sql (' + String(e.message).slice(0, 120) + ')'); } return 0; }
+}
+// futbol: marcador y minuto de ESPN de cada partido en juego
+async function liveFutbol(frows) {
+  const out = [];
+  for (const r of frows.filter((x) => x.status === 'live' && x.details?.espn?.event)) {
+    const e = r.details.espn, d = await getJson(`https://site.api.espn.com/apis/site/v2/sports/${e.sport}/${e.league}/summary?event=${e.event}`);
+    const c = d?.header?.competitions?.[0], st = c?.status; if (!st || st.type?.state !== 'in') continue;
+    const h = c.competitors?.find((x) => x.homeAway === 'home'), a = c.competitors?.find((x) => x.homeAway === 'away');
+    // el minuto: segundos del reloj, o el texto ("52'", "45'+3'") si ESPN no manda el reloj
+    const tx = String(st.displayClock || st.type?.detail || st.type?.shortDetail || ''), mt = /(\d+)(?:'?\s*\+\s*(\d+))?/.exec(tx);
+    const min = Number(st.clock) > 0 ? Math.floor(Number(st.clock) / 60) : /HALFTIME/i.test(st.type?.name || '') ? 45 : mt ? +mt[1] + (+mt[2] || 0) : null;
+    const per = Number(st.period) || (/SECOND|2ND/i.test(st.type?.name || '') ? 2 : /EXTRA|PENALT/i.test(st.type?.name || '') ? 3 : 1);
+    if (!h || !a || min == null) continue;
+    out.push({ match: r.id, data: { k: 'f', hs: Number(h.score) || 0, as: Number(a.score) || 0, min, per } });
+  }
+  return ponLive(out);
+}
+// CS2: mapas ganados de cada uno (PandaScore no da las rondas)
+async function liveCs2(crows) {
+  if (!PS || !crows.some((x) => x.status === 'live')) return 0;
+  const lista = await getJson('https://api.pandascore.co/csgo/matches/running?per_page=50', { authorization: `Bearer ${PS}` }), out = [];
+  const ids = new Set(crows.map((x) => x.id));
+  for (const m of lista || []) {
+    const [A, B] = (m.opponents || []).map((o) => o.opponent), id = `ps:csgo:${m.id}`;
+    if (!A || !B || !ids.has(id)) continue;
+    const sc = (x) => m.results?.find((r) => r.team_id === x.id)?.score ?? 0;
+    out.push({ match: id, data: { k: 's', a: sc(A), b: sc(B), bo: m.number_of_games || 3, ra: null, rb: null } });
+  }
+  return ponLive(out);
 }
 const espnCache = new Map();
 async function resolverGol(p) {
@@ -412,7 +454,7 @@ async function resolverPredicciones() {
   if (out.length) await rpc('sync_ex_pred_resolve', { p_secret: SECRET, p_rows: out });
   return [pend.length, out.length];
 }
-async function extras(vrows) {
+async function extras(vrows, frows = [], crows = []) {
   try {
     const r = await rpc('sync_ex', { p_secret: SECRET });
     console.log(`extras: partido mejorado ${r.boost || 'ninguno'} · trofeos nuevos ${r.trofeos} · predicciones caducadas ${r.caducadas}`);
@@ -421,7 +463,8 @@ async function extras(vrows) {
   for (;;) {
     vlrLista = null; espnCache.clear();
     const o = await obsValorant(vrows), [abiertas, cerradas] = await resolverPredicciones();
-    console.log(`predicciones: ${o} mapas en directo apuntados · ${abiertas} abiertas · ${cerradas} resueltas`);
+    const lf = await liveFutbol(frows).catch(() => 0), lc = await liveCs2(crows).catch(() => 0);
+    console.log(`predicciones: ${o} mapas en directo apuntados · ${abiertas} abiertas · ${cerradas} resueltas · cash out: ${lf} partidos de futbol y ${lc} de CS2 al día`);
     if (!watch || Date.now() - t0 + 25e3 > watch * 1000) break;
     await sleep(25e3);
   }
@@ -436,6 +479,10 @@ const rpc = async (fn, args) => {
   if (!r.ok) throw new Error(`${fn} ${r.status}: ${t.slice(0, 300)}`);
   return t ? JSON.parse(t) : null;
 };
+
+// PM 30-10: "sube un poco mas las odds, solo un poquito": +5 % a todas las cuotas (las reales y las del modelo)
+const SUBE = 1.05;
+function sube(o) { return o == null ? o : Math.round(o * SUBE * 100) / 100 }
 
 async function main() {
   const t0 = Date.now();
@@ -458,7 +505,7 @@ async function main() {
   let res = { pagadas: 0 }, total = { revelados: 0, pagadas: 0, pagas: 0 };
   do { res = await rpc('sync_close', { p_secret: SECRET }); for (const k in total) total[k] += res[k] || 0 } while (res.pagadas >= 60);
   console.log(`guardados ${saved} · reveladas ${total.revelados} · apuestas pagadas ${total.pagadas} · pagas ${total.pagas} · ${((Date.now() - t0) / 1000).toFixed(1)} s`);
-  await extras(v).catch((e) => console.log('extras:', e.message || e));        // cuota mejorada, predicciones rapidas y trofeos (db/022)
+  await extras(v, f, c).catch((e) => console.log('extras:', e.message || e));        // cuota mejorada, predicciones rapidas y trofeos (db/022)
   // avisos en Discord: nunca hacen fallar la sincronizacion
   if (process.env.DISCORD_WEBHOOK) { try { await avisos({ rpc, secret: SECRET, hook: process.env.DISCORD_WEBHOOK }) } catch (e) { console.log(`discord: ${e.message || e}`) } }
 }

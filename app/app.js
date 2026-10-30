@@ -184,7 +184,7 @@ const net = (f) => { const d = f.s - f.recibido; return `<span class="net ${d >=
 const img = (src, cls = '') => (src ? `<img class="${cls}" src="${esc(src)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<span class="noimg ${cls}"></span>`);
 const logo = (m, side) => img(side === 'a' ? m.la : m.lb, m.s === 'u' ? 'face' : 'tl');
 const form = (s) => `<span class="fm">${[...s].map((c) => `<b class="${c === 'G' ? 'g' : c === 'E' ? 'e' : ''}">${c}</b>`).join('')}</span>`;
-const board = () => M.filter((m) => (m.status === 'scheduled' || m.live) && (m.live || Date.parse(m.at) > NOW) && Date.parse(m.at) < NOW + (m.s === 'u' ? 72 : 8) * DAY);
+const board = () => M.filter((m) => (m.status === 'scheduled' || m.live) && (m.live || Date.parse(m.at) > NOW - 4 * 3600e3) && Date.parse(m.at) < NOW + (m.s === 'u' ? 72 : 8) * DAY);
 const inLeague = (m) => S.lg === 'fav' ? sigo(m) : S.lg === 'all' ? true : S.lg === 'top' ? m.live || m.s === 'v' || (m.s === 'c' ? 'sa'.includes(m.tier || 'x') : m.s === 'u' ? !!m.tag : TOP.has(m.lg)) || whoOn(m.id).length > 0 : m.lg === S.lg;
 const filtered = () => board().filter((m) => (S.f === 'all' || m.s === S.f) && inLeague(m)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
 const groups = (list) => { const g = new Map(); for (const m of list) { const k = DK(m.at); if (!g.has(k)) g.set(k, []); g.get(k).push(m) } return [...g.values()] };
@@ -702,9 +702,19 @@ const vivosHtml = (ls) => `<section class="lv2 ${ls.length > 1 ? 'mas' : ''}"><d
 let LVX = 0;
 function lvFlechas() { const n = document.querySelector('[data-lv]'); if (!n) return; if (n.scrollLeft !== LVX) n.scrollLeft = LVX; n.onscroll = () => { LVX = n.scrollLeft } }
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lvx]'); if (!b) return; const n = document.querySelector('[data-lv]'); n?.scrollBy({ left: +b.dataset.lvx * (n.querySelector('.lvc')?.offsetWidth || 300) + +b.dataset.lvx * 14, behavior: 'smooth' }) });
+const jugados = () => M.filter((m) => m.status === 'final' && (S.f === 'all' || m.s === S.f) && inLeague(m)).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+function jugadosHtml() {
+  const l = jugados(); if (!l.length) return '';
+  const n = Math.min(l.length, S.jugN || 8), gan = (m, k) => { const [x, y] = String(m.score || '').split(' ')[0].split(':').map(Number); if (!(x >= 0 && y >= 0) || x === y) return ''; return (x > y) === (k === 'home') ? 'w' : 'l' };
+  return `<section class="jug"><div class="day"><b>Ya jugados</b><span>últimos dos días</span><i>${l.length}</i></div>${l.slice(0, n).map((m) => `<button class="jug-r" data-goto="${m.id}">
+    <span class="jug-t">${WD(m.at)} ${HM(m.at)}<small>${esc(L[m.lg]?.[0] || '')}</small></span>
+    <span class="jug-e ${gan(m, 'home')}">${logo(m, 'a')}<b>${esc(m.a)}</b></span><span class="jug-s">${esc(String(m.score || '').split(' ')[0] || 'final')}</span><span class="jug-e b ${gan(m, 'away')}"><b>${esc(m.b)}</b>${logo(m, 'b')}</span>
+    <span class="jug-w">${whoOn(m.id).slice(0, 4).map((k) => av(k, 'sm')).join('')}</span></button>`).join('')}
+    ${n < l.length ? `<button class="jug-mas" data-jugmas="1">Ver más (${l.length - n})</button>` : ''}</section>`;
+}
 function partidos() {
   const list = filtered();
-  if (!S.foc || !byId(S.foc) || !board().some((m) => m.id === S.foc)) S.foc = (featured()[0] || list[0] || {}).id;
+  if (!S.foc || !byId(S.foc) || !(board().some((m) => m.id === S.foc) || byId(S.foc).status === 'final')) S.foc = (featured()[0] || list[0] || {}).id;
   if (S.brk && byId(S.foc)?.tour) return `<div class="pad brk-full">${bracketSheet(byId(S.foc)).replace('class="det sheet', 'class="brk-page').replace(' open"', '"')}</div>`;
   const feat = featured();
   const lives = M.filter((m) => m.live).sort((a, b) => whoOn(b.id).length - whoOn(a.id).length).slice(0, 14);
@@ -716,13 +726,14 @@ function partidos() {
       <span class="ft-o">${picksOf(m).map((p) => `<span>${p} <b>${po(m, p) ? O(po(m, p)) : '·'}</b></span>`).join('')}</span></button>`).join('')}</div>` : ''}
     <nav class="fil">${filt()}</nav>${leagues()}`;
   if (!list.length) h += `<p class="hint" style="padding:30px 0">No hay partidos con este filtro en los próximos días.</p>`;
+  const jugH = jugadosHtml();
   let ri = 0;
   for (const ms of groups(list)) {
     h += `<div class="day"><b>${DD(ms[0].at)}</b><span>${dayLab(ms[0].at)}</span><i>${ms.length} ${ms.length > 1 ? 'partidos' : 'partido'}</i></div>`;
     for (const m of ms) {
       const open = isOpen(m);
       h += `<div class="row ${S.foc === m.id ? 'on' : ''}" data-foc="${m.id}" style="--i:${Math.min(ri++, 14)}">
-        <span class="t">${m.live ? '<em>VIVO</em>' : HM(m.at)}${m.live ? `<small class="sc">${esc(String(m.score || '').split(' ')[0])}</small>` : `<small>${CD(m.at)}</small>`}</span>
+        <span class="t">${m.live ? '<em>VIVO</em>' : HM(m.at)}${m.live ? `<small class="sc">${esc(String(m.score || '').split(' ')[0])}</small>` : Date.parse(m.at) <= NOW ? '<small class="pe">por empezar</small>' : `<small>${CD(m.at)}</small>`}</span>
         <span class="llw" title="${esc(L[m.lg][0])} · ${SP[m.s][0]}"><img class="ll" src="${esc(L[m.lg][1])}" alt="" loading="lazy">${m.s === 'c' || m.s === 'v' ? `<img class="lls" src="${SP[m.s][1]}" alt="">` : ''}</span>
         <span class="tms"><span class="tm">${logo(m, 'a')}<span>${esc(m.a)}</span>${esFav(favK(m.s, m.a)) || esFav('pa:' + m.id) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${dailyTag(m)}</span><span class="tm">${logo(m, 'b')}<span>${esc(m.b)}</span>${esFav(favK(m.s, m.b)) ? `<i class="fav-i">${IC_FAV}</i>` : ''}</span></span>
         <span class="who">${whoOn(m.id).filter((x) => x.f !== MEK).map((x) => av(x.f, 'sm')).join('')}</span>
@@ -730,7 +741,7 @@ function partidos() {
       </div>`;
     }
   }
-  return h + `</section>${byId(S.foc) ? ficha(byId(S.foc)) : '<section class="det"></section>'}</div>`;
+  return h + jugH + `</section>${byId(S.foc) ? ficha(byId(S.foc)) : '<section class="det"></section>'}</div>`;
 }
 function ficha(m) {
   if (S.brk && m.tour) return bracketSheet(m);
@@ -754,7 +765,7 @@ function ficha(m) {
     <div class="prob-l">${ps.map((p, i) => `<span>${esc(p === 'X' ? 'empate' : pn(m, p))} ${pct[i]}%</span>`).join('')}</div>` : ''}
     <div class="picks ${open ? '' : 'closed'}" style="--n:${Math.max(1, ps.length)}">${ps.map((p) => `<button class="pk ${isSel(m, p) ? 'on' : ''} ${isMine(m, p) ? 'mine' : ''}" data-pick="${m.id}|${p}" ${open ? '' : 'disabled'}><span class="k">${p === 'X' ? 'X · EMPATE' : p + ' · GANA'}</span><span class="n">${esc(pn(m, p))}</span><b>${O(po(m, p))}</b></button>`).join('')}</div>
     <p class="hint" style="margin-top:10px">${m.src === 'draftkings' ? 'Cuotas reales de DraftKings' : 'Cuotas calculadas con la forma y el récord'} · se congelan al apostar</p>`;
-  if (!open) h += `<p class="hint">${LOCK}Cerrado: ya ha empezado. Se paga solo al acabar.</p>`;
+  if (!open) h += m.status === 'final' ? `<p class="hint">${LOCK}Final ${esc(String(m.score || '').split(' ')[0])}. Ya se ha pagado.</p>` : `<p class="hint">${LOCK}Cerrado: ya ha empezado. Se paga solo al acabar.</p>`;
   else if (!sel) h += `<p class="hint">Elige ${ps.length > 2 ? '1, X o 2' : '1 o 2'} para apostar.</p>`;
   else {
     const o = po(m, S.sel.p), st = stakeNow(), pv = ((st / Math.max(1, me().s)) * 100).toFixed(1);
@@ -1715,7 +1726,7 @@ document.addEventListener('click', (e) => { const b = e.target.closest('[data-la
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lga]'); if (!b) return; const n = document.querySelector('[data-lgs]'); n?.scrollBy({ left: +b.dataset.lga * n.clientWidth * 0.8, behavior: 'smooth' }) });
 document.addEventListener('click', async (e) => {
   if (S.onl && !e.target.closest('.onl')) { S.onl = false; pintaOnline() }
-  const t = e.target.closest('[data-vivo],[data-fav],[data-nov],[data-ct],[data-ft],[data-tclaim],[data-bsp],[data-bp],[data-side],[data-bm],[data-dv],[data-dtv],[data-mt],[data-mp],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
+  const t = e.target.closest('[data-jugmas],[data-vivo],[data-fav],[data-nov],[data-ct],[data-ft],[data-tclaim],[data-bsp],[data-bp],[data-side],[data-bm],[data-dv],[data-dtv],[data-mt],[data-mp],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
   const d = t.dataset;
   if (d.side && t.matches('[data-side]')) { S.shTodos = false; S.side = d.side; document.querySelector('.det')?.scrollTo?.(0, 0); return render() }
   if (d.act === 'sheet-back') { S.side = null; return render() }
@@ -1800,6 +1811,7 @@ document.addEventListener('click', async (e) => {
   else if (d.vis) { const { error } = await db.rpc('admin_set', { p_key: 'vis', p_value: d.vis }); if (error) return toast(errMsg(error)); return refresh() }
   else if (d.pf) S.pf = d.pf;
   else if (d.prof) { if (S.scr !== 'perfil') S.prev = S.scr; S.prof = d.prof; S.scr = 'perfil'; S.sheet = false; document.getElementById('view').scrollTop = 0 }
+  else if (d.jugmas) S.jugN = (S.jugN || 8) + 8;
   else if (d.goto) { S.scr = 'partidos'; S.foc = d.goto; S.sheet = true; document.getElementById('view').scrollTop = 0 }
   else if (d.pick) { S.side = null; const [m, p] = d.pick.split('|'); S.sel = isSel(byId(m), p) ? null : { m, p }; if (S.foc !== m) { S.foc = m; S.sheet = true } }
   else if (d.stake) { S.stake = d.stake === 'all' ? me().s : +d.stake; return updStake() }

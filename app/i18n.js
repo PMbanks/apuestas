@@ -17,6 +17,7 @@
 })();
 (function () {
   const D = {
+    'Ya jugados': 'Already played', 'últimos dos días': 'last two days', 'por empezar': 'about to start',
     // juegos (crash de velas, rankings, en la ronda; 30-10)
     'Cara o cruz': 'Heads or tails', 'Crash': 'Crash', 'Blackjack': 'Blackjack',
     'Contra': 'Against', 'Cualquiera': 'Anyone', 'Tu lado': 'Your side', 'Cara': 'Heads', 'Cruz': 'Tails', 'cara': 'heads', 'cruz': 'tails',
@@ -267,6 +268,8 @@
   };
   const DIAS = { LUN: 'MON', 'MIÉ': 'WED', JUE: 'THU', VIE: 'FRI', 'SÁB': 'SAT', DOM: 'SUN', HOY: 'TODAY', ENE: 'JAN', ABR: 'APR', AGO: 'AUG', DIC: 'DEC' };
   const R = [
+    [/^Final ([\d:]+)\. Ya se ha pagado\.$/, 'Final $1. Already paid.'],
+    [/^Ver más \((\d+)\)$/, 'See more ($1)'],
     // juegos (30-10)
     [/^Apostar ([\d.]+)$/, 'Bet $1'], [/^Retirar ×([\d.,]+)$/, 'Cash out ×$1'],
     [/^([\d.]+) dentro$/, '$1 in'], [/^sale en ×([\d.,]+)$/, 'exits at ×$1'],

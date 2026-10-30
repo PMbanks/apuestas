@@ -1955,3 +1955,17 @@ html.sin-anim .eqp.abre{animation:none}
 .mant svg{width:46px;height:46px;fill:none;stroke:var(--acc);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .mant b{font:800 30px/1.1 Archivo,Inter,sans-serif;letter-spacing:-.03em}
 .mant p{max-width:42ch;color:var(--mute)}
+
+/* Ya jugados (PM 30-10) */
+.jug{margin-top:34px}
+.jug-r{display:grid;grid-template-columns:92px minmax(0,1fr) 64px minmax(0,1fr) 70px;align-items:center;gap:12px;width:100%;padding:10px 4px;border:0;border-top:1px solid var(--hair);background:none;color:var(--soft);font:14px Inter,sans-serif;text-align:left;cursor:pointer}
+.jug-r:hover{background:rgba(255,255,255,.03)}
+.jug-t{font:12px JB,monospace;color:var(--mute);display:grid}.jug-t small{color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jug-e{display:flex;align-items:center;gap:8px;min-width:0}.jug-e.b{justify-content:flex-end;text-align:right}
+.jug-e b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.jug-e img{width:24px;height:24px;object-fit:contain;flex:none}
+.jug-e.w b{color:var(--ink)}.jug-e.l b{color:var(--dim);font-weight:500}
+.jug-s{text-align:center;font:700 16px JB,monospace;color:var(--ink)}
+.jug-w{display:flex;justify-content:flex-end;gap:2px}
+.jug-mas{margin:12px auto 0;display:block;padding:9px 18px;border:0;border-radius:999px;background:rgba(255,255,255,.06);color:var(--soft);font:600 13px Inter,sans-serif;cursor:pointer}
+.row .t small.pe{color:var(--acc)}
+@media (max-width:860px){.jug-r{grid-template-columns:minmax(0,1fr) 52px minmax(0,1fr);gap:8px}.jug-t,.jug-w{display:none}}
