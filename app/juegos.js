@@ -7,7 +7,7 @@
 // solo corren mientras hay una ronda o una animacion y la pantalla esta a la vista.
 'use strict';
 (function () {
-  const JUEGOS = [['blackjack', 'Blackjack']];   // PM, 30-10: solo blackjack, 100 de perdida maxima al dia
+  const JUEGOS = [['moneda', 'Cara o cruz'], ['crash', 'Crash'], ['blackjack', 'Blackjack']];   // PM, 30-10: ruleta y plinko fuera (su codigo sigue aqui, sin pestana)
   const FN = { moneda: 'moneda_estado', crash: 'crash_estado', ruleta: 'ruleta_estado', blackjack: 'bj_estado', plinko: 'plinko_estado' };
   const SUIT = ['♠', '♥', '♦', '♣'], RANK = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   const ORDEN = [0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7];       // casillas de la ruleta, en el sentido del reloj desde arriba
@@ -17,8 +17,8 @@
   /* ---------- estado ---------- */
   let ctx = null, root = null;
   const S = {
-    juego: 'blackjack', stake: Math.max(1, parseInt(lee('jg-stake'), 10) || 100), saldo: 0,
-    lado: 'cara', para: null, riesgo: 'medio', color: 'rojo', auto: '', busy: 0, err: null, ocupa: false,
+    juego: (() => { const j = lee('jg-juego'); return JUEGOS.some((x) => x[0] === j) ? j : 'crash' })(), stake: Math.max(1, parseInt(lee('jg-stake'), 10) || 100), saldo: 0,
+    lado: 'cara', para: null, riesgo: 'medio', color: 'rojo', auto: '', busy: 0, err: null, ocupa: false, aviso: '', pd: 0, bjRest: null,
     mo: { vistos: parseInt(lee('jg-mo-visto'), 10) || null, lado: 'cara', msg: '' },
     cr: { ultima: null },
     ru: { ang: 0, spin: null, hecho: null, msg: '' },
@@ -45,14 +45,19 @@
   const visible = () => !!(root && root.isConnected && !document.hidden);
   const toast = (h) => { if (ctx && ctx.toast) ctx.toast(h) };
   const jug = (u) => (ctx && ctx.jugadores.find((j) => j.uuid === u || j.id === u)) || { id: 'pm', color: 'pm', n: '·', uuid: u };
-  const av = (u, cls = 'sm') => (ctx && ctx.av ? ctx.av(jug(u).id, cls) : `<span class="av ${esc(jug(u).color)} ${cls}">${esc(String(jug(u).n || '·')[0])}</span>`);
+  const av = (u, cls = 'sm') => (ctx && ctx.av ? String(ctx.av(jug(u).id, cls)).replace(/ data-prof="[^"]*"/, '') : `<span class="av ${esc(jug(u).color)} ${cls}">${esc(String(jug(u).n || '·')[0])}</span>`);
   const nom = (u) => (u === (ctx && ctx.me) ? 'Tú' : jug(u).n);
   const cssVar = (n, d) => { try { return getComputedStyle(root).getPropertyValue(n).trim() || d } catch { return d } };
   const msgErr = (e) => {
     const m = (e && (e.message || e.error_description)) || 'Algo ha fallado';
-    return /Could not find the function|PGRST202|schema cache/i.test(m + ((e && e.code) || '')) ? 'Los juegos aún no están en la base: falta cargar db/010_juegos.sql' : m;
+    const c = m + ((e && e.code) || '');
+    if (/Could not find the function|PGRST202|schema cache/i.test(c)) return 'Los juegos aún no están en la base: falta cargar db/010_juegos.sql';
+    if (/permission denied|42501/i.test(c)) return 'Este juego está cerrado ahora mismo';
+    return m;
   };
-  const falla = (e) => toast(esc(msgErr(e)));
+  // el error se ve en el aviso y en un toast; el aviso se queda hasta la siguiente jugada
+  const falla = (e) => { const m = msgErr(e); S.aviso = m; toast(esc(m)); setT(root && root.querySelector('[data-aviso]'), m) };
+  const aviso = () => `<p class="jg-aviso" data-aviso>${esc(S.aviso)}</p>`;
   const tr = (el) => { if (window.GM_LANG && el) GM_LANG.traduce(el) };
   // escribe un texto solo si ha cambiado y lo pasa por el diccionario (asi no se pisa la traduccion en cada fotograma)
   const setT = (el, t) => { if (el && el._t !== t) { el._t = t; el.textContent = t; tr(el) } };
@@ -73,9 +78,10 @@
     const j = S.juego, n = ++cargaId;
     ultima = Date.now();
     try {
-      const [d, res] = await Promise.all([rpc(FN[j]), rpc('jg_resumen')]);
+      const [d, res, rest] = await Promise.all([rpc(FN[j]), rpc('jg_resumen'), j === 'blackjack' ? bjLimite() : null]);
       if (n !== cargaId) return;
       D[j] = d; D.res = res; S.err = null;
+      if (j === 'blackjack') { if (S.busy) S.bjRestPend = rest; else S.bjRest = rest }
       aplica(j);
     } catch (e) { if (n !== cargaId) return; S.err = msgErr(e) }
     pintaSi();
@@ -88,7 +94,7 @@
   }
   function firma() {
     const d = D[S.juego] || {}, r = D.res || {};
-    const base = [S.juego, S.err, r.crash && r.crash.id, r.ruleta && r.ruleta.estado, r.moneda, r.bj, S.lado, S.para, S.riesgo, S.color, S.mo.lado, S.mo.msg, S.ru.msg, S.pl.msg];
+    const base = [S.juego, S.err, r.crash && r.crash.id, r.ruleta && r.ruleta.estado, r.moneda, r.bj, S.bjRest, S.lado, S.para, S.riesgo, S.color, S.mo.lado, S.mo.msg, S.ru.msg, S.pl.msg];
     return JSON.stringify([base, d, S.juego === 'crash' ? crFase() : S.juego === 'ruleta' ? ruFase() : 0], (k, v) => (k === 'now' ? undefined : v));
   }
   // lo propio de cada juego al llegar datos nuevos
@@ -103,6 +109,7 @@
     else if (j === 'blackjack') {
       const m = D.blackjack.mano;
       if (!S.bj.init) S.bj = { init: true, id: m && m.id, nj: m ? m.jugador.length : 0, nb: m ? bjNb(m) : 0 };
+      if (!S.bjClamp && S.bjRest != null) { S.bjClamp = true; if (S.bjRest > 0 && S.stake > S.bjRest) S.stake = S.bjRest }
     }
   }
 
@@ -112,6 +119,24 @@
     root.className = 'jg';
     root.addEventListener('click', onClick);
     root.addEventListener('input', onInput);
+    // La app repinta la pantalla (cada minuto y con cada pulso) y al hacerlo descuelga y vuelve a colgar este nodo: si eso pasa entre
+    // pulsar y soltar, el navegador pierde el "clic". Por eso los botones se activan con pulsar+soltar sobre el mismo boton (comparado por
+    // su clave, no por el nodo) y el clic nativo, que solo queda para el teclado, se ignora justo despues. Retirar del crash actua al pulsar.
+    root.addEventListener('pointerdown', (e) => {
+      if ((e.button || 0) !== 0) return;
+      const b = e.target.closest && e.target.closest('[data-jg]');
+      if (!b || b.disabled) { S.dn = null; return }
+      if (b.dataset.jg === 'crGo' && b.classList.contains('jg-out')) { S.dn = null; S.pd = Date.now(); onClick({ type: 'pointerdown', target: b }); return }
+      S.dn = { k: llave(b), t: Date.now() };
+    });
+    root.addEventListener('pointerup', (e) => {
+      const d = S.dn; S.dn = null;
+      if (!d || Date.now() - d.t > 4000) return;
+      const b = e.target.closest && e.target.closest('[data-jg]');
+      if (!b || b.disabled || llave(b) !== d.k) return;
+      S.pd = Date.now(); onClick({ type: 'pointerup', target: b });
+    });
+    root.addEventListener('pointercancel', () => { S.dn = null });
     root.addEventListener('focusout', (e) => {
       if (e.target.matches && e.target.matches('[data-in]')) e.target.value = N(S.stake || 0);
       if (pend) setTimeout(() => { if (pend && !S.busy) pinta() }, 60);
@@ -135,6 +160,7 @@
     if (S.busy > 0) S.busy--;
     if (S.busy) return;
     if (S.saldoPend != null) { S.saldo = S.saldoPend; S.saldoPend = null }
+    if (S.bjRestPend !== undefined) { S.bjRest = S.bjRestPend; S.bjRestPend = undefined; pend = true }
     if (pend) pinta();
     root && root.querySelectorAll('[data-saldo]').forEach((e) => (e.textContent = N(S.saldo)));
     if (ctx.refresh) ctx.refresh();
@@ -154,7 +180,7 @@
       coin: root.querySelector('[data-coin]'), rot: root.querySelector('[data-rot]'), hub: root.querySelector('[data-hub]'), ball: root.querySelector('[data-ball]'),
     };
     root.querySelectorAll('[data-saldo]').forEach((e) => (e.textContent = N(S.saldo)));
-    if (S.juego === 'moneda' && refs.coin) refs.coin.style.transform = `rotateY(${S.mo.lado === 'cara' ? 0 : 180}deg)`;
+    if (S.juego === 'moneda' && refs.coin) refs.coin.style.transform = moPose(S.mo.lado === 'cara' ? 0 : 180);
     if (S.juego === 'crash') { crFrame(true); crLoop() }
     if (S.juego === 'ruleta') { ruPos(); ruLoop() }
     if (S.juego === 'blackjack') bjPost();
@@ -164,13 +190,15 @@
 
   /* ---------- eventos ---------- */
   const A = {};
+  const llave = (b) => `${b.dataset.jg}|${b.dataset.v || ''}|${b.dataset.id || ''}`;
   async function onClick(e) {
     const b = e.target.closest('[data-jg]');
     if (!b || !root.contains(b) || b.disabled) return;
     const a = A[b.dataset.jg];
     if (!a) return;
+    if (e.type === 'click' && S.pd && Date.now() - S.pd < 900) { S.pd = 0; return }      // ya se hizo al pulsar y soltar
     if (S.ocupa && !a.libre) return;
-    if (!a.libre) S.ocupa = true;
+    if (!a.libre) { S.ocupa = true; S.aviso = ''; setT(root.querySelector('[data-aviso]'), '') }
     try { await a(b.dataset, b) } catch (err) { falla(err) } finally { S.ocupa = false }
   }
   function onInput(e) {
@@ -186,7 +214,8 @@
     pinta(); cargar();
   };
   A.q = ({ v }) => {
-    const sal = Math.max(0, S.saldo || ctx.saldo || 0);
+    let sal = Math.max(0, S.saldo || ctx.saldo || 0);
+    if (S.juego === 'blackjack' && S.bjRest != null) sal = Math.min(sal, Math.max(0, S.bjRest));
     S.stake = v === 'mitad' ? Math.max(1, Math.floor(S.stake / 2)) : v === 'doble' ? Math.min(100000, S.stake * 2) : v === 'todo' ? Math.max(1, Math.min(100000, sal)) : +v;
     guarda('jg-stake', S.stake);
     const i = root.querySelector('[data-in]'); if (i) i.value = N(S.stake);
@@ -201,23 +230,50 @@
   }
   const queda = () => (S.saldo != null ? S.saldo : ctx.saldo);
   function stakeOk() {
-    if (!(S.stake >= 1)) { toast('Pon una cantidad'); return false }
-    if (S.stake > queda()) { toast(`No tienes tanto: te quedan <b>${N(queda())}</b>`); return false }
+    if (!(S.stake >= 1)) { falla({ message: 'Pon una cantidad' }); return false }
+    if (S.stake > queda()) { falla({ message: `No tienes tanto: te quedan ${N(queda())}` }); return false }
+    if (S.juego === 'blackjack' && S.bjRest != null) {
+      if (S.bjRest <= 0) { falla({ message: 'Hoy ya has perdido 100 en el blackjack. Vuelve mañana' }); return false }
+      if (S.stake > S.bjRest) { falla({ message: `Hoy solo puedes arriesgar ${N(S.bjRest)} más en el blackjack` }); return false }
+    }
     return true;
   }
+  // lo que queda por arriesgar hoy en el blackjack (la base deja perder 100 al dia, hora de Madrid): 100 mas lo neto de hoy
+  function madridInicio() {
+    const t = Date.now(), h = (z) => new Date(new Date(t).toLocaleString('en-US', { timeZone: z })), off = h('Europe/Madrid') - h('UTC'), m = new Date(t + off);
+    return Date.UTC(m.getUTCFullYear(), m.getUTCMonth(), m.getUTCDate()) - off;
+  }
+  async function bjLimite() {
+    try {
+      if (!ctx.db.from) return null;
+      const { data, error } = await ctx.db.from('ledger').select('amount').eq('kind', 'blackjack').gte('created_at', new Date(madridInicio()).toISOString());
+      return error || !data ? null : 100 + data.reduce((a, x) => a + x.amount, 0);
+    } catch { return null }
+  }
+  function bjLim() {
+    const r = S.bjRest;
+    if (r == null) return '';
+    return r <= 0 ? '<p class="jg-lim lose">Hoy ya has perdido 100. Vuelve mañana</p>' : `<p class="jg-lim">Hoy te quedan <b class="num">${N(r)}</b> por arriesgar</p>`;
+  }
   function apuesta() {
+    const bj = S.juego === 'blackjack', chips = bj ? [5, 10, 25, 50] : [100, 500, 1000];
     return `<div class="jg-stake"><div class="jg-lab"><span class="lab">Apuesta</span><span class="jg-sal"><span class="num" data-saldo>${N(S.saldo)}</span>${coin()}</span></div>
       <label class="jg-amt"><input data-in inputmode="numeric" autocomplete="off" value="${N(S.stake)}" aria-label="Apuesta">${coin()}</label>
-      <div class="jg-q"><button data-jg="q" data-v="100">100</button><button data-jg="q" data-v="500">500</button><button data-jg="q" data-v="1000">1.000</button><button data-jg="q" data-v="mitad">1/2</button><button data-jg="q" data-v="doble">×2</button><button data-jg="q" data-v="todo" data-q-todo>Todo</button></div></div>`;
+      <div class="jg-q">${chips.map((c) => `<button data-jg="q" data-v="${c}">${N(c)}</button>`).join('')}<button data-jg="q" data-v="mitad">1/2</button><button data-jg="q" data-v="doble">×2</button><button data-jg="q" data-v="todo" data-q-todo>${bj ? 'Máx' : 'Todo'}</button></div>${bj ? bjLim() : ''}</div>`;
   }
   const fila = (cuando, a, b, c, d) => `<div class="jg-r ${cuando || ''}">${a}<span class="jg-r-n">${b}</span>${c || ''}${d || ''}</div>`;
 
   /* =====================================================================
      CARA O CRUZ
      ===================================================================== */
+  // moneda con grosor: un canto de capas de oro entre la cara (corona) y la cruz (V-Buck)
   function carasHtml() {
-    return `<div class="jg-face cara"><img src="img/moneda-corona.webp" alt="Cara" draggable="false"></div><div class="jg-face cruz"><svg viewBox="0 0 100 100" aria-label="Cruz"><circle cx="50" cy="50" r="47" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="1.2 2.2"/><circle cx="50" cy="50" r="38" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".5"/><path d="M50 22v56M22 50h56" stroke="currentColor" stroke-width="9" stroke-linecap="round"/></svg></div>`;
+    let canto = '';
+    for (let i = 0; i < 15; i++) canto += `<i style="transform:translateZ(${(i - 7) * 1.6}px)"></i>`;
+    return `${canto}<div class="jg-face cara"><img src="img/moneda-corona.webp" alt="Cara" draggable="false"></div><div class="jg-face cruz"><span class="jg-aro"></span><img src="img/vbucks.webp" alt="Cruz" draggable="false"></div>`;
   }
+  // postura de la moneda en reposo (ligeramente de lado para que se vea el canto) y en cada instante del lanzamiento
+  const moPose = (rx, o = {}) => `translateY(${o.y || 0}px) scale(${o.s || 1}) rotateZ(${o.z || 0}deg) rotateY(${o.ry == null ? -20 : o.ry}deg) rotateX(${rx}deg)`;
   function vMoneda() {
     const d = D.moneda || { abiertos: [], recientes: [] };
     const otros = ctx.jugadores.filter((j) => j.uuid !== ctx.me);
@@ -226,7 +282,7 @@
       otros.map((j) => `<button class="jg-who ${S.para === j.uuid ? 'on' : ''}" data-jg="para" data-v="${esc(j.uuid)}">${av(j.uuid, 'xl')}<em>${esc(j.n)}</em></button>`).join('');
     return `<section class="jg-g">
       <div class="jg-stage jg-mo">
-        <div class="jg-coin-w"><div class="jg-coin" data-coin>${carasHtml()}</div></div>
+        <div class="jg-coin-w"><div class="jg-sh" data-sh></div><div class="jg-coin" data-coin>${carasHtml()}</div></div>
         <p class="jg-msg ${S.mo.cls || ''}" data-msg>${esc(S.mo.msg)}</p>
       </div>
       <div class="jg-side">
@@ -234,7 +290,7 @@
         <span class="lab jg-gap">Tu lado</span>
         <div class="chips"><button class="chip ${S.lado === 'cara' ? 'on' : ''}" data-jg="lado" data-v="cara">Cara</button><button class="chip ${S.lado === 'cruz' ? 'on' : ''}" data-jg="lado" data-v="cruz">Cruz</button></div>
         <div class="jg-gap">${apuesta()}</div>
-        <button class="go" data-jg="retar" data-go>Retar por <span data-go-n>${N(S.stake)}</span></button>
+        <button class="go" data-jg="retar" data-go>Retar por <span data-go-n>${N(S.stake)}</span></button>${aviso()}
         ${ajenos.length ? `<span class="lab jg-sec">Abiertos</span>${ajenos.map((a) => fila('', av(a.creador), `${esc(nom(a.creador))}<em>${a.para ? 'te reta, ' : ''}va a ${esc(a.lado)}</em>`, `<b class="num">${N(a.stake)}</b>`, `<button class="jg-b" data-jg="aceptar" data-id="${a.id}">Aceptar</button>`)).join('')}` : ''}
         ${mios.length ? `<span class="lab jg-sec">Tus retos</span>${mios.map((a) => fila('', av(a.creador), `${a.para ? esc(nom(a.para)) : 'Cualquiera'}<em>${esc(a.lado)}</em>`, `<b class="num">${N(a.stake)}</b>`, `<button class="jg-b" data-jg="retirarReto" data-id="${a.id}">Retirar</button>`)).join('')}` : ''}
         ${d.recientes.length ? `<span class="lab jg-sec">Últimos</span>${d.recientes.slice(0, 6).map((a) => { const perd = a.ganador === a.creador ? a.rival : a.creador; return fila('', av(a.ganador), `${esc(nom(a.ganador))}<em>le gana${a.ganador === ctx.me ? 's' : ''} a ${esc(perd === ctx.me ? 'ti' : nom(perd))} · ${esc(a.salio)}</em>`, `<b class="num win">+${N(a.stake)}</b>`) }).join('')}` : ''}
@@ -245,12 +301,22 @@
     S.mo.msg = '';
     if (S.juego !== 'moneda' || !refs.coin || quieto()) { S.mo.lado = salio; S.mo.msg = msg; S.mo.cls = gane ? 'win' : 'lose'; if (yaBusy) libera(); return }
     if (!yaBusy) S.busy++;
-    const c = refs.coin, fin = salio === 'cara' ? 0 : 180, st = S.mo.lado === 'cara' ? 0 : 180, giros = 1800, fe = st + giros + (st === fin ? 0 : 180);
+    const c = refs.coin, fin = salio === 'cara' ? 0 : 180, st = S.mo.lado === 'cara' ? 0 : 180, fe = st + 360 * 6 + (st === fin ? 0 : 180), sh = root.querySelector('[data-sh]');
     const msgEl = root.querySelector('[data-msg]'); if (msgEl) { setT(msgEl, ''); msgEl.className = 'jg-msg' }
-    let a;
-    try { a = c.animate([{ transform: `translateY(0) rotateY(${st}deg)` }, { transform: `translateY(-70px) rotateY(${(st + fe) / 2}deg)`, offset: 0.45 }, { transform: `translateY(0) rotateY(${fe}deg)` }], { duration: 1700, easing: 'cubic-bezier(.3,.55,.3,1)', fill: 'forwards' }); await a.finished } catch {}
+    let a, b;
+    try {
+      a = c.animate([
+        { transform: moPose(st), easing: 'cubic-bezier(.15,.65,.35,1)' },
+        { transform: moPose(st + (fe - st) * 0.55, { y: -160, s: 1.2, z: 12, ry: -6 }), offset: 0.46, easing: 'cubic-bezier(.55,0,.9,.55)' },
+        { transform: moPose(fe - 10, { y: 0, s: 1, z: -2 }), offset: 0.8, easing: 'cubic-bezier(.2,.7,.3,1)' },
+        { transform: moPose(fe + 4, { y: -22, s: 1.02, z: 1 }), offset: 0.89, easing: 'cubic-bezier(.5,0,.9,.6)' },
+        { transform: moPose(fe) },
+      ], { duration: 2300, fill: 'forwards' });
+      if (sh) b = sh.animate([{ transform: 'scale(1)', opacity: 0.7 }, { transform: 'scale(.5)', opacity: 0.25, offset: 0.46 }, { transform: 'scale(1)', opacity: 0.7, offset: 0.8 }, { transform: 'scale(.9)', opacity: 0.6, offset: 0.89 }, { transform: 'scale(1)', opacity: 0.7 }], { duration: 2300 });
+      await a.finished;
+    } catch {}
     S.mo.lado = salio; S.mo.msg = msg; S.mo.cls = gane ? 'win' : 'lose';
-    c.style.transform = `rotateY(${fin}deg)`; try { a && a.cancel() } catch {}
+    c.style.transform = moPose(fin); try { a && a.cancel(); b && b.cancel() } catch {}
     const m2 = root && root.querySelector('[data-msg]'); if (m2) { setT(m2, msg); m2.className = 'jg-msg ' + (gane ? 'win' : 'lose') }
     libera();
   }
@@ -292,6 +358,7 @@
     return ahora() < ms(r.arranca) ? 'apuestas' : 'curso';
   }
   const crT = () => Math.max(0, (ahora() - ms(D.crash.ronda.arranca)) / 1000);
+  const clsP = (p) => (p >= 10 ? 'xx' : p >= 5 ? 'hi' : p >= 2 ? 'md' : 'lo');
   const crMia = () => (D.crash && D.crash.apuestas || []).find((a) => a.player === ctx.me);
   function vCrash() {
     const d = D.crash || { ronda: null, apuestas: [], historial: [] };
@@ -301,12 +368,13 @@
         <div class="jg-big num" data-mult>×1,00</div>
         <p class="jg-sub" data-sub></p>
         <canvas class="jg-cv" data-cv></canvas>
-        <div class="jg-hist">${d.historial.map((p) => `<span class="${p >= 10 ? 'xx' : p >= 2 ? 'hi' : 'lo'}">×${X(p)}</span>`).join('')}</div>
+        <div class="jg-hist">${(d.rondas ? d.rondas.map((x) => x.punto) : d.historial).map((p) => `<span class="${clsP(p)}">×${X(p)}</span>`).join('')}</div>
+        ${d.rondas && d.rondas.some((x) => x.gente.length) ? `<span class="lab jg-sec">Últimas rondas</span>${d.rondas.filter((x) => x.gente.length).slice(0, 6).map((x) => `<div class="jg-rr"><b class="num ${clsP(x.punto)}">×${X(x.punto)}</b><span>${x.gente.map((g) => `<span class="jg-rg">${av(g.player)}${g.estado === 'cobrada' ? `<em class="${g.pago > g.stake ? 'win' : ''}">×${X(g.retiro)} ${g.pago > g.stake ? '+' + N(g.pago - g.stake) : ''}</em>` : `<em class="lose">▼ ${N(g.stake)}</em>`}</span>`).join('')}</span></div>`).join('')}` : ''}
       </div>
       <div class="jg-side">
         ${apuesta()}
         <div class="jg-gap"><span class="lab">Retirar solo en</span><label class="jg-auto"><span>×</span><input data-auto inputmode="decimal" autocomplete="off" placeholder="sin límite" value="${esc(S.auto)}" aria-label="Retirada automática"></label></div>
-        <button class="go" data-jg="crGo" data-go>Apostar</button>
+        <button class="go" data-jg="crGo" data-go><span data-bl>Apostar</span><span class="jg-pay" data-bp></span></button>${aviso()}
         ${d.apuestas.length ? `<span class="lab jg-sec">En la ronda</span>${d.apuestas.map((a) => crFila(a, f)).join('')}` : ''}
       </div></section>`;
   }
@@ -320,16 +388,17 @@
   function crBoton() {
     const b = refs.go || (root && root.querySelector('[data-go]')); if (!b || S.juego !== 'crash' || !D.crash) return;
     const f = crFase(), mia = crMia();
-    let txt = `Apostar <span data-go-n>${N(S.stake)}</span>`, dis = false, cls = 'go';
-    if (f === 'apuestas' && mia) { txt = 'Dentro'; dis = true }
+    let lab = `Apostar ${N(S.stake)}`, pay = '', dis = false, cls = 'go';
+    if (f === 'apuestas' && mia) { lab = 'Dentro'; dis = true }
     else if (f === 'curso') {
-      if (mia && mia.estado === 'viva') { const m = crMult(crT()); txt = `Retirar ×${X(m)} <span class="jg-pay">${N(Math.floor(mia.stake * m))}</span>`; cls = 'go jg-out' }
-      else if (mia) { txt = mia.estado === 'cobrada' ? 'Retirado' : 'Perdida'; dis = true }
-      else { txt = 'En marcha'; dis = true }
+      if (mia && mia.estado === 'viva') { const m = crMult(crT()); lab = `Retirar ×${X(m)}`; pay = N(Math.floor(mia.stake * m)); cls = 'go jg-out' }
+      else if (mia) { lab = mia.estado === 'cobrada' ? 'Retirado' : 'Perdida'; dis = true }
+      else { lab = 'En marcha'; dis = true }
     }
+    // el boton es siempre el mismo nodo con los mismos hijos: solo cambia su texto, asi el clic (pulsar y soltar) nunca cae en un elemento que ya no existe
     if (b.className !== cls) b.className = cls;
-    if (b.dataset.t !== txt) { b.innerHTML = txt; b.dataset.t = txt; tr(b) }
-    b.disabled = dis;
+    setT(b.querySelector('[data-bl]'), lab); setT(b.querySelector('[data-bp]'), pay);
+    if (b.disabled !== dis) b.disabled = dis;
   }
   function crFrame(solo) {
     crRaf = 0;
@@ -558,8 +627,8 @@
       <div class="jg-side">
         ${curso ? `<span class="lab">En juego</span><div class="jg-pot num">${N(m.apostado)}${coin()}</div>
           <button class="go" data-jg="pedir" data-id="${m.id}">Pedir</button>
-          <div class="jg-two"><button class="go ghost" data-jg="plantar" data-id="${m.id}">Plantarse</button>${m.puede_doblar ? `<button class="go ghost" data-jg="doblar" data-id="${m.id}" ${S.saldo < m.stake ? 'disabled' : ''}>Doblar</button>` : ''}</div>`
-        : `${apuesta()}<button class="go" data-jg="repartir" data-go>${m ? 'Otra mano' : 'Repartir'} por <span data-go-n>${N(S.stake)}</span></button>`}
+          <div class="jg-two"><button class="go ghost" data-jg="plantar" data-id="${m.id}">Plantarse</button>${m.puede_doblar ? `<button class="go ghost" data-jg="doblar" data-id="${m.id}" ${S.saldo < m.stake || (S.bjRest != null && S.bjRest < m.stake) ? 'disabled' : ''}>Doblar</button>` : ''}</div>${bjLim()}${aviso()}`
+        : `${apuesta()}<button class="go" data-jg="repartir" data-go ${S.bjRest != null && S.bjRest <= 0 ? 'disabled' : ''}>${m ? 'Otra mano' : 'Repartir'} por <span data-go-n>${N(S.stake)}</span></button>${aviso()}`}
         <p class="jg-rule">Blackjack paga 3 a 2. La banca se planta en 17.</p>
       </div></section>`;
   }
@@ -593,9 +662,10 @@
   async function bjAccion(fn, args) {
     const r = await rpc(fn, args);
     D.blackjack = { mano: r.mano, saldo: r.saldo };
-    S.saldoPend = r.saldo;                                                       // el saldo se ve cuando acaban las cartas
+    S.saldoPend = r.saldo;                                                       // el saldo y lo que queda hoy se ven cuando acaban las cartas
+    S.bjRestPend = await bjLimite();
     sigs.v = null; pinta();
-    if (!S.busy) { S.saldo = S.saldoPend; S.saldoPend = null; if (ctx.refresh) ctx.refresh() }
+    if (!S.busy) { S.saldo = S.saldoPend; S.saldoPend = null; S.bjRest = S.bjRestPend; S.bjRestPend = undefined; pinta(); if (ctx.refresh) ctx.refresh() }
   }
   A.repartir = async () => {
     if (!stakeOk()) return;

@@ -119,11 +119,24 @@
     root.className = 'jg';
     root.addEventListener('click', onClick);
     root.addEventListener('input', onInput);
+    // La app repinta la pantalla (cada minuto y con cada pulso) y al hacerlo descuelga y vuelve a colgar este nodo: si eso pasa entre
+    // pulsar y soltar, el navegador pierde el "clic". Por eso los botones se activan con pulsar+soltar sobre el mismo boton (comparado por
+    // su clave, no por el nodo) y el clic nativo, que solo queda para el teclado, se ignora justo despues. Retirar del crash actua al pulsar.
     root.addEventListener('pointerdown', (e) => {
-      const b = e.target.closest && e.target.closest('[data-jg=crGo]');
-      if (!b || b.disabled || !b.classList.contains('jg-out') || (e.button || 0) !== 0) return;
-      S.pd = Date.now(); onClick({ type: 'pointerdown', target: b });
+      if ((e.button || 0) !== 0) return;
+      const b = e.target.closest && e.target.closest('[data-jg]');
+      if (!b || b.disabled) { S.dn = null; return }
+      if (b.dataset.jg === 'crGo' && b.classList.contains('jg-out')) { S.dn = null; S.pd = Date.now(); onClick({ type: 'pointerdown', target: b }); return }
+      S.dn = { k: llave(b), t: Date.now() };
     });
+    root.addEventListener('pointerup', (e) => {
+      const d = S.dn; S.dn = null;
+      if (!d || Date.now() - d.t > 4000) return;
+      const b = e.target.closest && e.target.closest('[data-jg]');
+      if (!b || b.disabled || llave(b) !== d.k) return;
+      S.pd = Date.now(); onClick({ type: 'pointerup', target: b });
+    });
+    root.addEventListener('pointercancel', () => { S.dn = null });
     root.addEventListener('focusout', (e) => {
       if (e.target.matches && e.target.matches('[data-in]')) e.target.value = N(S.stake || 0);
       if (pend) setTimeout(() => { if (pend && !S.busy) pinta() }, 60);
@@ -177,12 +190,13 @@
 
   /* ---------- eventos ---------- */
   const A = {};
+  const llave = (b) => `${b.dataset.jg}|${b.dataset.v || ''}|${b.dataset.id || ''}`;
   async function onClick(e) {
     const b = e.target.closest('[data-jg]');
     if (!b || !root.contains(b) || b.disabled) return;
     const a = A[b.dataset.jg];
     if (!a) return;
-    if (e.type === 'click' && S.pd && Date.now() - S.pd < 900 && b.dataset.jg === 'crGo') { S.pd = 0; return }      // ya se hizo al pulsar
+    if (e.type === 'click' && S.pd && Date.now() - S.pd < 900) { S.pd = 0; return }      // ya se hizo al pulsar y soltar
     if (S.ocupa && !a.libre) return;
     if (!a.libre) { S.ocupa = true; S.aviso = ''; setT(root.querySelector('[data-aviso]'), '') }
     try { await a(b.dataset, b) } catch (err) { falla(err) } finally { S.ocupa = false }
@@ -293,7 +307,7 @@
     try {
       a = c.animate([
         { transform: moPose(st), easing: 'cubic-bezier(.15,.65,.35,1)' },
-        { transform: moPose(st + (fe - st) * 0.55, { y: -190, s: 1.22, z: 12, ry: -6 }), offset: 0.46, easing: 'cubic-bezier(.55,0,.9,.55)' },
+        { transform: moPose(st + (fe - st) * 0.55, { y: -160, s: 1.2, z: 12, ry: -6 }), offset: 0.46, easing: 'cubic-bezier(.55,0,.9,.55)' },
         { transform: moPose(fe - 10, { y: 0, s: 1, z: -2 }), offset: 0.8, easing: 'cubic-bezier(.2,.7,.3,1)' },
         { transform: moPose(fe + 4, { y: -22, s: 1.02, z: 1 }), offset: 0.89, easing: 'cubic-bezier(.5,0,.9,.6)' },
         { transform: moPose(fe) },
