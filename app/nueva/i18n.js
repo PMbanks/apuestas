@@ -449,6 +449,8 @@
     [/, de momento: $/, ', so far: '], [/^Semana del (.+)$/, 'Week of $1'],
     // tarjeta en vivo nueva (30-10)
     [/^Mapa (\d+) de (\d+) · (.+)$/, 'Map $1 of $2 · $3'], [/^Mapa (\d+) de (\d+)$/, 'Map $1 of $2'], [/^(\d+) en vivo$/, '$1 live'],
+    // prediccion de ronda en la celebracion y en Resultados: 'Ronda 18 de Split · Nova Esports' (30-10 noche)
+    [/^Ronda (\d+) de (.+?) · (.+)$/, 'Round $1 on $2 · $3'],
     // decimales con punto en ingles (x1,25 a x1.25): esta va la ultima de la lista
     [/×(\d+),(\d\d)/g, '×$1.$2'],
   ];

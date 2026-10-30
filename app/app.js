@@ -697,7 +697,8 @@ function avisos() {
     for (const b of ALL.filter((x) => x.k === MEK)) {
       const was = SNAP.bets.get(b.id); if (!was || was === b.st || was !== 'open' || b.cash) continue;
       const m = byId(b.m); if (!m) continue;
-      if (b.st === 'won') { confeti(); avisa('¡Has ganado ' + N(b.pay) + '!', `${pn(m, b.p)} · ${m.a} ${m.score || ''} ${m.b}`); toast(`¡Ganada! <b>+${N(b.pay)}</b> con ${esc(pn(m, b.p))}`) }
+      // la celebracion (tarjeta, confeti y sonido) la pone ganado.js; aqui solo el aviso del sistema, con la misma etiqueta que el suyo
+      if (b.st === 'won') avisa('¡Has ganado ' + N(b.pay) + '!', `${pn(m, b.p)} · ${m.a} ${m.score || ''} ${m.b}`);
       else if (b.st === 'lost') avisa('Apuesta perdida', `${pn(m, b.p)} · ${m.a} ${m.score || ''} ${m.b}`);
     }
     for (const c of CH) {
@@ -1181,8 +1182,9 @@ function liga() {
   return `<div class="lc">
     <header class="lc-h"><span class="lab">Temporada · desde el ${esc(SEASON ? fmt(SEASON + 'T12:00:00Z', { day: 'numeric', month: 'short' }) : '')} · ${F.length} jugadores</span><h2 class="wk"><small>SEMANA</small>${String(nWeeks).padStart(2, '0')}</h2>
       <p class="l-pay">Paga de <b>+${N(WEEKLY)}</b> a cada uno en ${CD(PAY)}</p>${CAMPEON ? `<p class="l-rey">${av(CAMPEON.k, 'sm')}<b>${esc(fr(CAMPEON.k).n)}</b> es el campeón de ${esc(CAMPEON.mes)} (▲ ${N(CAMPEON.v)}) y lleva la corona todo el mes</p>` : ''}</header>
-    <div class="podium">${order.map((i) => { const f = rank[i]; return `<div class="pd ${f.me ? 'me' : ''}" data-prof="${f.id}" style="cursor:pointer">${av(f.id, 'xl')}<span class="nm">${esc(f.n)}</span><b class="num">${N(f.s)}${coin()}</b>${net(f)}
+    <div class="podium" style="--pdn:${rank.length}">${order.map((i) => { const f = rank[i]; return `<div class="pd ${f.me ? 'me' : ''} ${i >= 3 ? 'rest' : ''}" data-prof="${f.id}" style="cursor:pointer">${av(f.id, 'xl')}<span class="nm">${esc(f.n)}</span><b class="num">${N(f.s)}${coin()}</b>${net(f)}
       <span class="bar" style="height:${Math.max(6, Math.round((f.s / mx) * 180))}px;background:var(--f-${f.id})"></span><span class="ps">${i + 1}${en() ? ['st', 'nd', 'rd'][i] || 'th' : 'º'}</span></div>` }).join('')}</div>
+    ${rank.length > 3 ? `<div class="pd-rest">${rank.slice(3).map((f, j) => `<button class="pr-r ${f.me ? 'me' : ''}" data-prof="${f.id}"><span class="pr-p">${j + 4}${en() ? 'th' : 'º'}</span>${av(f.id)}<span class="pr-n">${esc(f.n)}</span><span class="pr-v"><b class="num">${N(f.s)}${coin()}</b>${net(f)}</span></button>`).join('')}</div>` : ''}
     <p class="gap" data-notr>${en() ? `${gapUp > 0 ? `You need <b>${N(gapUp)}</b> to catch ${esc(rank[meI - 1].n)}` : meI > 0 ? `Level with ${esc(rank[meI - 1].n)}` : 'You are first'}${gapDn > 0 ? ` · you lead ${esc(rank[meI + 1].n)} by <b>${N(gapDn)}</b>` : ''}`
       : `${gapUp > 0 ? `Te faltan <b>${N(gapUp)}</b> para alcanzar a ${esc(rank[meI - 1].n)}` : meI > 0 ? `Empatado con ${esc(rank[meI - 1].n)}` : 'Vas primero'}${gapDn > 0 ? ` · le sacas <b>${N(gapDn)}</b> a ${esc(rank[meI + 1].n)}` : ''}`}</p>
     ${boteHtml()}

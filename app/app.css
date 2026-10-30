@@ -2181,3 +2181,26 @@ html[data-moneda="robux"] .cn{background-image:url(img/monedas/robux.svg)}
 /* la cabecera cabe con el engranaje: si falta sitio, lo que encoge es la linea de la paga */
 .top .pay{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .top h1,.top .bal,.top .aj-btn{flex-shrink:0}
+/* Liga (30-10 noche). PM: "el logo del dinero en league es demasiado pequeño; que siempre este a la derecha del total, no debajo;
+   si no cabe, hazlo diferente". Numero y logo siempre en una linea; con muchos jugadores el numero encoge para caber.
+   Donde no caben todas las columnas (1300 px o menos), podio de 3 y el resto en lista con el total y el logo a la derecha. */
+.pd .num{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;font-size:clamp(20px,calc(210px / var(--pdn,3)),30px)}
+.pd .num .cn{--s:.86em;margin-left:.22em}
+.pd .net .cn,.pr-r .net .cn{--s:1.2em;margin-left:.25em;vertical-align:-.25em}
+.pd-rest{display:none}
+@media (max-width:1300px){
+  .podium .pd.rest{display:none}
+  .podium .pd .num{font-size:30px}
+  .pd-rest{display:grid;max-width:640px;margin:26px auto 0;border-top:1px solid var(--hair)}
+  .pr-r{display:grid;grid-template-columns:40px 36px minmax(0,1fr) auto;align-items:center;gap:14px;padding:13px 4px;border-bottom:1px solid var(--hair);text-align:left}
+  .pr-p{font:800 20px/1 var(--disp);letter-spacing:-.03em;color:var(--mute)}
+  .pr-n{min-width:0;overflow:hidden;font:600 15px var(--sans);text-overflow:ellipsis;white-space:nowrap}
+  .pr-r.me .pr-n{color:var(--acc)}
+  .pr-v{display:grid;justify-items:end;gap:5px}
+  .pr-v .num{display:inline-flex;align-items:center;white-space:nowrap;font:500 24px/1 var(--mono);letter-spacing:-.04em}
+  .pr-v .num .cn{--s:.9em;margin-left:.25em}
+}
+@media (max-width:860px){.podium{grid-auto-columns:minmax(0,1fr);gap:14px}.podium .pd .num{font-size:24px}.pr-r{gap:12px;padding:12px 2px}.pr-v .num{font-size:21px}}
+/* movil estrecho: que el engranaje quepa siempre a la derecha del saldo */
+@media (max-width:440px){.top{gap:7px;padding:0 12px}.top .bal{font-size:20px}.top .bal .cn{--s:20px;margin-left:5px}.top .aj-btn{margin-left:0;width:30px;height:30px}.top .aj-btn svg{width:19px;height:19px}}
+@media (max-width:380px){.top .onl{display:none}}
