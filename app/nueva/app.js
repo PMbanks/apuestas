@@ -13,7 +13,7 @@ let NOW = Date.now(), PAY = 0, WEEK0 = 0;
 let ME = null, MEK = 'pm', VIS = 'open', WEEKLY = 1000, SEASON = '';
 let F = [], M = [], MI = new Map(), L = {}, ALL = [], LEDGER = [], CHAT = [], AW = [], H2H = {};
 let CH = [], DAILY = [], DAILY_ON = false, DAILY_BONUS = 1.25;
-let S = { scr: 'partidos', f: 'all', lg: 'top', sel: null, stake: 200, foc: null, sheet: false, bf: 'all', pf: 'pm', prof: 'pm', prev: 'colegas', calc: 0, reto: null, sure: null };
+let S = { side: null, scr: 'partidos', f: 'all', lg: 'top', sel: null, stake: 200, foc: null, sheet: false, bf: 'all', pf: 'pm', prof: 'pm', prev: 'colegas', calc: 0, reto: null, sure: null };
 try { S.calc = +localStorage.getItem('apuestas-calc') || 0 } catch {}
 let loaded = false;
 
@@ -72,7 +72,7 @@ function build(st, rows, chat, ex) {
     id: r.id, s: r.sport, lg: r.league, a: r.home, b: r.away, la: r.home_logo, lb: r.away_logo, at: r.starts_at,
     o: [r.odds_1, r.odds_x, r.odds_2].map((x) => (x == null ? null : Number(x))), status: r.status, live: r.status === 'live',
     score: r.score, winner: r.winner, tag: r.tag, venue: r.venue, stage: r.stage, bo: r.bo, tape: r.details?.tape || [], src: r.odds_src,
-    tv: r.details?.tv || [], espn: r.details?.espn || null,
+    tv: r.details?.tv || [], espn: r.details?.espn || null, players: r.details?.players || null, recent: r.details?.recent || null,
   }));
   MI = new Map(M.map((m) => [m.id, m]));
   L = {}; for (const r of rows) if (!L[r.league]) L[r.league] = [r.league_name, r.league_logo || SP[r.sport][1]];
@@ -160,9 +160,13 @@ const stakeNow = () => Math.max(0, Math.min(S.stake, me().s));
 const chips = () => [50, 100, 250, 500, 'all'].map((v) => { const on = v === 'all' ? S.stake >= me().s : S.stake === v; return `<button class="chip ${on ? 'on' : ''}" data-stake="${v}">${v === 'all' ? 'Todo' : N(v)}</button>` }).join('');
 const filt = () => { const b = board().filter(inLeague), cnt = (k) => b.filter((m) => k === 'all' || m.s === k).length;
   return [['all', 'Todo', null], ['f', ...SP.f], ['v', ...SP.v], ['u', ...SP.u]].map(([k, n, im]) => `<button class="f ${S.f === k ? 'on' : ''}" data-f="${k}">${im ? `<img src="${im}" alt="">` : ''}${n}<i>${cnt(k)}</i></button>`).join('') };
+const IC_TOP = '<svg viewBox="0 0 24 24"><path d="M12 3.2l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.5l6-.8z"/></svg>';
+const IC_ALL = '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></svg>';
+// PM, 30-10: "los menus de champions league, europa... no me gusta nada": una fila de escudos, el elegido con su nombre encendido
 const leagues = () => { const c = {}; for (const m of board()) if (S.f === 'all' || m.s === S.f) c[m.lg] = (c[m.lg] || 0) + 1;
   const ks = Object.keys(c).sort((a, b) => (TOP.has(b) - TOP.has(a)) || c[b] - c[a]);
-  return `<nav class="lgs"><button class="chip ${S.lg === 'top' ? 'on' : ''}" data-lg="top">Principales</button><button class="chip ${S.lg === 'all' ? 'on' : ''}" data-lg="all">Todas</button>${ks.map((k) => `<button class="chip ${S.lg === k ? 'on' : ''}" data-lg="${esc(k)}">${esc(L[k]?.[0] || k)} <i>${c[k]}</i></button>`).join('')}</nav>` };
+  const it = (k, n, ico, cnt) => `<button class="lgc ${S.lg === k ? 'on' : ''}" data-lg="${esc(k)}" title="${esc(n)}${cnt != null ? ' · ' + cnt : ''}"><span class="lgc-i">${ico}${cnt != null ? `<i>${cnt}</i>` : ''}</span><span class="lgc-n">${esc(n)}</span></button>`;
+  return `<nav class="lgs2">${it('top', 'Principales', IC_TOP, null)}${it('all', 'Todas', IC_ALL, null)}${ks.map((k) => it(k, L[k]?.[0] || k, `<img class="tl" src="${esc(L[k]?.[1])}" alt="" loading="lazy">`, c[k])).join('')}</nav>` };
 const betRow = (b) => {
   const m = byId(b.m); if (!m) return '';
   const st = b.st === 'open' ? (m.live ? 'live' : 'pend') : b.st;
@@ -216,6 +220,12 @@ function espnHtml(m, d) {
     const rows = STATS.map(([k, n, u]) => [n, val(tA, k), val(tB, k), u]).filter((r) => r[1] != null && r[2] != null);
     if (rows.length) h += `<div class="sts">${rows.map(([n, a, b, u]) => { const t = a + b || 1; return `<div class="st2"><span>${a}${u || ''}</span><span class="k">${n}</span><span>${b}${u || ''}</span><i class="bar"><b style="width:${(a / t) * 100}%"></b><b style="width:${(b / t) * 100}%"></b></i></div>` }).join('')}</div>`;
   }
+  // alineaciones (ESPN las publica cerca del partido)
+  const ro = (d?.rosters || []).filter((r) => (r.roster || []).some((x) => x.starter));
+  if (ro.length === 2) {
+    const col = (r) => { const xi = r.roster.filter((x) => x.starter); return `<div class="xi"><span class="lab">${esc(r.team?.displayName || '')}${r.formation ? ' · ' + esc(r.formation) : ''}</span>${xi.map((x) => `<span class="xp"><b>${esc(x.jersey || '')}</b>${esc(x.athlete?.displayName || '')}<i>${esc(x.position?.abbreviation || '')}</i></span>`).join('')}</div>` };
+    h += `<div class="alin"><span class="lab">Alineaciones</span><div class="alin2">${col(ro[0])}${col(ro[1])}</div></div>`;
+  } else if (!m.live && m.s === 'f') h += `<p class="hint">Las alineaciones salen cuando los equipos las dan, sobre una hora antes.</p>`;
   // ultimos 5 de cada uno
   const l5 = d?.lastFiveGames;
   if (Array.isArray(l5) && l5.length) {
@@ -244,6 +254,76 @@ async function fillEspn() {
   const d = await espnData(m);
   const now = document.getElementById('espn-box'); if (!now || now.dataset.m !== m.id) return;
   now.innerHTML = d ? espnHtml(m, d) : tvHtml(m.tv || []);
+  if (window.GM_LANG) GM_LANG.traduce(now);
+}
+
+/* ficha de un equipo o un luchador: ESPN (futbol y UFC) desde la app; Valorant con lo que guarda el sincronizador */
+const SHEETS = new Map();
+async function sheetData(m, side) {
+  const k = m.id + side, c = SHEETS.get(k);
+  if (c && Date.now() - c.t < 6e5) return c.d;
+  const id = m.espn?.ids?.[side];
+  let d = null;
+  try {
+    if (m.s === 'f' && id) {
+      const base = `https://site.api.espn.com/apis/site/v2/sports/soccer/${m.espn.league}/teams/${id}`;
+      const [sc, ro] = await Promise.all([fetch(base + '/schedule').then((r) => r.json()), fetch(base + '/roster').then((r) => r.json()).catch(() => null)]);
+      d = { sc, ro };
+    } else if (m.s === 'u' && id) {
+      d = { at: await fetch(`https://site.web.api.espn.com/apis/common/v3/sports/mma/ufc/athletes/${id}`).then((r) => r.json()) };
+    }
+  } catch { d = null }
+  SHEETS.set(k, { t: Date.now(), d });
+  return d;
+}
+const dmy = (t) => `${DD(t)} ${MO(t)}`;
+const res = (r) => `<b class="rs ${r === 'W' ? 'g' : r === 'D' ? 'e' : 'p'}">${r === 'W' ? 'G' : r === 'D' ? 'E' : 'P'}</b>`;
+function sheetFutbol(m, side, d) {
+  const id = String(m.espn.ids[side]);
+  const evs = (d.sc?.events || []).map((e) => { const c = e.competitions?.[0] || {}; const yo = (c.competitors || []).find((x) => String(x.team?.id) === id), el = (c.competitors || []).find((x) => String(x.team?.id) !== id);
+    const sc = (x) => x?.score?.displayValue ?? x?.score ?? ''; const hecho = c.status?.type?.completed;
+    const r = hecho ? (yo?.winner ? 'W' : el?.winner ? 'L' : 'D') : null;
+    return { at: Date.parse(e.date), hecho, r, rival: el?.team?.displayName || el?.team?.shortDisplayName || '', logo: el?.team?.logos?.[0]?.href || el?.team?.logo || null, casa: yo?.homeAway === 'home', marca: hecho ? `${sc(yo)}:${sc(el)}` : '' } });
+  const jugados = evs.filter((e) => e.hecho).sort((a, b) => b.at - a.at).slice(0, 8), proximos = evs.filter((e) => !e.hecho).sort((a, b) => a.at - b.at).slice(0, 4);
+  const fila = (e) => `<div class="shr">${img(e.logo, 'tl')}<span class="nm">${e.casa ? '' : '@ '}${esc(e.rival)}</span><span class="dt">${dmy(e.at)}</span>${e.hecho ? `<span class="mk">${esc(e.marca)}</span>${res(e.r)}` : `<span class="mk">${HM(e.at)}</span>`}</div>`;
+  let h = jugados.length ? `<div class="shs"><span class="lab">Forma</span><span class="fm big">${jugados.slice(0, 5).reverse().map((e) => res(e.r)).join('')}</span></div><div class="shs"><span class="lab">Últimos partidos</span>${jugados.map(fila).join('')}</div>` : '';
+  if (proximos.length) h += `<div class="shs"><span class="lab">Próximos</span>${proximos.map(fila).join('')}</div>`;
+  const at = d.ro?.athletes || [];
+  if (at.length) {
+    const g = { G: 'Porteros', D: 'Defensas', M: 'Centrocampistas', F: 'Delanteros' };
+    h += `<div class="shs"><span class="lab">Plantilla</span><div class="sq">${Object.entries(g).map(([k, n]) => { const x = at.filter((a) => (a.position?.abbreviation || '')[0] === k); return x.length ? `<div><small>${n}</small>${x.map((a) => `<span><b>${esc(a.jersey || '')}</b>${esc(a.displayName)}</span>`).join('')}</div>` : '' }).join('')}</div></div>`;
+  }
+  return h || '<p class="hint">ESPN no tiene más datos de este equipo.</p>';
+}
+function sheetUfc(m, side, d) {
+  const a = d.at?.athlete; if (!a) return '<p class="hint">ESPN no tiene la ficha de este luchador.</p>';
+  const st = Object.fromEntries((a.statsSummary?.statistics || []).map((x) => [x.abbreviation, x.displayValue]));
+  const bio = [['Récord', st['W-L-D']], ['KO / TKO', st['(T)KO']], ['Sumisiones', st.SUB], ['Edad', a.age], ['Altura', a.displayHeight], ['Peso', a.displayWeight], ['Alcance', a.displayReach], ['Guardia', a.stance?.text], ['País', a.flag?.alt || a.citizenship], ['Gimnasio', a.association?.name], ['Categoría', a.weightClass?.text], ['Apodo', a.nickname]].filter((x) => x[1]);
+  const peleas = Object.values(d.at.eventsMap || {}).filter((e) => e.gameResult).sort((x, y) => Date.parse(y.gameDate) - Date.parse(x.gameDate)).slice(0, 8);
+  return `<div class="bio">${bio.map(([k, v]) => `<div><span class="lab">${k}</span><b>${esc(String(v).replace(/-/g, '·'))}</b></div>`).join('')}</div>
+    ${peleas.length ? `<div class="shs"><span class="lab">Últimas peleas</span>${peleas.map((e) => `<div class="shr"><span class="nm">${esc(e.opponent?.displayName || '')}</span><span class="dt">${esc(e.shortName || '')} · ${dmy(Date.parse(e.gameDate))}</span>${res(e.gameResult === 'W' ? 'W' : e.gameResult === 'D' ? 'D' : 'L')}</div>`).join('')}</div>` : ''}`;
+}
+function sheetValorant(m, side) {
+  const pl = m.players?.[side] || [], rc = m.recent?.[side] || [];
+  let h = '';
+  if (pl.length) h += `<div class="shs"><span class="lab">Jugadores</span><div class="pls">${pl.map((x) => `<div class="pl">${x.img ? `<img class="face" src="${esc(x.img)}" alt="" loading="lazy">` : `<span class="pl-i">${esc((x.n || '?').slice(0, 2).toUpperCase())}</span>`}<b>${esc(x.n)}</b><span>${esc([x.nombre, x.nat].filter(Boolean).join(' · '))}</span></div>`).join('')}</div></div>`;
+  if (rc.length) h += `<div class="shs"><span class="lab">Últimos resultados</span>${rc.map((e) => `<div class="shr">${img(e.logo, 'tl')}<span class="nm">${esc(e.vs)}</span><span class="dt">${e.at ? dmy(Date.parse(e.at)) : ''}${e.t ? ' · ' + esc(e.t) : ''}</span><span class="mk">${esc(e.score)}</span>${res(e.won ? 'W' : 'L')}</div>`).join('')}</div>`;
+  return h || '<p class="hint">PandaScore todavía no tiene datos de este equipo.</p>';
+}
+function sheet(m, side) {
+  const nm = side === 'a' ? m.a : m.b;
+  return `<section class="det sheet ${S.sheet ? 'open' : ''}" data-keep="dt">
+    <button class="det-x vis" data-act="sheet-back">← ${esc(m.a)} vs ${esc(m.b)}</button>
+    <div class="sh-hd">${logo(m, side)}<div><h2>${esc(nm)}</h2><span class="lab">${esc(L[m.lg][0])}${m.stage ? ' · ' + esc(m.stage) : ''}</span></div></div>
+    <div id="sheet-box" data-m="${m.id}" data-side="${side}">${m.s === 'v' ? sheetValorant(m, side) : '<p class="hint">Cargando la ficha…</p>'}</div>
+  </section>`;
+}
+async function fillSheet() {
+  const box = document.getElementById('sheet-box'); if (!box) return;
+  const m = byId(box.dataset.m), side = box.dataset.side; if (!m || m.s === 'v') return;
+  const d = await sheetData(m, side);
+  const now = document.getElementById('sheet-box'); if (!now || now.dataset.m !== m.id || now.dataset.side !== side) return;
+  now.innerHTML = !d ? '<p class="hint">No se ha podido cargar la ficha.</p>' : m.s === 'f' ? sheetFutbol(m, side, d) : sheetUfc(m, side, d);
   if (window.GM_LANG) GM_LANG.traduce(now);
 }
 
@@ -380,6 +460,7 @@ function partidos() {
   return h + `</section>${byId(S.foc) ? ficha(byId(S.foc)) : '<section class="det"></section>'}</div>`;
 }
 function ficha(m) {
+  if (S.side) return sheet(m, S.side);
   const open = isOpen(m), ps = picksOf(m).filter((p) => po(m, p) != null);
   const imp = ps.map((p) => 1 / po(m, p)), sum = imp.reduce((a, b) => a + b, 0) || 1, pct = imp.map((x) => Math.round((x / sum) * 100));
   const sel = S.sel && S.sel.m === m.id;
@@ -388,7 +469,7 @@ function ficha(m) {
     <button class="det-x" data-act="close">← Partidos</button>
     <div class="d-meta"><img src="${esc(L[m.lg][1])}" alt="">${esc(L[m.lg][0])}${m.stage ? ' · ' + esc(m.stage) : ''}</div>
     <div class="d-cd">${m.live ? `En vivo · ${esc(m.score || '')}` : `${WD(m.at)} ${DD(m.at)} ${MO(m.at)} · ${HM(m.at)} · empieza en ${CD(m.at)}`}${m.venue ? ' · ' + esc(m.venue) : ''}</div>
-    <div class="d-vs"><div>${logo(m, 'a')}<h3>${esc(m.a)}</h3></div><span class="x">vs</span><div>${logo(m, 'b')}<h3>${esc(m.b)}</h3></div></div>
+    <div class="d-vs"><button class="d-side" data-side="a" title="Ver ficha">${logo(m, 'a')}<h3>${esc(m.a)}</h3><small>Ver ficha</small></button><span class="x">vs</span><button class="d-side" data-side="b" title="Ver ficha">${logo(m, 'b')}<h3>${esc(m.b)}</h3><small>Ver ficha</small></button></div>
     ${m.tag ? `<div class="d-tag">${esc(m.tag)}</div>` : ''}
     ${isDaily(m) ? `<div class="d-daily">${STAR}Apuesta del día${DAILY_ON ? ` · si aciertas cobras ×${O(DAILY_BONUS)}` : ' · el extra lo enciende PM'}</div>` : ''}
     ${m.tape.length ? `<div class="tape">${m.tape.map(([a, k, b]) => `<div class="tp"><span>${cell(a)}</span><span class="k">${esc(k)}</span><span>${cell(b)}</span></div>`).join('')}</div>` : ''}
@@ -743,7 +824,7 @@ function render() {
   vw.innerHTML = R[S.scr](); vw.dataset.scr = S.scr;
   if (cambia) { vw.classList.remove('entra'); void vw.offsetWidth; vw.classList.add('entra') }
   cuentaSaldo();
-  if (S.scr === 'partidos') fillEspn();
+  if (S.scr === 'partidos') { fillEspn(); fillSheet() }
   document.querySelectorAll('[data-keep]').forEach((e) => { if (keep[e.dataset.keep]) e.scrollTop = keep[e.dataset.keep] });
   if (window.GM_LANG) GM_LANG.traduce(document.getElementById('app'));
   document.querySelectorAll('[data-chat]').forEach((e) => { e.scrollTop = e.scrollHeight; e.querySelectorAll('img').forEach((i) => i.addEventListener('load', () => (e.scrollTop = e.scrollHeight), { once: true })) });
@@ -808,8 +889,10 @@ async function savePerfil(k, v) {
 }
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lang]'); if (!b || !window.GM_LANG) return; GM_LANG.set(b.dataset.lang); location.reload(); }, true);
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
+  const t = e.target.closest('[data-side],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
   const d = t.dataset;
+  if (d.side && t.matches('[data-side]')) { S.side = d.side; document.querySelector('.det')?.scrollTo?.(0, 0); return render() }
+  if (d.act === 'sheet-back') { S.side = null; return render() }
   if (d.cancel) {
     e.stopPropagation();
     if (S.sure !== 'b' + d.cancel) { S.sure = 'b' + d.cancel; render(); setTimeout(() => { if (S.sure === 'b' + d.cancel) { S.sure = null; render() } }, 3500); return }
@@ -840,7 +923,7 @@ document.addEventListener('click', async (e) => {
   else if (d.pf) S.pf = d.pf;
   else if (d.prof) { if (S.scr !== 'perfil') S.prev = S.scr; S.prof = d.prof; S.scr = 'perfil'; S.sheet = false; document.getElementById('view').scrollTop = 0 }
   else if (d.goto) { S.scr = 'partidos'; S.foc = d.goto; S.sheet = true; document.getElementById('view').scrollTop = 0 }
-  else if (d.pick) { const [m, p] = d.pick.split('|'); S.sel = isSel(byId(m), p) ? null : { m, p }; if (S.foc !== m) { S.foc = m; S.sheet = true } }
+  else if (d.pick) { S.side = null; const [m, p] = d.pick.split('|'); S.sel = isSel(byId(m), p) ? null : { m, p }; if (S.foc !== m) { S.foc = m; S.sheet = true } }
   else if (d.stake) { S.stake = d.stake === 'all' ? me().s : +d.stake; return updStake() }
   else if (d.act === 'bet') return placeBet();
   else if (d.act === 'send') return sendMsg();
@@ -858,7 +941,7 @@ document.addEventListener('click', async (e) => {
   }
   else if (d.act === 'close') S.sheet = false;
   else if (d.act === 'back') S.scr = S.prev || 'colegas';
-  else if (d.foc) { if (S.foc !== d.foc) S.reto = null; S.foc = d.foc; S.sheet = true }
+  else if (d.foc) { if (S.foc !== d.foc) { S.reto = null; S.side = null } S.foc = d.foc; S.sheet = true }
   render();
 });
 document.addEventListener('input', (e) => { if (!e.target.matches('[data-in]')) return; S.stake = Math.max(0, Math.round(+e.target.value || 0)); updStake() });

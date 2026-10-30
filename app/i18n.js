@@ -150,7 +150,7 @@
       for (const a of ['placeholder', 'title', 'aria-label']) { const v = e.getAttribute(a); if (v) { const x = tr(v); if (x !== v) e.setAttribute(a, x); } }
     }
     // la forma: G E P en español, W D L en inglés
-    for (const b of root.querySelectorAll('.fm b')) b.textContent = { G: 'W', E: 'D', P: 'L' }[b.textContent] || b.textContent;
+    for (const b of root.querySelectorAll('.fm b, b.rs')) b.textContent = { G: 'W', E: 'D', P: 'L' }[b.textContent] || b.textContent;
   }
   document.documentElement.lang = lang;
   window.GM_LANG = { get: () => lang, set: (l) => { lang = l === 'en' ? 'en' : 'es'; try { localStorage.setItem('gm-lang', lang); } catch (e) {} document.documentElement.lang = lang; }, traduce };

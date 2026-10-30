@@ -27,7 +27,7 @@
     'Retar a un colega en este partido': 'Challenge a friend on this match', 'Cerrar': 'Close', 'Elige colega y resultado.': 'Pick a friend and a result.',
     'Reto 1 contra 1 · el que acierte se lleva lo de los dos': '1 vs 1 challenge · whoever is right takes both stakes',
     'Dónde verlo': 'Where to watch', 'En inglés': 'In English', 'En español': 'In Spanish', 'sin datos': 'no data',
-    'Últimos 5': 'Last 5', 'Clasificación': 'Standings', 'Posesión': 'Possession', 'Tiros': 'Shots', 'A puerta': 'On target', 'Córners': 'Corners',
+    'Últimos 5': 'Last 5', 'Ver ficha': 'View profile', 'Alineaciones': 'Line-ups', 'Las alineaciones salen cuando los equipos las dan, sobre una hora antes.': 'Line-ups show once the teams announce them, about an hour before.', 'Últimos partidos': 'Last matches', 'Próximos': 'Next', 'Plantilla': 'Squad', 'Porteros': 'Goalkeepers', 'Defensas': 'Defenders', 'Centrocampistas': 'Midfielders', 'Delanteros': 'Forwards', 'Sumisiones': 'Submissions', 'Edad': 'Age', 'Altura': 'Height', 'Peso': 'Weight', 'Alcance': 'Reach', 'Guardia': 'Stance', 'País': 'Country', 'Gimnasio': 'Gym', 'Categoría': 'Division', 'Apodo': 'Nickname', 'Últimas peleas': 'Last fights', 'Jugadores': 'Players', 'Últimos resultados': 'Last results', 'Cargando la ficha…': 'Loading the profile…', 'No se ha podido cargar la ficha.': 'Could not load the profile.', 'ESPN no tiene más datos de este equipo.': 'ESPN has no more data on this team.', 'ESPN no tiene la ficha de este luchador.': 'ESPN has no profile for this fighter.', 'PandaScore todavía no tiene datos de este equipo.': 'PandaScore has no data on this team yet.', 'Clasificación': 'Standings', 'Posesión': 'Possession', 'Tiros': 'Shots', 'A puerta': 'On target', 'Córners': 'Corners',
     'Faltas': 'Fouls', 'Amarillas': 'Yellow cards', 'Rojas': 'Red cards', 'Fueras de juego': 'Offsides', 'Forma': 'Form', 'G · E · P': 'W · D · L',
     'Récord': 'Record', 'Formato': 'Format', 'Cargando datos de ESPN…': 'Loading ESPN data…', 'Apuesta del día': 'Bet of the day',
     '← Partidos': '← Matches', '← Volver': '← Back', 'Cartelera principal': 'Main card', 'Combate estelar': 'Main event', 'Internacional': 'International',
@@ -124,7 +124,7 @@
     [/^Cada lunes a las 00:00 entran ([\d.]+) a cada uno\. No se compran ni se ganan de otra forma\.$/, 'Every Monday at 00:00 each of you gets $1. They cannot be bought or earned any other way.'],
     [/^Cierra al empezar el partido\. Las elecciones de todos se ven siempre\.$/, 'Betting closes at kick-off. Everyone\'s picks are always visible.'],
     [/^Cierra al empezar el partido\. Las elecciones de todos se ven al empezar\.$/, 'Betting closes at kick-off. Everyone\'s picks show at kick-off.'],
-    [/^Gana (\d) con/, 'Win $1 with'], [/^(\d+) apuestas · toca una para ver el partido\.$/, '$1 bets · tap one to open the match.'],
+    [/^Gana (\d) con/, 'Win $1 with'], [/^← (.+) vs (.+)$/, '← $1 vs $2'], [/^(\d+) apuestas · toca una para ver el partido\.$/, '$1 bets · tap one to open the match.'],
   ];
   const tr = (s) => {
     const t = s.trim();
@@ -150,7 +150,7 @@
       for (const a of ['placeholder', 'title', 'aria-label']) { const v = e.getAttribute(a); if (v) { const x = tr(v); if (x !== v) e.setAttribute(a, x); } }
     }
     // la forma: G E P en español, W D L en inglés
-    for (const b of root.querySelectorAll('.fm b')) b.textContent = { G: 'W', E: 'D', P: 'L' }[b.textContent] || b.textContent;
+    for (const b of root.querySelectorAll('.fm b, b.rs')) b.textContent = { G: 'W', E: 'D', P: 'L' }[b.textContent] || b.textContent;
   }
   document.documentElement.lang = lang;
   window.GM_LANG = { get: () => lang, set: (l) => { lang = l === 'en' ? 'en' : 'es'; try { localStorage.setItem('gm-lang', lang); } catch (e) {} document.documentElement.lang = lang; }, traduce };

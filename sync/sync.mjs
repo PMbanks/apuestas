@@ -143,11 +143,11 @@ async function ufc() {
         stage: [c.type?.abbreviation, e.shortName || e.name].filter(Boolean).join(' · '),
         tag: i === comps.length - 1 ? 'Combate estelar' : i >= comps.length - 5 ? 'Cartelera principal' : null,
         venue: c.venue?.fullName || e.venues?.[0]?.fullName || null,
-        home: x.athlete.displayName, away: y.athlete.displayName, home_logo: face(x.athlete), away_logo: face(y.athlete),
+        home: x.athlete.displayName, away: y.athlete.displayName, home_logo: face(x), away_logo: face(y),
         starts_at: new Date(Date.parse(c.date || e.date)).toISOString(), status,
         score: done ? (c.status?.result?.shortDisplayName || st.shortDetail || null) : null,
         winner: status === 'final' ? (x.winner ? '1' : '2') : null,
-        details: { espn: { sport: 'mma', league: 'ufc', event: e.id, ids: { a: x.athlete.id, b: y.athlete.id } }, tv: tvEspn(c).length ? tvEspn(c) : tvEspn(e.competitions?.[comps.length - 1] || {}), tape: [[x.records?.[0]?.summary?.replace(/-/g, '·') || '', 'Récord', y.records?.[0]?.summary?.replace(/-/g, '·') || '']].filter((r) => r[0] || r[2]) },
+        details: { espn: { sport: 'mma', league: 'ufc', event: e.id, ids: { a: x.id, b: y.id } }, tv: tvEspn(c).length ? tvEspn(c) : tvEspn(e.competitions?.[comps.length - 1] || {}), tape: [[x.records?.[0]?.summary?.replace(/-/g, '·') || '', 'Récord', y.records?.[0]?.summary?.replace(/-/g, '·') || '']].filter((r) => r[0] || r[2]) },
       };
       if (status === 'scheduled') {
         const pct = (r) => (r ? (r.w + 1) / (r.w + r.l + r.d + 2) : 0.5);
