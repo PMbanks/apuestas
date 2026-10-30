@@ -69,11 +69,16 @@ async function load() {
   build(st.data, rows, (ch.data || []).reverse(), ex.error ? null : ex.data);
   avisos();
 }
+const LIGAS_FUERA = new Set(['eng.fa', 'usa.1', 'uefa.europa.conf', 'ned.1', 'bra.1', 'mex.1', 'por.1']);
 function build(st, rows, chat, ex) {
   NOW = Date.now(); PAY = nextMonday(); WEEK0 = PAY - 7 * DAY;
   ME = st.me; VIS = st.vis; WEEKLY = st.weekly; SEASON = st.season_start;
   const key = new Map(st.players.map((p) => [p.id, p.color]));
   MEK = key.get(ME) || 'pm';
+  // PM, 30-10: fuera la FA Cup, MLS, Conference, Eredivisie, Brasileirao, Liga MX y Liga Portugal (sync.mjs ya no las trae y
+  // db/028 borra lo que habia); si quedara algun partido suyo con apuestas, se sigue viendo para que se pueda seguir
+  const conBets = new Set((st.bets || []).map((b) => b.match));
+  rows = rows.filter((r) => !LIGAS_FUERA.has(r.league) || conBets.has(r.id));
   M = rows.map((r) => ({
     id: r.id, s: r.sport, lg: r.league, a: r.home, b: r.away, la: r.home_logo, lb: r.away_logo, at: r.starts_at,
     o: [r.odds_1, r.odds_x, r.odds_2].map((x) => (x == null ? null : Number(x))), status: r.status, live: r.status === 'live',
