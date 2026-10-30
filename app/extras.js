@@ -352,7 +352,8 @@
     if (Date.now() - V.t > 60e3) cargaVit();
     const color = (/--f-([a-z0-9]+)/.exec(pf.getAttribute('style') || '') || [])[1];
     const j = (V.d.jug || []).find((x) => x.color === color); if (!j) return;
-    const mia = j.id === V.d.me, donde = pf.querySelector('.kpis') || pf.querySelector('.pf-hero');
+    // PM 31-10: "tu saldo arriba de la sala de trofeos": la vitrina y la sala van despues del grafico del saldo (.pf-2)
+    const mia = j.id === V.d.me, donde = pf.querySelector('.pf-2') || pf.querySelector('.kpis') || pf.querySelector('.pf-hero');
     if (!donde) return;
     // si nada ha cambiado desde la ultima vez no se vuelve a construir nada (la app toca el DOM cada segundo)
     const kk = [V.t, color, XV.pick, XV.sel.join(), XV.inv && XV.inv.length, XV.msg, XV.guardando, XV.mas.mes, XV.mas.sem].join('|');

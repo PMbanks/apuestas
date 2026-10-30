@@ -2286,3 +2286,6 @@ html[data-moneda="robux"] .cn{background-image:url(../img/monedas/robux.svg)}
 .dn-b{height:8px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden}.dn-b i{display:block;height:100%;border-radius:99px;background:var(--win)}.dn-b i.dn{background:#ff6b6b}
 .dn-v{display:inline-flex;align-items:center;justify-self:end;white-space:nowrap;font:600 18px var(--mono);letter-spacing:-.03em}.dn-v.up{color:var(--win)}.dn-v.dn{color:#ff8a8a}.dn-v .cn{--s:17px;margin-left:5px}
 @media (max-width:560px){.dn-r{grid-template-columns:minmax(0,1fr) auto;gap:6px 12px}.dn-b{grid-column:1/3;grid-row:2}}
+/* PM 31-10: "el logo de las monedas mas grande en todos lados menos donde ya esta grande": el tamano por defecto sube (los que llevan --s propio no cambian) */
+.cn{width:var(--s,1.12em);height:var(--s,1.12em);vertical-align:-.24em}
+.net .cn,.cmt-v em .cn,.dn-n .cn{--s:1.2em}
