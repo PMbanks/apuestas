@@ -24,6 +24,8 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
           PANDASCORE_KEY: ${{ secrets.PANDASCORE_KEY }}
+          # opcional: sin este secreto no se manda nada a Discord (ver DISCORD-WEBHOOK.md)
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
       # GitHub apaga los horarios de un repo sin commits en 60 dias: uno vacio al mes lo mantiene vivo
       - name: Mantener vivo el horario
         if: github.event_name == 'schedule'

@@ -2,6 +2,9 @@
 // los guarda en Supabase, revela las apuestas al empezar y paga las apuestas de los partidos acabados.
 // Lo lanza GitHub Actions cada 15 minutos. Con DRY=1 solo cuenta lo que haria, sin tocar Supabase.
 //   SUPABASE_URL, SUPABASE_ANON_KEY, SYNC_SECRET, PANDASCORE_KEY
+//   DISCORD_WEBHOOK (opcional): si existe, avisos en Discord (sync/discord.mjs, db/021_discord.sql)
+// Con SOLO_DISCORD=1 hace nada mas que los avisos de Discord (para probarlos).
+import { avisos } from './discord.mjs';
 
 const SB = process.env.SUPABASE_URL, ANON = process.env.SUPABASE_ANON_KEY, SECRET = process.env.SYNC_SECRET, PS = process.env.PANDASCORE_KEY;
 const DRY = !!process.env.DRY;
@@ -317,6 +320,113 @@ async function fichasEsports(rows) {
   console.log(`fichas de equipos: ${Object.keys(cache).length} guardadas · ${Object.keys(nuevas).length} refrescadas`);
 }
 
+// ---------- predicciones rapidas, cuota mejorada y trofeos (db/022_extras.sql) ----------
+// La base no ve ESPN ni vlr.gg: aqui se mira lo que ya paso y se le dice el veredicto de cada prediccion.
+//  - Gol en 10 minutos (ESPN): cada gol trae la hora real (wallclock). Cuenta desde 1 minuto despues de apostar hasta 11;
+//    si hay descanso en medio la ventana se alarga lo que dure; si el partido acaba antes y no hubo gol, se devuelve.
+//  - Ronda de Valorant (vlr.gg, API abierta de orlandomm): el historial ronda a ronda dice quien gano la ronda N del mapa.
+//    Ademas, cada pasada apunta en la base cuantas rondas lleva cada mapa en directo (ex_pred_obs): con eso la base rechaza
+//    apuestas a rondas que ya se jugaron. PRED_WATCH_S=540 (maximo) repite esto cada 25 s durante la pasada y el hueco casi desaparece.
+const VLR = 'https://vlr.orlandomm.net/api/v1';
+const baseN = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const normN = (s) => { const x = baseN(s).replace(/\b(esports?|gaming|team|gc|club)\b/g, '').replace(/[^a-z0-9]/g, ''); return x.length >= 3 ? x : baseN(s).replace(/[^a-z0-9]/g, ''); };
+const parecido = (a, b) => { a = normN(a); b = normN(b); if (!a || !b) return false; if (a === b) return true; return Math.min(a.length, b.length) >= 4 && (a.includes(b) || b.includes(a)); };
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+const horaMadrid = (t) => new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+let vlrLista = null;
+const vlrMapas = (d) => (d.maps || []).filter((m) => m.name && !/all maps/i.test(m.name));
+async function vlrBuscar(home, away, placedMs) {
+  if (!vlrLista) vlrLista = [...((await getJson(`${VLR}/matches`))?.data || []), ...((await getJson(`${VLR}/results`))?.data || [])];
+  const c = vlrLista.filter((x) => (x.teams || []).length === 2 && ((parecido(x.teams[0].name, home) && parecido(x.teams[1].name, away)) || (parecido(x.teams[0].name, away) && parecido(x.teams[1].name, home))));
+  const ds = [];
+  for (const x of c.slice(0, 4)) { const d = (await getJson(`${VLR}/matches/${x.id}`))?.data; if (d) ds.push(d); }
+  ds.sort((a, b) => Math.abs((a.timestamp || 0) * 1000 - placedMs) - Math.abs((b.timestamp || 0) * 1000 - placedMs));
+  return ds[0] || null;
+}
+// quien gano la ronda n del mapa ref: {res:'win'|'lose', ev} | {res:'void', ev} | null (todavia no se sabe)
+function rondaGanador(d, ref, n, pick, home) {
+  const maps = vlrMapas(d), i = maps.findIndex((m) => String(m.name).toLowerCase() === ref);
+  if (i < 0) return null;
+  const m = maps[i], rs = (m.rounds || []).filter((r) => r.score), k = rs.findIndex((r) => Number(r.number) === n);
+  if (k >= 0) {
+    const [p, q] = String(rs[k].score).split('-').map(Number), [pp, pq] = String(k ? rs[k - 1].score : '0-0').split('-').map(Number);
+    if (p + q !== n || (k && Number(rs[k - 1].number) !== n - 1)) return null;           // datos que no cuadran: mejor esperar
+    const w = p === pp + 1 && q === pq ? 0 : q === pq + 1 && p === pp ? 1 : null;
+    if (w == null) return null;
+    const homeIdx = parecido(d.teams?.[0]?.name, home) ? 0 : 1;
+    return { res: (pick === '1') === (w === homeIdx) ? 'win' : 'lose', ev: `Ronda ${n} de ${m.name}: ${d.teams?.[w]?.name || '?'} (${p}-${q}), vlr.gg` };
+  }
+  if (maps.slice(i + 1).some((x) => (x.rounds || []).length) || !['live', 'upcoming'].includes(String(d.status).toLowerCase())) return { res: 'void', ev: `El mapa ${m.name} acabó antes de la ronda ${n}` };
+  return null;
+}
+// lo que va por cada mapa en directo
+async function obsValorant(vrows) {
+  const out = [];
+  for (const r of vrows.filter((x) => x.status === 'live')) {
+    const d = await vlrBuscar(r.home, r.away, Date.parse(r.starts_at));
+    if (!d || String(d.status).toLowerCase() !== 'live') continue;
+    const maps = vlrMapas(d), n = (m) => (m.rounds || []).filter((x) => x.score).length;
+    const vivos = maps.filter((m) => m.status === 'live');
+    for (const m of vivos) out.push({ match: r.id, ref: String(m.name).toLowerCase(), n: n(m) });
+    if (!vivos.length) { const sig = maps.find((m) => !n(m)); if (sig) out.push({ match: r.id, ref: String(sig.name).toLowerCase(), n: 0 }); }
+  }
+  if (out.length) await rpc('sync_ex_pred_put', { p_secret: SECRET, p_rows: out });
+  return out.length;
+}
+const espnCache = new Map();
+async function resolverGol(p) {
+  const e = p.espn; if (!e?.event) return null;
+  const k = `${e.sport}/${e.league}/${e.event}`;
+  if (!espnCache.has(k)) espnCache.set(k, await getJson(`https://site.api.espn.com/apis/site/v2/sports/${e.sport}/${e.league}/summary?event=${e.event}`));
+  const d = espnCache.get(k); if (!d) return null;
+  const evs = d.keyEvents || [], t = (x) => Date.parse(x.wallclock), from = Date.parse(p.from);
+  let to = Date.parse(p.to);
+  const ht = evs.find((x) => /^halftime$/i.test(x.type?.text || '')), h2 = evs.find((x) => /start 2nd half/i.test(x.type?.text || ''));
+  if (ht && h2 && t(ht) && t(h2)) to += Math.max(0, Math.min(to, t(h2)) - Math.max(from, t(ht)));      // el descanso no cuenta
+  const goles = evs.filter((x) => x.scoringPlay && !x.shootout && t(x) > from && t(x) <= to);
+  const quien = (x) => `${x.participants?.[0]?.athlete?.displayName || 'gol'} (${x.clock?.displayValue || '?'})`;
+  const ventana = `${horaMadrid(from)} a ${horaMadrid(to)}`;
+  if (goles.length) return { res: p.pick === 'si' ? 'won' : 'lost', ev: `Gol de ${quien(goles[0])} a las ${horaMadrid(t(goles[0]))}, ESPN. Ventana ${ventana}` };
+  const st = d.header?.competitions?.[0]?.status?.type || {};
+  if (st.state === 'post') {
+    const fin = evs.filter((x) => /end regular time|end extra time|full time/i.test(x.type?.text || '')).map(t).filter(Boolean).pop() || Math.max(0, ...evs.map(t).filter(Boolean));
+    if (fin && fin < to - 90e3) return { res: 'void', ev: `El partido acabó a las ${horaMadrid(fin)}, antes de que terminara la ventana (${ventana})` };
+    return { res: p.pick === 'no' ? 'won' : 'lost', ev: `Sin goles entre ${ventana}, ESPN` };
+  }
+  if (Date.now() > to + 4 * 60e3) return { res: p.pick === 'no' ? 'won' : 'lost', ev: `Sin goles entre ${ventana}, ESPN` };
+  return null;
+}
+async function resolverRonda(p) {
+  const d = await vlrBuscar(p.home, p.away, Date.parse(p.placed));
+  if (!d) return null;
+  const x = rondaGanador(d, p.ref, p.n, p.pick, p.home);
+  if (!x) return null;
+  return { res: x.res === 'win' ? 'won' : x.res === 'lose' ? 'lost' : 'void', ev: x.ev };
+}
+async function resolverPredicciones() {
+  const pend = (await rpc('sync_ex_pred_pending', { p_secret: SECRET })) || [], out = [];
+  for (const p of pend) {
+    try { const x = p.kind === 'gol' ? await resolverGol(p) : await resolverRonda(p); if (x) out.push({ id: p.id, res: x.res, ev: x.ev }); }
+    catch (e) { console.log('predicción', p.id, 'sin resolver:', e.message); }
+  }
+  if (out.length) await rpc('sync_ex_pred_resolve', { p_secret: SECRET, p_rows: out });
+  return [pend.length, out.length];
+}
+async function extras(vrows) {
+  try {
+    const r = await rpc('sync_ex', { p_secret: SECRET });
+    console.log(`extras: partido mejorado ${r.boost || 'ninguno'} · trofeos nuevos ${r.trofeos} · predicciones caducadas ${r.caducadas}`);
+  } catch (e) { console.log('extras: falta cargar db/022_extras.sql (' + String(e.message).slice(0, 140) + ')'); return; }
+  const watch = Math.min(540, +process.env.PRED_WATCH_S || 0), t0 = Date.now();
+  for (;;) {
+    vlrLista = null; espnCache.clear();
+    const o = await obsValorant(vrows), [abiertas, cerradas] = await resolverPredicciones();
+    console.log(`predicciones: ${o} mapas en directo apuntados · ${abiertas} abiertas · ${cerradas} resueltas`);
+    if (!watch || Date.now() - t0 + 25e3 > watch * 1000) break;
+    await sleep(25e3);
+  }
+}
+
 // ---------- Supabase ----------
 // Entra con la clave publica del proyecto y una clave propia del sincronizador (SYNC_SECRET):
 // la base solo le deja guardar partidos y cerrar los acabados (db/002_sync_y_cuentas.sql).
@@ -329,6 +439,7 @@ const rpc = async (fn, args) => {
 
 async function main() {
   const t0 = Date.now();
+  if (process.env.SOLO_DISCORD) { if (process.env.DISCORD_WEBHOOK && SB && ANON && SECRET) await avisos({ rpc, secret: SECRET, hook: process.env.DISCORD_WEBHOOK }); return; }
   const [f, u, v, c] = await Promise.all([soccer(), ufc(), esports('valorant'), esports('csgo')]);
   await fichasEsports([...v, ...c]);
   await bracketsEsports([...v, ...c]);
@@ -347,6 +458,9 @@ async function main() {
   let res = { pagadas: 0 }, total = { revelados: 0, pagadas: 0, pagas: 0 };
   do { res = await rpc('sync_close', { p_secret: SECRET }); for (const k in total) total[k] += res[k] || 0 } while (res.pagadas >= 60);
   console.log(`guardados ${saved} · reveladas ${total.revelados} · apuestas pagadas ${total.pagadas} · pagas ${total.pagas} · ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  await extras(v).catch((e) => console.log('extras:', e.message || e));        // cuota mejorada, predicciones rapidas y trofeos (db/022)
+  // avisos en Discord: nunca hacen fallar la sincronizacion
+  if (process.env.DISCORD_WEBHOOK) { try { await avisos({ rpc, secret: SECRET, hook: process.env.DISCORD_WEBHOOK }) } catch (e) { console.log(`discord: ${e.message || e}`) } }
 }
 
-main().catch((e) => { console.error(e.message || e); process.exit(1); });
+main().catch((e) => { console.error(e.message || e); proces

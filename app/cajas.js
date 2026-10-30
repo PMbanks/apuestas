@@ -548,6 +548,7 @@
     let r;
     try { r = mia ? await rpc('cs_open_owned', { p_id: mia }) : await rpc('cs_open', { p_case: c.id, p_n: n }) } catch (e) { ocupado = false; pinta(); return avisa(esc(msgErr(e))) }
     ocupado = false;
+    try { const f = (x) => ({ r: x.rarity, i: src(x.image, 256), l: esLujo(x.id) ? 1 : 0 }); window.dispatchEvent(new CustomEvent('gm:caja-abierta', { detail: { quien: ctx.me, nombre: jug(ctx.me).n, caja: c.id, cajaNombre: c.name, items: r.items.map((i) => ({ ...f(item(i.item)), n: item(i.item).name, v: i.value })), pool: Array.from({ length: 24 }, () => f(relleno(info))) } })) } catch {}   // en directo (cajas-vivo.js)
     if (mia) D.cajasDe.set(ctx.me, mias().filter((o) => o.id !== mia));
     // la imagen grande del premio se va bajando mientras gira
     for (const i of r.items) { const im = new Image(); im.decoding = 'async'; im.src = src(item(i.item).image, r.items.length === 1 ? 512 : 360) }
@@ -734,6 +735,7 @@
     // el: la vista de la app (o el hueco [data-cajas]); c: { db, me, jugadores, saldo, toast, refresh }; nueva: se acaba de entrar en la pantalla
     montar(el, c, nueva) {
       ctx = c;
+      try { window.dispatchEvent(new CustomEvent('gm:cajas-montada', { detail: { db: c.db, me: c.me } })) } catch {}   // en directo (cajas-vivo.js)
       if (!root) { root = document.createElement('div'); root.className = 'cj'; pinta() }
       const hueco = el && (el.matches && el.matches('[data-cajas]') ? el : el.querySelector('[data-cajas]'));
       if (hueco) hueco.replaceWith(root); else if (el && !root.isConnected) el.appendChild(root);
