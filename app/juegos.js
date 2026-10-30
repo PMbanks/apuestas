@@ -173,7 +173,7 @@
     return JUEGOS.map(([k, n]) => `<button class="jg-tab ${S.juego === k ? 'on' : ''}" data-jg="tab" data-v="${k}">${n}${k === 'moneda' ? `<b class="${r.moneda > 0 ? '' : 'off'}">${r.moneda || 0}</b>` : `<i class="${pt[k] ? '' : 'off'}"></i>`}</button>`).join('');
   }
   function vista() {
-    return { moneda: vMoneda, crash: vCrash, ruleta: vRuleta, blackjack: vBj, plinko: vPlinko }[S.juego]() + rankingHtml();
+    return { moneda: vMoneda, crash: vCrash, ruleta: vRuleta, blackjack: vBj, plinko: vPlinko }[S.juego]().replace(/<\/section>\s*$/, rankingHtml() + '</section>');
   }
   function post() {
     if (!root) return;
@@ -196,12 +196,13 @@
     if (!CON_RANKING.includes(j) || !rk) return '';
     const top = rk.slice(0, 3), resto = rk.slice(3), crash = j === 'crash';
     const neto = (n) => (n >= 0 ? '+' + N(n) : '▼ ' + N(-n));
+    const fil = (x, i, clase) => `<div class="jg-pd ${clase}"><b class="jg-pn num">${i + 1}</b>${av(x.player, 'xl')}<span class="jg-pnm">${esc(nom(x.player))}${crash && x.mejor ? `<em class="jg-pm">×${X(x.mejor)}</em>` : ''}</span><span class="jg-pg num ${x.neto >= 0 ? 'win' : 'lose'}">${neto(x.neto)}</span></div>`;
     const cab = `<div class="jg-rk-h"><span class="lab">Ranking</span><div class="chips"><button class="chip ${S.rk.periodo === 'siempre' ? 'on' : ''}" data-jg="rkP" data-v="siempre">De siempre</button><button class="chip ${S.rk.periodo === 'semana' ? 'on' : ''}" data-jg="rkP" data-v="semana">Esta semana</button></div></div>`;
-    if (!rk.length) return `<section class="jg-rk">${cab}<p class="jg-rk-v">Todavía no ha jugado nadie</p></section>`;
-    return `<section class="jg-rk">${cab}
-      <div class="jg-pod">${top.map((x, i) => `<div class="jg-pd p${i + 1}"><b class="jg-pn num">${i + 1}</b>${av(x.player, 'xl')}<span class="jg-pnm">${esc(nom(x.player))}</span><span class="jg-pg num ${x.neto >= 0 ? 'win' : 'lose'}">${neto(x.neto)}</span>${crash && x.mejor ? `<em class="jg-pm">×${X(x.mejor)}</em>` : ''}</div>`).join('')}</div>
-      ${resto.length ? `<button class="jg-vt" data-jg="rkT">${S.rk.todos ? 'Ocultar' : 'Ver todos'} <i>${resto.length}</i></button>${S.rk.todos ? `<div class="jg-rk-l">${resto.map((x, i) => fila('', av(x.player), `${esc(nom(x.player))}<em>${i + 4}º</em>`, crash && x.mejor ? `<em class="jg-pm">×${X(x.mejor)}</em>` : '', `<b class="num jg-pg ${x.neto >= 0 ? 'win' : 'lose'}">${neto(x.neto)}</b>`)).join('')}</div>` : ''}` : ''}
-    </section>`;
+    if (!rk.length) return `<aside class="jg-rk">${cab}<p class="jg-rk-v">Todavía no ha jugado nadie</p></aside>`;
+    return `<aside class="jg-rk">${cab}
+      <div class="jg-pod">${top.map((x, i) => fil(x, i, 'p' + (i + 1))).join('')}</div>
+      ${resto.length ? `<button class="jg-vt" data-jg="rkT">${S.rk.todos ? 'Ocultar' : 'Ver todos'} <i>${resto.length}</i></button>${S.rk.todos ? `<div class="jg-rk-l jg-pod">${resto.map((x, i) => fil(x, i + 3, 'pr')).join('')}</div>` : ''}` : ''}
+    </aside>`;
   }
   async function cargaRank() {
     const j = S.juego; if (!CON_RANKING.includes(j)) return;
@@ -309,6 +310,7 @@
       <div class="jg-stage jg-mo">
         <div class="jg-coin-w"><div class="jg-sh" data-sh></div><div class="jg-coin" data-coin>${carasHtml()}</div></div>
         <p class="jg-msg ${S.mo.cls || ''}" data-msg>${esc(S.mo.msg)}</p>
+        <div class="jg-mo-l"><div class="jg-mo-a">${ajenos.length ? `<span class="lab jg-sec">Abiertos</span>${ajenos.slice(0, 3).map((a) => fila('', av(a.creador), `${esc(nom(a.creador))}<em>${a.para ? 'te reta, ' : ''}va a ${esc(a.lado)}</em>`, `<b class="num">${N(a.stake)}</b>`, `<button class="jg-b" data-jg="aceptar" data-id="${a.id}">Aceptar</button>`)).join('')}` : ''}${mios.length ? `<span class="lab jg-sec">Tus retos</span>${mios.slice(0, 3).map((a) => fila('', av(a.creador), `${a.para ? esc(nom(a.para)) : 'Cualquiera'}<em>${esc(a.lado)}</em>`, `<b class="num">${N(a.stake)}</b>`, `<button class="jg-b" data-jg="retirarReto" data-id="${a.id}">Retirar</button>`)).join('')}` : ''}</div><div class="jg-mo-b">${d.recientes.length ? `<span class="lab jg-sec">Últimos</span>${d.recientes.slice(0, 4).map((a) => { const perd = a.ganador === a.creador ? a.rival : a.creador; return fila('', av(a.ganador), `${esc(nom(a.ganador))}<em>le gana${a.ganador === ctx.me ? 's' : ''} a ${esc(perd === ctx.me ? 'ti' : nom(perd))} · ${esc(a.salio)}</em>`, `<b class="num win">+${N(a.stake)}</b>`) }).join('')}` : ''}</div></div>
       </div>
       <div class="jg-side">
         <span class="lab">Contra</span><div class="jg-whos">${quien}</div>
@@ -316,9 +318,6 @@
         <div class="chips"><button class="chip ${S.lado === 'cara' ? 'on' : ''}" data-jg="lado" data-v="cara">Cara</button><button class="chip ${S.lado === 'cruz' ? 'on' : ''}" data-jg="lado" data-v="cruz">Cruz</button></div>
         <div class="jg-gap">${apuesta()}</div>
         <button class="go" data-jg="retar" data-go>Retar por <span data-go-n>${N(S.stake)}</span></button>${aviso()}
-        ${ajenos.length ? `<span class="lab jg-sec">Abiertos</span>${ajenos.map((a) => fila('', av(a.creador), `${esc(nom(a.creador))}<em>${a.para ? 'te reta, ' : ''}va a ${esc(a.lado)}</em>`, `<b class="num">${N(a.stake)}</b>`, `<button class="jg-b" data-jg="aceptar" data-id="${a.id}">Aceptar</button>`)).join('')}` : ''}
-        ${mios.length ? `<span class="lab jg-sec">Tus retos</span>${mios.map((a) => fila('', av(a.creador), `${a.para ? esc(nom(a.para)) : 'Cualquiera'}<em>${esc(a.lado)}</em>`, `<b class="num">${N(a.stake)}</b>`, `<button class="jg-b" data-jg="retirarReto" data-id="${a.id}">Retirar</button>`)).join('')}` : ''}
-        ${d.recientes.length ? `<span class="lab jg-sec">Últimos</span>${d.recientes.slice(0, 6).map((a) => { const perd = a.ganador === a.creador ? a.rival : a.creador; return fila('', av(a.ganador), `${esc(nom(a.ganador))}<em>le gana${a.ganador === ctx.me ? 's' : ''} a ${esc(perd === ctx.me ? 'ti' : nom(perd))} · ${esc(a.salio)}</em>`, `<b class="num win">+${N(a.stake)}</b>`) }).join('')}` : ''}
       </div></section>`;
   }
   // yaBusy: quien llama ya ha sumado un "ocupado" antes de pedir el resultado (asi el saldo no se mueve antes de tiempo)
@@ -394,7 +393,7 @@
         <p class="jg-sub" data-sub></p>
         <div class="jg-cvw"><canvas class="jg-cv" data-cv></canvas><div class="jg-cd" data-cd hidden><svg viewBox="0 0 220 220" aria-hidden="true"><circle class="t" cx="110" cy="110" r="96"/><circle class="p" data-cdp cx="110" cy="110" r="96"/></svg><div class="jg-cdn"><b data-cdn>10</b><small>segundos</small></div></div></div>
         <div class="jg-hist">${(d.rondas ? d.rondas.map((x) => x.punto) : d.historial).map((p) => `<span class="${clsP(p)}">×${X(p)}</span>`).join('')}</div>
-        ${d.rondas && d.rondas.some((x) => x.gente.length) ? `<span class="lab jg-sec">Últimas rondas</span>${d.rondas.filter((x) => x.gente.length).slice(0, 5).map((x) => `<div class="jg-rr ${clsP(x.punto)}"><b class="num">×${X(x.punto)}</b><span>${x.gente.map((g) => `<span class="jg-rg ${g.estado === 'cobrada' ? (g.pago > g.stake ? 'w' : 'e') : 'l'}">${av(g.player)}${g.estado === 'cobrada' ? `<em>×${X(g.retiro)}${g.pago > g.stake ? ' +' + N(g.pago - g.stake) : ''}</em>` : `<em>▼ ${N(g.stake)}</em>`}</span>`).join('')}</span></div>`).join('')}` : ''}
+        ${d.rondas && d.rondas.some((x) => x.gente.length) ? `<span class="lab jg-sec">Últimas rondas</span>${d.rondas.filter((x) => x.gente.length).slice(0, 5).map((x, i) => `<div class="jg-rr ${clsP(x.punto)}${i > 2 ? ' mas' : ''}"><b class="num">×${X(x.punto)}</b><span>${x.gente.map((g) => `<span class="jg-rg ${g.estado === 'cobrada' ? (g.pago > g.stake ? 'w' : 'e') : 'l'}">${av(g.player)}${g.estado === 'cobrada' ? `<em>×${X(g.retiro)}${g.pago > g.stake ? ' +' + N(g.pago - g.stake) : ''}</em>` : `<em>▼ ${N(g.stake)}</em>`}</span>`).join('')}</span></div>`).join('')}` : ''}
       </div>
       <div class="jg-side">
         ${apuesta()}

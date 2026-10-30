@@ -207,7 +207,7 @@
   .jg-hand{min-height:108px;margin:8px 0}
   .jg-mid{min-height:120px}
 }
-@media (prefers-reduced-motion:reduce){.jg *{transition:none!important}.jg.jg-in{animation:none}}
+html.sin-anim .jg *{transition:none!important}html.sin-anim .jg.jg-in{animation:none}
 .jg .lab{display:block}
 .jg-gap{display:block}
 
@@ -290,3 +290,57 @@
 .jg-vt i{font:500 11px var(--mono);font-style:normal;color:var(--dim)}
 .jg-rk-l{margin-top:14px}
 .jg-rk-l .jg-r{grid-template-columns:22px minmax(0,1fr) auto auto}
+
+/* ===== distribucion: mesa o grafica en el centro, controles a la izquierda y ranking a la derecha =====
+   En movil todo apilado (juego, controles, ranking). Hasta 1360 de ancho: juego y controles lado a lado y el ranking debajo.
+   Desde 1360 (escritorio): tres columnas y todo dentro de la altura de la pantalla, sin scroll. */
+.jg-g{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "side" "rk";gap:36px}
+.jg-stage{grid-area:stage}.jg-side{grid-area:side}.jg-rk{grid-area:rk;max-width:none;margin:0}
+.jg-rk-h{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;flex-wrap:wrap}
+.jg-pod{display:grid;grid-template-columns:minmax(0,1fr);margin-top:10px}
+.jg-pd{display:grid;grid-template-columns:30px 38px minmax(0,1fr) auto;align-items:center;justify-items:start;gap:10px;padding:10px 0;border-top:1px solid var(--hair);text-align:left}
+.jg-pn{font:500 26px/1 var(--mono);letter-spacing:-.06em}
+.jg-pd.pr .jg-pn{font-size:15px;color:var(--dim);text-shadow:none}
+.jg-pd .av{width:36px;height:36px;font-size:12px}
+.jg-pnm{display:grid;gap:2px;min-width:0;font:700 14px var(--disp);letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jg-pg{font:600 15px var(--mono);letter-spacing:-.03em;white-space:nowrap}
+.jg-vt{margin:14px 0 0}
+.jg-rk-l{margin-top:0}
+.jg-mo-l{display:grid;grid-template-columns:minmax(0,1fr);gap:0 28px;width:100%;margin-top:26px}
+.jg-mo-l .jg-sec{margin-top:0;margin-bottom:4px}
+.jg-mo-b .jg-r-n{overflow:visible}
+@media (min-width:981px){
+  .jg-g{grid-template-columns:minmax(0,1fr) 320px;grid-template-areas:"stage side" "rk rk";gap:40px}
+  .jg-rk .jg-pod{max-width:420px}
+}
+@media (min-width:1360px){
+  .jg{height:100%;display:flex;flex-direction:column;max-width:none;padding:14px 26px 16px}
+  .jg-tabs{flex:none;margin:-10px 0 14px}
+  .jg-g{flex:1;min-height:0;grid-template-columns:274px minmax(0,1fr) 252px;grid-template-areas:"side stage rk";gap:30px;align-items:stretch}
+  .jg-side,.jg-rk{min-height:0;overflow-y:auto;scrollbar-width:none;overscroll-behavior:contain}
+  .jg-side::-webkit-scrollbar,.jg-rk::-webkit-scrollbar{display:none}
+  .jg-rk .jg-pod{max-width:none}
+  .jg-stage{min-height:0;display:flex;flex-direction:column}
+  .jg-side .go{margin-top:20px}.jg-gap{margin-top:22px}.jg-sec{margin-top:26px}
+  .jg-amt input{font-size:32px}
+  /* crash: la grafica ocupa lo que sobra */
+  .jg-big{font-size:clamp(44px,5vw,72px)}
+  .jg-cr .jg-sub{margin-top:6px}
+  .jg-cvw{flex:1;min-height:200px;margin-top:12px}
+  .jg-cvw .jg-cv{height:100%}
+  .jg-cr .jg-hist{flex:none;flex-wrap:nowrap;overflow:hidden;margin-top:12px}
+  .jg-cr .jg-sec{margin-top:16px}
+  .jg-rr{padding:7px 0 7px 16px}.jg-rr>b{font-size:18px}.jg-rr::before{top:8px;bottom:8px}
+  /* blackjack: la mesa llena el centro */
+  .jg-stage.jg-bj{flex-direction:row;align-items:stretch;min-height:0}
+  .jg-felt{max-width:760px;min-height:0;height:100%;padding:22px 24px 20px}
+  .jg-mid{min-height:120px}
+  .jg-hand{min-height:0;margin:8px 0}
+  /* cara o cruz: la moneda arriba y las listas debajo, sin salirse */
+  .jg-stage.jg-mo{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:0}
+  .jg-coin-w{width:190px;margin-top:120px}
+  .jg-msg{margin-top:14px}
+}
+.jg-mo-a .jg-sec:not(:first-child){margin-top:18px}
+@media (min-width:1360px){.jg-felt{max-height:700px;align-self:center}}
+@media (min-width:1360px){.jg-mo-l{grid-template-columns:repeat(2,minmax(0,1fr))}}
