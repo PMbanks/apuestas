@@ -34,7 +34,7 @@ begin
       values (me, d.o_item, d.o_wear, d.o_fl, d.o_st, d.o_value, caja, me) returning id into iid;
     lab := 'Caja gratis: ' || (select name from cs_cases where id = caja);
   else
-    insert into ledger(player, amount, kind, note, week) values (me, amt, 'ruleta', 'Ruleta de la semana', wk);
+    insert into ledger(player, amount, kind, note, week) values (me, amt, 'ruleta_semana', 'Ruleta de la semana', wk);
     lab := '+' || fmt_int(amt) || ' V-Bucks';
   end if;
   insert into wheel_spins(player, week, prize, label, amount, inv_id) values (me, wk, idx, lab, amt, iid);

@@ -7,7 +7,7 @@ const TZ = 'Europe/Madrid', DAY = 864e5, DOMAIN = '@apuestas.app';
 const TOP = new Set(['esp.1', 'eng.1', 'ger.1', 'ita.1', 'fra.1', 'uefa.champions', 'uefa.europa', 'esp.copa_del_rey']);
 const SP = { f: ['Fútbol', 'img/futbol.svg'], v: ['Valorant', 'img/valorant.svg'], c: ['CS2', 'img/cs2.png'], u: ['UFC', 'img/ufc.png'] };
 const DEP = ['f', 'v', 'c', 'u'];
-const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', ruleta: 'Ruleta de la semana', premio_semana: 'Premio de la semana' };
+const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', ruleta_semana: 'Ruleta de la semana', premio_semana: 'Premio de la semana', moneda: 'Cara o cruz', crash: 'Crash', ruleta: 'Ruleta', blackjack: 'Blackjack', plinko: 'Plinko' };
 let CLAIM = null, BOTE = null, REACT = new Map(), POLLS = new Map(), CAMPEON = null;
 
 /* ---------- estado ---------- */
@@ -76,7 +76,7 @@ function build(st, rows, chat, ex) {
     id: r.id, s: r.sport, lg: r.league, a: r.home, b: r.away, la: r.home_logo, lb: r.away_logo, at: r.starts_at,
     o: [r.odds_1, r.odds_x, r.odds_2].map((x) => (x == null ? null : Number(x))), status: r.status, live: r.status === 'live',
     score: r.score, winner: r.winner, tag: r.tag, venue: r.venue, stage: r.stage, bo: r.bo, tape: r.details?.tape || [], src: r.odds_src,
-    tv: r.details?.tv || [], espn: r.details?.espn || null, players: r.details?.players || null, recent: r.details?.recent || null, tier: r.details?.tier || null, tid: r.details?.ids || null, tour: r.details?.bracket ? `${r.details.game}:${r.details.tour}` : null,
+    tv: r.details?.tv || [], espn: r.details?.espn || null, players: r.details?.players || null, recent: r.details?.recent || null, tier: r.details?.tier || null, tid: r.details?.ids || null, games: r.details?.games || null, tour: r.details?.bracket ? `${r.details.game}:${r.details.tour}` : null,
   }));
   MI = new Map(M.map((m) => [m.id, m]));
   L = {}; for (const r of rows) if (!L[r.league]) L[r.league] = [r.league_name, r.league_logo || SP[r.sport][1]];
@@ -433,6 +433,46 @@ function brLineas(box) {
     });
     if (d) cols.insertAdjacentHTML('afterbegin', `<svg class="brk-l" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path d="${d}"/></svg>`);
   });
+}
+
+/* directo (PM, 30-10: "un boton de live para ver como va el partido; ahora juegan en Valorant y no se ve nada") */
+const embedDe = (v) => { if (!v?.e) return null; let u = v.e; const j = u.includes('?') ? '&' : '?';
+  if (/player\.twitch\.tv/.test(u)) u += `${j}parent=pmbanks.github.io&parent=localhost&parent=127.0.0.1&muted=true`;
+  else if (/youtube\.com\/embed/.test(u)) u += `${j}autoplay=1&mute=1`;
+  return u };
+const LIVE_ORD = (a, b) => whoOn(b.id).length - whoOn(a.id).length || Date.parse(a.at) - Date.parse(b.at);
+function dvSel() {
+  const vs = M.filter((m) => m.live).sort(LIVE_ORD), m = vs.find((x) => x.id === S.dv) || vs[0]; if (!m) return { vs, m: null, tvs: [], tv: null };
+  const tvs = (m.tv || []).filter((v) => v.e), pri = (v) => (/^(es|en)$/.test(v.l) ? 2 : 0) + (v.main ? 1 : 0);
+  const tv = tvs[S.dtv] && S.dvm === m.id ? tvs[S.dtv] : [...tvs].sort((a, b) => pri(b) - pri(a))[0] || null;
+  return { vs, m, tvs, tv };
+}
+const dvKey = () => { const { m, tv } = dvSel(); return (m?.id || '') + '|' + (tv?.e || '') };
+function dvInfo(m) {
+  const w = whoOn(m.id), g = m.games || [];
+  const mapas = g.length ? `<div class="dv-maps">${g.map((x) => `<span class="${x.st === 'running' ? 'run' : x.st === 'finished' ? 'fin' : ''}"><small>Mapa ${x.n}</small><b>${x.st === 'running' ? 'en juego' : x.st === 'finished' ? (x.w === m.tid?.a ? esc(m.a) : x.w === m.tid?.b ? esc(m.b) : 'acabado') : 'pendiente'}</b></span>`).join('')}</div>` : '';
+  return `<div class="dv-info" data-dv-info>
+    <div class="dv-sc"><div>${logo(m, 'a')}<b>${esc(m.a)}</b></div><strong>${esc(m.score || '0:0')}</strong><div>${logo(m, 'b')}<b>${esc(m.b)}</b></div></div>
+    <p class="dv-meta"><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt="">${esc(L[m.lg]?.[0] || '')}${m.stage ? ' · ' + esc(corto(m.stage)) : ''}${m.bo ? ' · BO' + m.bo : ''}</p>
+    ${mapas}
+    <div class="dv-bets"><span class="lab">Apuestas en este partido</span>${w.length ? w.map((x) => `<div class="dv-b" style="--c:var(--f-${x.f})">${av(x.f, 'sm')}<b>${esc(fr(x.f).n)}</b><span>${x.p ? esc(pn(m, x.p)) + ' · ' + O(x.o) : 'oculta'}</span><em>${N(x.stake)} → ${x.p ? N(x.stake * x.o) : '?'}</em></div>`).join('') : '<p class="hint">Nadie ha apostado a este partido.</p>'}</div>
+    <button class="go-s res" data-goto="${m.id}">Ver la ficha y las estadísticas</button>
+    <p class="hint">El marcador se actualiza cada pocos minutos; lo de verdad va en el vídeo.</p>
+  </div>`;
+}
+function directo() {
+  const { vs, m, tvs, tv } = dvSel();
+  if (!m) { const sig = M.filter((x) => !x.live && Date.parse(x.at) > NOW).sort((a, b) => Date.parse(a.at) - Date.parse(b.at))[0];
+    return `<div class="pad"><div class="dv-nada"><h2>Ahora mismo no se juega nada</h2>${sig ? `<p>Lo siguiente: <b>${esc(sig.a)} vs ${esc(sig.b)}</b>, ${WD(sig.at)} a las ${HM(sig.at)} (faltan ${CD(sig.at)}).</p>` : ''}</div></div>` }
+  const emb = embedDe(tv);
+  return `<div class="pad dv" data-dv-key="${esc(dvKey())}">
+    <div class="dv-main">
+      <div class="dv-player">${emb ? `<iframe src="${esc(emb)}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="Directo"></iframe>` : `<div class="dv-sin"><p>Este partido no tiene una emisión que se pueda ver aquí.</p>${(m.tv || []).filter((v) => v.u).map((v) => `<a class="tv" href="${esc(v.u)}" target="_blank" rel="noopener">${esc(v.n)} ↗</a>`).join('')}</div>`}</div>
+      ${tvs.length > 1 ? `<nav class="dv-tvs">${tvs.map((v, i) => `<button class="chip ${v === tv ? 'on' : ''}" data-dtv="${i}">${esc(v.n)} · ${esc(LANG[v.l] || v.l || '')}</button>`).join('')}</nav>` : ''}
+      ${dvInfo(m)}
+    </div>
+    <aside class="dv-list"><span class="lab">En directo · ${vs.length}</span>${vs.map((x) => `<button class="dv-it ${x === m ? 'on' : ''}" data-dv="${x.id}"><img class="tl" src="${esc(L[x.lg]?.[1] || '')}" alt=""><span><b>${esc(x.a)} <i>${esc(x.score || '0:0')}</i> ${esc(x.b)}</b><small>${esc(L[x.lg]?.[0] || '')}</small></span>${whoOn(x.id).length ? `<em>${whoOn(x.id).map((w) => av(w.f, 'sm')).join('')}</em>` : ''}</button>`).join('')}</aside>
+  </div>`;
 }
 
 /* retos 1 contra 1 */
@@ -885,7 +925,7 @@ function chat() {
 // PM, 30-10: movimientos con paginas y separados (apuestas, cajas y skins, pagas y premios), con la foto de la caja
 // o contra quien fue la batalla; sin las reglas. Y la ruleta de la semana
 let WHEEL = null, CASOS = null, BATS = new Map();
-const movTipo = (k) => (['apuesta', 'premio', 'devolucion'].includes(k) ? 'apuestas' : ['caja', 'venta', 'batalla'].includes(k) ? 'cajas' : 'pagas');
+const movTipo = (k) => (['apuesta', 'premio', 'devolucion'].includes(k) ? 'apuestas' : ['caja', 'venta', 'batalla'].includes(k) ? 'cajas' : ['moneda', 'crash', 'ruleta', 'blackjack', 'plinko'].includes(k) ? 'juegos' : 'pagas');
 const RUEDA = [['50', 0], ['Caja', 1], ['100', 0], ['250', 0], ['Caja ★', 2], ['500', 0], ['150', 0], ['1.000', 3]];
 async function cargaMov() {
   let cambia = false;
@@ -900,7 +940,7 @@ function movFila(m, saldo) {
   const rivales = bid ? (BATS.get(bid) || []).map((u) => F.find((f) => f.uid === u)).filter((f) => f && !f.me) : [];
   const ico = m.kind === 'caja' ? casoImg(m.d) || `<span class="mv-i c">${IC_BOX}</span>`
     : m.kind === 'batalla' && rivales.length ? `<span class="mv-av">${rivales.map((f) => av(f.id, 'sm')).join('')}</span>`
-    : `<span class="mv-i ${tipo === 'apuestas' ? 'b' : tipo === 'cajas' ? 'c' : 'p'}">${tipo === 'apuestas' ? IC_TICKET : tipo === 'cajas' ? IC_BOX : IC_GIFT}</span>`;
+    : `<span class="mv-i ${tipo === 'apuestas' ? 'b' : tipo === 'cajas' ? 'c' : tipo === 'juegos' ? 'j' : 'p'}">${tipo === 'apuestas' ? IC_TICKET : tipo === 'cajas' ? IC_BOX : tipo === 'juegos' ? IC_DADO : IC_GIFT}</span>`;
   const det = m.kind === 'batalla' && rivales.length ? `Contra ${rivales.map((f) => esc(f.n)).join(' y ')}` : esc(m.d && m.d !== m.c ? m.d : '');
   return `<div class="mv"><time>${DD(m.at)} ${MO(m.at)}<small>${HM(m.at)}</small></time>${ico}<p><b>${esc(m.c)}</b>${det ? `<span>${det}</span>` : ''}</p><span class="a ${m.a > 0 ? 'up' : 'dn'}">${m.a > 0 ? '▲' : '▼'} ${N(Math.abs(m.a))}</span>${saldo != null ? `<span class="s">${N(saldo)}</span>` : ''}</div>`;
 }
@@ -939,7 +979,7 @@ function monedero() {
     </div>
     ${ruedaHtml()}
     <section class="movs"><div class="sec-h"><h2>Movimientos</h2><i>${lista.length} ${lista.length === 1 ? 'movimiento' : 'movimientos'}</i></div>
-      <nav class="mv-tabs">${[['todo', 'Todo'], ['apuestas', 'Apuestas'], ['cajas', 'Cajas y skins'], ['pagas', 'Pagas y premios']].map(([k, n]) => `<button class="chip ${tab === k ? 'on' : ''}" data-mt="${k}">${n} <i>${cnt(k)}</i></button>`).join('')}</nav>
+      <nav class="mv-tabs">${[['todo', 'Todo'], ['apuestas', 'Apuestas'], ['cajas', 'Cajas y skins'], ['juegos', 'Juegos'], ['pagas', 'Pagas y premios']].filter(([k]) => k === 'todo' || cnt(k)).map(([k, n]) => `<button class="chip ${tab === k ? 'on' : ''}" data-mt="${k}">${n} <i>${cnt(k)}</i></button>`).join('')}</nav>
       ${filas || '<p class="hint">Nada por aquí todavía.</p>'}
       ${pags > 1 ? `<nav class="pags"><button data-mp="${pg - 1}" ${pg ? '' : 'disabled'} aria-label="Anterior">‹</button>${Array.from({ length: pags }, (_, i) => `<button data-mp="${i}" class="${i === pg ? 'on' : ''}">${i + 1}</button>`).join('')}<button data-mp="${pg + 1}" ${pg < pags - 1 ? '' : 'disabled'} aria-label="Siguiente">›</button></nav>` : ''}
     </section></div>`;
@@ -995,11 +1035,15 @@ const SCREENS = {
   apuestas: ['Mis apuestas', 'Lo que llevas en juego y todo lo que ya se ha pagado', '<path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5V10a2 2 0 0 0 0 4v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5V14a2 2 0 0 0 0-4z"/><path d="M14.5 6.5v11" stroke-dasharray="1.5 2"/>'],
   colegas: ['Apuestas de todos', 'Lo que lleva cada uno en juego y cuánto falta', '<circle cx="9" cy="8.5" r="3.2"/><path d="M3.2 19.5a5.8 5.8 0 0 1 11.6 0"/><circle cx="16.8" cy="9.6" r="2.6"/><path d="M15.4 14.4a4.6 4.6 0 0 1 5.6 4.5"/>'],
   liga: ['Liga', 'La temporada, semana a semana', '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"/>'],
+  directo: ['Directo', 'Lo que se está jugando ahora mismo', '<circle cx="12" cy="12" r="3"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14"/>'],
   cajas: ['Cajas', 'Abre cajas de CS2, guarda skins y juega batallas', '<path d="M3.8 8.2 12 4.2l8.2 4v7.6L12 19.8l-8.2-4z"/><path d="M3.8 8.2 12 12.2l8.2-4M12 12.2v7.6M7.9 6.2l8.2 4"/>'],
   chat: ['Chat', 'Fotos, mensajes y avisos', '<path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 17h-8l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 5 5z"/>'],
   monedero: ['Monedero', 'Tus V-Bucks, la paga del lunes y cada movimiento', '<path d="M4.5 8V7a2 2 0 0 1 2-2H17v3"/><rect x="4" y="8" width="16.5" height="11" rx="2.5"/><circle cx="16" cy="13.5" r="1.3"/>'],
+  juegos: ['Juegos', 'Cara o cruz, crash, ruleta, blackjack y plinko', '<rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r=".6"/><circle cx="15" cy="9" r=".6"/><circle cx="12" cy="12" r=".6"/><circle cx="9" cy="15" r=".6"/><circle cx="15" cy="15" r=".6"/>'],
 };
-const R = { partidos, apuestas, colegas, liga, chat, monedero, perfil, cajas: () => (window.GM_CAJAS ? GM_CAJAS.html() : '') };
+const jgCtx = () => ({ db, me: ME, meKey: MEK, jugadores: F.map((f) => ({ id: f.id, uuid: f.uid, n: f.n, color: f.id })), saldo: me().s, av, toast, refresh });
+const juegos = () => (window.GM_JUEGOS ? GM_JUEGOS.html(jgCtx()) : '');
+const R = { juegos, directo, partidos, apuestas, colegas, liga, chat, monedero, perfil, cajas: () => (window.GM_CAJAS ? GM_CAJAS.html() : '') };
 const cajasCtx = () => ({ db, me: ME, jugadores: F.map((f) => ({ id: f.uid, n: f.n, color: f.id, ini: f.ini, photo: !!f.photo })), saldo: me().s, toast, refresh });
 const photoCss = () => { document.getElementById('phs').textContent = F.filter((f) => f.photo).map((f) => `.av.${f.id}.ph{background-image:url("${encodeURI(f.photo)}")}`).join('') };
 function render() {
@@ -1009,18 +1053,22 @@ function render() {
   const cajas = [...document.querySelectorAll('#view input[id^="poll-"]')].map((e) => [e.id, e.value, document.activeElement === e]);
   const keep = {}; document.querySelectorAll('[data-keep]').forEach((e) => (keep[e.dataset.keep] = e.scrollTop));
   const un = S.scr === 'chat' ? 0 : unread();
-  document.getElementById('nav').innerHTML = Object.entries(SCREENS).map(([k, [n, , ic]]) => `<button class="nv ${S.scr === k ? 'on' : ''}" data-scr="${k}"><svg viewBox="0 0 24 24">${ic}</svg><span class="nl">${n}</span><span class="ns">${n.replace('Mis apuestas', 'Apuestas').replace('Apuestas de todos', 'Todos')}</span>${k === 'chat' && un ? `<i>${un}</i>` : ''}</button>`).join('');
+  document.getElementById('nav').innerHTML = Object.entries(SCREENS).filter(([k]) => k !== 'directo').map(([k, [n, , ic]]) => `<button class="nv ${S.scr === k ? 'on' : ''}" data-scr="${k}"><svg viewBox="0 0 24 24">${ic}</svg><span class="nl">${n}</span><span class="ns">${n.replace('Mis apuestas', 'Apuestas').replace('Apuestas de todos', 'Todos')}</span>${k === 'chat' && un ? `<i>${un}</i>` : ''}</button>`).join('');
   const rank = [...F].sort((a, b) => b.s - a.s);
   document.getElementById('me').innerHTML = `${av(MEK, 'xl')}<b>${esc(me().n)}</b><em>${N(me().s)} · ${rank.indexOf(me()) + 1}º de ${F.length}</em>`;
   document.getElementById('me').dataset.prof = MEK;
   const lg = window.GM_LANG ? GM_LANG.get() : 'es';
   document.getElementById('lang').innerHTML = ['es', 'en'].map((l) => `<button type="button" class="${l === lg ? 'on' : ''}" data-lang="${l}">${l.toUpperCase()}</button>`).join('');
   const [t, sub] = S.scr === 'perfil' ? ['Perfil', fr(S.prof).n + (fr(S.prof).apodo ? ' · ' + fr(S.prof).apodo : '')] : SCREENS[S.scr];
-  document.getElementById('top').innerHTML = `<h1>${t}</h1><span class="sub">${esc(sub)}</span><span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>${CLAIM && !CLAIM.today ? `<button class="claim" data-act="claim">${IC_GIFT}<span>Reclamar ${N(CLAIM.amount)}</span></button>` : ''}<span class="onl" data-onl>${onlineHtml()}</span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span>`;
+  document.getElementById('top').innerHTML = `<h1>${t}</h1><span class="sub">${esc(sub)}</span><span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>${M.some((x) => x.live) ? `<button class="dv-btn ${S.scr === 'directo' ? 'on' : ''}" data-scr="directo"><i></i>Directo <b>${M.filter((x) => x.live).length}</b></button>` : ''}${CLAIM && !CLAIM.today ? `<button class="claim" data-act="claim">${IC_GIFT}<span>Reclamar ${N(CLAIM.amount)}</span></button>` : ''}<span class="onl" data-onl>${onlineHtml()}</span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span>`;
   photoCss();
   const vw = document.getElementById('view'), cambia = vw.dataset.vista !== S.scr;
-  vw.innerHTML = R[S.scr](); vw.dataset.vista = S.scr;
+  const mismoVideo = S.scr === 'directo' && vw.dataset.vista === 'directo' && vw.querySelector('[data-dv-key]')?.dataset.dvKey === dvKey();
+  if (mismoVideo) { const tmp = document.createElement('div'); tmp.innerHTML = R.directo(); const a = vw.querySelector('[data-dv-info]'), b = tmp.querySelector('[data-dv-info]'); if (a && b) a.replaceWith(b); const l1 = vw.querySelector('.dv-list'), l2 = tmp.querySelector('.dv-list'); if (l1 && l2) l1.replaceWith(l2) }
+  else vw.innerHTML = R[S.scr]();
+  vw.dataset.vista = S.scr;
   if (S.scr === 'cajas' && window.GM_CAJAS) GM_CAJAS.montar(vw, cajasCtx(), cambia);
+  if (S.scr === 'juegos' && window.GM_JUEGOS) GM_JUEGOS.montar(vw, jgCtx(), cambia);
   if (cambia) { vw.classList.remove('entra'); void vw.offsetWidth; vw.classList.add('entra') }
   cuentaSaldo();
   if (S.scr === 'partidos') { lgFlechas(); fillEspn(); fillSheet(); fillBracket() }
@@ -1118,10 +1166,12 @@ async function savePerfil(k, v) {
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lang]'); if (!b || !window.GM_LANG) return; GM_LANG.set(b.dataset.lang); location.reload(); }, true);
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lga]'); if (!b) return; const n = document.querySelector('[data-lgs]'); n?.scrollBy({ left: +b.dataset.lga * n.clientWidth * 0.8, behavior: 'smooth' }) });
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-side],[data-bm],[data-mt],[data-mp],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
+  const t = e.target.closest('[data-side],[data-bm],[data-dv],[data-dtv],[data-mt],[data-mp],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
   const d = t.dataset;
   if (d.side && t.matches('[data-side]')) { S.side = d.side; document.querySelector('.det')?.scrollTo?.(0, 0); return render() }
   if (d.act === 'sheet-back') { S.side = null; return render() }
+  if (d.dv) { S.dv = d.dv; S.dtv = null; S.dvm = null; return render() }
+  if (d.dtv != null && t.matches('[data-dtv]')) { S.dtv = +d.dtv; S.dvm = dvSel().m?.id; return render() }
   if (d.mt) { S.mt = d.mt; S.mp = 0; return render() }
   if (d.mp != null && t.matches('[data-mp]')) { S.mp = +d.mp; render(); document.querySelector('.movs')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); return }
   if (d.act === 'girar') {
@@ -1224,6 +1274,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 });
 const IC_GIFT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M3 9h18M12 9v11M12 9c-1.5-3.5-6-4-6-1.5S10 9 12 9zm0 0c1.5-3.5 6-4 6-1.5S14 9 12 9z"/></svg>';
 const IC_TICKET = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5V10a2 2 0 0 0 0 4v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5V14a2 2 0 0 0 0-4z"/></svg>';
+const IC_DADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r=".9" fill="currentColor"/><circle cx="15" cy="15" r=".9" fill="currentColor"/><circle cx="12" cy="12" r=".9" fill="currentColor"/></svg>';
 const IC_BOX = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3.8 8.2 12 4.2l8.2 4v7.6L12 19.8l-8.2-4z"/><path d="M3.8 8.2 12 12.2l8.2-4M12 12.2v7.6"/></svg>';
 const puedeRescate = () => CLAIM && !CLAIM.rescue_used && me().s < 10 && !openOf(MEK).length;
 let chan = null, ONLINE = new Set();
@@ -1231,7 +1282,7 @@ const onlineHtml = () => { const ks = [...new Set([MEK, ...ONLINE])].filter((k) 
 const pintaOnline = () => document.querySelectorAll('[data-onl]').forEach((e) => { e.innerHTML = onlineHtml(); if (window.GM_LANG) GM_LANG.traduce(e) });
 function live() {
   if (chan) return;
-  let to; const soon = () => { clearTimeout(to); to = setTimeout(refresh, 700) };
+  let to; const soon = () => { if (window.GM_JUEGOS && GM_JUEGOS.ocupado()) return; clearTimeout(to); to = setTimeout(refresh, 700) };
   chan = db.channel('vivo', { config: { presence: { key: String(ME) } } }).on('presence', { event: 'sync' }, () => { ONLINE = new Set(Object.values(chan.presenceState()).flat().map((x) => x.k)); pintaOnline() }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pulse' }, soon).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat' }, soon).subscribe(async (st) => { if (st === 'SUBSCRIBED') try { await chan.track({ k: MEK }) } catch {} });
   // cuenta atras cada minuto y datos frescos cada 5, solo con la pantalla visible
   let ticks = 0;

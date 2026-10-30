@@ -230,7 +230,8 @@ async function esports(game) {
       winner: status === 'final' ? (m.winner_id === A.id ? '1' : '2') : null,
       details: { ids: { a: A.id, b: B.id }, tier: tier || null, game, tour: m.tournament_id || null, bracket: !!m.tournament?.has_bracket,
         tv: (m.streams_list || []).filter((x) => x.raw_url).sort((x, y) => (/^(en|es)$/.test(y.language) - /^(en|es)$/.test(x.language)) || (y.main - x.main)).slice(0, 8)
-          .map((x) => ({ n: /twitch/.test(x.raw_url) ? 'Twitch' : /youtube/.test(x.raw_url) ? 'YouTube' : /kick\.com/.test(x.raw_url) ? 'Kick' : 'Stream', l: x.language, u: x.raw_url, main: !!x.main })),
+          .map((x) => ({ n: /twitch/.test(x.raw_url) ? 'Twitch' : /youtube/.test(x.raw_url) ? 'YouTube' : /kick\.com/.test(x.raw_url) ? 'Kick' : 'Stream', l: x.language, u: x.raw_url, e: x.embed_url || null, main: !!x.main })),
+        games: (m.games || []).map((g) => ({ n: g.position, st: g.status, w: g.winner?.id ?? null })),
         tape: [[m.number_of_games ? 'BO' + m.number_of_games : '', 'Formato', m.number_of_games ? 'BO' + m.number_of_games : '']].filter((r) => r[0] || r[2]) },
     });
   }

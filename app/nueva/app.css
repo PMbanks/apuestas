@@ -1025,3 +1025,51 @@ img.tl{border-radius:0;background:none;padding:0;object-fit:contain;filter:drop-
 .ru-o span{display:inline-flex;align-items:center;gap:8px}
 .ru-o em{font:12px var(--mono);font-style:normal;color:var(--acc)}
 @media (max-width:860px){.rueda{grid-template-columns:1fr;justify-items:center;text-align:center;gap:20px}.ru-w{width:220px;height:220px}.ru-o{justify-content:center}.mv{grid-template-columns:52px 34px minmax(0,1fr) auto;column-gap:10px}.mv .s{display:none}}
+
+/* directo */
+.dv-btn{display:inline-flex;align-items:center;gap:8px;margin-right:14px;padding:7px 14px 7px 12px;border-radius:999px;background:rgba(224,100,111,.16);color:#ff8f98;font:700 12px var(--sans);white-space:nowrap;flex:none}
+.dv-btn i{width:8px;height:8px;border-radius:50%;background:#e0646f;animation:latido 1.2s ease-in-out infinite}
+.dv-btn b{font:600 11px var(--mono);color:var(--ink)}
+.dv-btn.on{background:#e0646f;color:#fff}.dv-btn.on i{background:#fff}
+@media (max-width:860px){.dv-btn{padding:7px 10px;margin-right:8px}}
+.dv{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:32px;align-items:start}
+.dv-player{position:relative;aspect-ratio:16/9;max-width:100%;border-radius:16px;overflow:hidden;background:#000}
+.dv-player iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.dv-sin{display:grid;place-content:center;justify-items:center;gap:12px;height:100%;padding:20px;text-align:center;color:var(--mute);background:var(--bg2)}
+.dv-tvs{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px}
+.dv-info{display:grid;gap:18px;margin-top:22px}
+.dv-sc{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:20px}
+.dv-sc div{display:flex;align-items:center;gap:12px;min-width:0}
+.dv-sc div:last-child{flex-direction:row-reverse;text-align:right}
+.dv-sc img{width:44px;height:44px;object-fit:contain}
+.dv-sc b{font:700 20px/1.1 var(--disp);letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dv-sc strong{font:600 44px/1 var(--mono);color:#ff8f98}
+.dv-meta{display:flex;align-items:center;gap:8px;font:12px var(--mono);color:var(--mute)}
+.dv-meta img{width:20px;height:20px;object-fit:contain}
+.dv-maps{display:flex;flex-wrap:wrap;gap:8px}
+.dv-maps span{display:grid;gap:2px;min-width:110px;padding:8px 12px;border-radius:10px;background:var(--bg2)}
+.dv-maps small{font:10px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.dv-maps b{font:600 13px var(--sans);color:var(--mute)}
+.dv-maps .run{box-shadow:inset 0 0 0 1.5px #e0646f}.dv-maps .run b{color:#ff8f98}
+.dv-maps .fin b{color:var(--ink)}
+.dv-bets .lab{display:block;margin-bottom:6px}
+.dv-b{display:grid;grid-template-columns:28px auto minmax(0,1fr) auto;align-items:center;column-gap:10px;min-height:44px;padding-left:10px;border-left:3px solid var(--c);margin-top:6px;background:linear-gradient(90deg,color-mix(in srgb,var(--c) 10%,transparent),transparent 70%)}
+.dv-b b{font:600 14px var(--sans)}
+.dv-b span{font:13px var(--mono);color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dv-b em{font:13px var(--mono);font-style:normal;color:var(--mute);padding-right:8px}
+.dv-list{display:grid;gap:6px;position:sticky;top:12px}
+.dv-list .lab{margin-bottom:6px}
+.dv-it{display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px;border-radius:12px;text-align:left;transition:background .15s}
+.dv-it:hover{background:rgba(255,255,255,.04)}
+.dv-it.on{background:rgba(224,100,111,.12)}
+.dv-it img{width:22px;height:22px;object-fit:contain}
+.dv-it b{display:block;font:600 13px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dv-it b i{font:500 12px var(--mono);font-style:normal;color:#ff8f98;margin:0 4px}
+.dv-it small{display:block;margin-top:2px;font:11px var(--mono);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dv-it em{display:flex}.dv-it em .av+.av{margin-left:-8px}
+.dv-nada{padding:60px 0;text-align:center}
+.dv-nada h2{font:800 34px/1 var(--disp);letter-spacing:-.03em}
+.dv-nada p{margin-top:14px;color:var(--mute)}
+@media (max-width:860px){.dv{grid-template-columns:1fr}.dv-list{position:static}.dv-sc strong{font-size:32px}.dv-sc b{font-size:15px}}
+
+.mv-i.j{background:rgba(204,100,150,.16);color:#e58ab4}
