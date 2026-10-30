@@ -369,7 +369,7 @@
         <p class="jg-sub" data-sub></p>
         <div class="jg-cvw"><canvas class="jg-cv" data-cv></canvas><div class="jg-cd" data-cd hidden><svg viewBox="0 0 220 220" aria-hidden="true"><circle class="t" cx="110" cy="110" r="96"/><circle class="p" data-cdp cx="110" cy="110" r="96"/></svg><div class="jg-cdn"><b data-cdn>10</b><small>segundos</small></div></div></div>
         <div class="jg-hist">${(d.rondas ? d.rondas.map((x) => x.punto) : d.historial).map((p) => `<span class="${clsP(p)}">×${X(p)}</span>`).join('')}</div>
-        ${d.rondas && d.rondas.some((x) => x.gente.length) ? `<span class="lab jg-sec">Últimas rondas</span>${d.rondas.filter((x) => x.gente.length).slice(0, 6).map((x) => `<div class="jg-rr ${clsP(x.punto)}"><b class="num">×${X(x.punto)}</b><span>${x.gente.map((g) => `<span class="jg-rg ${g.estado === 'cobrada' ? (g.pago > g.stake ? 'w' : 'e') : 'l'}">${av(g.player)}${g.estado === 'cobrada' ? `<em>×${X(g.retiro)}${g.pago > g.stake ? ' +' + N(g.pago - g.stake) : ''}</em>` : `<em>▼ ${N(g.stake)}</em>`}</span>`).join('')}</span></div>`).join('')}` : ''}
+        ${d.rondas && d.rondas.some((x) => x.gente.length) ? `<span class="lab jg-sec">Últimas rondas</span>${d.rondas.filter((x) => x.gente.length).slice(0, 5).map((x) => `<div class="jg-rr ${clsP(x.punto)}"><b class="num">×${X(x.punto)}</b><span>${x.gente.map((g) => `<span class="jg-rg ${g.estado === 'cobrada' ? (g.pago > g.stake ? 'w' : 'e') : 'l'}">${av(g.player)}${g.estado === 'cobrada' ? `<em>×${X(g.retiro)}${g.pago > g.stake ? ' +' + N(g.pago - g.stake) : ''}</em>` : `<em>▼ ${N(g.stake)}</em>`}</span>`).join('')}</span></div>`).join('')}` : ''}
       </div>
       <div class="jg-side">
         ${apuesta()}
