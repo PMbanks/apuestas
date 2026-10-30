@@ -2227,3 +2227,33 @@ html[data-moneda="robux"] .cn{background-image:url(../img/monedas/robux.svg)}
 .xc-vy{margin-top:6px}.xc-vy .xc-btn{width:100%;justify-content:center;margin-left:0}
 @media (max-width:560px){.bol-n .xc-btn{width:100%;justify-content:center;margin:6px 0 0;padding:12px 16px;white-space:normal}}
 .bol-n{flex-wrap:wrap;row-gap:14px}
+/* Combinadas (30-10 noche, db/029): selector en el boleto y tarjetas en Mis apuestas */
+.blt-modo{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:2px 0 8px;padding:4px;border-radius:14px;background:rgba(255,255,255,.05)}
+.blt-modo button{display:grid;gap:3px;padding:9px 11px;border-radius:10px;text-align:left;color:var(--mute);transition:background .15s,color .15s}
+.blt-modo button b{font:700 14px var(--sans)}.blt-modo button small{font:500 11px/1.3 var(--sans);color:var(--dim)}
+.blt-modo button.on{background:rgba(242,193,78,.16);color:var(--ink)}.blt-modo button.on b{color:var(--acc)}
+.blt-cq{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:4px 0 6px}
+.blt-cq b{font:600 30px/1 var(--mono);letter-spacing:-.03em;color:var(--acc)}
+.blt.comb .blt-l .blt-in,.blt.comb .blt-l .blt-co{display:none}
+.cmb-cs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:18px}.cmb-cs+.cmb-cs{margin-top:18px}.cmb-cs.cerr{opacity:.85}
+.cmb{padding:18px 20px 16px;border-radius:20px;background:linear-gradient(165deg,#2a2d36,#22252d)}
+.cmb header{display:flex;align-items:baseline;gap:12px;margin-bottom:10px}
+.cmb-t{font:800 18px var(--disp);letter-spacing:-.02em}.cmb-va{font:500 12px var(--mono);color:var(--win)}
+.cmb-no{margin-left:auto;font:500 11px var(--mono);letter-spacing:.14em;color:var(--dim)}
+.cmb-l{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--hair)}
+.cmb-i{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;font:700 11px var(--sans);font-style:normal;background:rgba(255,255,255,.08);color:var(--mute)}
+.cmb-l.ok .cmb-i{background:rgba(43,212,125,.2);color:var(--win)}.cmb-l.ko .cmb-i{background:rgba(255,99,99,.2);color:#ff8a8a}.cmb-l.vivo .cmb-i{color:#ff6b6b;font-size:9px}
+.cmb-p{display:grid;gap:2px;min-width:0}.cmb-p b{overflow:hidden;font:600 14px var(--sans);text-overflow:ellipsis;white-space:nowrap}
+.cmb-p small{overflow:hidden;font:500 11px var(--mono);color:var(--dim);text-overflow:ellipsis;white-space:nowrap}
+.cmb-o{display:grid;justify-items:end;gap:2px;font:600 15px var(--mono)}.cmb-o small{font:500 10px var(--sans);color:var(--dim)}
+.cmb-l.ko .cmb-p b{color:#ff9d9d;text-decoration:line-through}
+.cmb-n{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 28px;margin-top:12px;padding-top:14px;border-top:1px dashed rgba(255,255,255,.14)}
+.cmb-n small{display:block;font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.cmb-n b{display:flex;align-items:center;margin-top:7px;font:500 20px/1 var(--mono);letter-spacing:-.03em}
+.cmb-co b{font-size:26px;color:var(--acc)}.cmb-n .cn{--s:18px;margin-left:5px}.cmb-n .x-cancel{align-self:center;margin-left:auto}
+.cmb-sello{display:grid;gap:6px;font:800 13px var(--disp);letter-spacing:.12em}.cmb-sello b{font-size:20px}
+.cmb-sello.won{color:var(--win)}.cmb-sello.lost{color:#ff8a8a}.cmb-sello.void{color:var(--mute)}
+@media (max-width:560px){.cmb{padding:16px 14px}.cmb-n .x-cancel{width:100%;justify-content:center;margin:4px 0 0;padding:12px 16px}}
+/* aviso en Partidos: se puede hacer una combinada */
+.cmb-hint{display:flex;align-items:center;gap:10px;margin:10px 0 2px;font:500 12.5px var(--sans);color:var(--mute)}
+.cmb-hint b{color:var(--acc);font-weight:700}.cmb-hint i{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:rgba(242,193,78,.16);color:var(--acc);font:800 12px var(--sans);font-style:normal}

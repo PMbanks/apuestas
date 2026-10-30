@@ -1,0 +1,89 @@
+// Tus combinadas en Mis apuestas (db/029, PM 30-10 noche: "has hecho lo de las apuestas combinadas? hazlo").
+// Una tarjeta por combinada: sus partidos con lo que elegiste y como va cada uno (acertado, fallado, anulado, en juego o por
+// empezar), la cuota total, lo apostado y lo que cobras o cobraste, y Cancelar (devuelve todo) hasta que empiece el primero.
+// Va aparte, como extras.js: rellena #cmb-slot (lo pone app.js) y usa lo global de app.js (db, ME, S, toast, refresh).
+'use strict';
+(function () {
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const N = (x) => String(Math.round(x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const O = (x) => Number(x).toFixed(2).replace('.', ',');
+  const coin = () => '<span class="cn"></span>';
+  const g = (f) => { try { return f() } catch { return undefined } };
+  const traduce = (el) => { if (window.GM_LANG && el) { try { GM_LANG.traduce(el) } catch {} } };
+  const IC_X = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>';
+  const C = { t: 0, list: null, vivo: false, sure: 0, busy: false, err: '' };
+
+  async function carga(forzar) {
+    const me = g(() => ME); if (!me || C.vivo || (!forzar && Date.now() - C.t < 30e3)) return;
+    C.vivo = true;
+    try {
+      const { data, error } = await db.from('combos')
+        .select('id,stake,odds,status,payout,created_at,combo_legs(match_id,pick,odds,result,matches(home,away,sport,status,starts_at,score,winner))')
+        .eq('player', me).order('created_at', { ascending: false }).limit(30);
+      if (error) throw error;
+      C.list = data || []; C.err = '';
+    } catch (e) { C.err = /does not exist|PGRST/.test(String(e && (e.message || e.code))) ? '' : 'No se han podido cargar tus combinadas'; if (!C.list) C.list = [] }
+    C.t = Date.now(); C.vivo = false; pinta(true);
+  }
+
+  const nombre = (m, p) => (p === '1' ? m.home : p === '2' ? m.away : 'Empate');
+  const empezado = (m) => m.status !== 'scheduled' || Date.parse(m.starts_at) <= Date.now();
+  function estadoPata(l) {
+    const m = l.matches || {};
+    if (l.result === 'won') return ['ok', '✓', 'Acertado'];
+    if (l.result === 'lost') return ['ko', '✗', 'Fallado'];
+    if (l.result === 'void') return ['nul', '·', 'Anulado: cuenta como 1'];
+    if (m.status === 'live' || (m.status === 'scheduled' && Date.parse(m.starts_at) <= Date.now())) return ['vivo', '●', 'En juego'];
+    return ['pend', '', ''];
+  }
+  const cuando = (t) => g(() => new Intl.DateTimeFormat(document.documentElement.lang === 'en' ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid', weekday: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(t))) || '';
+  function tarjeta(c) {
+    const legs = (c.combo_legs || []).slice().sort((a, b) => Date.parse(a.matches?.starts_at || 0) - Date.parse(b.matches?.starts_at || 0));
+    const puede = c.status === 'open' && legs.length && legs.every((l) => l.matches && !empezado(l.matches));
+    const sello = { open: '', won: `<span class="cmb-sello won">COBRADA<b>${N(c.payout)}${coin()}</b></span>`, lost: '<span class="cmb-sello lost">PERDIDA</span>', void: `<span class="cmb-sello void">DEVUELTA<b>${N(c.payout || c.stake)}${coin()}</b></span>` }[c.status] || '';
+    const hechas = legs.filter((l) => l.result === 'won').length;
+    const sure = C.sure === c.id;
+    return `<article class="cmb ${c.status}">
+      <header><span class="cmb-t">Combinada de ${legs.length}</span>${c.status === 'open' ? `<span class="cmb-va">${hechas} de ${legs.length} acertados</span>` : ''}<span class="cmb-no">Nº C${String(c.id).padStart(5, '0')}</span></header>
+      <div class="cmb-ls">${legs.map((l) => { const m = l.matches || {}, [k, ic, tx] = estadoPata(l); return `<div class="cmb-l ${k}">
+        <i class="cmb-i">${ic}</i><span class="cmb-p"><b>${esc(nombre(m, l.pick))}</b><small>${esc(m.home || '')} vs ${esc(m.away || '')}${m.score && (m.status === 'live' || m.status === 'final') ? ` · ${esc(String(m.score).split(' ')[0])}` : ` · ${esc(cuando(m.starts_at))}`}</small></span>
+        <span class="cmb-o">${O(l.odds)}${tx ? `<small>${tx}</small>` : ''}</span></div>` }).join('')}</div>
+      <div class="cmb-n"><span><small>Cuota</small><b>${O(c.odds)}</b></span><span><small>Apostado</small><b>${N(c.stake)}${coin()}</b></span>
+        ${c.status === 'open' ? `<span class="cmb-co"><small>Cobrarías</small><b>${N(c.stake * c.odds)}${coin()}</b></span>` : sello}
+        ${puede ? `<button class="x-cancel ${sure ? 'sure' : ''}" data-cmb-cancel="${c.id}">${IC_X}${sure ? `¿Seguro? Te devuelvo ${N(c.stake)}` : 'Cancelar combinada'}</button>` : ''}</div>
+    </article>`;
+  }
+  let firma = '';
+  function pinta(todo) {
+    const slot = document.getElementById('cmb-slot'); if (!slot) return;
+    if (!C.list) { carga(); return }
+    const abiertas = C.list.filter((c) => c.status === 'open'), cerradas = C.list.filter((c) => c.status !== 'open').slice(0, 6);
+    const f = JSON.stringify([C.list.map((c) => [c.id, c.status, (c.combo_legs || []).map((l) => l.result + (l.matches && l.matches.status))]), C.sure, C.err, document.documentElement.lang]);
+    if (!todo && f === firma && slot.childElementCount) return;
+    firma = f;
+    slot.innerHTML = !C.list.length ? '' : `<div class="sec-h mb-h"><h2>Combinadas</h2><i>${abiertas.length}</i></div>
+      ${abiertas.length ? `<div class="cmb-cs">${abiertas.map(tarjeta).join('')}</div>` : '<p class="hint">Ninguna en juego. En Partidos, mete 2 o más cuotas en el boleto y elige Combinada.</p>'}
+      ${cerradas.length ? `<div class="cmb-cs cerr">${cerradas.map(tarjeta).join('')}</div>` : ''}${C.err ? `<p class="hint">${esc(C.err)}</p>` : ''}`;
+    traduce(slot);
+  }
+
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-cmb-cancel]'); if (!b) return;
+    e.stopPropagation(); e.preventDefault();
+    const id = +b.dataset.cmbCancel; if (C.busy) return;
+    if (C.sure !== id) { C.sure = id; pinta(true); setTimeout(() => { if (C.sure === id) { C.sure = 0; pinta(true) } }, 3500); return }
+    C.sure = 0; C.busy = true;
+    try { const { data, error } = await db.rpc('cancel_combo', { p_id: id }); if (error) throw error; g(() => toast(`Combinada cancelada: te devuelvo <b>${N(data.devuelto)}</b>`)) }
+    catch (err) { g(() => toast(esc(String((err && err.message) || 'No se ha podido cancelar')))) }
+    C.busy = false; await carga(true); g(() => refresh());
+  }, true);
+  window.addEventListener('gm:combo', () => carga(true));
+
+  // cada vez que la app pinta Mis apuestas, el hueco vuelve vacio: se rellena con lo que ya hay y se refresca si es viejo
+  let pendiente = false;
+  new MutationObserver(() => {
+    if (pendiente) return; pendiente = true;
+    queueMicrotask(() => { pendiente = false; const s = document.getElementById('cmb-slot'); if (s && !s.childElementCount) { pinta(true); carga() } });
+  }).observe(document.documentElement, { childList: true, subtree: true });
+  setInterval(() => { if (document.getElementById('cmb-slot') && !document.hidden) carga() }, 60e3);
+})();
