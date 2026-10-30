@@ -23,13 +23,13 @@
   const POR_PAG = 8;          // batallas terminadas por pagina
   const INV_PASO = 60;        // skins del inventario que se pintan de cada vez
   const ESP_VER = 6;          // cuchillos y guantes que se ven de primeras en lo que trae una caja
-  const CATS = [['skins', 'Skins de CS2'], ['lujo', 'Lujo'], ['cosmeticos', 'Cosméticos']];
+  const CATS = [['skins', 'Skins de CS2'], ['lujo', 'Lujo']];  // Cosmeticos ocultos: el Mercado esta en mantenimiento (PM 30-10)
   const ORDENES = [['valor', 'Más valiosas'], ['nuevas', 'Más nuevas'], ['rareza', 'Por rareza']];
   const SEL_BAT = 'id,mode,cases,cost,status,created_by,winner,totals,created_at,done_at,cs_battle_seats(seat,player)';
 
   /* ---------- estado ---------- */
   let ctx = null, root = null;
-  const S = { tab: 'abrir', cat: ['lujo', 'cosmeticos'].includes(lee('cj-cat')) ? lee('cj-cat') : 'skins', caja: null, n: 1, rapido: lee('cj-rapido') === '1', quien: null, sel: new Set(), bat: null, nueva: null, res: null, sure: null, rep: null, espTodo: null,
+  const S = { tab: 'abrir', cat: lee('cj-cat') === 'lujo' ? 'lujo' : 'skins', caja: null, n: 1, rapido: lee('cj-rapido') === '1', quien: null, sel: new Set(), bat: null, nueva: null, res: null, sure: null, rep: null, espTodo: null,
     orden: ['valor', 'nuevas', 'rareza'].includes(lee('cj-orden')) ? lee('cj-orden') : 'valor', fR: null, fC: null, invN: INV_PASO, pag: 0 };
   const D = { cases: null, caja: new Map(), items: new Map(), st: null, bats: new Map(), err: null, hechas: null, cajasDe: new Map() };
   let anim = null, pendiente = false, cargando = null, otraVez = false, ultima = 0, ocupado = false;

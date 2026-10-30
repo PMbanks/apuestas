@@ -1565,7 +1565,9 @@ const SCREENS = {
 const jgCtx = () => ({ db, me: ME, meKey: MEK, jugadores: F.map((f) => ({ id: f.id, uuid: f.uid, n: f.n, color: f.id })), saldo: me().s, av, toast, refresh });
 const juegos = () => (window.GM_JUEGOS ? GM_JUEGOS.html(jgCtx()) : '');
 const mkCtx = () => ({ db, me: ME, meKey: MEK, jugadores: F.map((f) => ({ id: f.id, uuid: f.uid, n: f.n, color: f.id })), saldo: me().s, av, toast, refresh });
-const mercado = () => (window.GM_MERCADO ? GM_MERCADO.html(mkCtx()) : '');
+// PM 30-10: el Mercado no esta terminado, en mantenimiento hasta que diga (el modulo y la base siguen ahi)
+const MERCADO_MANT = true;
+const mercado = () => (MERCADO_MANT ? `<div class="pad mant"><svg viewBox="0 0 24 24">${SCREENS.mercado[2]}</svg><b>En mantenimiento</b><p>El Mercado está casi listo. Intercambios, ventas, contratos y jackpot llegan pronto.</p></div>` : window.GM_MERCADO ? GM_MERCADO.html(mkCtx()) : '');
 const R = { novedades, juegos, mercado, directo, partidos, apuestas, colegas, liga, chat, monedero, perfil, cajas: () => (window.GM_CAJAS ? GM_CAJAS.html() : '') };
 const cajasCtx = () => ({ db, me: ME, jugadores: F.map((f) => ({ id: f.uid, n: f.n, color: f.id, ini: f.ini, photo: !!f.photo })), saldo: me().s, toast, refresh });
 const photoCss = () => { document.getElementById('phs').textContent = F.filter((f) => f.photo).map((f) => `.av.${f.id}.ph{background-image:url("${encodeURI(f.photo)}")}`).join('') };
@@ -1595,7 +1597,7 @@ function render() {
   const cajas = [...document.querySelectorAll('#view input[id^="poll-"]')].map((e) => [e.id, e.value, document.activeElement === e]);
   const keep = {}; document.querySelectorAll('[data-keep]').forEach((e) => (keep[e.dataset.keep] = e.scrollTop));
   const un = S.scr === 'chat' ? 0 : unread();
-  document.getElementById('nav').innerHTML = Object.entries(SCREENS).filter(([k]) => k !== 'directo').map(([k, [n, , ic]]) => `<button class="nv ${S.scr === k ? 'on' : ''}" data-scr="${k}"><svg viewBox="0 0 24 24">${ic}</svg><span class="nl">${n}</span><span class="ns">${n.replace('Mis apuestas', 'Apuestas').replace('Apuestas de todos', 'Todos').replace('Novedades', 'Nuevo')}</span>${k === 'chat' && un ? `<i>${un}</i>` : ''}${k === 'novedades' && S.scr !== 'novedades' && novSinVer() ? '<i class="nv-pt"></i>' : ''}</button>`).join('');
+  document.getElementById('nav').innerHTML = Object.entries(SCREENS).filter(([k]) => k !== 'directo' && k !== 'novedades').map(([k, [n, , ic]]) => `<button class="nv ${S.scr === k ? 'on' : ''}" data-scr="${k}"><svg viewBox="0 0 24 24">${ic}</svg><span class="nl">${n}</span><span class="ns">${n.replace('Mis apuestas', 'Apuestas').replace('Apuestas de todos', 'Todos').replace('Novedades', 'Nuevo')}</span>${k === 'chat' && un ? `<i>${un}</i>` : ''}${k === 'novedades' && S.scr !== 'novedades' && novSinVer() ? '<i class="nv-pt"></i>' : ''}</button>`).join('');
   const rank = [...F].sort((a, b) => b.s - a.s);
   document.getElementById('me').innerHTML = `${av(MEK, 'xl')}<b>${esc(me().n)}</b><em>${N(me().s)} · ${rank.indexOf(me()) + 1}º de ${F.length}</em>`;
   document.getElementById('me').dataset.prof = MEK;
@@ -1614,7 +1616,7 @@ function render() {
   avisaMira();
   if (S.scr === 'cajas' && window.GM_CAJAS) GM_CAJAS.montar(vw, cajasCtx(), cambia);
   if (S.scr === 'juegos' && window.GM_JUEGOS) GM_JUEGOS.montar(vw, jgCtx(), cambia);
-  if (S.scr === 'mercado' && window.GM_MERCADO) GM_MERCADO.montar(vw, mkCtx(), cambia);
+  if (S.scr === 'mercado' && window.GM_MERCADO && !MERCADO_MANT) GM_MERCADO.montar(vw, mkCtx(), cambia);
   if (cambia) { vw.classList.remove('entra'); void vw.offsetWidth; vw.classList.add('entra'); clearTimeout(render.ent); render.ent = setTimeout(() => vw.classList.remove('entra'), 1400) }
   cuentaSaldo();
   if (S.scr === 'partidos') { lgFlechas(); lvFlechas(); fillEspn(); fillSheet(); fillBracket() }

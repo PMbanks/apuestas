@@ -17,6 +17,7 @@
 })();
 (function () {
   const D = {
+    'En mantenimiento': 'Under maintenance', 'El Mercado está casi listo. Intercambios, ventas, contratos y jackpot llegan pronto.': 'The Market is almost ready. Trades, sales, contracts and jackpot are coming soon.',
     // menú y cabeceras
     'Partidos': 'Matches', 'Mis apuestas': 'My bets', 'Apuestas de todos': 'All bets', 'Todos': 'All', 'Apuestas': 'Bets', 'Colegas': 'Friends', 'Liga': 'League', 'Monedero': 'Wallet', 'Perfil': 'Profile',
     'Fútbol, Valorant, CS2 y UFC · solo 1 X 2 · cierra al empezar': 'Football, Valorant, CS2 and UFC · 1 X 2 only · closes at kick-off',
