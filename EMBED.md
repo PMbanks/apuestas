@@ -20,6 +20,11 @@ Añade una pestaña o sección "Gambling Master" que muestre esa dirección dent
 Usuario y contraseña: te los da PM. No los guardes en el código ni en el repo.
 Se entra una vez dentro de la pestaña y ya se queda.
 
+Para que se quede de verdad, la pestaña tiene que guardar datos del sitio entre cierres:
+- **Electron:** la `webview` o la ventana con una partición persistente, por ejemplo `partition="persist:gambling-master"` (sin `persist:` se borra al cerrar y pide entrar cada vez).
+- **Tauri / WebView2:** no uses modo incógnito ni una carpeta de datos temporal.
+- **Navegador:** no la abras en ventana privada y no borres los datos del sitio al cerrar.
+
 ## No hace falta
 
 - Ninguna clave ni cuenta de Supabase.
