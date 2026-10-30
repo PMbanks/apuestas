@@ -263,3 +263,30 @@
 .jg-cdn small{font:500 11px var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--mute)}
 .jg-cd.hot .p{stroke:#ff7a66;filter:drop-shadow(0 0 11px rgba(255,110,90,.8))}
 .jg-cd.hot .jg-cdn b{color:#ffb4a8;text-shadow:0 0 28px rgba(255,100,80,.55)}
+
+/* lo que cobraria cada uno ahora mismo */
+.jg-live{font:600 15px var(--mono);letter-spacing:-.03em;color:var(--acc);text-shadow:0 0 12px rgba(242,193,78,.35)}
+.jg-live::before{content:"▲ ";font-size:9px;vertical-align:2px;opacity:.7}
+.jg-r.ok{background:linear-gradient(90deg,rgba(43,212,125,.1),rgba(43,212,125,0) 80%)}
+.jg-r.ko{background:linear-gradient(90deg,rgba(224,100,111,.09),rgba(224,100,111,0) 80%)}
+.jg-r[data-pl]{padding:0 6px;margin:0 -6px;border-radius:8px}
+
+/* ranking: podio de tres columnas iguales y el resto plegado */
+.jg-rk{margin-top:72px;max-width:720px}
+.jg-rk-h{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.jg-rk-h .chips{margin-top:0}
+.jg-rk-v{margin-top:22px;font:13px var(--mono);color:var(--dim)}
+.jg-pod{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:26px}
+.jg-pd{display:grid;justify-items:center;align-content:start;gap:9px;padding:0 6px;text-align:center}
+.jg-pn{font:500 40px/1 var(--mono);letter-spacing:-.06em;color:var(--dim)}
+.jg-pd.p1 .jg-pn{color:var(--acc);text-shadow:0 0 22px rgba(242,193,78,.4)}
+.jg-pd.p2 .jg-pn{color:#cfd5dd}.jg-pd.p3 .jg-pn{color:#d8935a}
+.jg-pd .av{width:48px;height:48px;font-size:15px}
+.jg-pnm{font:700 15px var(--disp);letter-spacing:-.02em}
+.jg-pg{font:600 17px var(--mono);letter-spacing:-.03em}
+.jg-pm{font:11px var(--mono);font-style:normal;color:var(--acc)}
+.jg-vt{display:flex;align-items:center;gap:8px;margin:28px auto 0;padding:8px 18px;border-radius:999px;background:rgba(255,255,255,.07);font:600 12px var(--sans);color:var(--soft);transition:background .18s,color .18s}
+.jg-vt:hover{background:rgba(255,255,255,.12);color:var(--ink)}
+.jg-vt i{font:500 11px var(--mono);font-style:normal;color:var(--dim)}
+.jg-rk-l{margin-top:14px}
+.jg-rk-l .jg-r{grid-template-columns:22px minmax(0,1fr) auto auto}

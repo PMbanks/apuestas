@@ -8,6 +8,7 @@
 'use strict';
 (function () {
   const JUEGOS = [['moneda', 'Cara o cruz'], ['crash', 'Crash'], ['blackjack', 'Blackjack']];   // PM, 30-10: ruleta y plinko fuera (su codigo sigue aqui, sin pestana)
+  const CON_RANKING = ['moneda', 'crash', 'blackjack'];                                   // juegos con ranking (db/017b)
   const FN = { moneda: 'moneda_estado', crash: 'crash_estado', ruleta: 'ruleta_estado', blackjack: 'bj_estado', plinko: 'plinko_estado' };
   const SUIT = ['♠', '♥', '♦', '♣'], RANK = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   const ORDEN = [0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7];       // casillas de la ruleta, en el sentido del reloj desde arriba
@@ -18,7 +19,7 @@
   let ctx = null, root = null;
   const S = {
     juego: (() => { const j = lee('jg-juego'); return JUEGOS.some((x) => x[0] === j) ? j : 'crash' })(), stake: Math.max(1, parseInt(lee('jg-stake'), 10) || 100), saldo: 0,
-    lado: 'cara', para: null, riesgo: 'medio', color: 'rojo', auto: '', busy: 0, err: null, ocupa: false, aviso: '', pd: 0, bjRest: null,
+    lado: 'cara', para: null, riesgo: 'medio', color: 'rojo', auto: '', busy: 0, err: null, ocupa: false, rk: { periodo: lee('jg-rk-p') === 'semana' ? 'semana' : 'siempre', todos: false, d: {} }, aviso: '', pd: 0, bjRest: null,
     mo: { vistos: parseInt(lee('jg-mo-visto'), 10) || null, lado: 'cara', msg: '' },
     cr: { ultima: null },
     ru: { ang: 0, spin: null, hecho: null, msg: '' },
@@ -78,10 +79,11 @@
     const j = S.juego, n = ++cargaId;
     ultima = Date.now();
     try {
-      const [d, res, rest] = await Promise.all([rpc(FN[j]), rpc('jg_resumen'), j === 'blackjack' ? bjLimite() : null]);
+      const [d, res, rest, rank] = await Promise.all([rpc(FN[j]), rpc('jg_resumen'), j === 'blackjack' ? bjLimite() : null, CON_RANKING.includes(j) ? rpc('jg_ranking', { p_juego: j, p_periodo: S.rk.periodo }).catch(() => null) : null]);
       if (n !== cargaId) return;
       D[j] = d; D.res = res; S.err = null;
       if (j === 'blackjack') { if (S.busy) S.bjRestPend = rest; else S.bjRest = rest }
+      if (CON_RANKING.includes(j) && !S.busy) S.rk.d[j] = rank;                          // el ranking enseña resultados: no se toca mientras una animacion los esconde
       aplica(j);
     } catch (e) { if (n !== cargaId) return; S.err = msgErr(e) }
     pintaSi();
@@ -94,7 +96,7 @@
   }
   function firma() {
     const d = D[S.juego] || {}, r = D.res || {};
-    const base = [S.juego, S.err, r.crash && r.crash.id, r.ruleta && r.ruleta.estado, r.moneda, r.bj, S.bjRest, S.lado, S.para, S.riesgo, S.color, S.mo.lado, S.mo.msg, S.ru.msg, S.pl.msg];
+    const base = [S.juego, S.err, r.crash && r.crash.id, r.ruleta && r.ruleta.estado, r.moneda, r.bj, S.bjRest, S.lado, S.para, S.riesgo, S.color, S.rk.d[S.juego], S.rk.todos, S.rk.periodo, S.mo.lado, S.mo.msg, S.ru.msg, S.pl.msg];
     return JSON.stringify([base, d, S.juego === 'crash' ? crFase() : S.juego === 'ruleta' ? ruFase() : 0], (k, v) => (k === 'now' ? undefined : v));
   }
   // lo propio de cada juego al llegar datos nuevos
@@ -171,7 +173,7 @@
     return JUEGOS.map(([k, n]) => `<button class="jg-tab ${S.juego === k ? 'on' : ''}" data-jg="tab" data-v="${k}">${n}${k === 'moneda' ? `<b class="${r.moneda > 0 ? '' : 'off'}">${r.moneda || 0}</b>` : `<i class="${pt[k] ? '' : 'off'}"></i>`}</button>`).join('');
   }
   function vista() {
-    return { moneda: vMoneda, crash: vCrash, ruleta: vRuleta, blackjack: vBj, plinko: vPlinko }[S.juego]();
+    return { moneda: vMoneda, crash: vCrash, ruleta: vRuleta, blackjack: vBj, plinko: vPlinko }[S.juego]() + rankingHtml();
   }
   function post() {
     if (!root) return;
@@ -181,12 +183,31 @@
     };
     root.querySelectorAll('[data-saldo]').forEach((e) => (e.textContent = N(S.saldo)));
     if (S.juego === 'moneda' && refs.coin) refs.coin.style.transform = moPose(S.mo.lado === 'cara' ? 0 : 180);
-    if (S.juego === 'crash') { crFrame(true); crLoop() }
+    if (S.juego === 'crash') { crFilasFx(); crFrame(true); crLoop() }
     if (S.juego === 'ruleta') { ruPos(); ruLoop() }
     if (S.juego === 'blackjack') bjPost();
   }
   function paraLoops() { cancelAnimationFrame(crRaf); clearTimeout(crPoll); cancelAnimationFrame(ruRaf); clearTimeout(ruPoll); clearTimeout(ruTimer); crRaf = crPoll = ruRaf = ruPoll = ruTimer = 0 }
   function reanuda() { if (S.juego === 'crash') crLoop(); if (S.juego === 'ruleta') ruLoop() }
+
+  /* ---------- ranking: podio con los 3 primeros y "Ver todos" (la base lo da ya agregado: db/017b) ---------- */
+  function rankingHtml() {
+    const j = S.juego, rk = S.rk.d[j];
+    if (!CON_RANKING.includes(j) || !rk) return '';
+    const top = rk.slice(0, 3), resto = rk.slice(3), crash = j === 'crash';
+    const neto = (n) => (n >= 0 ? '+' + N(n) : '▼ ' + N(-n));
+    const cab = `<div class="jg-rk-h"><span class="lab">Ranking</span><div class="chips"><button class="chip ${S.rk.periodo === 'siempre' ? 'on' : ''}" data-jg="rkP" data-v="siempre">De siempre</button><button class="chip ${S.rk.periodo === 'semana' ? 'on' : ''}" data-jg="rkP" data-v="semana">Esta semana</button></div></div>`;
+    if (!rk.length) return `<section class="jg-rk">${cab}<p class="jg-rk-v">Todavía no ha jugado nadie</p></section>`;
+    return `<section class="jg-rk">${cab}
+      <div class="jg-pod">${top.map((x, i) => `<div class="jg-pd p${i + 1}"><b class="jg-pn num">${i + 1}</b>${av(x.player, 'xl')}<span class="jg-pnm">${esc(nom(x.player))}</span><span class="jg-pg num ${x.neto >= 0 ? 'win' : 'lose'}">${neto(x.neto)}</span>${crash && x.mejor ? `<em class="jg-pm">×${X(x.mejor)}</em>` : ''}</div>`).join('')}</div>
+      ${resto.length ? `<button class="jg-vt" data-jg="rkT">${S.rk.todos ? 'Ocultar' : 'Ver todos'} <i>${resto.length}</i></button>${S.rk.todos ? `<div class="jg-rk-l">${resto.map((x, i) => fila('', av(x.player), `${esc(nom(x.player))}<em>${i + 4}º</em>`, crash && x.mejor ? `<em class="jg-pm">×${X(x.mejor)}</em>` : '', `<b class="num jg-pg ${x.neto >= 0 ? 'win' : 'lose'}">${neto(x.neto)}</b>`)).join('')}</div>` : ''}` : ''}
+    </section>`;
+  }
+  async function cargaRank() {
+    const j = S.juego; if (!CON_RANKING.includes(j)) return;
+    try { S.rk.d[j] = await rpc('jg_ranking', { p_juego: j, p_periodo: S.rk.periodo }) } catch { S.rk.d[j] = null }
+    pintaSi(true);
+  }
 
   /* ---------- eventos ---------- */
   const A = {};
@@ -213,6 +234,10 @@
     S.juego = v; guarda('jg-juego', v); paraLoops(); sigs.v = null;
     pinta(); cargar();
   };
+  A.rkP = ({ v }) => { S.rk.periodo = v === 'semana' ? 'semana' : 'siempre'; guarda('jg-rk-p', S.rk.periodo); cargaRank() };
+  A.rkP.libre = true;
+  A.rkT = () => { S.rk.todos = !S.rk.todos; pintaSi(true) };
+  A.rkT.libre = true;
   A.q = ({ v }) => {
     let sal = Math.max(0, S.saldo || ctx.saldo || 0);
     if (S.juego === 'blackjack' && S.bjRest != null) sal = Math.min(sal, Math.max(0, S.bjRest));
@@ -261,7 +286,7 @@
       <label class="jg-amt"><input data-in inputmode="numeric" autocomplete="off" value="${N(S.stake)}" aria-label="Apuesta">${coin()}</label>
       <div class="jg-q">${chips.map((c) => `<button data-jg="q" data-v="${c}">${N(c)}</button>`).join('')}<button data-jg="q" data-v="mitad">1/2</button><button data-jg="q" data-v="doble">×2</button><button data-jg="q" data-v="todo" data-q-todo>${bj ? 'Máx' : 'Todo'}</button></div>${bj ? bjLim() : ''}</div>`;
   }
-  const fila = (cuando, a, b, c, d) => `<div class="jg-r ${cuando || ''}">${a}<span class="jg-r-n">${b}</span>${c || ''}${d || ''}</div>`;
+  const fila = (cuando, a, b, c, d, attrs) => `<div class="jg-r ${cuando || ''}" ${attrs || ''}>${a}<span class="jg-r-n">${b}</span>${c || ''}${d || ''}</div>`;
 
   /* =====================================================================
      CARA O CRUZ
@@ -380,9 +405,11 @@
   }
   function crFila(a, f) {
     let est = '<em>dentro</em>';
-    if (a.estado === 'cobrada') est = `<b class="num win">×${X(a.retiro)}</b><em class="win">+${N(a.pago)}</em>`;
+    // mientras corre la ronda, los que siguen dentro enseñan lo que cobrarian ahora mismo (se actualiza en cada fotograma sin repintar la fila)
+    if (a.estado === 'viva' && f === 'curso') est = `<b class="num jg-live" data-live="${a.stake}">${N(a.stake)}</b>`;
+    else if (a.estado === 'cobrada') est = `<b class="num win">×${X(a.retiro)}</b><em class="win">+${N(a.pago)}</em>`;
     else if (a.estado === 'perdida') est = `<em class="lose">▼ ${N(a.stake)}</em>`;
-    return fila('', av(a.player), `${esc(nom(a.player))}${a.auto ? `<em>sale en ×${X(a.auto)}</em>` : ''}`, `<b class="num ${a.estado === 'viva' ? '' : 'dim'}">${N(a.stake)}</b>`, `<span class="jg-st">${est}</span>`);
+    return fila(a.estado === 'cobrada' ? 'ok' : a.estado === 'perdida' ? 'ko' : '', av(a.player), `${esc(nom(a.player))}${a.auto ? `<em>sale en ×${X(a.auto)}</em>` : ''}`, `<b class="num ${a.estado === 'viva' ? '' : 'dim'}">${N(a.stake)}</b>`, `<span class="jg-st">${est}</span>`, `data-pl="${a.player}" data-est="${a.estado}"`);
   }
   // el boton principal segun la fase: apostar / dentro / retirar con lo que cobrarias
   function crBoton() {
@@ -432,6 +459,19 @@
     el.animate([{ transform: 'translate(-50%,0) scale(.8)', opacity: 0 }, { transform: 'translate(-50%,-26px) scale(1.1)', opacity: 1, offset: 0.25 }, { transform: 'translate(-50%,-80px) scale(1)', opacity: 0 }], { duration: 1300, easing: 'ease-out' }).onfinish = () => el.remove();
     if (refs.mult) refs.mult.animate([{ transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 350 });
   }
+  function crFilasFx() {
+    const r = D.crash && D.crash.ronda; if (!r) return;
+    if (S.cr.rid !== r.id) { S.cr.rid = r.id; S.cr.vistos = new Set(); S.cr.primera = true }
+    root.querySelectorAll('[data-pl]').forEach((row) => {
+      const est = row.dataset.est; if (est === 'viva') return;
+      const k = row.dataset.pl + est; if (S.cr.vistos.has(k)) return;
+      S.cr.vistos.add(k);
+      if (S.cr.primera || quieto()) return;
+      const verde = est === 'cobrada';
+      row.animate([{ backgroundColor: verde ? 'rgba(43,212,125,.42)' : 'rgba(224,100,111,.38)', transform: verde ? 'translateX(-8px) scale(1.01)' : 'translateX(6px)' }, { backgroundColor: 'rgba(0,0,0,0)', transform: 'none' }], { duration: verde ? 900 : 700, easing: 'cubic-bezier(.2,.8,.25,1)' });
+    });
+    S.cr.primera = false;
+  }
   // la ronda acaba de explotar delante de mis ojos
   function crTrans(f0, id0) { if (f0 === 'curso' && D.crash.ronda && D.crash.ronda.id === id0 && crFase() === 'fin') crBoom() }
   const crActivo = (f) => f === 'apuestas' || f === 'curso' || CRX.parts.length > 0 || !!CRX.boom;
@@ -453,6 +493,10 @@
       if (refs.mult._e !== est) { refs.mult._e = est; const [a, b] = est ? est.split('|') : ['', '']; refs.mult.style.color = a; refs.mult.style.textShadow = b }
     }
     setT(refs.sub, txt);
+    if (f === 'curso') {
+      if (!refs.live) refs.live = [...root.querySelectorAll('[data-live]')];
+      for (const el of refs.live) { const v = Math.floor(+el.dataset.live * m); if (el._v !== v) { el._v = v; el.textContent = N(v) } }
+    }
     crCuenta(f, r);
     crBoton();
     crDibuja(f, t, m);

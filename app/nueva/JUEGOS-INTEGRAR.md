@@ -63,6 +63,8 @@ const R = { partidos, apuestas, colegas, liga, chat, monedero, juegos, perfil };
 'Aceptar': 'Accept', 'Retirar': 'Withdraw', 'Tú': 'You', 'ti': 'you',
 'Retirar solo en': 'Cash out only at', 'sin límite': 'no limit', 'Retirada automática': 'Auto cash out',
 'Dentro': 'In', 'dentro': 'in', 'En marcha': 'Running', 'Retirado': 'Cashed out', 'Perdida': 'Lost', 'En la ronda': 'In the round', 'Últimas rondas': 'Last rounds',
+'Ranking': 'Leaderboard', 'De siempre': 'All time', 'Esta semana': 'This week', 'Ver todos': 'See all', 'Ocultar': 'Hide', 'Todavía no ha jugado nadie': 'Nobody has played yet',
+'Ese juego no tiene ranking': 'That game has no leaderboard', 'Elige siempre o semana': 'Pick all time or this week',
 'Todavía nadie dentro': 'Nobody in yet', 'segundos': 'seconds', 'Apuesta para abrir una ronda': 'Bet to open a round', 'Retira antes de que explote': 'Cash out before it blows',
 'Banca': 'Dealer', 'Haz tu apuesta': 'Place your bet', 'En juego': 'In play', 'Pedir': 'Hit', 'Plantarse': 'Stand', 'Doblar': 'Double', 'doblada': 'doubled',
 'Repartir por': 'Deal for', 'Otra mano por': 'Another hand for', 'Hoy te quedan': 'Today you have', 'por arriesgar': 'left to risk',
@@ -98,6 +100,7 @@ const R = { partidos, apuestas, colegas, liga, chat, monedero, juegos, perfil };
 [/^Ganas ▲ ([\d.]+)$/, 'You win ▲ $1'], [/^Te pasas · ▼ ([\d.]+)$/, 'Bust · ▼ $1'], [/^Pierdes ▼ ([\d.]+)$/, 'You lose ▼ $1'],
 [/^Hoy solo puedes arriesgar ([\d.]+) más en el blackjack$/, 'Today you can only risk $1 more in blackjack'],
 [/^Hoy ya has perdido 100 en el blackjack\. Vuelve mañana$/, 'You have already lost 100 today in blackjack. Come back tomorrow'],
+[/^(\d+)º$/, '$1th'],
 [/×(\d+),(\d\d)/g, '×$1.$2'],   // decimales con punto: este va el ultimo de la lista
 ```
 
