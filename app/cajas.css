@@ -538,3 +538,4 @@ button.cj-seat:hover{background:rgba(242,193,78,.16);color:var(--acc)}
 .cj-top-p .v{display:flex;align-items:center;gap:6px;font:600 20px var(--mono)}
 .cj-top-p.p1 .v{color:var(--acc)}
 .cj-top-p small{font:11px var(--mono);color:var(--dim)}
+.cj-todo{margin-left:auto;color:#ff8f98}.cj-todo.on{background:rgba(224,100,111,.18);color:#ffd0d4}

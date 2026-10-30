@@ -343,7 +343,8 @@
       ${nC.size > 1 ? `<nav class="cj-fcs"><button class="cj-fc ${!S.fC ? 'on' : ''}" data-cj="fC" data-v=""><span>Todas las cajas</span></button>${[...nC].sort((a, b) => b[1] - a[1]).map(([id, n]) => `<button class="cj-fc ${S.fC === id ? 'on' : ''}" data-cj="fC" data-v="${esc(id)}" title="${esc(caja(id).name || '')}">${pic(caja(id).image, 128)}<span data-notr>${esc(caja(id).name || id)}</span><b>${n}</b></button>`).join('')}</nav>` : ''}`;
     const herramientas = mio ? `<div class="cj-tools"><span class="hint">Toca una para elegirla</span>
         ${faltan > 1 ? `<button class="chip" data-cj="todas">Elegir las ${faltan}</button>` : ''}
-        ${baratas && !filtrado ? `<button class="chip" data-cj="baratas">Elegir las de menos de ${BARATA}</button>` : ''}</div>` : '';
+        ${baratas && !filtrado ? `<button class="chip" data-cj="baratas">Elegir las de menos de ${BARATA}</button>` : ''}
+        ${D.st.inv.length ? `<button class="chip cj-todo ${S.sure === 'todo' ? 'on' : ''}" data-cj="vendertodo">${S.sure === 'todo' ? `¿Vender las ${N((S.todo || []).length)} por ${N((S.todo || []).reduce((a, x) => a + x.value, 0))}? Toca otra vez` : 'Vender todo el inventario'}</button>` : ''}</div>` : '';
     return `${fila}${tuyas}${head}${herramientas}${filtros}
       ${filtrado ? `<p class="cj-count"><span>${cuantas(vis.length, vis)}</span><span class="num">${N(vis.reduce((a, i) => a + i.value, 0))}${coin()}</span><button class="chip" data-cj="sinfiltro">Quitar filtros</button></p>` : ''}
       <div class="cj-grid cj-inv">${ver.map((i) => tile(item(i.item), { top: caja(i.case).name, meta: metaDe(i), valor: i.value, on: S.sel.has(i.id), boton: mio ? `data-cj="sel" data-v="${i.id}"` : '' })).join('')}</div>
@@ -671,6 +672,16 @@
       case 'venderRes': if (!seguro('res')) return; return vender(S.res.items.filter((i) => i.status !== 'sold').map((i) => i.id));
       case 'quien': S.quien = v === ctx.me ? null : v; S.sel.clear(); S.sure = null; S.fR = null; S.fC = null; S.invN = INV_PASO; pinta(); return cargar(true);
       case 'sel': { const id = +v; if (S.sel.has(id)) S.sel.delete(id); else S.sel.add(id); S.sure = null; return pinta() }
+      // PM, 30-10: "un botón para vender todo el inventario" (todo lo suyo, no solo lo cargado en pantalla)
+      case 'vendertodo': {
+        if (S.sure !== 'todo') {
+          const { data } = await ctx.db.from('cs_inv').select('id,value').eq('player', ctx.me).eq('status', 'own').limit(5000);
+          S.todo = data || []; if (!S.todo.length) return; S.sure = 'todo'; pinta();
+          setTimeout(() => { if (S.sure === 'todo') { S.sure = null; pinta() } }, 4500); return;
+        }
+        S.sure = null; const ids = (S.todo || []).map((x) => x.id); S.todo = null; if (!ids.length) return pinta();
+        return vender(ids);
+      }
       case 'baratas': for (const i of D.st.inv) if (i.value < BARATA) S.sel.add(i.id); S.sure = null; return pinta();
       case 'todas': for (const i of D.st.inv) if ((!S.fR || item(i.item).rarity === S.fR) && (!S.fC || i.case === S.fC)) S.sel.add(i.id); S.sure = null; return pinta();
       case 'nosel': S.sel.clear(); S.sure = null; return pinta();
