@@ -8,7 +8,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="img/icon-192.png">
 <link rel="apple-touch-icon" href="img/icon-192.png">
-<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="app.css?v=202610300834">
 <style id="phs"></style>
 </head>
 <body>
@@ -23,6 +23,7 @@
     <input id="pass" name="password" type="password" autocomplete="current-password" required>
     <button class="go" type="submit" id="login-go">Entrar</button>
     <p class="lg-err" id="login-err" role="alert"></p>
+    <div class="lang lg-lang"><button type="button" data-lang="es">ES</button><button type="button" data-lang="en">EN</button></div>
   </form>
 </div>
 <div class="app" id="app" hidden>
@@ -30,7 +31,7 @@
     <div class="brand"><span class="cn"></span>GAMBLING MASTER</div>
     <nav class="nav" id="nav"></nav>
     <div class="rail-me" id="me" style="cursor:pointer"></div>
-    <p class="rail-rule">Reglas fijas. Solo PM las cambia. Se actualiza sola para los tres.</p>
+    <div class="lang" id="lang"></div>
   </aside>
   <header class="top" id="top"></header>
   <main class="scr" id="view"></main>
@@ -38,7 +39,8 @@
 <div class="boot" id="boot"><span class="cn"></span></div>
 <div class="toast" id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js"></script>
-<script src="app.js"></script>
+<script src="config.js?v=202610300834"></script>
+<script src="i18n.js?v=202610300834"></script>
+<script src="app.js?v=202610300834"></script>
 </body>
 </html>

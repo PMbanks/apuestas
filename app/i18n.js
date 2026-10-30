@@ -1,0 +1,157 @@
+// Gambling Master en español o en inglés. La app escribe en español; con el inglés elegido se traduce lo pintado
+// con este diccionario (frases exactas) y estas reglas (frases con números o nombres). Lo que escriben los jugadores no se toca.
+'use strict';
+(function () {
+  const D = {
+    // menú y cabeceras
+    'Partidos': 'Matches', 'Mis apuestas': 'My bets', 'Apuestas de todos': 'All bets', 'Todos': 'All', 'Apuestas': 'Bets', 'Colegas': 'Friends', 'Liga': 'League', 'Monedero': 'Wallet', 'Perfil': 'Profile',
+    'Fútbol, Valorant y UFC · solo 1 X 2 · cierra al empezar': 'Football, Valorant and UFC · 1 X 2 only · closes at kick-off',
+    'Lo que llevas en juego y todo lo que ya se ha pagado': 'What you have in play and everything already paid',
+    'Lo que lleva cada uno en juego y cuánto falta': 'What each of you has in play and how long is left',
+    'La temporada, semana a semana': 'The season, week by week', 'Fotos, mensajes y avisos': 'Photos, messages and notices',
+    'Tu dinero, la paga del lunes y cada movimiento': 'Your money, the Monday payday and every move',
+    // entrar
+    'Usuario': 'Username', 'Contraseña': 'Password', 'Entrar': 'Log in', 'Usuario o contraseña incorrectos': 'Wrong username or password',
+    // partidos
+    'Fútbol': 'Football', 'Todo': 'All', 'Principales': 'Top', 'Todas': 'All', 'Cobro con': 'Payout with', 'nada': 'none',
+    'cuotas reales de DraftKings o calculadas · se congelan al apostar': 'real DraftKings odds or our own · locked when you bet',
+    'cuotas: DraftKings o calculadas': 'odds: DraftKings or our own', 'VIVO': 'LIVE', 'En directo': 'Live', 'EN DIRECTO': 'LIVE', 'vs': 'vs',
+    'No hay partidos con este filtro en los próximos días.': 'No matches with this filter in the next days.',
+    'Empate': 'Draw', 'empate': 'draw', 'X · EMPATE': 'X · DRAW', '1 · GANA': '1 · WIN', '2 · GANA': '2 · WIN',
+    'Cuotas reales de DraftKings · se congelan al apostar': 'Real DraftKings odds · locked when you bet',
+    'Cuotas calculadas con la forma y el récord · se congelan al apostar': 'Odds from form and record · locked when you bet',
+    'Elige 1, X o 2 para apostar.': 'Pick 1, X or 2 to bet.', 'Elige 1 o 2 para apostar.': 'Pick 1 or 2 to bet.',
+    'Cerrado: ya ha empezado. Se paga solo al acabar.': 'Closed: it has started. It pays out by itself at the end.',
+    'Si aciertas con': 'If you win with', 'Colegas en este partido': 'Friends in this match', 'aún no ha apostado': 'has not bet yet',
+    'Tus apuestas aquí': 'Your bets here', 'Cancelar': 'Cancel', '¿Seguro? Toca otra vez': 'Sure? Tap again',
+    'Retar a un colega en este partido': 'Challenge a friend on this match', 'Cerrar': 'Close', 'Elige colega y resultado.': 'Pick a friend and a result.',
+    'Reto 1 contra 1 · el que acierte se lleva lo de los dos': '1 vs 1 challenge · whoever is right takes both stakes',
+    'Dónde verlo': 'Where to watch', 'En inglés': 'In English', 'En español': 'In Spanish', 'sin datos': 'no data',
+    'Últimos 5': 'Last 5', 'Clasificación': 'Standings', 'Posesión': 'Possession', 'Tiros': 'Shots', 'A puerta': 'On target', 'Córners': 'Corners',
+    'Faltas': 'Fouls', 'Amarillas': 'Yellow cards', 'Rojas': 'Red cards', 'Fueras de juego': 'Offsides', 'Forma': 'Form', 'G · E · P': 'W · D · L',
+    'Récord': 'Record', 'Formato': 'Format', 'Cargando datos de ESPN…': 'Loading ESPN data…', 'Apuesta del día': 'Bet of the day',
+    '← Partidos': '← Matches', '← Volver': '← Back', 'Cartelera principal': 'Main card', 'Combate estelar': 'Main event', 'Internacional': 'International',
+    // mis apuestas
+    'En juego': 'In play', 'Apostado': 'Staked', 'Cobrado': 'Collected', 'Aciertos': 'Hit rate', 'Racha': 'Streak', 'Mejor cuota': 'Best odds',
+    'acertada': 'won', 'la de ahora': 'right now', 'Si aciertas todo lo abierto': 'If everything open wins', 'Resueltas': 'Settled', 'Ganadas': 'Won',
+    'Perdidas': 'Lost', 'Pendiente': 'Pending', 'Ganada': 'Won', 'Perdida': 'Lost', 'Anulada': 'Void', 'Tus retos': 'Your challenges',
+    'Nada en juego. Ve a Partidos y toca una cuota.': 'Nothing in play. Go to Matches and tap a price.', 'Todavía nada.': 'Nothing yet.',
+    'Aún no has retado a nadie. Abre un partido y pulsa Retar.': 'You have not challenged anyone yet. Open a match and tap Challenge.',
+    'Esperando respuesta': 'Waiting for an answer', 'Rechazado': 'Declined', 'Sin contestar': 'No answer', 'Retirado': 'Withdrawn', 'Ganado': 'Won',
+    'Sin ganador': 'No winner', 'No': 'No', 'Retirar': 'Withdraw',
+    // colegas
+    'De aquí a la paga del lunes': 'From now to the Monday payday', 'Lo que viene': 'Coming up', 'Sin extra': 'No bonus', 'Elecciones': 'Picks',
+    'Visibles': 'Visible', 'Ocultas hasta empezar': 'Hidden until kick-off', 'Retos 1 contra 1': '1 vs 1 challenges', 'Duelos': 'Duels',
+    'apostáis a cosas distintas': 'you bet on different outcomes', 'Sin duelos a la vista.': 'No duels in sight.', 'Si acierta': 'If it wins',
+    'Últimas resueltas': 'Last settled', 'Nada en juego.': 'Nothing in play.', 'Oculta': 'Hidden', 'EN VIVO': 'LIVE',
+    'Nadie ha retado a nadie todavía. Se reta desde la ficha de cada partido.': 'Nobody has challenged anyone yet. Challenges start from each match.',
+    'AHORA': 'NOW', 'MÁS ADELANTE': 'LATER', 'DUELO': 'DUEL', 'Nadie tiene nada en juego todavía': 'Nobody has anything in play yet', 'vs.': 'vs.',
+    // liga
+    'SEMANA': 'WEEK', 'Vas primero': 'You are first', 'En juego ahora': 'In play now', 'entre todos': 'between all of you', 'Repartido': 'Handed out',
+    'esta temporada': 'this season', 'Aciertos del grupo': 'Group hit rate', 'Saldo semana a semana': 'Balance week by week',
+    'Por encima de la línea discontinua vas ganando dinero. Pasa el ratón por cada semana.': 'Above the dashed line you are making money. Hover each week.',
+    'Ganancia por semana': 'Profit by week', 'Lo ganado o perdido cada semana, sin contar la paga.': 'Won or lost each week, without the payday.',
+    'Aciertos por deporte': 'Hit rate by sport', 'Qué parte de sus apuestas acierta cada uno.': 'How many of their bets each one wins.',
+    'Dónde apuesta cada uno': 'Where each one bets', 'Qué parte de lo apostado va a cada deporte.': 'How much of each one\'s stakes goes to each sport.',
+    'Cuota media': 'Average odds', 'Cuanto más alta, más arriesga.': 'The higher, the riskier.', 'Últimas apuestas': 'Latest bets',
+    'Cada punto es una apuesta resuelta.': 'Each dot is a settled bet.', 'Premios de la temporada': 'Season awards',
+    'Se reparten cuando haya apuestas resueltas.': 'Handed out once bets are settled.', 'Cuando se resuelvan las primeras apuestas saldrán aquí.': 'The first settled bets show up here.',
+    'Colega': 'Player', 'Saldo': 'Balance', 'Neto': 'Net', 'Mejor premio': 'Best win', 'Fuerte en': 'Strong at', 'ganada': 'won', 'perdida': 'lost',
+    'la más reciente, a la derecha': 'the newest on the right', 'INICIO': 'START', 'lo repartido': 'handed out', 'Mayor premio': 'Biggest win',
+    'Cuota más alta acertada': 'Highest odds won', 'Mejor semana': 'Best week', 'Peor golpe': 'Worst hit', 'Más apuestas': 'Most bets', 'Mejor racha': 'Best streak',
+    'ganadas seguidas': 'wins in a row', 'Valorant': 'Valorant', 'UFC': 'UFC',
+    // chat
+    'Escribe a tus colegas': 'Message your friends', 'Sus apuestas': 'Their bets', 'Fotos': 'Photos', 'Aún no hay fotos.': 'No photos yet.', 'Escribe el primero.': 'Be the first to write.',
+    // monedero
+    'Tu saldo': 'Your balance', 'Paga del lunes': 'Monday payday', 'pagas de los lunes': 'Monday paydays', 'Premios': 'Winnings',
+    'lo que te han pagado': 'what you have been paid', 'Si aciertas todo': 'If everything wins', 'saldo posible': 'possible balance', 'Movimientos': 'Moves',
+    'los últimos': 'the latest', 'Cuándo': 'When', 'Qué': 'What', 'Importe': 'Amount', 'Reglas': 'Rules', 'Apuesta': 'Bet', 'Premio': 'Win', 'Devolución': 'Refund',
+    'Ajuste': 'Adjustment', 'Sin movimientos todavía.': 'No moves yet.', 'Reglas fijas. Solo PM puede cambiarlas.': 'Fixed rules. Only PM can change them.',
+    'Lo que no gastas se acumula para siempre.': 'What you do not spend adds up for ever.',
+    'Solo se apuesta a quién gana: 1, X o 2. En Valorant y UFC no hay empate.': 'You only bet on who wins: 1, X or 2. Valorant and UFC have no draw.',
+    'Los resultados llegan solos y se pagan al momento. Si un partido no se juega, se devuelve lo apostado.': 'Results arrive by themselves and pay out at once. If a match is not played, the stake comes back.',
+    // perfil
+    'Poner foto': 'Add photo', 'Cambiar foto': 'Change photo', 'Quitar': 'Remove', 'Cambiar contraseña': 'Change password', 'Cerrar sesión': 'Log out',
+    'Activar avisos': 'Turn on alerts', 'Avisos activados': 'Alerts on', 'Guardar': 'Save', 'Contraseña nueva (8 o más)': 'New password (8 or more)',
+    'Toca tu apodo o tu frase para cambiarlos. Tu foto la ven los demás.': 'Tap your nickname or your line to change them. The others see your photo.',
+    'de una vez': 'in one go', 'sin apuestas': 'no bets', 'arriesga mucho': 'takes big risks', 'término medio': 'middle of the road', 'juega seguro': 'plays it safe',
+    'Tu saldo ': 'Your balance', 'Su saldo': 'Their balance', 'Por encima de la línea discontinua va ganando.': 'Above the dashed line they are winning.',
+    'Por deporte': 'By sport', 'Apuestas acertadas de las resueltas.': 'Settled bets that won.', 'Tus duelos': 'Your duels',
+    'Partidos en los que apostasteis a cosas distintas: quién acertó.': 'Matches where you bet on different outcomes: who was right.',
+    'Sigue a': 'Follows', 'Logros': 'Achievements', 'Aún sin premios esta temporada.': 'No awards yet this season.', 'Nada en juego ahora mismo.': 'Nothing in play right now.',
+    'Primera victoria': 'First win', 'Gana una apuesta': 'Win a bet', 'En racha': 'On a roll', '3 ganadas seguidas': '3 wins in a row', 'Imparable': 'Unstoppable',
+    '5 ganadas seguidas': '5 wins in a row', 'Valiente': 'Brave', 'Gana con cuota de 3 o más': 'Win at odds of 3 or more', 'Francotirador': 'Sniper',
+    'Gana con cuota de 5 o más': 'Win at odds of 5 or more', 'Todoterreno': 'All-rounder', 'Apuesta en fútbol, Valorant y UFC': 'Bet on football, Valorant and UFC',
+    'Fiel': 'Loyal', '20 apuestas': '20 bets', 'Ballena': 'Whale', 'Apuesta 1.000 de una vez': 'Bet 1,000 in one go', 'En verde': 'In the green',
+    'Ten más de lo que te han dado': 'Have more than you were given', 'Duelista': 'Duellist', 'Gana un reto 1 contra 1': 'Win a 1 vs 1 challenge',
+    'Del día': 'Of the day', 'Acierta la apuesta del día': 'Win the bet of the day', 'Rico': 'Rich', 'Llega a 5.000': 'Reach 5,000',
+    // avisos de la app
+    'Sin saldo: espera a la paga del lunes': 'No chips: wait for the Monday payday', 'Subiendo foto…': 'Uploading photo…',
+    'Foto de perfil cambiada': 'Profile photo changed', 'Foto quitada': 'Photo removed', 'Apodo guardado': 'Nickname saved', 'Frase guardada': 'Line saved',
+    'Reto aceptado': 'Challenge accepted', 'Reto rechazado': 'Challenge declined', 'Mínimo 8 caracteres': 'At least 8 characters',
+    'Contraseña cambiada. Solo la sabes tú.': 'Password changed. Only you know it.', 'Algo ha fallado': 'Something went wrong',
+  };
+  const DIAS = { LUN: 'MON', 'MIÉ': 'WED', JUE: 'THU', VIE: 'FRI', 'SÁB': 'SAT', DOM: 'SUN', HOY: 'TODAY', ENE: 'JAN', ABR: 'APR', AGO: 'AUG', DIC: 'DEC' };
+  const R = [
+    [/\b(LUN|MIÉ|JUE|VIE|SÁB|DOM|HOY|ENE|ABR|AGO|DIC)\b/g, (m) => DIAS[m]],
+    [/\bMAR(?= \d)/g, 'TUE'],
+    [/\b(lun|mar|mié|jue|vie|sáb|dom)\b(?= \d)/g, (m) => ({ lun: 'mon', mar: 'tue', 'mié': 'wed', jue: 'thu', vie: 'fri', 'sáb': 'sat', dom: 'sun' }[m])],
+    [/\bayer\b/g, 'yesterday'], [/\bhoy\b/g, 'today'],
+    [/^(\d+) partidos?$/, (m, n) => `${n} match${n === '1' ? '' : 'es'}`],
+    [/empieza en /g, 'starts in '], [/^En vivo/, 'Live'], [/en mapas/g, 'on maps'], [/\ben juego\b/g, 'in play'],
+    [/^\+([\d.]+) el lunes ·$/, '+$1 on Monday ·'], [/(\d+)º de (\d+)/g, '#$1 of $2'], [/^Apostar ([\d.]+)$/, 'Bet $1'], [/^([\d.]+) limpias$/, '$1 profit'],
+    [/^(\d+) apuestas abiertas$/, '$1 open bets'], [/^(\d+) apuestas en total$/, '$1 bets in total'], [/^(\d+) premios$/, '$1 wins'],
+    [/^(\d+) de (\d+) resueltas$/, '$1 of $2 settled'], [/^(\d+) de (\d+)$/, '$1 of $2'], [/^(\d+) se pueden cancelar todavía$/, '$1 can still be cancelled'],
+    [/^(\d+) abiertos$/, '$1 open'], [/^Próximas · (\d+)$/, 'Upcoming · $1'], [/racha/g, 'streak'], [/^hasta las (.+)$/, 'until $1'],
+    [/se ve a las ([\d:]+)/g, 'shown at $1'], [/aún no ha apostado/g, 'has not bet yet'],
+    [/^Temporada · desde el (.+) · (\d+) jugadores$/, 'Season · since $1 · $2 players'], [/^Paga de \+([\d.]+) a cada uno en$/, 'Payday +$1 for each in'],
+    [/^Te faltan ([\d.]+) para alcanzar a (.+)$/, 'You need $1 to catch $2'], [/ · le sacas ([\d.]+) a (.+)$/, ' · you lead $2 by $1'], [/^le sacas ([\d.]+) a (.+)$/, 'you lead $2 by $1'],
+    [/^(\d+) lunes · (\d+) jugadores$/, '$1 Mondays · $2 players'], [/^(\d+) de (\d+) resueltas$/, '$1 of $2 settled'],
+    [/^SEM (\d+)$/, 'WK $1'], [/^SEM (\d+) · AHORA$/, 'WK $1 · NOW'], [/^repartido ([\d.]+)$/, 'handed out $1'], [/^PAGA \+([\d.]+)$/, 'PAYDAY +$1'],
+    [/^Semana (\d+)$/, 'Week $1'], [/apostados/g, 'staked'], [/\bpor semana\b/g, 'a week'],
+    [/^(\d+)º de (\d+)$/, '#$1 of $2'], [/^(\d+)º · /, '#$1 · '], [/^fuerte en$/, 'strong at'], [/^desde el$/, 'since the'],
+    [/^Solo (.+) puede cambiar su foto, su apodo y su frase\.$/, 'Only $1 can change their photo, nickname and line.'],
+    [/^Paga del lunes: \+([\d.]+) para cada uno$/, 'Monday payday: +$1 for each'], [/^Resumen de la semana: /, 'Week summary: '],
+    [/ ganó /g, ' won '], [/ perdió /g, ' lost '], [/ recupera /g, ' gets back '], [/ con /g, ' with '], [/^Empieza (.+?)\. Apuestas: /, 'Kick-off: $1. Bets: '],
+    [/ reta a /g, ' challenges '], [/ acepta el reto de /g, ' accepts the challenge from '], [/ en juego$/, ' in play'], [/ contra /g, ' against '],
+    [/ no se ha jugado$/, ' was not played'], [/· apuesta del día/g, '· bet of the day'], [/ · si aciertas cobras ×/, ' · win and get ×'],
+    [/ · el extra lo enciende PM/, ' · PM turns the bonus on'], [/^Con extra ×/, 'With bonus ×'],
+    [/^Apostado ([\d.]+) a (.+)$/, 'Bet $1 on $2'], [/^Cancelada: te devuelvo ([\d.]+)$/, 'Cancelled: $1 back to you'], [/^Reto enviado a (.+)$/, 'Challenge sent to $1'],
+    [/^Reto retirado: te devuelvo lo puesto$/, 'Challenge withdrawn: your stake is back'], [/^Enviar reto de ([\d.]+)$/, 'Send a $1 challenge'],
+    [/^Pones ([\d.]+)\. Si (.+) acepta, hay ([\d.]+) en juego\.$/, 'You put in $1. If $2 accepts, $3 is at stake.'], [/^Acepto (.+)$/, 'I take $1'],
+    [/^Gana (.+)$/, '$1 wins'], [/ · reta a /g, ' · challenges '], [/^cuota$/, 'odds'], [/gana · cuota/g, 'win · odds'], [/empate · cuota/g, 'draw · odds'],
+    [/^Paga del lunes /, 'Monday payday '], [/ · se acumula$/, ' · it adds up'], [/^Cancelada: /, 'Cancelled: '], [/^Anulado: /, 'Void: '],
+    [/^Cada lunes a las 00:00 entran ([\d.]+) a cada uno\. No se compran ni se ganan de otra forma\.$/, 'Every Monday at 00:00 each of you gets $1. They cannot be bought or earned any other way.'],
+    [/^Cierra al empezar el partido\. Las elecciones de todos se ven siempre\.$/, 'Betting closes at kick-off. Everyone\'s picks are always visible.'],
+    [/^Cierra al empezar el partido\. Las elecciones de todos se ven al empezar\.$/, 'Betting closes at kick-off. Everyone\'s picks show at kick-off.'],
+    [/^Gana (\d) con/, 'Win $1 with'], [/^(\d+) apuestas · toca una para ver el partido\.$/, '$1 bets · tap one to open the match.'],
+  ];
+  const tr = (s) => {
+    const t = s.trim();
+    if (!t) return s;
+    if (D[t]) return s.replace(t, D[t]);
+    let x = t;
+    for (const [re, to] of R) x = x.replace(re, to);
+    return x === t ? s : s.replace(t, x);
+  };
+  let lang = 'es';
+  try { lang = localStorage.getItem('gm-lang') === 'en' ? 'en' : 'es'; } catch (e) {}
+  function traduce(root) {
+    if (lang !== 'en' || !root) return;
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (w.nextNode()) nodes.push(w.currentNode);
+    for (const n of nodes) {
+      if (n.parentElement && n.parentElement.closest('.msg p, textarea, input, [data-notr]')) continue;   // lo que escribe la gente no se traduce
+      const v = n.nodeValue;
+      if (/[A-Za-zÁÉÍÓÚÜáéíóúüñ]/.test(v)) { const x = tr(v); if (x !== v) n.nodeValue = x; }
+    }
+    for (const e of root.querySelectorAll('[placeholder],[title],[aria-label]')) {
+      for (const a of ['placeholder', 'title', 'aria-label']) { const v = e.getAttribute(a); if (v) { const x = tr(v); if (x !== v) e.setAttribute(a, x); } }
+    }
+    // la forma: G E P en español, W D L en inglés
+    for (const b of root.querySelectorAll('.fm b')) b.textContent = { G: 'W', E: 'D', P: 'L' }[b.textContent] || b.textContent;
+  }
+  document.documentElement.lang = lang;
+  window.GM_LANG = { get: () => lang, set: (l) => { lang = l === 'en' ? 'en' : 'es'; try { localStorage.setItem('gm-lang', lang); } catch (e) {} document.documentElement.lang = lang; }, traduce };
+})();

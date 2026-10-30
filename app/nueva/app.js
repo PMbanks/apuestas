@@ -244,6 +244,7 @@ async function fillEspn() {
   const d = await espnData(m);
   const now = document.getElementById('espn-box'); if (!now || now.dataset.m !== m.id) return;
   now.innerHTML = d ? espnHtml(m, d) : tvHtml(m.tv || []);
+  if (window.GM_LANG) GM_LANG.traduce(now);
 }
 
 /* retos 1 contra 1 */
@@ -682,7 +683,7 @@ function perfil() {
         <div class="pf-tags"><span><b>${pos}º</b> de ${F.length}</span><span>racha <b>${f.racha}</b></span><span>fuerte en <b>${f.fuerte}</b></span></div>
         <p class="pf-note">${mine ? 'Toca tu apodo o tu frase para cambiarlos. Tu foto la ven los demás.' : `Solo ${esc(f.n)} puede cambiar su foto, su apodo y su frase.`}</p>
         ${mine ? `<div class="pf-pass" ${S.pw ? '' : 'hidden'}><input type="password" id="newpass" autocomplete="new-password" placeholder="Contraseña nueva (8 o más)" minlength="8"><button class="go" data-act="setpass">Guardar</button></div>
-        <div class="pf-act">${window.Notification && Notification.permission !== 'granted' ? '<button data-act="notif">Activar avisos</button>' : window.Notification ? '<span class="pf-ok">Avisos activados</span>' : ''}<button class="q" data-act="pass">Cambiar contraseña</button><button class="q" data-act="logout">Cerrar sesión</button></div>` : ''}</div>
+        <div class="pf-act">${window.Notification && Notification.permission !== 'granted' ? '<button data-act="notif">Activar avisos</button>' : window.Notification ? '<span class="pf-ok">Avisos activados</span>' : ''}<button class="q" data-act="pass">Cambiar contraseña</button><button class="q" data-act="logout">Cerrar sesión</button><span class="lang" style="margin:0">${['es', 'en'].map((l) => `<button type="button" class="${(window.GM_LANG ? GM_LANG.get() : 'es') === l ? 'on' : ''}" data-lang="${l}">${l.toUpperCase()}</button>`).join('')}</span></div>` : ''}</div>
       <div class="pf-bal"><span class="lab">Saldo</span><b>${N(f.s)}${coin()}</b>${net(f)}</div>
     </header>
     <div class="kpis">
@@ -717,7 +718,7 @@ function perfil() {
 const SCREENS = {
   partidos: ['Partidos', 'Fútbol, Valorant y UFC · solo 1 X 2 · cierra al empezar', '<rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'],
   apuestas: ['Mis apuestas', 'Lo que llevas en juego y todo lo que ya se ha pagado', '<path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5V10a2 2 0 0 0 0 4v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5V14a2 2 0 0 0 0-4z"/><path d="M14.5 6.5v11" stroke-dasharray="1.5 2"/>'],
-  colegas: ['Colegas', 'Lo que lleva cada uno en juego y cuánto falta', '<circle cx="9" cy="8.5" r="3.2"/><path d="M3.2 19.5a5.8 5.8 0 0 1 11.6 0"/><circle cx="16.8" cy="9.6" r="2.6"/><path d="M15.4 14.4a4.6 4.6 0 0 1 5.6 4.5"/>'],
+  colegas: ['Apuestas de todos', 'Lo que lleva cada uno en juego y cuánto falta', '<circle cx="9" cy="8.5" r="3.2"/><path d="M3.2 19.5a5.8 5.8 0 0 1 11.6 0"/><circle cx="16.8" cy="9.6" r="2.6"/><path d="M15.4 14.4a4.6 4.6 0 0 1 5.6 4.5"/>'],
   liga: ['Liga', 'La temporada, semana a semana', '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"/>'],
   chat: ['Chat', 'Fotos, mensajes y avisos', '<path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 17h-8l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 5 5z"/>'],
   monedero: ['Monedero', 'Tu dinero, la paga del lunes y cada movimiento', '<path d="M4.5 8V7a2 2 0 0 1 2-2H17v3"/><rect x="4" y="8" width="16.5" height="11" rx="2.5"/><circle cx="16" cy="13.5" r="1.3"/>'],
@@ -729,10 +730,12 @@ function render() {
   NOW = Date.now();
   const keep = {}; document.querySelectorAll('[data-keep]').forEach((e) => (keep[e.dataset.keep] = e.scrollTop));
   const un = S.scr === 'chat' ? 0 : unread();
-  document.getElementById('nav').innerHTML = Object.entries(SCREENS).map(([k, [n, , ic]]) => `<button class="nv ${S.scr === k ? 'on' : ''}" data-scr="${k}"><svg viewBox="0 0 24 24">${ic}</svg><span class="nl">${n}</span><span class="ns">${n.replace('Mis apuestas', 'Apuestas')}</span>${k === 'chat' && un ? `<i>${un}</i>` : ''}</button>`).join('');
+  document.getElementById('nav').innerHTML = Object.entries(SCREENS).map(([k, [n, , ic]]) => `<button class="nv ${S.scr === k ? 'on' : ''}" data-scr="${k}"><svg viewBox="0 0 24 24">${ic}</svg><span class="nl">${n}</span><span class="ns">${n.replace('Mis apuestas', 'Apuestas').replace('Apuestas de todos', 'Todos')}</span>${k === 'chat' && un ? `<i>${un}</i>` : ''}</button>`).join('');
   const rank = [...F].sort((a, b) => b.s - a.s);
   document.getElementById('me').innerHTML = `${av(MEK, 'xl')}<b>${esc(me().n)}</b><em>${N(me().s)} · ${rank.indexOf(me()) + 1}º de ${F.length}</em>`;
   document.getElementById('me').dataset.prof = MEK;
+  const lg = window.GM_LANG ? GM_LANG.get() : 'es';
+  document.getElementById('lang').innerHTML = ['es', 'en'].map((l) => `<button type="button" class="${l === lg ? 'on' : ''}" data-lang="${l}">${l.toUpperCase()}</button>`).join('');
   const [t, sub] = S.scr === 'perfil' ? ['Perfil', fr(S.prof).n + (fr(S.prof).apodo ? ' · ' + fr(S.prof).apodo : '')] : SCREENS[S.scr];
   document.getElementById('top').innerHTML = `<h1>${t}</h1><span class="sub">${esc(sub)}</span><span class="pay">+${N(WEEKLY)} el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span>`;
   photoCss();
@@ -742,6 +745,7 @@ function render() {
   cuentaSaldo();
   if (S.scr === 'partidos') fillEspn();
   document.querySelectorAll('[data-keep]').forEach((e) => { if (keep[e.dataset.keep]) e.scrollTop = keep[e.dataset.keep] });
+  if (window.GM_LANG) GM_LANG.traduce(document.getElementById('app'));
   document.querySelectorAll('[data-chat]').forEach((e) => { e.scrollTop = e.scrollHeight; e.querySelectorAll('img').forEach((i) => i.addEventListener('load', () => (e.scrollTop = e.scrollHeight), { once: true })) });
 }
 function updStake() {
@@ -754,7 +758,7 @@ function updStake() {
   document.querySelectorAll('[data-stake]').forEach((e) => { const v = e.dataset.stake; e.classList.toggle('on', v === 'all' ? S.stake >= me().s : +v === S.stake) });
 }
 let tt;
-function toast(html) { const t = document.getElementById('toast'); t.innerHTML = html; t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 2800) }
+function toast(html) { const t = document.getElementById('toast'); t.innerHTML = html; if (window.GM_LANG) GM_LANG.traduce(t); t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 2800) }
 const errMsg = (e) => esc((e && (e.message || e.error_description)) || 'Algo ha fallado').replace(/^.*?: /, (x) => (x.length < 30 ? '' : x));
 async function refresh() { try { await load(); render() } catch (e) { toast(errMsg(e)) } }
 let busy = false;
@@ -802,6 +806,7 @@ async function savePerfil(k, v) {
   const { error } = await db.rpc('update_profile', k === 'apodo' ? { p_apodo: v } : { p_frase: v });
   if (error) return toast(errMsg(error)); toast(k === 'apodo' ? 'Apodo guardado' : 'Frase guardada'); await refresh();
 }
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-lang]'); if (!b || !window.GM_LANG) return; GM_LANG.set(b.dataset.lang); location.reload(); }, true);
 document.addEventListener('click', async (e) => {
   const t = e.target.closest('[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
   const d = t.dataset;
@@ -866,7 +871,7 @@ document.addEventListener('change', (e) => {
 document.addEventListener('keydown', (e) => { if (e.target.matches('[data-msg]') && e.key === 'Enter') sendMsg(); if (e.target.matches('[data-pedit]') && e.key === 'Enter') e.target.blur() });
 
 /* ---------- entrar ---------- */
-function showLogin() { document.getElementById('boot').hidden = true; document.getElementById('app').hidden = true; document.getElementById('login').hidden = false; setTimeout(() => document.getElementById('user').focus(), 50) }
+function showLogin() { if (window.GM_LANG) GM_LANG.traduce(document.getElementById('login')); document.getElementById('boot').hidden = true; document.getElementById('app').hidden = true; document.getElementById('login').hidden = false; setTimeout(() => document.getElementById('user').focus(), 50) }
 function showApp() { document.getElementById('boot').hidden = true; document.getElementById('login').hidden = true; document.getElementById('app').hidden = false }
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();

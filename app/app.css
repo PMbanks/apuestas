@@ -4,7 +4,7 @@
 /* Mezcla: menu lateral (movil: barra abajo), tablero del A, ficha del B, liga del C. Un solo mundo oscuro con oro de moneda. */
 :root{
   color-scheme:dark;
-  --bg:#14171d;--bg2:#101318;--ink:#f4f2ec;--soft:#dcd9d2;--mute:#99a0aa;--dim:#6c737e;--hair:rgba(255,255,255,.09);
+  --bg:#1d2129;--bg2:#181b22;--ink:#f4f2ec;--soft:#dcd9d2;--mute:#99a0aa;--dim:#6c737e;--hair:rgba(255,255,255,.1);
   --acc:#f2c14e;--acc2:#ffdc85;--win:#2bd47d;--f-pm:#b88c2c;--f-c1:#cc6496;--f-c2:#4d88e6;
   --ease:cubic-bezier(.2,.7,.2,1);
   --sans:Inter,system-ui,sans-serif;--disp:Archivo,Inter,system-ui,sans-serif;--mono:JB,ui-monospace,Consolas,monospace;
@@ -566,3 +566,10 @@ body{min-height:100%}
 /* PM, 30-10: "equipos con el logo negro no se pueden ver": cada escudo lleva un halo claro y redondo detras (sin caja) y un filo claro */
 img.tl{border-radius:50%;background:radial-gradient(closest-side,rgba(255,255,255,.2),rgba(255,255,255,.07) 72%,rgba(255,255,255,0));padding:2px;filter:drop-shadow(0 0 .7px rgba(255,255,255,.75))}
 .row .ll,.ft .lab img,.d-meta img,.s-match img{border-radius:50%;background:radial-gradient(closest-side,rgba(255,255,255,.2),rgba(255,255,255,.06) 72%,rgba(255,255,255,0));padding:1px;filter:drop-shadow(0 0 .6px rgba(255,255,255,.7))}
+
+.lang{display:flex;gap:4px;margin:14px 6px 0}
+.lang button{padding:5px 10px;border-radius:999px;font:600 11px var(--mono);letter-spacing:.1em;color:var(--mute);transition:color .15s,background .15s}
+.lang button:hover{color:var(--ink)}
+.lang button.on{background:rgba(255,255,255,.08);color:var(--ink)}
+.lg-lang{justify-content:center;margin:18px 0 0}
+@media (max-width:860px){.rail .lang{display:none}}
