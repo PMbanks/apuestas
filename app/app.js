@@ -452,7 +452,7 @@ function dvInfo(m) {
   const w = whoOn(m.id), g = m.games || [];
   const mapas = g.length ? `<div class="dv-maps">${g.map((x) => `<span class="${x.st === 'running' ? 'run' : x.st === 'finished' ? 'fin' : ''}"><small>Mapa ${x.n}</small><b>${x.st === 'running' ? 'en juego' : x.st === 'finished' ? (x.w === m.tid?.a ? esc(m.a) : x.w === m.tid?.b ? esc(m.b) : 'acabado') : 'pendiente'}</b></span>`).join('')}</div>` : '';
   return `<div class="dv-info" data-dv-info>
-    <div class="dv-sc"><div>${logo(m, 'a')}<b>${esc(m.a)}</b></div><strong>${esc(m.score || '0:0')}</strong><div>${logo(m, 'b')}<b>${esc(m.b)}</b></div></div>
+    <div class="dv-sc"><div>${logo(m, 'a')}<b>${esc(m.a)}</b></div><strong>${esc(m.score || '0:0')}${m.s === 'v' || m.s === 'c' ? '<small>mapas ganados</small>' : ''}</strong><div>${logo(m, 'b')}<b>${esc(m.b)}</b></div></div>
     <p class="dv-meta"><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt="">${esc(L[m.lg]?.[0] || '')}${m.stage ? ' · ' + esc(corto(m.stage)) : ''}${m.bo ? ' · BO' + m.bo : ''}</p>
     ${mapas}
     <div class="dv-bets"><span class="lab">Apuestas en este partido</span>${w.length ? w.map((x) => `<div class="dv-b" style="--c:var(--f-${x.f})">${av(x.f, 'sm')}<b>${esc(fr(x.f).n)}</b><span>${x.p ? esc(pn(m, x.p)) + ' · ' + O(x.o) : 'oculta'}</span><em>${N(x.stake)} → ${x.p ? N(x.stake * x.o) : '?'}</em></div>`).join('') : '<p class="hint">Nadie ha apostado a este partido.</p>'}</div>

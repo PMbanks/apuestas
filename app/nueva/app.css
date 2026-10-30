@@ -1073,3 +1073,4 @@ img.tl{border-radius:0;background:none;padding:0;object-fit:contain;filter:drop-
 @media (max-width:860px){.dv{grid-template-columns:1fr}.dv-list{position:static}.dv-sc strong{font-size:32px}.dv-sc b{font-size:15px}}
 
 .mv-i.j{background:rgba(204,100,150,.16);color:#e58ab4}
+.dv-sc strong{display:grid;justify-items:center}.dv-sc strong small{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-top:6px}
