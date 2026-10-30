@@ -13,7 +13,8 @@
   const RANGO = { esp: 0, cov: 1, cla: 2, res: 3, mil: 4 };
   // de cada 10.000 aperturas; si a una caja le falta una rareza se reparte entre las que tiene.
   // db/012_cajas_mas.sql cambia las odds y a la vez anade cat a las cajas: si las cajas traen cat, mandan las nuevas.
-  const PESO_007 = { mil: 7992, res: 1598, cla: 320, cov: 64, esp: 26 }, PESO_012 = { mil: 7570, res: 1800, cla: 450, cov: 130, esp: 50 };
+  // db/027 (PM 30-10: "que las odds sean mas complicadas de que te toquen, mola que tengan cuchillos") vuelve a las de CS2 de verdad.
+  const PESO_007 = { mil: 7992, res: 1598, cla: 320, cov: 64, esp: 26 }, PESO_012 = { mil: 7992, res: 1598, cla: 320, cov: 64, esp: 26 };
   const WEAR = ['Recién fabricado', 'Casi nuevo', 'Algo desgastado', 'Bastante desgastado', 'Deplorable'];
   // solo para rellenar la ruleta: lo que sale de verdad lo decide el servidor
   const RELLENO = { mil: 60, res: 25, cla: 9, cov: 4, esp: 2 };
@@ -490,7 +491,7 @@
     for (const k of hay) { if (x < RELLENO[k]) { r = k; break } x -= RELLENO[k] }
     const l = info.por[r]; return l[(rnd() * l.length) | 0];
   }
-  const kCard = (it, gana) => it.rarity === 'esp' && !esLujo(it.id) ? `<div class="bv-k esp ${gana ? 'gana' : ''}"><span>★</span></div>` : `<div class="bv-k ${gana ? 'gana' : ''}" style="--c:${color(it.rarity)}">${pic(it.image, 256, '', true)}</div>`;
+  const kCard = (it, gana) => it.rarity === 'esp' && !esLujo(it.id) && !it.image ? `<div class="bv-k esp ${gana ? 'gana' : ''}"><span>★</span></div>` : `<div class="bv-k ${gana ? 'gana' : ''}" style="--c:${color(it.rarity)}">${pic(it.image, 256, '', true)}</div>`;
   function reel(b, r, seat, e, landed) {
     const d = b.drops.find((x) => x.round === r && x.seat === seat);
     if (!d) return `<div class="bv-reel"></div>`;
@@ -546,8 +547,9 @@
     for (const k of hay) { if (x < RELLENO[k]) { r = k; break } x -= RELLENO[k] }
     const l = info.por[r]; return l[(Math.random() * l.length) | 0];
   }
-  // como en el juego: un cuchillo o unos guantes salen en la ruleta como una estrella dorada (lo de lujo, con su foto)
-  const carta = (it) => it.rarity === 'esp' && !esLujo(it.id) ? '<div class="cj-k esp"><span>★</span></div>' : `<div class="cj-k" style="--c:${color(it.rarity)}">${pic(it.image, 256, '', true)}</div>`;
+  // un cuchillo o unos guantes salen en la ruleta con su skin y el brillo dorado (PM 30-10: "si es una estrella, que sea la skin,
+  // no la estrella"); la estrella solo si no hay foto
+  const carta = (it) => it.rarity === 'esp' && !esLujo(it.id) && !it.image ? '<div class="cj-k esp"><span>★</span></div>' : `<div class="cj-k" style="--c:${color(it.rarity)}">${pic(it.image, 256, '', true)}</div>`;
   function girar(el, info, inv, dur) {
     if (!el) return Promise.resolve();
     const G = 46, cartas = [];

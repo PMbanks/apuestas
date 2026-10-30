@@ -768,9 +768,12 @@ let LVX = 0;
 function lvFlechas() { const n = document.querySelector('[data-lv]'); if (!n) return; if (n.scrollLeft !== LVX) n.scrollLeft = LVX; n.onscroll = () => { LVX = n.scrollLeft } }
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lvx]'); if (!b) return; const n = document.querySelector('[data-lv]'); n?.scrollBy({ left: +b.dataset.lvx * (n.querySelector('.lvc')?.offsetWidth || 300) + +b.dataset.lvx * 14, behavior: 'smooth' }) });
 const jugados = () => M.filter((m) => m.status === 'final' && (S.f === 'all' || m.s === S.f) && inLeague(m)).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+// PM, 30-10: "que se puedan ver latest games, osea juegos ya jugados": la lista estaba al final de Partidos y no se veia.
+// Ahora hay un boton arriba, al lado de los filtros, que deja solo los ya jugados (todos, sin "Ver mas").
+const jugChip = () => { const n = jugados().length; return n ? `<button class="f jug-chip ${S.soloJug ? 'on' : ''}" data-act="soloJug" aria-pressed="${!!S.soloJug}">Ya jugados<i>${n}</i></button>` : '' };
 function jugadosHtml() {
   const l = jugados(); if (!l.length) return '';
-  const n = Math.min(l.length, S.jugN || 8), gan = (m, k) => { const [x, y] = String(m.score || '').split(' ')[0].split(':').map(Number); if (!(x >= 0 && y >= 0) || x === y) return ''; return (x > y) === (k === 'home') ? 'w' : 'l' };
+  const n = S.soloJug ? l.length : Math.min(l.length, S.jugN || 8), gan = (m, k) => { const [x, y] = String(m.score || '').split(' ')[0].split(':').map(Number); if (!(x >= 0 && y >= 0) || x === y) return ''; return (x > y) === (k === 'home') ? 'w' : 'l' };
   return `<section class="jug"><div class="day"><b>Ya jugados</b><span>últimos dos días</span><i>${l.length}</i></div>${l.slice(0, n).map((m) => `<button class="jug-r" data-goto="${m.id}">
     <span class="jug-t">${WD(m.at)} ${HM(m.at)}<small>${esc(L[m.lg]?.[0] || '')}</small></span>
     <span class="jug-e ${gan(m, 'home')}">${logo(m, 'a')}<b>${esc(m.a)}</b></span><span class="jug-s">${esc(String(m.score || '').split(' ')[0] || 'final')}</span><span class="jug-e b ${gan(m, 'away')}"><b>${esc(m.b)}</b>${logo(m, 'b')}</span>
@@ -789,11 +792,11 @@ function partidos() {
       <span class="lab"><img src="${esc(L[m.lg][1])}" alt=""><b>${WD(m.at)} ${HM(m.at)}</b> · ${isDaily(m) ? 'Apuesta del día' : esc(m.tag || L[m.lg][0])}</span>
       <span class="ft-v">${logo(m, 'a')}<i>vs</i>${logo(m, 'b')}</span><span class="ft-n">${esc(m.a)} · ${esc(m.b)}</span>
       <span class="ft-o">${picksOf(m).map((p) => `<span>${p} <b>${po(m, p) ? O(po(m, p)) : '·'}</b></span>`).join('')}</span></button>`).join('')}</div>` : ''}
-    <nav class="fil">${filt()}</nav>${leagues()}`;
-  if (!list.length) h += `<p class="hint" style="padding:30px 0">No hay partidos con este filtro en los próximos días.</p>`;
+    <nav class="fil">${filt()}${jugChip()}</nav>${leagues()}`;
+  if (!list.length && !S.soloJug) h += `<p class="hint" style="padding:30px 0">No hay partidos con este filtro en los próximos días.</p>`;
   const jugH = jugadosHtml();
   let ri = 0;
-  for (const ms of groups(list)) {
+  for (const ms of S.soloJug ? [] : groups(list)) {
     h += `<div class="day"><b>${DD(ms[0].at)}</b><span>${dayLab(ms[0].at)}</span><i>${ms.length} ${ms.length > 1 ? 'partidos' : 'partido'}</i></div>`;
     for (const m of ms) {
       const open = isOpen(m);
@@ -1576,6 +1579,26 @@ function rendimiento(f) {
   </section>`;
 }
 /* ---------- Perfil ---------- */
+// Ajustes. PM, 30-10: "pon un apartado de settings, y lo de mutear el sonido tambien en settings, no fuera de esta".
+// Todo lo que antes estaba suelto (silencio en la cabecera, animaciones, idioma, avisos y la cuenta en el perfil) vive aqui,
+// mas la moneda que se ve (moneda.js: mismo numero, otro logo y otro nombre).
+function ajustes() {
+  const snd = !(window.GM_SONIDOS && GM_SONIDOS.silenciado()), an = !(window.GM_ANIM && !GM_ANIM.on()), lg = window.GM_LANG ? GM_LANG.get() : 'es', mo = window.GM_MONEDA ? GM_MONEDA.get() : 'vbucks';
+  const sw = (act, on, t, s) => `<button class="aj-f anim-t ${on ? 'on' : ''}" data-act="${act}" aria-pressed="${on}"><span class="aj-tx"><b>${t}</b><small>${s}</small></span><i></i></button>`;
+  const mons = window.GM_MONEDA ? GM_MONEDA.lista() : [['vbucks', 'V-Bucks', IMG + 'vbucks.webp']];
+  const avisos = !window.Notification ? '<p class="aj-n">Este navegador no deja mandar avisos.</p>'
+    : Notification.permission === 'granted' ? '<p class="aj-n"><span class="pf-ok">Avisos activados</span></p>'
+    : '<p class="aj-n">Te avisa de tus apuestas y de los partidos que sigues.</p><button class="aj-a" data-act="notif">Activar avisos</button>';
+  return `<div class="pad aj">
+    <section class="aj-s"><h3 class="lab">Sonido y movimiento</h3>${sw('sonido', snd, 'Sonidos', 'Botones, ruletas, premios y mensajes')}${sw('anim', an, 'Animaciones', 'Ruletas, confeti y transiciones')}</section>
+    <section class="aj-s"><h3 class="lab">Moneda</h3><p class="aj-n">Cambia el logo y el nombre. Lo que tienes es lo mismo.</p>
+      <div class="aj-ops" data-nomon>${mons.map(([k, n, img]) => `<button class="aj-m ${mo === k ? 'on' : ''}" data-act="mon" data-mon="${k}" aria-pressed="${mo === k}"><img src="${img}" alt=""><b data-notr>${n}</b></button>`).join('')}</div></section>
+    <section class="aj-s"><h3 class="lab">Idioma</h3><div class="aj-ops">${[['es', 'Español'], ['en', 'English']].map(([l, n]) => `<button type="button" class="aj-m ${lg === l ? 'on' : ''}" data-lang="${l}"><b data-notr>${n}</b></button>`).join('')}</div></section>
+    <section class="aj-s"><h3 class="lab">Avisos</h3>${avisos}</section>
+    <section class="aj-s"><h3 class="lab">Cuenta</h3><div class="aj-ops"><button class="aj-a" data-act="pass">Cambiar contraseña</button><button class="aj-a q" data-act="logout">Cerrar sesión</button></div>
+      <div class="pf-pass" ${S.pw ? '' : 'hidden'}><input type="password" id="newpass" autocomplete="new-password" placeholder="Contraseña nueva (8 o más)" minlength="8"><button class="go" data-act="setpass">Guardar</button></div></section>
+  </div>`;
+}
 function perfil() {
   const f = fr(S.prof), mine = !!f.me, rank = [...F].sort((a, b) => b.s - a.s), pos = rank.indexOf(f) + 1, op = openOf(f.id);
   const aw = AW.filter((a) => a[2] === f.id), wins = [...f.last].filter((c) => c === 'W').length, h2h = Object.entries(H2H[f.id] || {});
@@ -1588,8 +1611,7 @@ function perfil() {
           : `${f.apodo ? `<p class="pf-ap">${esc(f.apodo)}</p>` : ''}${f.frase ? `<p class="pf-fr">${esc(f.frase)}</p>` : ''}`}
         <div class="pf-tags"><span><b>${pos}º</b> de ${F.length}</span><span>racha <b>${f.racha}</b></span><span>fuerte en <b>${f.fuerte}</b></span></div>
         <p class="pf-note">${mine ? 'Toca tu apodo o tu frase para cambiarlos. Tu foto la ven los demás.' : `Solo ${esc(f.n)} puede cambiar su foto, su apodo y su frase.`}</p>
-        ${mine ? `<div class="pf-pass" ${S.pw ? '' : 'hidden'}><input type="password" id="newpass" autocomplete="new-password" placeholder="Contraseña nueva (8 o más)" minlength="8"><button class="go" data-act="setpass">Guardar</button></div>
-        <div class="pf-act">${window.Notification && Notification.permission !== 'granted' ? '<button data-act="notif">Activar avisos</button>' : window.Notification ? '<span class="pf-ok">Avisos activados</span>' : ''}<button class="q anim-t ${window.GM_ANIM && !GM_ANIM.on() ? '' : 'on'}" data-act="anim" aria-pressed="${!(window.GM_ANIM && !GM_ANIM.on())}"><i></i>Animaciones</button><button class="q" data-act="pass">Cambiar contraseña</button><button class="q" data-act="logout">Cerrar sesión</button><span class="lang" style="margin:0">${['es', 'en'].map((l) => `<button type="button" class="${(window.GM_LANG ? GM_LANG.get() : 'es') === l ? 'on' : ''}" data-lang="${l}">${l.toUpperCase()}</button>`).join('')}</span></div>` : ''}</div>
+        ${mine ? `<div class="pf-act"><button class="q" data-scr="ajustes">Ajustes</button></div>` : ''}</div>
       <div class="pf-bal"><span class="lab">Saldo</span><b>${N(f.s)}${coin()}</b>${net(f)}</div>
     </header>
     <div class="kpis">
@@ -1635,7 +1657,7 @@ const novVistas = () => { try { return JSON.parse(localStorage.getItem('gm-nov-v
 const novSinVer = () => { const v = novVistas(); return (NOVS || []).filter((x) => !v.includes(x.id)).length };
 const novCuando = (x) => { const t = Date.parse((x.fecha || '') + 'T12:00:00Z'); return isFinite(t) ? `${WD(t)} ${DD(t)} ${MO(t)}${x.hora ? ' · ' + x.hora : ''}` : '' };
 const novDia = (f) => { const t = Date.parse(f + 'T12:00:00Z'); return isFinite(t) ? (DK(t) === DK(NOW) ? 'Hoy' : DK(t) === DK(NOW - DAY) ? 'Ayer' : `${WD(t)} ${DD(t)} ${MO(t)}`) : '' };
-const NOV_IR = { partidos: 'Ir a Partidos', apuestas: 'Ver mis apuestas', colegas: 'Ver las apuestas de todos', liga: 'Ir a la Liga', cajas: 'Ir a Cajas', chat: 'Ir al Chat', monedero: 'Ir al Monedero', juegos: 'Ir a Juegos', directo: 'Ver el directo', recompensas: 'Abrir Recompensas' };
+const NOV_IR = { partidos: 'Ir a Partidos', apuestas: 'Ver mis apuestas', colegas: 'Ver las apuestas de todos', liga: 'Ir a la Liga', cajas: 'Ir a Cajas', chat: 'Ir al Chat', monedero: 'Ir al Monedero', juegos: 'Ir a Juegos', directo: 'Ver el directo', recompensas: 'Abrir Recompensas', ajustes: 'Abrir Ajustes' };
 const novArte = (x, grande) => { const ims = (Array.isArray(x.img) ? x.img : x.img ? [x.img] : []).slice(0, 3);
   return `<div class="nov-art n${ims.length} ${grande ? 'g' : ''}">${ims.map((p, i) => `<img src="${esc(novImg(p))}" alt="" loading="lazy" style="--k:${i}" onerror="this.style.display='none'">`).join('') || `<span class="nov-ic">${STAR}</span>`}</div>` };
 const novT = (x, k) => esc((window.GM_LANG && GM_LANG.get() === 'en' && x[k + '_en']) || x[k] || '');
@@ -1685,6 +1707,7 @@ const SCREENS = {
   novedades: ['Novedades', '', '<path d="M12 3.5l1.9 5.2 5.3.3-4.2 3.3 1.5 5.2L12 14.5l-4.5 3 1.5-5.2-4.2-3.3 5.3-.3z"/><path d="M19 3v3M17.5 4.5h3M5 17v3M3.5 18.5h3"/>'],
   juegos: ['Juegos', '', '<rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r=".6"/><circle cx="15" cy="9" r=".6"/><circle cx="12" cy="12" r=".6"/><circle cx="9" cy="15" r=".6"/><circle cx="15" cy="15" r=".6"/>'],
   mercado: ['Mercado', '', '<path d="M4 9.5 5.6 5h12.8L20 9.5"/><path d="M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0"/><path d="M5.5 12.5V19h13v-6.5"/><path d="M10 19v-4h4v4"/>'],
+  ajustes: ['Ajustes', '', '<circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.6-2-3.4-2.4 1a7.7 7.7 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.5A7.7 7.7 0 0 0 7 6.5l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 0 0 0 3l-2 1.6 2 3.4 2.4-1a7.7 7.7 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.7 7.7 0 0 0 2.6-1.5l2.4 1 2-3.4z"/>'],
 };
 const jgCtx = () => ({ db, me: ME, meKey: MEK, jugadores: F.map((f) => ({ id: f.id, uuid: f.uid, n: f.n, color: f.id })), saldo: me().s, av, toast, refresh });
 const juegos = () => (window.GM_JUEGOS ? GM_JUEGOS.html(jgCtx()) : '');
@@ -1692,7 +1715,7 @@ const mkCtx = () => ({ db, me: ME, meKey: MEK, jugadores: F.map((f) => ({ id: f.
 // PM 30-10: el Mercado no esta terminado, en mantenimiento hasta que diga (el modulo y la base siguen ahi)
 const MERCADO_MANT = true;
 const mercado = () => (MERCADO_MANT ? `<div class="pad mant"><svg viewBox="0 0 24 24">${SCREENS.mercado[2]}</svg><b>En mantenimiento</b><p>El Mercado está casi listo. Intercambios, ventas, contratos y jackpot llegan pronto.</p></div>` : window.GM_MERCADO ? GM_MERCADO.html(mkCtx()) : '');
-const R = { novedades, juegos, mercado, directo, partidos, apuestas, colegas, liga, chat, monedero, perfil, cajas: () => (window.GM_CAJAS ? GM_CAJAS.html() : '') };
+const R = { ajustes, novedades, juegos, mercado, directo, partidos, apuestas, colegas, liga, chat, monedero, perfil, cajas: () => (window.GM_CAJAS ? GM_CAJAS.html() : '') };
 const cajasCtx = () => ({ db, me: ME, jugadores: F.map((f) => ({ id: f.uid, n: f.n, color: f.id, ini: f.ini, photo: !!f.photo })), saldo: me().s, toast, refresh });
 const photoCss = () => { document.getElementById('phs').textContent = F.filter((f) => f.photo).map((f) => `.av.${f.id}.ph{background-image:url("${encodeURI(f.photo)}")}`).join('') };
 // PM, 30-10: "si estas en una apuesta en directo ahora mismo, que salga toda la info en cualquier lado, encima del perfil,
@@ -1751,15 +1774,14 @@ function render() {
   const cajas = [...document.querySelectorAll('#view input[id^="poll-"]')].map((e) => [e.id, e.value, document.activeElement === e]);
   const keep = {}; document.querySelectorAll('[data-keep]').forEach((e) => (keep[e.dataset.keep] = e.scrollTop));
   const un = S.scr === 'chat' ? 0 : unread();
-  document.getElementById('nav').innerHTML = Object.entries(SCREENS).filter(([k]) => k !== 'directo' && k !== 'novedades').map(([k, [n, , ic]]) => `<button class="nv ${S.scr === k ? 'on' : ''}" data-scr="${k}"><svg viewBox="0 0 24 24">${ic}</svg><span class="nl">${n}</span><span class="ns">${n.replace('Mis apuestas', 'Apuestas').replace('Apuestas de todos', 'Todos').replace('Novedades', 'Nuevo')}</span>${k === 'chat' && un ? `<i>${un}</i>` : ''}${k === 'novedades' && S.scr !== 'novedades' && novSinVer() ? '<i class="nv-pt"></i>' : ''}</button>`).join('');
+  document.getElementById('nav').innerHTML = Object.entries(SCREENS).filter(([k]) => k !== 'directo' && k !== 'novedades' && k !== 'ajustes').map(([k, [n, , ic]]) => `<button class="nv ${S.scr === k ? 'on' : ''}" data-scr="${k}"><svg viewBox="0 0 24 24">${ic}</svg><span class="nl">${n}</span><span class="ns">${n.replace('Mis apuestas', 'Apuestas').replace('Apuestas de todos', 'Todos').replace('Novedades', 'Nuevo')}</span>${k === 'chat' && un ? `<i>${un}</i>` : ''}${k === 'novedades' && S.scr !== 'novedades' && novSinVer() ? '<i class="nv-pt"></i>' : ''}</button>`).join('');
   const rank = [...F].sort((a, b) => b.s - a.s);
   document.getElementById('me').innerHTML = `${av(MEK, 'xl')}<b>${esc(me().n)}</b><em>${N(me().s)} · ${rank.indexOf(me()) + 1}º de ${F.length}</em>`;
   document.getElementById('me').dataset.prof = MEK;
-  const lg = window.GM_LANG ? GM_LANG.get() : 'es';
-  document.getElementById('lang').innerHTML = ['es', 'en'].map((l) => `<button type="button" class="${l === lg ? 'on' : ''}" data-lang="${l}">${l.toUpperCase()}</button>`).join('');
+  document.getElementById('lang').innerHTML = `<button type="button" class="rail-aj ${S.scr === 'ajustes' ? 'on' : ''}" data-scr="ajustes"><svg viewBox="0 0 24 24">${SCREENS.ajustes[2]}</svg>Ajustes</button>`;
   const [t, sub] = S.scr === 'perfil' ? ['Perfil', ''] : SCREENS[S.scr];
   pintaRw(); pintaNv(); pintaVivoYo(); pintaEq();
-  document.getElementById('top').innerHTML = `<h1>${t}</h1>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}<span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>${M.some((x) => x.live) ? `<button class="dv-btn ${S.scr === 'directo' ? 'on' : ''}" data-scr="directo"><i></i>Directo <b>${M.filter((x) => x.live).length}</b></button>` : ''}${nvBoton()}${rwBoton()}<span class="onl ${S.onl ? 'abre' : ''}" data-onl>${onlineHtml()}</span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span>`;
+  document.getElementById('top').innerHTML = `<h1>${t}</h1>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}<span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>${M.some((x) => x.live) ? `<button class="dv-btn ${S.scr === 'directo' ? 'on' : ''}" data-scr="directo"><i></i>Directo <b>${M.filter((x) => x.live).length}</b></button>` : ''}${nvBoton()}${rwBoton()}<span class="onl ${S.onl ? 'abre' : ''}" data-onl>${onlineHtml()}</span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span><button class="aj-btn ${S.scr === 'ajustes' ? 'on' : ''}" data-scr="ajustes" aria-label="Ajustes" title="Ajustes"><svg viewBox="0 0 24 24">${SCREENS.ajustes[2]}</svg></button>`;
   photoCss();
   if (window.GM_MERCADO) GM_MERCADO.aplicaCosmeticos(mkCtx());
   const vw = document.getElementById('view'), cambia = vw.dataset.vista !== S.scr;
@@ -1910,6 +1932,9 @@ document.addEventListener('click', async (e) => {
   if (d.ct) { S.ct = d.ct; return render() }
   if (d.ft) { S.ft = d.ft; S.fdN = 60; return render() }
   if (d.act === 'fd-mas') { S.fdN = (S.fdN || 60) + 60; return render() }
+  if (d.act === 'sonido') { if (window.GM_SONIDOS) GM_SONIDOS.alterna(); return render() }
+  if (d.act === 'mon') { if (window.GM_MONEDA) GM_MONEDA.set(d.mon); return render() }
+  if (d.act === 'soloJug') { S.soloJug = !S.soloJug; document.getElementById('view').scrollTop = 0; const pb = document.querySelector('[data-keep=pb]'); if (pb) pb.scrollTop = 0; return render() }
   if (d.act === 'nvp') { S.nvp = !S.nvp; if (S.nvp) { S.rew = false; if (!NOVS) cargaNov(); novAbre() } return render() }
   if (d.act === 'anim') { if (window.GM_ANIM) GM_ANIM.set(!GM_ANIM.on()); toast(window.GM_ANIM && GM_ANIM.on() ? 'Animaciones encendidas' : 'Animaciones apagadas'); return render() }
   if (d.act === 'sh-todos') { S.shTodos = !S.shTodos; return render() }

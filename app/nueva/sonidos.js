@@ -3,7 +3,7 @@
 //   1. Eventos: window.dispatchEvent(new CustomEvent('gm:sonido', { detail: 'cobrar' })) (ver SONIDOS-EVENTOS.md).
 //   2. El DOM, donde se puede: la ruleta de las cajas (tic y golpe final), el crash (subida y explosion), el aviso de
 //      arriba (#toast: cobros y fallos), los resultados de los juegos, los mensajes nuevos del chat y los botones principales.
-// El audio no arranca hasta la primera pulsacion o toque (los navegadores no lo dejan antes). El boton de silencio se
+// El audio no arranca hasta la primera pulsacion o toque (los navegadores no lo dejan antes). El silencio (en Ajustes) se
 // recuerda. En reposo no hay ningun bucle: solo observadores, y un bucle corto mientras gira una ruleta.
 'use strict';
 (function () {
@@ -134,32 +134,12 @@
     if (b && !b.disabled) suena('clic');
   }, true);
 
-  /* ---------- boton de silencio, en la cabecera ---------- */
-  const SVG_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11"/></svg>';
-  const SVG_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>';
-  let boton = null;
-  function pintaBoton() {
-    if (!boton) return;
-    boton.innerHTML = mudo ? SVG_OFF : SVG_ON;
-    boton.setAttribute('aria-label', mudo ? 'Activar sonidos' : 'Silenciar sonidos');
-    boton.title = mudo ? 'Activar sonidos' : 'Silenciar sonidos';
-    boton.classList.toggle('off', mudo);
-    if (window.GM_LANG) GM_LANG.traduce(boton);
-  }
+  /* ---------- silencio: el interruptor vive en Ajustes (PM 30-10: "lo de mutear el sonido en settings, no fuera") ---------- */
   function silencia(v) {
     mudo = !!v; guarda(CLAVE, mudo ? '0' : '1');
     if (mudo) { paraCrash() }
-    pintaBoton();
   }
-  function cuelga() {
-    const top = document.getElementById('top'); if (!top) return;
-    if (!boton) {
-      boton = document.createElement('button'); boton.type = 'button'; boton.className = 'sn-mute';
-      boton.addEventListener('click', (e) => { e.stopPropagation(); const era = mudo; silencia(!mudo); if (era) { desbloquea(); suena('clic') } });
-      pintaBoton();
-    }
-    if (boton.parentNode !== top) top.appendChild(boton);
-  }
+  function alterna() { const era = mudo; silencia(!mudo); if (era) { desbloquea(); suena('clic') } return !mudo }
 
   /* ---------- la ruleta de las cajas: un tic por carta y el golpe final ---------- */
   const COLOR_RAREZA = { '#e4ae39': 'esp', '#eb4b4b': 'cov', '#d32ce6': 'cla', '#8847ff': 'res', '#4b69ff': 'mil' };
@@ -244,7 +224,6 @@
     if (n.matches('[data-mult]') || n.querySelector('[data-mult]')) revisaMult(n.matches('[data-mult]') ? n : n.querySelector('[data-mult]'));
     if (n.matches('.msg, [data-chat]') || n.querySelector('.msg, [data-chat]')) programaChat();
     if (n.matches('.jg-res, .jg-msg') || n.querySelector('.jg-res, .jg-msg')) for (const r of (n.matches('.jg-res, .jg-msg') ? [n] : n.querySelectorAll('.jg-res, .jg-msg'))) revisaResultado(r);
-    if (n.id === 'top' || n.querySelector('#top')) cuelga();
   }
   new MutationObserver((rs) => {
     for (const r of rs) {
@@ -256,20 +235,11 @@
       }
       if (r.target.id === 'toast') { revisaToast(r.target); continue }
       if (r.target.hasAttribute && r.target.hasAttribute('data-mult')) { multT = performance.now(); continue }
-      if (r.target.id === 'top') cuelga();
       for (const n of r.addedNodes) ve(n);
     }
   }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
 
-  const css = document.createElement('style');
-  css.textContent = `
-.sn-mute{flex:none;display:grid;place-items:center;width:34px;height:34px;margin-left:12px;border-radius:50%;color:var(--mute);transition:color .15s,background .15s}
-.sn-mute:hover{color:var(--ink);background:rgba(255,255,255,.06)}
-.sn-mute.off{color:var(--dim)}
-.sn-mute svg{width:20px;height:20px}
-@media (max-width:860px){.sn-mute{margin-left:4px;width:32px;height:32px}}`;
-  document.head.appendChild(css);
 
-  window.GM_SONIDOS = { suena, silencia, silenciado: () => mudo };
-  cuelga(); revisaChat();       // si el chat ya esta pintado, se anotan sus mensajes para que no suenen como nuevos
+  window.GM_SONIDOS = { suena, silencia, alterna, silenciado: () => mudo };
+  revisaChat();       // si el chat ya esta pintado, se anotan sus mensajes para que no suenen como nuevos
 })();

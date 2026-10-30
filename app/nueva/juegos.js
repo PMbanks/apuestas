@@ -270,12 +270,12 @@
     if (!(S.stake >= 1)) { falla({ message: 'Pon una cantidad' }); return false }
     if (S.stake > queda()) { falla({ message: `No tienes tanto: te quedan ${N(queda())}` }); return false }
     if (S.juego === 'blackjack' && S.bjRest != null) {
-      if (S.bjRest <= 0) { falla({ message: 'Hoy ya has perdido 100 en el blackjack. Vuelve mañana' }); return false }
+      if (S.bjRest <= 0) { falla({ message: 'Hoy ya has perdido 500 en el blackjack. Vuelve mañana' }); return false }
       if (S.stake > S.bjRest) { falla({ message: `Hoy solo puedes arriesgar ${N(S.bjRest)} más en el blackjack` }); return false }
     }
     return true;
   }
-  // lo que queda por arriesgar hoy en el blackjack (la base deja perder 100 al dia, hora de Madrid): 100 mas lo neto de hoy
+  // lo que queda por arriesgar hoy en el blackjack (la base deja perder 500 al dia desde db/027, hora de Madrid): 500 mas lo neto de hoy
   function madridInicio() {
     const t = Date.now(), h = (z) => new Date(new Date(t).toLocaleString('en-US', { timeZone: z })), off = h('Europe/Madrid') - h('UTC'), m = new Date(t + off);
     return Date.UTC(m.getUTCFullYear(), m.getUTCMonth(), m.getUTCDate()) - off;
@@ -290,7 +290,7 @@
   function bjLim() {
     const r = S.bjRest;
     if (r == null) return '';
-    return r <= 0 ? '<p class="jg-lim lose">Hoy ya has perdido 100. Vuelve mañana</p>' : `<p class="jg-lim">Hoy te quedan <b class="num">${N(r)}</b> por arriesgar</p>`;
+    return r <= 0 ? '<p class="jg-lim lose">Hoy ya has perdido 500. Vuelve mañana</p>' : `<p class="jg-lim">Hoy te quedan <b class="num">${N(r)}</b> por arriesgar</p>`;
   }
   function apuesta() {
     const bj = S.juego === 'blackjack', chips = bj ? [5, 10, 25, 50] : [100, 500, 1000];

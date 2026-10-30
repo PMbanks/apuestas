@@ -2141,3 +2141,43 @@ img.tl{image-rendering:auto}
 :root{--f-c5:#e8853d;--f-c6:#9a7ce8}
 .av.c5{background:var(--f-c5);color:#1d0f04}
 .av.c6{background:var(--f-c6);color:#120a24}
+/* octavo: Isaac (30-10) */
+:root{--f-c7:#e0574f}
+.av.c7{background:var(--f-c7);color:#200606}
+/* moneda que se ve (moneda.js, Ajustes): mismo numero, otro logo */
+html[data-moneda="usd"] .cn{background-image:url(img/monedas/usd.svg)}
+html[data-moneda="sol"] .cn{background-image:url(img/monedas/sol.svg)}
+html[data-moneda="robux"] .cn{background-image:url(img/monedas/robux.svg)}
+/* Ajustes (30-10): el engranaje de arriba ocupa el sitio del silencio; en el carril, en lugar de ES EN */
+.top .aj-btn{flex:none;display:grid;place-items:center;width:36px;height:36px;margin-left:12px;border-radius:50%;color:var(--mute);transition:color .15s,background .15s}
+.top .aj-btn:hover,.top .aj-btn.on{color:var(--ink);background:rgba(255,255,255,.06)}
+.top .aj-btn svg,.rail-aj svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.lang .rail-aj{display:flex;align-items:center;gap:10px;padding:6px 4px;border-radius:0;background:none;font:600 13px var(--sans);letter-spacing:0;color:var(--mute);transition:color .15s}
+.lang .rail-aj:hover,.lang .rail-aj.on{color:var(--ink);background:none}.lang .rail-aj.on svg{stroke:var(--acc)}
+@media (max-width:860px){.top .aj-btn{margin-left:4px;width:34px;height:34px}}
+.aj{max-width:760px}
+.aj-s{padding:26px 0 28px;border-top:1px solid var(--hair)}
+.aj-s:first-child{padding-top:6px;border-top:0}
+.aj-s .lab{margin-bottom:14px}
+.aj-f.anim-t{display:flex;width:100%;align-items:center;justify-content:space-between;gap:24px;padding:12px 0;text-align:left;color:var(--mute)}
+.aj-f.anim-t i{flex:none;width:40px;height:24px}
+.aj-f.anim-t i::after{left:3px;top:3px;width:18px;height:18px}
+.aj-f.anim-t.on i::after{transform:translateX(16px)}
+.aj-tx{display:grid;gap:4px;min-width:0}
+.aj-tx b{font:600 16px var(--sans);color:var(--ink)}
+.aj-tx small{font:400 13px/1.4 var(--sans);color:var(--mute)}
+.aj-n{margin:0 0 16px;font:400 14px/1.5 var(--sans);color:var(--mute)}
+.aj-ops{display:flex;flex-wrap:wrap;gap:12px 30px}
+.aj-m{position:relative;display:flex;align-items:center;gap:11px;padding:8px 0 10px;font:600 15px var(--sans);color:var(--mute);transition:color .15s}
+.aj-m img{width:30px;height:30px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.45))}
+.aj-m:hover,.aj-m.on{color:var(--ink)}
+.aj-m.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--acc)}
+.aj-a{padding:8px 0;font:600 14px var(--sans);color:var(--acc)}
+.aj-a.q{color:var(--mute)}.aj-a.q:hover{color:var(--ink)}
+.aj .pf-pass{margin-top:14px}
+@media (max-width:860px){.aj-ops{gap:10px 22px}.aj-tx b{font-size:15px}}
+/* Ya jugados arriba (30-10) */
+.fil .jug-chip{margin-left:auto}
+/* la cabecera cabe con el engranaje: si falta sitio, lo que encoge es la linea de la paga */
+.top .pay{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.top h1,.top .bal,.top .aj-btn{flex-shrink:0}

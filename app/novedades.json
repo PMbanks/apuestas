@@ -2,6 +2,45 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "ajustes-moneda-2315",
+   "fecha": "2026-10-30",
+   "hora": "23:15",
+   "titulo": "Ajustes y moneda",
+   "texto": "El engranaje de arriba abre Ajustes: sonido, animaciones, idioma, avisos y tu cuenta. Y puedes ver tu dinero como V-Bucks, dólares, Solana o Robux: mismo número, otro logo.",
+   "img": [
+    "novedades/ajustes-moneda.webp"
+   ],
+   "ir": "ajustes",
+   "titulo_en": "Settings and currency",
+   "texto_en": "The gear at the top opens Settings: sound, animations, language, notifications and your account. And you can show your money as V-Bucks, dollars, Solana or Robux: same number, different logo."
+  },
+  {
+   "id": "ya-jugados-2315",
+   "fecha": "2026-10-30",
+   "hora": "23:15",
+   "titulo": "Ya jugados",
+   "texto": "En Partidos, el botón Ya jugados de arriba enseña todos los partidos acabados con su resultado.",
+   "img": [
+    "novedades/ya-jugados.webp"
+   ],
+   "ir": "partidos",
+   "titulo_en": "Already played",
+   "texto_en": "In Matches, the Already played button at the top shows every finished match with its result."
+  },
+  {
+   "id": "cajas-odds-2315",
+   "fecha": "2026-10-30",
+   "hora": "23:15",
+   "titulo": "Cajas más difíciles y blackjack hasta 500",
+   "texto": "Las cajas traen lo mismo, cuchillos incluidos, pero lo bueno sale menos: odds de CS2 de verdad. En la ruleta el cuchillo sale con su skin. En el blackjack ya puedes perder hasta 500 al día.",
+   "img": [
+    "novedades/cajas-odds.webp"
+   ],
+   "ir": "cajas",
+   "titulo_en": "Tougher cases and blackjack up to 500",
+   "texto_en": "Cases have the same items, knives included, but the good stuff drops less: real CS2 odds. In the spinner the knife shows its skin. In blackjack you can now lose up to 500 a day."
+  },
+  {
    "id": "crash-velas-1305",
    "fecha": "2026-10-30",
    "hora": "13:05",

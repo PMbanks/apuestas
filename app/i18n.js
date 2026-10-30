@@ -17,6 +17,11 @@
 })();
 (function () {
   const D = {
+    // Ajustes, moneda y ya jugados (30-10 noche)
+    'Ajustes': 'Settings', 'Sonido y movimiento': 'Sound and motion', 'Sonidos': 'Sounds', 'Botones, ruletas, premios y mensajes': 'Buttons, spins, prizes and messages',
+    'Ruletas, confeti y transiciones': 'Spins, confetti and transitions', 'Moneda': 'Currency', 'Cambia el logo y el nombre. Lo que tienes es lo mismo.': 'Changes the logo and the name. What you have stays the same.',
+    'Idioma': 'Language', 'Abrir Ajustes': 'Open Settings', 'Cuenta': 'Account', 'Este navegador no deja mandar avisos.': 'This browser does not allow notifications.',
+    'Te avisa de tus apuestas y de los partidos que sigues.': 'Lets you know about your bets and the matches you follow.',
     // resultados (ganado.js, 30-10)
     'Resultados': 'Results', 'Resultados nuevos': 'New results', 'Apuesta ganada': 'Bet won', 'Reto ganado': 'Challenge won', 'Cash out': 'Cash out',
     'Has ganado': 'You won', 'Has retirado': 'You cashed out', 'Tu elección': 'Your pick', 'Apostaste': 'You staked', 'limpias': 'profit',
@@ -53,7 +58,7 @@
     'Todavía nadie dentro': 'Nobody in yet', 'segundos': 'seconds', 'Apuesta para abrir una ronda': 'Bet to open a round', 'Retira antes de que explote': 'Cash out before it blows',
     'Banca': 'Dealer', 'Haz tu apuesta': 'Place your bet', 'En juego': 'In play', 'Pedir': 'Hit', 'Plantarse': 'Stand', 'Doblar': 'Double', 'doblada': 'doubled',
     'Repartir por': 'Deal for', 'Otra mano por': 'Another hand for', 'Hoy te quedan': 'Today you have', 'por arriesgar': 'left to risk',
-    'Hoy ya has perdido 100. Vuelve mañana': 'You have already lost 100 today. Come back tomorrow',
+    'Hoy ya has perdido 500. Vuelve mañana': 'You have already lost 500 today. Come back tomorrow',
     'Blackjack paga 3 a 2': 'Blackjack pays 3 to 2', 'Blackjack paga 3 a 2. La banca se planta en 17.': 'Blackjack pays 3 to 2. The dealer stands on 17.',
     'Empate · te devuelvo la apuesta': 'Push · your bet is returned',
     'Pon una cantidad': 'Enter an amount', 'Este juego está cerrado ahora mismo': 'This game is closed right now',
@@ -188,7 +193,7 @@
     // juegos (JUEGOS-INTEGRAR.md, las que faltaban)
     'Crash': 'Crash', 'Blackjack': 'Blackjack', 'Contra': 'Against', 'cara': 'heads', 'cruz': 'tails', 'Máx': 'Max',
     'Retar por': 'Challenge for', 'ti': 'you', 'Retirada automática': 'Auto cash out', 'Últimas rondas': 'Last rounds', 'Todavía nadie dentro': 'Nobody in yet', 'segundos': 'seconds',
-    'Haz tu apuesta': 'Place your bet', 'Repartir por': 'Deal for', 'Otra mano por': 'Another hand for', 'Hoy te quedan': 'Today you have', 'por arriesgar': 'left to risk', 'Hoy ya has perdido 100. Vuelve mañana': 'You have already lost 100 today. Come back tomorrow',
+    'Haz tu apuesta': 'Place your bet', 'Repartir por': 'Deal for', 'Otra mano por': 'Another hand for', 'Hoy te quedan': 'Today you have', 'por arriesgar': 'left to risk', 'Hoy ya has perdido 500. Vuelve mañana': 'You have already lost 500 today. Come back tomorrow',
     'Blackjack paga 3 a 2': 'Blackjack pays 3 to 2', 'Este juego está cerrado ahora mismo': 'This game is closed right now', 'La retirada automática va de ×1,01 a ×1000': 'Auto cash out goes from ×1.01 to ×1000', 'Tienes que entrar primero': 'You need to log in first', 'La apuesta mínima es 1': 'The minimum bet is 1', 'La apuesta máxima es 100.000': 'The maximum bet is 100,000',
     'Elige cara o cruz': 'Pick heads or tails', 'Elige a un colega': 'Pick a friend', 'Ya tienes 5 retos abiertos: retira alguno': 'You already have 5 open challenges: withdraw one', 'Ese reto no existe': 'That challenge does not exist', 'Ese reto ya no está abierto': 'That challenge is no longer open', 'No puedes aceptar tu propio reto': 'You cannot accept your own challenge',
     'Ese reto es para otro': 'That challenge is for someone else', 'Ese reto no es tuyo': 'That challenge is not yours', 'Ese reto ya no se puede retirar': 'That challenge can no longer be withdrawn', 'La ronda ya ha arrancado: espera a la siguiente': 'The round has already started: wait for the next one', 'Ya estás dentro de esta ronda': 'You are already in this round', 'No hay ninguna ronda': 'There is no round',
@@ -320,7 +325,7 @@
     [/^le gana a (.+) · (cara|cruz)$/, 'beats $1 · $2'], [/^le ganas a (.+) · (cara|cruz)$/, 'you beat $1 · $2'], [/^(beats|you beat) (.+) · cara$/, '$1 $2 · heads'], [/^(beats|you beat) (.+) · cruz$/, '$1 $2 · tails'], [/^beats ti · /, 'beats you · '],
     [/^Ganas ▲ ([\d.]+)$/, 'You win ▲ $1'], [/^Te pasas · ▼ ([\d.]+)$/, 'Bust · ▼ $1'], [/^Pierdes ▼ ([\d.]+)$/, 'You lose ▼ $1'],
     [/^Hoy solo puedes arriesgar ([\d.]+) más en el blackjack$/, 'Today you can only risk $1 more in blackjack'],
-    [/^Hoy ya has perdido 100 en el blackjack\. Vuelve mañana$/, 'You have already lost 100 today in blackjack. Come back tomorrow'],
+    [/^Hoy ya has perdido 500 en el blackjack\. Vuelve mañana$/, 'You have already lost 500 today in blackjack. Come back tomorrow'],
     [/^(\d+)º$/, '$1th'],
     [/×(\d+),(\d\d)/g, '×$1.$2'],   // decimales con punto (juegos.js ya los pinta con punto en ingles; esta regla solo es por si acaso): va el ultimo
     // mercado (30-10)
@@ -390,7 +395,7 @@
     [/^va a cara$/, 'goes for heads'], [/^va a cruz$/, 'goes for tails'], [/^le gana a (.+) · (cara|cruz)$/, 'beats $1 · $2'],
     [/^le ganas a (.+) · (cara|cruz)$/, 'you beat $1 · $2'], [/^(beats|you beat) (.+) · cara$/, '$1 $2 · heads'], [/^(beats|you beat) (.+) · cruz$/, '$1 $2 · tails'],
     [/^beats ti · /, 'beats you · '], [/^Ganas ▲ ([\d.]+)$/, 'You win ▲ $1'], [/^Te pasas · ▼ ([\d.]+)$/, 'Bust · ▼ $1'],
-    [/^Pierdes ▼ ([\d.]+)$/, 'You lose ▼ $1'], [/^Hoy solo puedes arriesgar ([\d.]+) más en el blackjack$/, 'Today you can only risk $1 more in blackjack'], [/^Hoy ya has perdido 100 en el blackjack\. Vuelve mañana$/, 'You have already lost 100 today in blackjack. Come back tomorrow'],
+    [/^Pierdes ▼ ([\d.]+)$/, 'You lose ▼ $1'], [/^Hoy solo puedes arriesgar ([\d.]+) más en el blackjack$/, 'Today you can only risk $1 more in blackjack'], [/^Hoy ya has perdido 500 en el blackjack\. Vuelve mañana$/, 'You have already lost 500 today in blackjack. Come back tomorrow'],
     // repaso del ingles en todas las pantallas (30-10)
     [/^Perfil de (.+)$/, "$1's profile"], [/^Apuesta del día: se cobra ×(.+)$/, 'Bet of the day: pays ×$1'], [/^Ronda of (\d+)$/, 'Round of $1'], [/^EN VIVO\b/, 'LIVE'],
     [/ · sin resueltas$/, ' · none settled'], [/ · (\d+%) aciertos$/, ' · $1 hit rate'], [/^(\d+) apuestas? · (\d+) partidos?$/, (m, a, b) => `${a} bet${a === '1' ? '' : 's'} · ${b} match${b === '1' ? '' : 'es'}`],
