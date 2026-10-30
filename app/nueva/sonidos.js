@@ -71,41 +71,41 @@
   /* ---------- los sonidos ---------- */
   const ESCALA = { mil: [392, 523], res: [440, 587, 740], cla: [494, 659, 784, 988], cov: [523, 659, 784, 1047, 1319], esp: [523, 659, 784, 1047, 1319, 1568] };
   const S = {
-    clic: () => nota(900, 0.05, 0.09, { onda: 'triangle', a: 640 }),
+    // PM eligio sus sonidos el 30-10 (pagina de sonidos): botones B, ruleta D, premio B, cobrar A, perder C, crash D, mensaje C, sticker A
+    clic: () => nota(600, 0.07, 0.12, { a: 300 }),
     // un tic de la ruleta al pasar cada carta
-    'caja-tic': (p) => nota(1500 + Math.random() * 120, 0.028, 0.11 * (p.vol ?? 1), { onda: 'triangle', a: 900, ataque: 0.002 }),
+    'caja-tic': (p) => nota(720, 0.04, 0.14 * (p.vol ?? 1), { a: 420, ataque: 0.002 }),
     // el golpe final: cuanto mas rara, mas notas y brillo
+    // el premio: monedas cayendo (mas cuanto mas rara) y una campana
     'caja-final': (p) => {
-      const r = ESCALA[p.rareza] ? p.rareza : 'mil', fa = ESCALA[r], v = p.vol ?? 1;
-      nota(150, 0.22, 0.2 * v, { a: 50, ataque: 0.004 });
-      nota(75, 0.3, 0.14 * v, { ataque: 0.004 });
-      fa.forEach((f, i) => { nota(f, r === 'mil' ? 0.2 : 0.55, (r === 'mil' ? 0.05 : 0.07) * v, { en: 0.05 + i * (r === 'esp' ? 0.075 : 0.09), onda: 'triangle', filtro: 5200 }); if (r === 'esp' || r === 'cov') nota(f * 2, 0.45, 0.025 * v, { en: 0.05 + i * 0.075 }) });
-      if (r === 'cla' || r === 'cov') barrido(0.5, 0.025 * v, 2500, 9000, { tipo: 'highpass', en: 0.1 });
-      if (r === 'esp') { barrido(1.1, 0.05 * v, 1800, 11000, { tipo: 'bandpass', q: 1.4, en: 0.1 }); nota(1568, 0.9, 0.05 * v, { en: 0.5, onda: 'sine' }) }
+      const r = ESCALA[p.rareza] ? p.rareza : 'mil', v = p.vol ?? 1, n = { mil: 2, res: 4, cla: 7, cov: 11, esp: 16 }[r];
+      for (let i = 0; i < n; i++) nota(2000 + Math.random() * 2000, 0.14, 0.05 * v, { en: i * 0.045, onda: 'triangle', ataque: 0.001 });
+      nota(r === 'esp' ? 1568 : 1047, 0.9, (r === 'mil' ? 0.03 : 0.08) * v, { en: n * 0.045 });
     },
     // monedas: dos notas altas seguidas
     cobrar: () => { nota(1319, 0.16, 0.09, { onda: 'square', filtro: 3800, ataque: 0.003 }); nota(1760, 0.34, 0.09, { en: 0.085, onda: 'square', filtro: 4200, ataque: 0.003 }); nota(2637, 0.3, 0.025, { en: 0.085 }) },
-    perder: () => { nota(330, 0.26, 0.11, { onda: 'sawtooth', a: 300, filtro: 900 }); nota(247, 0.42, 0.11, { en: 0.2, onda: 'sawtooth', a: 165, filtro: 700 }) },
+    perder: () => { nota(400, 0.5, 0.14, { a: 40 }); barrido(0.25, 0.06, 2000, 200) },
     // el crash: una subida que no se para hasta que explota o se retira
+    // el crash: rugido grave que sube (cohete) hasta que explota o se retira
     'crash-sube': () => {
       if (crash) return;
-      const t0 = ac.currentTime, g = ac.createGain(), o1 = ac.createOscillator(), o2 = ac.createOscillator(), fl = ac.createBiquadFilter();
-      o1.type = 'triangle'; o2.type = 'sine'; o2.detune.value = 7;
-      for (const o of [o1, o2]) { o.frequency.setValueAtTime(190, t0); o.frequency.exponentialRampToValueAtTime(1500, t0 + 45) }
-      fl.type = 'lowpass'; fl.frequency.value = 2400;
-      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.03, t0 + 0.4);
-      o1.connect(fl); o2.connect(fl); fl.connect(g); g.connect(maestro);
+      const t0 = ac.currentTime, g = ac.createGain(), o1 = ac.createOscillator(), fl = ac.createBiquadFilter();
+      o1.type = 'sine'; o1.frequency.setValueAtTime(60, t0); o1.frequency.exponentialRampToValueAtTime(260, t0 + 45);
+      fl.type = 'lowpass'; fl.frequency.value = 420; o1.connect(fl); fl.connect(g);
+      const o2 = ac.createBufferSource(), fn = ac.createBiquadFilter(), gn = ac.createGain();
+      o2.buffer = buffer(); o2.loop = true; fn.type = 'lowpass'; fn.frequency.setValueAtTime(300, t0); fn.frequency.exponentialRampToValueAtTime(1600, t0 + 45);
+      gn.gain.value = 0.6; o2.connect(fn); fn.connect(gn); gn.connect(g);
+      g.connect(maestro); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.06, t0 + 0.4);
       o1.start(t0); o2.start(t0); o1.stop(t0 + 46); o2.stop(t0 + 46);
       crash = { g, o1, o2 };
     },
     'crash-para': () => paraCrash(),
     'crash-boom': (p) => {
       paraCrash(); const v = p.vol ?? 1;
-      barrido(0.9, 0.5 * v, 3200, 80, { q: 0.6, ataque: 0.004 });
-      nota(130, 0.5, 0.3 * v, { a: 28, ataque: 0.004 });
-      nota(60, 0.7, 0.2 * v, { a: 30, ataque: 0.004 });
+      nota(55, 1.4, 0.4 * v, { a: 25, ataque: 0.004 });
+      barrido(1.6, 0.45 * v, 1800, 60, { q: 0.5, ataque: 0.004 });
     },
-    chat: () => { nota(520, 0.13, 0.12, { a: 780, ataque: 0.005 }); nota(1040, 0.1, 0.04, { en: 0.03, a: 1560 }) },
+    chat: () => { nota(1319, 0.5, 0.06); nota(1760, 0.6, 0.05, { en: 0.09 }) },
     sticker: () => { nota(380, 0.09, 0.12, { a: 640, onda: 'triangle', ataque: 0.004 }); nota(760, 0.12, 0.09, { en: 0.07, a: 1100, onda: 'triangle' }) },
   };
   let crash = null;
