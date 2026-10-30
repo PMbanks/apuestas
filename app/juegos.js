@@ -7,7 +7,7 @@
 // solo corren mientras hay una ronda o una animacion y la pantalla esta a la vista.
 'use strict';
 (function () {
-  const JUEGOS = [['moneda', 'Cara o cruz'], ['crash', 'Crash'], ['ruleta', 'Ruleta'], ['blackjack', 'Blackjack'], ['plinko', 'Plinko']];
+  const JUEGOS = [['blackjack', 'Blackjack']];   // PM, 30-10: solo blackjack, 100 de perdida maxima al dia
   const FN = { moneda: 'moneda_estado', crash: 'crash_estado', ruleta: 'ruleta_estado', blackjack: 'bj_estado', plinko: 'plinko_estado' };
   const SUIT = ['♠', '♥', '♦', '♣'], RANK = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   const ORDEN = [0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7];       // casillas de la ruleta, en el sentido del reloj desde arriba
@@ -17,7 +17,7 @@
   /* ---------- estado ---------- */
   let ctx = null, root = null;
   const S = {
-    juego: lee('jg-juego') || 'moneda', stake: Math.max(1, parseInt(lee('jg-stake'), 10) || 100), saldo: 0,
+    juego: 'blackjack', stake: Math.max(1, parseInt(lee('jg-stake'), 10) || 100), saldo: 0,
     lado: 'cara', para: null, riesgo: 'medio', color: 'rojo', auto: '', busy: 0, err: null, ocupa: false,
     mo: { vistos: parseInt(lee('jg-mo-visto'), 10) || null, lado: 'cara', msg: '' },
     cr: { ultima: null },

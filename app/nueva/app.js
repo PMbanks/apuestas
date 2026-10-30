@@ -948,17 +948,57 @@ function movFila(m, saldo) {
   const det = m.kind === 'batalla' && rivales.length ? `Contra ${rivales.map((f) => esc(f.n)).join(' y ')}` : esc(m.d && m.d !== m.c ? m.d : '');
   return `<div class="mv"><time>${DD(m.at)} ${MO(m.at)}<small>${HM(m.at)}</small></time>${ico}<p><b>${esc(m.c)}</b>${det ? `<span>${det}</span>` : ''}</p><span class="a ${m.a > 0 ? 'up' : 'dn'}">${m.a > 0 ? '▲' : '▼'} ${N(Math.abs(m.a))}</span>${saldo != null ? `<span class="s">${N(saldo)}</span>` : ''}</div>`;
 }
+// PM, 30-10: "la weekly wheel esta super bugeada, las vueltas y todo". Ahora el angulo sale del reloj en cada
+// fotograma: aunque la app repinte a mitad (el pulso de Realtime llega en cuanto giras), la rueda sigue donde iba
+let RU = null;
+const RU_DUR = 5600;
+const ruAng = () => { if (!RU) return S.ruRot || 0; const p = Math.min(1, (Date.now() - RU.t0) / RU_DUR); return RU.from + (RU.to - RU.from) * (1 - Math.pow(1 - p, 3.4)) };
+function ruLoop() {
+  const el = document.getElementById('rueda'); if (el) el.style.transform = `rotate(${ruAng().toFixed(2)}deg)`;
+  if (!RU) return;
+  if (Date.now() - RU.t0 < RU_DUR) return requestAnimationFrame(ruLoop);
+  const r = RU; RU = null; S.ruRot = r.to; S.ruGira = false; S.ruWin = r.res.prize;
+  toast(r.res.item ? `${esc(r.res.label)}: ya está en tu inventario` : `Ruleta: <b>${esc(r.res.label)}</b>`);
+  refresh();
+}
 function ruedaHtml() {
   const wk = new Date(WEEK0 + DAY / 2).toISOString().slice(0, 10), mio = (WHEEL || []).find((w) => w.player === me().uid && w.week === wk);
   const otros = (WHEEL || []).filter((w) => w.week === wk && w.player !== me().uid).map((w) => [F.find((f) => f.uid === w.player), w.label]).filter(([f]) => f);
-  const seg = RUEDA.map(([t, c], i) => { const a0 = (i * 45 - 90) * Math.PI / 180, a1 = ((i + 1) * 45 - 90) * Math.PI / 180, am = ((i + .5) * 45 - 90) * Math.PI / 180;
-    return `<path d="M100 100L${(100 + 96 * Math.cos(a0)).toFixed(1)} ${(100 + 96 * Math.sin(a0)).toFixed(1)}A96 96 0 0 1 ${(100 + 96 * Math.cos(a1)).toFixed(1)} ${(100 + 96 * Math.sin(a1)).toFixed(1)}Z" class="rs${c} ${i % 2 ? 'imp' : ''}"/><text x="${(100 + 64 * Math.cos(am)).toFixed(1)}" y="${(100 + 64 * Math.sin(am)).toFixed(1)}" transform="rotate(${(i + .5) * 45} ${(100 + 64 * Math.cos(am)).toFixed(1)} ${(100 + 64 * Math.sin(am)).toFixed(1)})">${t}</text>` }).join('');
-  return `<section class="rueda"><div class="ru-w"><i class="ru-pin"></i><svg viewBox="0 0 200 200" class="ru" id="rueda" style="transform:rotate(${S.ruRot || 0}deg)" role="img" aria-label="Ruleta de la semana">${seg}<circle cx="100" cy="100" r="16" class="ru-c"/></svg></div>
-    <div class="ru-t"><span class="lab">Ruleta de la semana</span><h2>${mio ? esc(mio.label) : 'Una tirada gratis cada semana'}</h2>
-      <p>${mio ? 'Ya has girado esta semana. La siguiente, el lunes.' : 'V-Bucks de 50 a 1.000 o una caja de CS2 gratis que se abre sola y va a tu inventario.'}</p>
-      ${mio ? '' : `<button class="go-s" data-act="girar" ${S.ruGira ? 'disabled' : ''}>${S.ruGira ? 'Girando…' : 'Girar la ruleta'}</button>`}
+  const gana = RU ? -1 : S.ruWin ?? (mio ? mio.prize : -1);
+  const seg = RUEDA.map(([t, c], i) => { const a0 = (i * 45 - 90) * Math.PI / 180, a1 = ((i + 1) * 45 - 90) * Math.PI / 180, am = ((i + .5) * 45 - 90) * Math.PI / 180, tx = (100 + 64 * Math.cos(am)).toFixed(1), ty = (100 + 64 * Math.sin(am)).toFixed(1);
+    return `<path d="M100 100L${(100 + 96 * Math.cos(a0)).toFixed(1)} ${(100 + 96 * Math.sin(a0)).toFixed(1)}A96 96 0 0 1 ${(100 + 96 * Math.cos(a1)).toFixed(1)} ${(100 + 96 * Math.sin(a1)).toFixed(1)}Z" class="rs${c} ${i % 2 ? 'imp' : ''} ${i === gana ? 'gana' : ''}"/><text x="${tx}" y="${ty}" transform="rotate(${(i + .5) * 45} ${tx} ${ty})" class="${c === 3 ? 'osc' : ''}">${t}</text>` }).join('');
+  const bolas = Array.from({ length: 16 }, (_, i) => { const a = (i * 22.5 - 90) * Math.PI / 180; return `<circle cx="${(100 + 98 * Math.cos(a)).toFixed(1)}" cy="${(100 + 98 * Math.sin(a)).toFixed(1)}" r="2.2" class="ru-led"/>` }).join('');
+  return `<section class="rueda"><div class="ru-w ${RU ? 'gira' : ''}"><i class="ru-pin"></i><svg viewBox="0 0 200 200" class="ru" id="rueda" style="transform:rotate(${ruAng().toFixed(2)}deg)" role="img" aria-label="Ruleta de la semana"><circle cx="100" cy="100" r="99" class="ru-aro"/>${seg}${bolas}<circle cx="100" cy="100" r="17" class="ru-c"/></svg></div>
+    <div class="ru-t"><span class="lab">Ruleta de la semana</span><h3>${RU ? 'Girando…' : mio ? esc(mio.label) : 'Una tirada gratis'}</h3>
+      <p>${RU ? '' : mio ? 'Ya has girado esta semana. La siguiente, el lunes.' : 'De 50 a 1.000 V-Bucks o una caja de CS2 que se abre sola.'}</p>
+      ${mio || RU ? '' : `<button class="go-s" data-act="girar">Girar</button>`}
       ${otros.length ? `<div class="ru-o">${otros.map(([f, l]) => `<span>${av(f.id, 'sm')}${esc(f.n)} <em>${esc(l)}</em></span>`).join('')}</div>` : ''}</div></section>`;
 }
+// lo que hay para reclamar: cuantas cosas esperan
+function rwPend() {
+  const wk = new Date(WEEK0 + DAY / 2).toISOString().slice(0, 10), di = Math.floor((NOW - WEEK0) / DAY);
+  const rueda = !(WHEEL || []).some((w) => w.player === me().uid && w.week === wk);
+  const dentroBote = !!BOTE?.players?.[me().uid], boteAbierto = BOTE && (!BOTE.desde || wk >= BOTE.desde) && di <= 2;
+  return { diario: !!CLAIM && !CLAIM.today, rueda, rescate: puedeRescate(), bote: boteAbierto && !dentroBote, dentroBote, boteAbierto };
+}
+function rwBoton() { const p = rwPend(), n = [p.diario, p.rueda, p.rescate, p.bote].filter(Boolean).length;
+  return `<button class="claim ${n ? '' : 'nada'} ${S.rew ? 'on' : ''}" data-act="rw" aria-label="Recompensas">${IC_GIFT}<span>Recompensas</span>${n ? `<b>${n}</b>` : ''}</button>` }
+function pintaRw() {
+  let el = document.getElementById('rw');
+  if (!S.rew) { if (el) el.remove(); return }
+  if (!el) { el = document.createElement('div'); el.id = 'rw'; document.body.appendChild(el) }
+  const p = rwPend();
+  el.innerHTML = `<div class="rw-fondo" data-act="rw"></div><aside class="rw" role="dialog" aria-label="Recompensas">
+    <header><h2>Recompensas</h2><button class="q" data-act="rw">Cerrar</button></header>
+    ${ruedaHtml()}
+    <div class="rw-r"><span class="rw-i">${IC_GIFT}</span><p><b>Premio diario</b><span>${N(CLAIM?.amount || 50)} V-Bucks cada día, reclamándolos</span></p>${p.diario ? `<button class="go-s" data-act="claim">Reclamar</button>` : '<em>Hecho hoy</em>'}</div>
+    <div class="rw-r"><span class="rw-i b">${IC_TICKET}</span><p><b>Bote de la semana</b><span>${N(BOTE?.amount || 100)} cada uno, entra quien quiera de lunes a miércoles. Se lo lleva el que más gane con sus apuestas</span></p>${p.bote ? `<button class="go-s" data-act="bote">Entrar</button>` : p.dentroBote ? '<em>Estás dentro</em>' : `<em>${BOTE?.desde && new Date(WEEK0 + DAY / 2).toISOString().slice(0, 10) < BOTE.desde ? 'Empieza el lunes' : 'Cerrado hasta el lunes'}</em>`}</div>
+    ${p.rescate ? `<div class="rw-r"><span class="rw-i p">${IC_GIFT}</span><p><b>Rescate</b><span>Te has quedado a cero: ${N(CLAIM.rescue)} para seguir, una vez por semana</span></p><button class="go-s" data-act="rescue">Pedir</button></div>` : ''}
+  </aside>`;
+  if (window.GM_LANG) GM_LANG.traduce(el);
+  if (RU) requestAnimationFrame(ruLoop);
+}
+
 function monedero() {
   const days = ['L', 'M', 'X', 'J', 'V', 'S', 'D'], di = Math.min(6, Math.max(0, Math.floor((NOW - WEEK0) / DAY)));
   const mine = ALL.filter((b) => b.k === MEK), open = mine.filter((b) => b.st === 'open'), won = mine.filter((b) => b.st === 'won').reduce((a, b) => a + b.pay, 0);
@@ -971,7 +1011,6 @@ function monedero() {
     <div class="w-hero">${coin('big')}
       <div><span class="lab">Tu saldo</span><div class="w-bal">${N(me().s)}</div>
         <p class="w-pay">Paga del lunes <b>+${N(WEEKLY)}</b> · se acumula</p>
-        <div class="w-claim">${CLAIM ? (CLAIM.today ? `<span class="pf-ok">Premio diario reclamado · vuelve mañana</span>` : `<button class="go-s" data-act="claim">${IC_GIFT}Reclamar ${N(CLAIM.amount)} de hoy</button>`) : ''}${puedeRescate() ? `<button class="go-s res" data-act="rescue">Pedir rescate de ${N(CLAIM.rescue)}</button>` : ''}</div>
         <div class="w-cd" data-cdpay>${fmtPay(PAY)}</div>
         <div class="wk7">${days.map((d, i) => `<i class="${i <= di ? 'on' : ''}"></i>`).join('')}${days.map((d, i) => `<span class="${i === di ? 'on' : ''}">${d}</span>`).join('')}</div>
       </div></div>
@@ -981,7 +1020,6 @@ function monedero() {
       <div class="stt"><span class="lab">En juego</span><b>${N(open.reduce((a, b) => a + b.stake, 0))}</b><span>${open.length} apuestas abiertas</span></div>
       <div class="stt ac"><span class="lab">Si aciertas todo</span><b>${N(me().s + open.reduce((a, b) => a + b.stake * b.o, 0))}</b><span>saldo posible</span></div>
     </div>
-    ${ruedaHtml()}
     <section class="movs"><div class="sec-h"><h2>Movimientos</h2><i>${lista.length} ${lista.length === 1 ? 'movimiento' : 'movimientos'}</i></div>
       <nav class="mv-tabs">${[['todo', 'Todo'], ['apuestas', 'Apuestas'], ['cajas', 'Cajas y skins'], ['juegos', 'Juegos'], ['pagas', 'Pagas y premios']].filter(([k]) => k === 'todo' || cnt(k)).map(([k, n]) => `<button class="chip ${tab === k ? 'on' : ''}" data-mt="${k}">${n} <i>${cnt(k)}</i></button>`).join('')}</nav>
       ${filas || '<p class="hint">Nada por aquí todavía.</p>'}
@@ -1043,7 +1081,7 @@ const SCREENS = {
   cajas: ['Cajas', 'Abre cajas de CS2, guarda skins y juega batallas', '<path d="M3.8 8.2 12 4.2l8.2 4v7.6L12 19.8l-8.2-4z"/><path d="M3.8 8.2 12 12.2l8.2-4M12 12.2v7.6M7.9 6.2l8.2 4"/>'],
   chat: ['Chat', 'Fotos, mensajes y avisos', '<path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 17h-8l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 5 5z"/>'],
   monedero: ['Monedero', 'Tus V-Bucks, la paga del lunes y cada movimiento', '<path d="M4.5 8V7a2 2 0 0 1 2-2H17v3"/><rect x="4" y="8" width="16.5" height="11" rx="2.5"/><circle cx="16" cy="13.5" r="1.3"/>'],
-  juegos: ['Juegos', 'Cara o cruz, crash, ruleta, blackjack y plinko', '<rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r=".6"/><circle cx="15" cy="9" r=".6"/><circle cx="12" cy="12" r=".6"/><circle cx="9" cy="15" r=".6"/><circle cx="15" cy="15" r=".6"/>'],
+  juegos: ['Juegos', 'Blackjack · como mucho 100 de pérdida al día', '<rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r=".6"/><circle cx="15" cy="9" r=".6"/><circle cx="12" cy="12" r=".6"/><circle cx="9" cy="15" r=".6"/><circle cx="15" cy="15" r=".6"/>'],
 };
 const jgCtx = () => ({ db, me: ME, meKey: MEK, jugadores: F.map((f) => ({ id: f.id, uuid: f.uid, n: f.n, color: f.id })), saldo: me().s, av, toast, refresh });
 const juegos = () => (window.GM_JUEGOS ? GM_JUEGOS.html(jgCtx()) : '');
@@ -1064,7 +1102,8 @@ function render() {
   const lg = window.GM_LANG ? GM_LANG.get() : 'es';
   document.getElementById('lang').innerHTML = ['es', 'en'].map((l) => `<button type="button" class="${l === lg ? 'on' : ''}" data-lang="${l}">${l.toUpperCase()}</button>`).join('');
   const [t, sub] = S.scr === 'perfil' ? ['Perfil', fr(S.prof).n + (fr(S.prof).apodo ? ' · ' + fr(S.prof).apodo : '')] : SCREENS[S.scr];
-  document.getElementById('top').innerHTML = `<h1>${t}</h1><span class="sub">${esc(sub)}</span><span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>${M.some((x) => x.live) ? `<button class="dv-btn ${S.scr === 'directo' ? 'on' : ''}" data-scr="directo"><i></i>Directo <b>${M.filter((x) => x.live).length}</b></button>` : ''}${CLAIM && !CLAIM.today ? `<button class="claim" data-act="claim">${IC_GIFT}<span>Reclamar ${N(CLAIM.amount)}</span></button>` : ''}<span class="onl" data-onl>${onlineHtml()}</span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span>`;
+  pintaRw();
+  document.getElementById('top').innerHTML = `<h1>${t}</h1><span class="sub">${esc(sub)}</span><span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>${M.some((x) => x.live) ? `<button class="dv-btn ${S.scr === 'directo' ? 'on' : ''}" data-scr="directo"><i></i>Directo <b>${M.filter((x) => x.live).length}</b></button>` : ''}${rwBoton()}<span class="onl" data-onl>${onlineHtml()}</span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span>`;
   photoCss();
   const vw = document.getElementById('view'), cambia = vw.dataset.vista !== S.scr;
   const mismoVideo = S.scr === 'directo' && vw.dataset.vista === 'directo' && vw.querySelector('[data-dv-key]')?.dataset.dvKey === dvKey();
@@ -1180,12 +1219,10 @@ document.addEventListener('click', async (e) => {
   if (d.mt) { S.mt = d.mt; S.mp = 0; return render() }
   if (d.mp != null && t.matches('[data-mp]')) { S.mp = +d.mp; render(); document.querySelector('.movs')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); return }
   if (d.act === 'girar') {
-    if (S.ruGira) return; S.ruGira = true; render();
-    const { data, error } = await db.rpc('spin_wheel'); if (error) { S.ruGira = false; render(); return toast(errMsg(error)) }
-    const el = document.getElementById('rueda'), base = Math.ceil((S.ruRot || 0) / 360) * 360;
-    S.ruRot = base + 360 * 6 - (data.prize * 45 + 22.5) + (Math.random() - .5) * 30;
-    if (el) { el.style.transition = 'transform 5.2s cubic-bezier(.12,.7,.14,1)'; el.style.transform = `rotate(${S.ruRot}deg)` }
-    setTimeout(async () => { S.ruGira = false; toast(data.item ? `${esc(data.label)}: ya está en tu inventario` : `Ruleta: <b>${esc(data.label)}</b>`); if (window.GM_FX?.confeti) GM_FX.confeti(); await refresh() }, 5400);
+    if (S.ruGira || RU) return; S.ruGira = true;
+    const { data, error } = await db.rpc('spin_wheel'); S.ruGira = false; if (error) { render(); return toast(errMsg(error)) }
+    const from = S.ruRot || 0, fin = -(data.prize * 45 + 22.5) + (Math.random() - .5) * 30, giro = (((fin - from) % 360) + 360) % 360;
+    S.ruWin = null; RU = { t0: Date.now(), from, to: from + 360 * 6 + giro, res: data }; render(); requestAnimationFrame(ruLoop);
     return;
   }
   if (d.act === 'bracket') { S.brk = true; S.side = null; document.querySelector('.det')?.scrollTo?.(0, 0); return render() }
@@ -1196,6 +1233,8 @@ document.addEventListener('click', async (e) => {
   if (d.vote) { const [pid, o] = d.vote.split('|'); const { error } = await db.rpc('vote_poll', { p_poll: +pid, p_opt: +o }); if (error) return toast(errMsg(error)); return refresh() }
   if (d.share) { const { error } = await db.from('chat').insert({ player: ME, body: '', bet_id: +d.share }); if (error) return toast(errMsg(error)); toast('Apuesta mandada al chat'); return refresh() }
   if (d.sumo) { const [mid, pk] = d.sumo.split('|'); S.scr = 'partidos'; S.foc = mid; S.sheet = true; S.side = null; S.sel = { m: mid, p: pk }; location.hash = 'partidos'; render(); return toast('Elige cuánto y dale a Apostar') }
+  if (d.act === 'rw') { S.rew = !S.rew; return render() }
+  if (d.act === 'bote') { const { error } = await db.rpc('join_bote'); if (error) return toast(errMsg(error)); toast('Estás dentro del bote de esta semana'); return refresh() }
   if (d.act === 'claim') { const { data, error } = await db.rpc('claim_daily'); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} del premio diario`); return refresh() }
   if (d.act === 'rescue') { const { data, error } = await db.rpc('claim_rescue'); if (error) return toast(errMsg(error)); toast(`Rescate: +${N(data)}${coin()}`); return refresh() }
   if (d.act === 'poll') { S.pollForm = !S.pollForm; render(); if (S.pollForm) document.getElementById('poll-q')?.focus(); return }
