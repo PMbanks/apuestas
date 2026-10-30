@@ -275,34 +275,67 @@
       </div>
     </section>`;
   }
+  // PM, 30-10: "lo de las battles se bugea y quiero un diseño mucho mejor".
+  // La repeticion va por reloj: cada fotograma saca la ronda y la posicion de cada ruleta de la hora de inicio,
+  // y las ruletas se rellenan con un azar con semilla. Si la app repinta a mitad, se vuelve a pintar igual y sigue.
+  const KH = 92, GAP = 8, WIN = 212, KN = 34;
+  let REP = null, repRaf = 0;
+  const RD = () => (S.rapido ? 1700 : 4600), SPIN = () => (quieto() ? 1 : S.rapido ? 1150 : 3500);
+  const sem = (x) => () => { x = (x + 0x6D2B79F5) | 0; let t = Math.imul(x ^ (x >>> 15), 1 | x); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 };
+  function rellenoS(info, rnd) {
+    if (!info) return null;
+    const hay = ORDEN.filter((r) => info.por[r]), tot = hay.reduce((a, r) => a + RELLENO[r], 0);
+    let x = rnd() * tot, r = hay[hay.length - 1];
+    for (const k of hay) { if (x < RELLENO[k]) { r = k; break } x -= RELLENO[k] }
+    const l = info.por[r]; return l[(rnd() * l.length) | 0];
+  }
+  const kCard = (it, gana) => it.rarity === 'esp' ? `<div class="bv-k esp ${gana ? 'gana' : ''}"><span>★</span></div>` : `<div class="bv-k ${gana ? 'gana' : ''}" style="--c:${color(it.rarity)}">${pic(it.image, 256, '', true)}</div>`;
+  function reel(b, r, seat, e, landed) {
+    const d = b.drops.find((x) => x.round === r && x.seat === seat);
+    if (!d) return `<div class="bv-reel"></div>`;
+    const info = D.caja.get(b.cases[r - 1]), rnd = sem(b.id * 1009 + r * 31 + seat * 7), win = item(d.inv.item), cs = [];
+    for (let i = 0; i < KN + 3; i++) cs.push(i === KN ? win : rellenoS(info, rnd) || win);
+    const fin = KN * (KH + GAP) - (WIN - KH) / 2 + (rnd() - 0.5) * KH * 0.45;
+    const p = landed ? 1 : Math.min(1, Math.max(0, (e - (r - 1) * RD()) / SPIN())), y = fin * (1 - Math.pow(1 - p, 4));
+    return `<div class="bv-reel ${landed ? 'ya' : ''}" style="--c:${color(win.rarity)}"><div class="bv-track" data-tr="${seat}" data-fin="${fin.toFixed(1)}" style="transform:translateY(${(-y).toFixed(1)}px)">${cs.map((it, i) => kCard(it, i === KN)).join('')}</div><i class="bv-line"></i></div>`;
+  }
+  function bvIt(d, nuevo) { const x = item(d.inv.item); return `<span class="bv-it ${nuevo ? 'nuevo' : ''}" style="--c:${color(x.rarity)}" title="${esc(x.name)}">${x.rarity === 'esp' && !x.image ? '<b>★</b>' : pic(x.image, 128)}<em>${N(d.inv.value)}</em></span>` }
   function vBat() {
     const b = D.bats.get(S.bat), atras = '<button class="cj-back" data-cj="batallas">Batallas</button>';
     if (!b) return atras + `<p class="hint">${D.err ? esc(D.err) : 'Cargando batalla…'}</p>`;
-    const tam = tamDe(b), mitad = tam / 2, fin = b.status === 'done' && S.rep !== b.id, rep = S.rep === b.id;
-    const drops = (s) => b.drops.filter((d) => d.seat === s).sort((x, y) => x.round - y.round);
-    const totS = (s) => (fin ? drops(s).reduce((a, d) => a + d.inv.value, 0) : 0);
-    const gan = b.seats.filter((x) => Math.floor(x.seat / mitad) === b.winner).map((x) => jug(x.player).n);
-    const cab = `<div class="cj-bv-h">
-      <div><span class="lab">Batalla ${b.mode}</span>
-        <div class="cj-rd" data-cj-rd>${b.cases.map((cid, i) => `<span data-r="${i + 1}" class="${rep ? '' : 'on'}">${pic((D.cases.find((c) => c.id === cid) || {}).image, 128)}</span>`).join('')}</div></div>
-      <div class="cj-bv-act">${rep ? '<button class="chip" data-cj="saltar">Saltar</button>' : fin ? '<button class="chip" data-cj="otravez">Ver otra vez</button>'
-        : b.status === 'open' && b.seats.some((y) => y.player === ctx.me) ? `<button class="chip" data-cj="salir" data-v="${b.id}">${S.sure === 'salir' + b.id ? '¿Seguro? Toca otra vez' : b.by === ctx.me ? 'Cancelar' : 'Salir'}</button>` : ''}</div>
-    </div>`;
-    const tt = b.totals || [0, 0];
-    const res = fin ? `<div class="cj-result"><h2>${gan.length > 1 ? 'Ganan ' + esc(gan.join(' y ')) : 'Gana ' + esc(gan[0] || '·')}</h2>
-      <p><b>${N(tt[b.winner])}</b> contra ${N(tt[1 - b.winner])} · se ${gan.length > 1 ? 'llevan' : 'lleva'} las ${b.drops.length} skins</p></div>`
-      : b.status === 'open' ? `<p class="cj-lead">Esperando ${tam - b.seats.length === 1 ? 'a 1 jugador' : 'a ' + (tam - b.seats.length) + ' jugadores'}. Se abre sola al llenarse.</p>` : '';
-    const fila = (s) => {
-      const x = b.seats.find((y) => y.seat === s);
-      if (!x) return `<div class="cj-sr vacio"><div class="cj-sr-h">${b.status === 'open' && !b.seats.some((y) => y.player === ctx.me) && ctx.saldo >= b.cost ? `<button class="cj-seat" data-cj="unir" data-v="${b.id}|${s}">+</button><b>Unirme aquí</b>` : '<span class="cj-seat"></span><b class="cj-dim">Libre</b>'}</div></div>`;
-      return `<div class="cj-sr" data-seat="${s}">
-        <div class="cj-sr-h">${av(x.player, 'xl')}<b>${esc(jug(x.player).n)}</b>${b.status === 'open' ? '' : `<span class="cj-sr-tot"><span data-tot="${s}">${N(totS(s))}</span>${coin()}</span>`}</div>
-        <div class="cj-sr-stage" data-st="${s}"></div>
-        <div class="cj-haul" data-haul="${s}">${fin ? drops(s).map((d) => haulIt(d.inv)).join('') : ''}</div>
-      </div>`;
+    const tam = tamDe(b), mitad = tam / 2, n = b.cases.length, rep = !!(REP && REP.id === b.id);
+    const e = rep ? Date.now() - REP.t0 : 0, rNow = rep ? Math.min(n, Math.floor(e / RD()) + 1) : n + 1, landed = rep && e - (rNow - 1) * RD() >= SPIN();
+    const visible = (d) => b.status === 'done' && (!rep || d.round < rNow || (d.round === rNow && landed));
+    const dr = (st) => b.drops.filter((d) => d.seat === st && visible(d)).sort((x, y) => x.round - y.round);
+    const tot = (st) => dr(st).reduce((a, d) => a + d.inv.value, 0);
+    const T = [0, 1].map((t) => Array.from({ length: mitad }, (_, i) => tot(t * mitad + i)).reduce((a, v) => a + v, 0));
+    const fin = b.status === 'done' && !rep, dentro = b.seats.some((y) => y.player === ctx.me);
+    const nombres = (t) => b.seats.filter((x) => Math.floor(x.seat / mitad) === t).map((x) => esc(jug(x.player).n)).join(' y ');
+    const lider = T[0] === T[1] ? null : T[0] > T[1] ? 0 : 1;
+    const titulo = b.status === 'open' ? (tam - b.seats.length === 1 ? 'Falta 1 jugador' : `Faltan ${tam - b.seats.length} jugadores`)
+      : rep ? `Ronda ${rNow} de ${n}` : `Gana ${nombres(b.winner) || '·'}`;
+    const sub = b.status === 'open' ? 'Se abre sola en cuanto se llena. El lado que saque más valor se lleva todas las skins.'
+      : fin ? `${N(T[b.winner])} contra ${N(T[1 - b.winner])} · ${mitad > 1 ? 'se llevan' : 'se lleva'} las ${b.drops.length} skins`
+      : lider == null ? 'Van empatados' : `Va ganando ${nombres(lider)} por ${N(Math.abs(T[0] - T[1]))}`;
+    const act = rep ? '<button class="chip" data-cj="saltar">Saltar</button>' : fin ? '<button class="chip" data-cj="otravez">Ver otra vez</button>'
+      : b.status === 'open' && dentro ? `<button class="chip" data-cj="salir" data-v="${b.id}">${S.sure === 'salir' + b.id ? '¿Seguro? Toca otra vez' : b.by === ctx.me ? 'Cancelar' : 'Salir'}</button>` : '';
+    const head = `<header class="bv-h"><div class="bv-t"><span class="lab">Batalla ${b.mode} · ${n} ${n === 1 ? 'ronda' : 'rondas'}</span><h2 class="${fin ? 'gana' : ''}">${titulo}</h2><p>${sub}</p></div>
+      <div class="bv-pot"><span class="num">${N(b.cost * tam)}</span>${coin()}<em>${b.status === 'open' ? N(b.cost) + ' cada uno' : 'en juego'}</em></div>${act ? `<div class="bv-act">${act}</div>` : ''}</header>`;
+    const rds = `<div class="bv-rds">${b.cases.map((cid, i) => { const st = !rep ? (b.status === 'done' ? 'ok' : '') : i + 1 < rNow || (i + 1 === rNow && landed) ? 'ok' : i + 1 === rNow ? 'now' : ''; return `<span class="${st}">${pic((D.cases.find((c) => c.id === cid) || {}).image, 128)}<i>${i + 1}</i></span>` }).join('')}</div>`;
+    const tug = b.status === 'done' ? `<div class="bv-tug" aria-hidden="true"><i style="flex:${T[0] + T[1] ? Math.max(T[0], 0.01) : 1}"></i><i style="flex:${T[0] + T[1] ? Math.max(T[1], 0.01) : 1}"></i></div>` : '';
+    const col = (st) => {
+      const x = b.seats.find((y) => y.seat === st), t = Math.floor(st / mitad);
+      if (!x) return `<div class="bv-col vacio">${b.status === 'open' && !dentro && ctx.saldo >= b.cost ? `<button class="bv-join" data-cj="unir" data-v="${b.id}|${st}"><b>+</b><span>Unirme aquí</span><em>${N(b.cost)}${coin()}</em></button>` : '<span class="bv-free">Libre</span>'}</div>`;
+      const j = jug(x.player), ds = dr(st), mejor = ds.reduce((a, d) => (!a || d.inv.value > a.inv.value ? d : a), null);
+      const stage = rep ? reel(b, rNow, st, e, landed)
+        : fin && mejor ? `<div class="bv-best" style="--c:${color(item(mejor.inv.item).rarity)}">${pic(item(mejor.inv.item).image, 360)}<span>${esc(partes(item(mejor.inv.item)).join(' | '))}</span><b>${N(mejor.inv.value)}${coin()}</b></div>` : '';
+      return `<div class="bv-col ${fin ? (t === b.winner ? 'win' : 'lose') : rep && lider === t ? 'va' : ''}" style="--pc:var(--f-${esc(j.color)})">
+        <div class="bv-p">${av(x.player, 'xl')}<b>${esc(j.n)}</b><span class="bv-tot"><span class="num">${N(tot(st))}</span>${coin()}</span></div>
+        ${stage}<div class="bv-haul">${ds.map((d) => bvIt(d, rep && d.round === rNow)).join('')}</div></div>`;
     };
-    const lado = (t) => `<div class="cj-team ${fin ? (b.winner === t ? 'win' : 'lose') : ''}" data-team="${t}">${Array.from({ length: mitad }, (_, i) => fila(t * mitad + i)).join('')}</div>`;
-    return `${atras}${cab}${res}<div class="cj-arena m${tam}">${lado(0)}<span class="cj-vs">VS</span>${lado(1)}</div>`;
+    const team = (t) => `<div class="bv-team n${mitad}">${Array.from({ length: mitad }, (_, i) => col(t * mitad + i)).join('')}</div>`;
+    const cl = (t) => jug(b.seats.find((y) => Math.floor(y.seat / mitad) === t)?.player).color;
+    return `${atras}<div class="bv" style="--c0:var(--f-${esc(cl(0))});--c1:var(--f-${esc(cl(1))})">${head}${rds}${tug}<div class="bv-arena m${tam}">${team(0)}<span class="bv-vs">VS</span>${team(1)}</div></div>`;
   }
   function haulIt(i) { const x = item(i.item); return `<span class="cj-h-it" style="--c:${color(x.rarity)}" title="${esc(x.name)}">${pic(x.image, 128)}<em>${N(i.value)}</em></span>` }
 
@@ -327,7 +360,7 @@
     if (anim) anim.anims.push(a);
     return a.finished.then(() => k.classList.add('gana'), () => k.classList.add('gana'));
   }
-  function para() { if (!anim) return; anim.saltar = true; for (const a of anim.anims) { try { a.finish() } catch {} } }
+  function para() { if (REP) return termina(); if (!anim) return; anim.saltar = true; for (const a of anim.anims) { try { a.finish() } catch {} } }
 
   async function abrir() {
     if (anim || ocupado) return;
@@ -362,30 +395,33 @@
     cargar(true);
   }
 
-  async function repeticion(b) {
-    if (anim || !b || b.status !== 'done') return;
+  function repeticion(b) {
+    if (!b || b.status !== 'done') return;
     marcaVisto(b.id);
-    const tam = tamDe(b), mitad = tam / 2, vel = S.rapido ? 0.32 : 1;
-    anim = { anims: [], saltar: false };
-    S.rep = b.id; pinta(true);
-    const tot = [0, 0, 0, 0];
-    for (let r = 1; r <= b.cases.length && !anim.saltar; r++) {
-      root.querySelectorAll('[data-cj-rd] [data-r]').forEach((e) => e.classList.toggle('on', +e.dataset.r <= r));
-      const info = D.caja.get(b.cases[r - 1]);
-      const ronda = b.drops.filter((d) => d.round === r);
-      await Promise.all(ronda.map((d, i) => girar(root.querySelector(`[data-st="${d.seat}"]`), info, d.inv, 3600 * vel + i * 140)));
-      for (const d of ronda) {
-        tot[d.seat] += d.inv.value;
-        const h = root.querySelector(`[data-haul="${d.seat}"]`); if (h) h.insertAdjacentHTML('beforeend', haulIt(d.inv));
-        const t = root.querySelector(`[data-tot="${d.seat}"]`); if (t) t.textContent = N(tot[d.seat]);
+    REP = { id: b.id, t0: Date.now(), key: '' }; S.rep = b.id;
+    pinta(true); bucle();
+  }
+  function bucle() {
+    cancelAnimationFrame(repRaf);
+    const paso = () => {
+      if (!REP) return;
+      const b = D.bats.get(REP.id);
+      if (!b || S.bat !== REP.id || S.tab !== 'batallas') { REP = null; S.rep = null; return }
+      const n = b.cases.length, e = Date.now() - REP.t0, r = Math.floor(e / RD()) + 1;
+      if (r > n) return termina();
+      const landed = e - (r - 1) * RD() >= SPIN(), key = r + '|' + landed;
+      if (key !== REP.key || !root.querySelector('[data-tr]')) { REP.key = key; pinta(true) }
+      else if (!landed) {
+        const k = 1 - Math.pow(1 - Math.min(1, (e - (r - 1) * RD()) / SPIN()), 4);
+        root.querySelectorAll('[data-tr]').forEach((tr) => { tr.style.transform = `translateY(${(-(+tr.dataset.fin) * k).toFixed(1)}px)` });
       }
-      // quien va ganando
-      const eq = [0, 1].map((t) => tot.slice(t * mitad, t * mitad + mitad).reduce((a, v) => a + v, 0));
-      root.querySelectorAll('[data-team]').forEach((e) => e.classList.toggle('va', eq[+e.dataset.team] > eq[1 - +e.dataset.team]));
-      await espera(500 * vel);
-    }
-    anim = null; S.rep = null;
-    pinta();
+      repRaf = requestAnimationFrame(paso);
+    };
+    repRaf = requestAnimationFrame(paso);
+  }
+  function termina() {
+    cancelAnimationFrame(repRaf); REP = null; S.rep = null;
+    pinta(true);
     if (ctx.refresh) ctx.refresh();
     cargar(true);
   }
