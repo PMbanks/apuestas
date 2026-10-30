@@ -122,9 +122,10 @@
   async function edgeCs2() {
     if (Date.now() - edgeFallo < 180000) return null;
     const probar = async (opts) => { const r = await fetch(`${EDGE}?cs2=1`, { cache: 'no-store', ...opts }); if (!r.ok) throw new Error(r.status); const j = await r.json(); if (!j.ok) throw new Error('mal'); return j.matches || [] };
+    // la funcion pide la sesion del jugador (comprobacion de JWT encendida): se manda la de la app
+    try { const tok = (typeof db !== 'undefined' && (await db.auth.getSession()).data?.session?.access_token) || null;
+      if (tok) return await probar({ headers: { apikey: CFG.anon, authorization: 'Bearer ' + tok } }) } catch {}
     try { return await probar() } catch {}
-    // si la funcion se desplego pidiendo JWT, con la clave publica de la app tambien contesta
-    try { if (CFG.anon) return await probar({ headers: { apikey: CFG.anon, authorization: 'Bearer ' + CFG.anon } }) } catch {}
     edgeFallo = Date.now(); return null;
   }
   const cs2Lista = () => cached('cs2', 15000, edgeCs2);
