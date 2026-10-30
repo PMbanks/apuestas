@@ -32,12 +32,14 @@
     const rev = !parecido(d.teams?.[0]?.name, a), par = (x) => (rev ? [x[1], x[0]] : x);
     const [ta, tb] = par(d.teams || [{}, {}]);
     const maps = (d.maps || []).filter((m) => m.name && !/all maps/i.test(m.name));
-    const vivo = maps.find((m) => m.status === 'live') || [...maps].reverse().find((m) => (m.rounds || []).length);
+    const hechos = (Number(ta.score) || 0) + (Number(tb.score) || 0);
+    const estado = (m, i) => (i < hechos ? 'fin' : i === hechos && d.status !== 'completed' ? 'live' : 'pend');
+    const vivo = maps.find((m, i) => estado(m, i) === 'live') || maps[hechos - 1];
     const cab = `<div class="vv-cab"><span>${ta.img ? `<img src="${esc(ta.img)}" alt="">` : ''}<b>${esc(a)}</b></span><strong>${ta.score ?? 0}<i>:</i>${tb.score ?? 0}<small>mapas</small></strong><span class="d"><b>${esc(b)}</b>${tb.img ? `<img src="${esc(tb.img)}" alt="">` : ''}</span></div>`;
     const tarjeta = (m, i) => {
-      const [x, y] = par(m.teams || [{}, {}]), live = m.status === 'live', jugado = (x.score ?? 0) + (y.score ?? 0) > 0;
+      const [x, y] = par(m.teams || [{}, {}]), est = estado(m, i), live = est === 'live', jugado = est === 'fin' || (x.score ?? 0) + (y.score ?? 0) > 0;
       const lado = (t) => (t.roundsCt != null ? `<small>CT ${t.roundsCt} · T ${t.roundsT}</small>` : '');
-      return `<div class="vv-map ${live ? 'live' : jugado ? 'fin' : ''}"><div class="vv-mn"><b>Mapa ${i + 1} · ${esc(m.name)}</b><small>${live ? 'EN JUEGO' : jugado ? 'acabado' : 'pendiente'}${m.pickedBy ? ' · pick de ' + esc(m.pickedBy) : ''}</small></div>
+      return `<div class="vv-map ${live ? 'live' : jugado ? 'fin' : ''}"><div class="vv-mn"><b>Mapa ${i + 1} · ${esc(m.name)}</b><small>${live ? ((x.score ?? 0) + (y.score ?? 0) ? 'EN JUEGO' : 'EMPEZANDO') : est === 'fin' ? 'acabado · gana ' + esc((x.score ?? 0) > (y.score ?? 0) ? a : b) : 'pendiente'}${m.pickedBy ? ' · pick de ' + esc(m.pickedBy) : ''}</small></div>
         <div class="vv-ms"><span class="${(x.score ?? 0) > (y.score ?? 0) ? 'gana' : ''}">${jugado || live ? x.score ?? 0 : '·'}${jugado ? lado(x) : ''}</span><i>:</i><span class="${(y.score ?? 0) > (x.score ?? 0) ? 'gana' : ''}">${jugado || live ? y.score ?? 0 : '·'}${jugado ? lado(y) : ''}</span></div></div>`;
     };
     let rondas = '';
@@ -45,7 +47,7 @@
       let ant = [0, 0];
       const rs = vivo.rounds.filter((r) => r.score).map((r) => { const [p, q] = String(r.score).split('-').map(Number), g = p > ant[0] ? 0 : 1; ant = [p, q]; const k = rev ? 1 - g : g;
         return `<i class="${k ? 'b' : 'a'} ${r.number === 12 ? 'medio' : ''}" title="Ronda ${r.number} · ${esc(METODO[r.method] || r.method || '')}">${r.methodIcon ? `<img src="${esc(r.methodIcon)}" alt="">` : ''}</i>` }).join('');
-      rondas = `<div class="vv-r"><span class="lab">${esc(vivo.name)} · ronda a ronda</span><div class="vv-rs">${rs}</div><div class="vv-leg"><span class="a">${esc(a)}</span><span class="b">${esc(b)}</span></div></div>`;
+      rondas = `<div class="vv-r"><span class="lab">${esc(vivo.name)} · ronda a ronda${maps.indexOf(vivo) < hechos ? ' (acabado)' : ''}</span><div class="vv-rs">${rs}</div><div class="vv-leg"><span class="a">${esc(a)}</span><span class="b">${esc(b)}</span></div></div>`;
     }
     let jug = '';
     const ps = vivo?.players?.length ? vivo.players : d.players || [];
@@ -105,9 +107,10 @@
         const d = await valorant(m.a, m.b); if (!d) continue;
         const rev = !parecido(d.teams?.[0]?.name, m.a), par = (x) => (rev ? [x[1], x[0]] : x);
         const [ta, tb] = par(d.teams || [{}, {}]);
-        const vivoMap = (d.maps || []).find((x) => x.status === 'live');
+        const ms = (d.maps || []).filter((x) => x.name && !/all maps/i.test(x.name)), hechos = (Number(ta.score) || 0) + (Number(tb.score) || 0);
+        const vivoMap = d.status !== 'completed' ? ms[hechos] : null;
         let txt = `${ta.score ?? 0}:${tb.score ?? 0}`;
-        if (vivoMap) { const [x, y] = par(vivoMap.teams || [{}, {}]); if (x.score != null) txt += ` (${x.score}-${y.score})` }
+        if (vivoMap) { const [x, y] = par(vivoMap.teams || [{}, {}]); txt += ` (${x.score ?? 0}-${y.score ?? 0} ${vivoMap.name})` }
         if (m.score !== txt) { m.score = txt; m.vlr = true; cambia = true }
       }
       // que el siguiente load() no lo pise hasta que vuelva a pasar por aqui
