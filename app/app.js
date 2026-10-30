@@ -702,7 +702,7 @@ function liga() {
   const rank = [...F].sort((a, b) => b.s - a.s), mx = Math.max(1, rank[0]?.s || 1), meI = rank.findIndex((f) => f.me);
   const open = ALL.filter((b) => b.st === 'open').reduce((a, b) => a + b.stake, 0), set = ALL.filter((b) => b.st === 'won' || b.st === 'lost'), won = set.filter((b) => b.st === 'won').length;
   const gapUp = meI > 0 ? rank[meI - 1].s - me().s : 0, gapDn = meI >= 0 && meI < rank.length - 1 ? me().s - rank[meI + 1].s : 0;
-  const order = rank.length >= 3 ? [1, 0, 2] : rank.map((_, i) => i), nWeeks = Math.max(1, me().h.length - 1);
+  const order = rank.length >= 3 ? [1, 0, ...rank.map((_, i) => i).slice(2)] : rank.map((_, i) => i), nWeeks = Math.max(1, me().h.length - 1);
   return `<div class="lc">
     <header class="lc-h"><span class="lab">Temporada · desde el ${esc(SEASON ? fmt(SEASON + 'T12:00:00Z', { day: 'numeric', month: 'short' }) : '')} · ${F.length} jugadores</span><h2 class="wk"><small>SEMANA</small>${String(nWeeks).padStart(2, '0')}</h2>
       <p class="l-pay">Paga de <b>+${N(WEEKLY)}</b> a cada uno en ${CD(PAY)}</p></header>
