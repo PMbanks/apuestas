@@ -463,4 +463,4 @@ async function main() {
   if (process.env.DISCORD_WEBHOOK) { try { await avisos({ rpc, secret: SECRET, hook: process.env.DISCORD_WEBHOOK }) } catch (e) { console.log(`discord: ${e.message || e}`) } }
 }
 
-main().catch((e) => { console.error(e.message || e); proces
+main().catch((e) => { console.error(e.message || e); process.exit(1); });
