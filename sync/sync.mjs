@@ -54,6 +54,19 @@ const soccerModel = (ppgH, ppgA) => {
 const parseRecord = (s) => { const [w, d, l] = String(s || '').split('-').map(Number); return isFinite(w) ? { w, d: d || 0, l: l || 0 } : null; };
 const formEs = (f) => String(f || '').toUpperCase().replace(/[^WDL]/g, '').slice(-5).replace(/W/g, 'G').replace(/D/g, 'E').replace(/L/g, 'P');
 
+// donde verlo: canales y plataformas de ESPN con su idioma (en, es)
+const tvEspn = (c) => {
+  const seen = new Set(), out = [];
+  for (const b of [...(c.geoBroadcasts || []), ...(c.broadcasts || [])]) {
+    const n = b.media?.shortName || (Array.isArray(b.names) ? b.names[0] : null);
+    // ESPN marca casi todo como 'en': los canales en espanol se reconocen por su nombre
+    const l = /deportes|univision|unim[aá]s|tudn|telemundo|universo|vix|espa[nñ]ol/i.test(n) ? 'es' : b.lang || 'en';
+    if (!n || seen.has(n + l)) continue;
+    seen.add(n + l); out.push({ n, l, t: b.type?.shortName === 'Streaming' || b.type?.shortName === 'STREAMING' ? 'stream' : 'tv' });
+  }
+  return out.slice(0, 8);
+};
+
 // ---------- futbol (ESPN) ----------
 const espnDark = (kind, id, size) => `https://a.espncdn.com/combiner/i?img=/i/${kind}/soccer/500-dark/${id}.png&w=${size}&h=${size}`;
 async function soccer() {
@@ -84,6 +97,8 @@ async function soccer() {
           score: status === 'live' || status === 'final' ? `${isFinite(sh) ? sh : 0}:${isFinite(sa) ? sa : 0}` : null,
           winner: status === 'final' ? (sh > sa ? '1' : sh < sa ? '2' : 'X') : null,
           details: {
+            espn: { sport: 'soccer', league: lg, event: e.id },
+            tv: tvEspn(c),
             tape: [
               [formEs(h.form) ? 'F:' + formEs(h.form) : '', 'Forma', formEs(a.form) ? 'F:' + formEs(a.form) : ''],
               [h.records?.[0]?.summary?.replace(/-/g, '·') || '', 'G · E · P', a.records?.[0]?.summary?.replace(/-/g, '·') || ''],
@@ -132,7 +147,7 @@ async function ufc() {
         starts_at: new Date(Date.parse(c.date || e.date)).toISOString(), status,
         score: done ? (c.status?.result?.shortDisplayName || st.shortDetail || null) : null,
         winner: status === 'final' ? (x.winner ? '1' : '2') : null,
-        details: { tape: [[x.records?.[0]?.summary?.replace(/-/g, '·') || '', 'Récord', y.records?.[0]?.summary?.replace(/-/g, '·') || '']].filter((r) => r[0] || r[2]) },
+        details: { espn: { sport: 'mma', league: 'ufc', event: e.id }, tv: tvEspn(c).length ? tvEspn(c) : tvEspn(e.competitions?.[comps.length - 1] || {}), tape: [[x.records?.[0]?.summary?.replace(/-/g, '·') || '', 'Récord', y.records?.[0]?.summary?.replace(/-/g, '·') || '']].filter((r) => r[0] || r[2]) },
       };
       if (status === 'scheduled') {
         const pct = (r) => (r ? (r.w + 1) / (r.w + r.l + r.d + 2) : 0.5);
@@ -188,7 +203,9 @@ async function valorant() {
       starts_at: new Date(t).toISOString(), status, bo: m.number_of_games || null,
       score: status === 'live' || status === 'final' ? `${sc(A.id)}:${sc(B.id)}` : null,
       winner: status === 'final' ? (m.winner_id === A.id ? '1' : '2') : null,
-      details: { tape: [[m.number_of_games ? 'BO' + m.number_of_games : '', 'Formato', m.number_of_games ? 'BO' + m.number_of_games : ''],
+      details: { tv: (m.streams_list || []).filter((x) => x.raw_url && /^(en|es)$/.test(x.language)).slice(0, 6)
+          .map((x) => ({ n: /twitch/.test(x.raw_url) ? 'Twitch' : /youtube/.test(x.raw_url) ? 'YouTube' : /kick\.com/.test(x.raw_url) ? 'Kick' : 'Stream', l: x.language, u: x.raw_url, main: !!x.main })),
+        tape: [[m.number_of_games ? 'BO' + m.number_of_games : '', 'Formato', m.number_of_games ? 'BO' + m.number_of_games : ''],
         [fa ? 'F:' + fa.s : '', 'Forma', fb ? 'F:' + fb.s : '']].filter((r) => r[0] || r[2]) },
     };
     if (status === 'scheduled') {
