@@ -1,6 +1,6 @@
-// Datos de la pantalla Cajas: escribe db/012b_cajas_datos.sql con las 30 cajas de CS2 y las 5 de lujo, lo que trae cada una y su valor.
+// Datos de la pantalla Cajas: escribe db/012b_cajas_datos.sql con las 30 cajas de CS2 y las 10 de lujo, lo que trae cada una y su valor.
 // Cajas, skins, desgaste e imagenes de CS2: ByMykel/CSGO-API (GitHub). Precios: Skinport, en euros. Las dos sin clave.
-// Cajas de lujo (relojes, zapatillas...): sync/lujo-datos.mjs, con fotos propias en app/img/lujo/ (sync/lujo-imagenes.mjs).
+// Cajas de lujo (relojes, zapatillas...): sync/lujo-datos.mjs, con fotos recortadas en app/img/lujo/ y una caja dibujada para cada una en app/img/lujo/cajas/ (sync/lujo-imagenes.mjs).
 // Este fichero sustituye a db/007b_cajas_datos.sql (la tanda vieja, con margen del 10 % y 15 cajas): no se cargan las dos, solo este.
 // Se lanza a mano cuando se quiera poner precios al dia o cambiar la lista de cajas; el SQL se carga en Supabase.
 //   node sync/cajas-datos.mjs
@@ -10,7 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LUJO, BASE_IMG } from './lujo-datos.mjs';
+import { LUJO, OBJETOS, BASE_IMG } from './lujo-datos.mjs';
 
 const FACTOR_LUJO = 1;  // las cajas de lujo van a 1 euro = 1 V-Buck: con la paga de 1.000 por semana se pueden abrir (Zapatillas ~220, Relojes ~2.600, Coches ~21.000)
 const FACTOR = 20;     // 1 euro = 20 V-Bucks (la paga del lunes, 1.000, son 50 euros de skins)
@@ -116,12 +116,17 @@ async function main() {
     }
   }
 
-  // objetos de lujo: sin desgaste ni StatTrak (minf null, st false), el mismo precio en las 10 casillas, todos igual de probables dentro de su rareza
-  for (const c of LUJO) for (const [id, name, eur, rarity, foto] of c.items) {
-    items.set(id, { id, name, phase: null, rarity, image: BASE_IMG + id.replace(/^lujo-/, '') + '.webp', minf: null, maxf: null, st: false, weight: 100,
+  // objetos de lujo: sin desgaste ni StatTrak (minf null, st false), el mismo precio en las 10 casillas, todos igual de probables dentro de su rareza.
+  // La rareza es del objeto (cs_items.rarity), asi que si una caja lo pone con otra rareza distinta de la suya "de siempre" (la de la ultima caja de la lista
+  // que lo lleva) se guarda como otro objeto con el mismo nombre y la misma foto: 'lujo-yeezy-350-cla'.
+  const primaria = {};
+  for (const c of [...LUJO].reverse()) for (const [id, r] of c.items) if (!primaria[id]) primaria[id] = r;
+  const idLujo = (id, r) => (r === primaria[id] ? id : `${id}-${r}`);
+  for (const c of LUJO) for (const [id, r] of c.items) {
+    const [name, eur] = OBJETOS[id], vid = idLujo(id, r);
+    if (!items.has(vid)) items.set(vid, { id: vid, name, phase: null, rarity: r, image: BASE_IMG + id.replace(/^lujo-/, '') + '.webp', minf: null, maxf: null, st: false, weight: 100,
       eur: null, price: Array(10).fill(Math.max(1, Math.round(eur * FACTOR_LUJO))), lujo: true });
   }
-
   // precios en euros: 5 desgastes normal y 5 StatTrak
   const nombre = (it, st, w) => {
     let n = it.name;
@@ -179,10 +184,10 @@ async function main() {
     const ev = evCaja(ids);
     return { id: c.id, name: c.name, image: c.image, released: (c.first_sale_date || '').replace(/\//g, '-') || null, sort: i + 1, cat: 'skins', ev, price: Math.max(1, Math.round(ev * (1 + MARGEN))), ids };
   });
-  // las de lujo: la foto de la caja es la de su objeto mas caro; precio = valor medio, igual que las de skins
+  // las de lujo: la imagen de la caja es una caja dibujada (sync/lujo-cajas.py) en app/img/lujo/cajas/; precio = valor medio, igual que las de skins
   for (const [i, c] of LUJO.entries()) {
-    const ids = c.items.map((x) => x[0]), ev = evCaja(ids);
-    filas.push({ id: c.id, name: c.nombre, image: BASE_IMG + c.portada.replace(/^lujo-/, '') + '.webp', released: null, sort: i + 1, cat: 'lujo', ev, price: Math.max(1, Math.round(ev * (1 + MARGEN))), ids });
+    const ids = c.items.map(([id, r]) => idLujo(id, r)), ev = evCaja(ids);
+    filas.push({ id: c.id, name: c.nombre, image: BASE_IMG + 'cajas/' + c.id.replace(/^lujo-/, '') + '.webp', released: null, sort: i + 1, cat: 'lujo', ev, price: Math.max(1, Math.round(ev * (1 + MARGEN))), ids });
   }
 
   const corta = (u) => (u.startsWith(IMG) ? u.slice(IMG.length) : u);

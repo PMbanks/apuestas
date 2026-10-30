@@ -23,7 +23,7 @@ begin
   if (select count(*) from cs_cases where active and cat = 'skins') < 30 then
     raise exception 'FALLO: tiene que haber al menos 30 cajas de skins (hay %). Carga 012b_cajas_datos.sql', (select count(*) from cs_cases where active and cat = 'skins');
   end if;
-  if (select count(*) from cs_cases where active and cat = 'lujo') < 4 then raise exception 'FALLO: tiene que haber al menos 4 cajas de lujo'; end if;
+  if (select count(*) from cs_cases where active and cat = 'lujo') < 9 then raise exception 'FALLO: tiene que haber al menos 9 cajas de lujo (hay %). Carga 012b_cajas_datos.sql', (select count(*) from cs_cases where active and cat = 'lujo'); end if;
   perform set_config('request.jwt.claims', jsonb_build_object('sub', jug[1], 'role', 'authenticated')::text, true);
   r := cs_cases();
   if exists (select 1 from jsonb_array_elements(r) e where e->>'cat' is null or e->>'cat' not in ('skins', 'lujo')) then raise exception 'FALLO: cs_cases() no devuelve la categoria'; end if;
@@ -33,6 +33,8 @@ begin
 
   -- 2. las de lujo: ni desgaste ni StatTrak, un solo precio por objeto, y cada caja cuesta su valor medio exacto
   for c in select * from cs_cases where active and cat = 'lujo' order by sort loop
+    if c.image !~ '^https://pmbanks.github.io/apuestas/img/lujo/cajas/[a-z0-9-]+[.]webp$' then raise exception 'FALLO: %: la imagen de la caja de lujo no es una caja (%)', c.name, c.image; end if;
+    if (select count(distinct t.rarity) from cs_case_items ci join cs_items t on t.id = ci.item_id where ci.case_id = c.id) <> 5 then raise exception 'FALLO: %: le falta alguna de las cinco rarezas', c.name; end if;
     if exists (select 1 from cs_case_items ci join cs_items t on t.id = ci.item_id where ci.case_id = c.id and (t.minf is not null or t.st or t.image !~ '^https://')) then
       raise exception 'FALLO: %: un objeto de lujo lleva desgaste, StatTrak o una imagen que no es absoluta', c.name;
     end if;
@@ -44,7 +46,7 @@ begin
       select (array[7570, 1800, 450, 130, 50])[array_position(tiers, t.rarity)] as w, avg(t.price[1]) as m
         from cs_case_items ci join cs_items t on t.id = ci.item_id where ci.case_id = c.id group by t.rarity) z;
     if abs(ev_lujo - c.price) > 1 then raise exception 'FALLO: % cuesta % pero su valor medio es %', c.name, c.price, round(ev_lujo, 2); end if;
-    resumen := resumen || format('%s: %s V-Bucks (%s objetos, valor medio %s). ', c.name, c.price, (select count(*) from cs_case_items where case_id = c.id), round(ev_lujo, 1));
+    resumen := resumen || format('%s %s (%s objetos, valor medio %s). ', c.name, c.price, (select count(*) from cs_case_items where case_id = c.id), round(ev_lujo, 1));
   end loop;
   -- las de skins: el precio es el valor medio que guardo el generador (redondeado)
   if exists (select 1 from cs_cases where active and cat = 'skins' and abs(price - ev) > 1) then raise exception 'FALLO: alguna caja de skins no cuesta su valor medio'; end if;
