@@ -17,6 +17,29 @@
 })();
 (function () {
   const D = {
+    // resultados (ganado.js, 30-10)
+    'Resultados': 'Results', 'Resultados nuevos': 'New results', 'Apuesta ganada': 'Bet won', 'Reto ganado': 'Challenge won', 'Cash out': 'Cash out',
+    'Has ganado': 'You won', 'Has retirado': 'You cashed out', 'Tu elección': 'Your pick', 'Apostaste': 'You staked', 'limpias': 'profit',
+    'Toca para cerrar': 'Tap to close', 'Desde la última vez': 'Since you were away', 'más en Resultados': 'more in Results', 'También': 'Also',
+    'ganadas': 'won', 'perdidas': 'lost', 'devuelta': 'refunded', 'devueltas': 'refunded',
+    'Perdiste': 'You lost', 'con': 'with', 'Cash out con': 'Cash out with', 'Perdiste el reto con': 'You lost the challenge to', 'Reto devuelto': 'Challenge refunded',
+    'Te devolvemos': 'Refunded', 'Reto a': 'Challenge vs', 'Tuyos': 'Yours', 'De todos': 'Everyone', 'Últimos 7 días': 'Last 7 days',
+    'Todavía no hay resultados.': 'No results yet.', 'Ver el Feed': 'See the Feed', 'ganó': 'won', 'perdió': 'lost', 'retiró': 'cashed out', 'recupera': 'gets back',
+
+    // boleto multiple (boleto.js, 30-10)
+    'Boleto': 'Bet slip', 'Vaciar': 'Clear', 'Mismo importe para todas': 'Same stake for all', 'Abrir el boleto': 'Open the bet slip', 'Ir al partido': 'Go to the match',
+    'La mitad de tu saldo, repartida': 'Half your balance, split', 'Todo tu saldo, repartido': 'Your whole balance, split',
+    'Total apostado': 'Total stake', 'Cobrarías si aciertas todas': 'Payout if all win', 'Cobrarías si aciertas': 'Payout if it wins',
+    'para apostarlo todo': 'to place it all', 'Pon un importe en cada una': 'Put a stake on each pick',
+    'Quita las que ya no tienen cuota': 'Remove the picks with no odds', 'Esa opción ya no tiene cuota': 'No odds for this pick any more',
+    'Con cuota mejorada te quedan': 'With boosted odds you have', 'en este partido': 'left on this match',
+    'ya ha empezado y sale del boleto': 'has started and leaves the slip', 'Ha entrado': 'Placed', 'No ha entrado': 'Not placed', 'No ha entrado ninguna': 'None placed',
+    'Las que no han entrado siguen abajo con el motivo': 'The ones that did not go in stay below with the reason', 'Sin conexión: no ha entrado': 'No connection: not placed',
+    'Toca una cuota para añadirla al boleto.': 'Tap any odds to add them to your slip.',
+    'Este partido ya ha empezado: apuestas cerradas': 'This match has already started: betting closed', 'Esa opción no se puede apostar': 'That pick cannot be bet on',
+    'Ese partido no existe': 'That match does not exist', 'Elige 1, X o 2': 'Pick 1, X or 2',
+
+    'Ya jugados': 'Already played', 'últimos dos días': 'last two days', 'por empezar': 'about to start',
     // juegos (crash de velas, rankings, en la ronda; 30-10)
     'Cara o cruz': 'Heads or tails', 'Crash': 'Crash', 'Blackjack': 'Blackjack',
     'Contra': 'Against', 'Cualquiera': 'Anyone', 'Tu lado': 'Your side', 'Cara': 'Heads', 'Cruz': 'Tails', 'cara': 'heads', 'cruz': 'tails',
@@ -266,9 +289,22 @@
     'Mercado': 'Market',
     // tarjeta en vivo nueva (30-10)
     'Vas con el empate': 'You back the draw', '▲ Ganando': '▲ Winning', '▼ Perdiendo': '▼ Losing',
+    // panel de equipo nuevo (30-10)
+    'Resumen': 'Overview', 'Partidos': 'Matches', 'Clasificación': 'Table', 'Palmarés': 'Honours', 'Ganancias': 'Earnings', 'Próximos': 'Upcoming', 'Últimos resultados': 'Latest results', 'Nada a la vista.': 'Nothing coming up.', 'Sin resultados.': 'No results.',
+    'Equipo': 'Team', 'Balance': 'Record', 'Victorias': 'Win rate', 'Goles': 'Goals', 'Quién más ha ganado': 'Top earners', 'Volver': 'Back',
+    // todas las apuestas con paginas (30-10)
+    'Todas las apuestas': 'All bets', 'En vivo': 'Live', 'Devueltas': 'Refunded', 'Retiradas': 'Cashed out', 'RETIRADA': 'CASHED OUT', 'EN JUEGO': 'OPEN', 'Oculta hasta empezar': 'Hidden until kick-off', 'Nada con estos filtros.': 'Nothing with these filters.', 'Todavía nadie ha apostado.': 'Nobody has bet yet.',
+    // todas las apuestas con paginas (30-10)
+    'Todas las apuestas': 'All bets', 'En vivo': 'Live', 'Devueltas': 'Refunded', 'Retiradas': 'Cashed out', 'RETIRADA': 'CASHED OUT', 'EN JUEGO': 'OPEN', 'Oculta hasta empezar': 'Hidden until kick-off', 'Nada con estos filtros.': 'Nothing with these filters.', 'Todavía nadie ha apostado.': 'Nobody has bet yet.',
   };
   const DIAS = { LUN: 'MON', 'MIÉ': 'WED', JUE: 'THU', VIE: 'FRI', 'SÁB': 'SAT', DOM: 'SUN', HOY: 'TODAY', ENE: 'JAN', ABR: 'APR', AGO: 'AUG', DIC: 'DEC' };
   const R = [
+    // boleto multiple (boleto.js, 30-10)
+    [/^Apostar las (\d+)$/, 'Bet all $1'], [/^Apostando (\d+) de (\d+)…$/, 'Placing $1 of $2…'], [/^Han entrado las (\d+)$/, 'All $1 placed'], [/^Han entrado (\d+) de (\d+)$/, '$1 of $2 placed'],
+    [/^La cuota mejorada admite hasta ([\d.]+) por jugador en este partido y te quedan ([\d.]+)$/, 'Boosted odds allow up to $1 per player on this match and you have $2 left'],
+
+    [/^Final ([\d:]+)\. Ya se ha pagado\.$/, 'Final $1. Already paid.'],
+    [/^Ver más \((\d+)\)$/, 'See more ($1)'],
     // juegos (30-10)
     [/^Apostar ([\d.]+)$/, 'Bet $1'], [/^Retirar ×([\d.,]+)$/, 'Cash out ×$1'],
     [/^([\d.]+) dentro$/, '$1 in'], [/^sale en ×([\d.,]+)$/, 'exits at ×$1'],

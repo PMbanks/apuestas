@@ -8,6 +8,8 @@
 // Usa el cliente de la app (const db de app.js); si no existe, crea uno con la misma sesion.
 'use strict';
 (function () {
+  if (window.__gaExtras) return;   // por si la pagina lo carga dos veces: dos copias se pelearian por el DOM
+  window.__gaExtras = true;
   const CFG = window.APP_CONFIG || {};
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const N = (x) => String(Math.round(x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -145,7 +147,12 @@
   async function cargaPred(forzar) {
     if (P.vivo || Date.now() < P.off || (!forzar && Date.now() - P.t < 15e3)) return;
     P.vivo = true;
-    try { P.d = await rpc('ex_pred_estado'); P.t = Date.now() }
+    try {
+      const antes = new Map(((P.d && P.d.mine) || []).map((x) => [x.id, x.status]));
+      P.d = await rpc('ex_pred_estado'); P.t = Date.now();
+      // si el sincronizador ha resuelto una prediccion mia, se recarga la app (saldo y monedero) sin esperar al pulso
+      if ((P.d.mine || []).some((x) => x.status !== 'open' && antes.get(x.id) === 'open')) { recarga(); avisa('Predicción rápida resuelta') }
+    }
     catch (e) { P.off = Date.now() + (noEsta(e) ? 30 : 2) * 60e3; P.d = null; P.t = Date.now() }
     P.vivo = false;
   }
@@ -170,17 +177,19 @@
     const nombres = nombresDe(info), names = nombres.join('|'), sp = info.querySelector('.dv-sp')?.textContent || '', ek = info.dataset.espn || '';
     if (/^soccer\|/.test(ek)) {
       const [, lg, ev] = ek.split('|'), id = `espn:${lg}:${ev}`;
-      if (!P.d.live.some((m) => m.id === id)) return { names, kind: 'gol', off: 'Las predicciones rápidas de este partido todavía no están disponibles.' };
+      const lm = P.d.live.find((m) => m.id === id);
+      if (!lm) return { names, kind: 'gol', off: 'Las predicciones rápidas de este partido todavía no están disponibles.' };
       const d = await espn(ek), st = d?.header?.competitions?.[0]?.status || {}, t = st.type || {};
-      const clock = Number(st.clock) || 0, per = Number(st.period) || 0;
+      const per = Number(st.period) || 0, c = lm.c || {};
       let off = '';
       if (!d) off = 'No consigo los datos del partido ahora mismo.';
       else if (t.state !== 'in') off = 'El partido no está en juego.';
       else if (/HALFTIME/i.test(t.name || '') || /^(ht|half ?time|descanso)$/i.test(String(t.shortDetail || t.description || '').trim())) off = 'Descanso: vuelve cuando ruede el balón.';
-      else if (per > 2 || (per === 2 && clock > 82 * 60)) off = 'Queda muy poco partido para una ventana de 10 minutos.';
+      else if (per > 2) off = 'Prórroga: sin predicciones.';
+      else if (!c.ok) off = c.why || 'Sin datos frescos del directo';
       return { names, kind: 'gol', match: id, key: `gol|${id}`, titulo: '¿Habrá gol en los próximos 10 minutos?', minuto: st.displayClock || '',
-        opts: [['si', 'Sí, habrá gol', P.d.gol_si], ['no', 'No, sin goles', P.d.gol_no]],
-        nota: 'Cuenta desde 1 minuto después de apostar, durante 10 minutos. Lo comprueba el servidor con la hora real de cada gol en ESPN.', off };
+        opts: [['si', 'Sí, habrá gol', c.si], ['no', 'No, sin goles', c.no]],
+        nota: 'Cuenta desde 3 minutos después de apostar, durante 10 minutos, porque ESPN va con retraso respecto al directo. La cuota depende del minuto y del marcador y se queda fija al apostar.', off };
     }
     if (/valorant/i.test(sp) && nombres.length === 2) {
       const m = P.d.live.find((x) => x.sport === 'v' && x.home === nombres[0] && x.away === nombres[1]);
@@ -192,17 +201,24 @@
       else if (String(d.status).toLowerCase() !== 'live') off = 'El partido no está en juego.';
       else if (!vivo) off = 'Entre mapas: vuelve cuando empiece el siguiente.';
       const rondas = vivo ? (vivo.rounds || []).filter((r) => r.score).length : 0, rev = d && !parecido(d.teams?.[0]?.name, nombres[0]);
+      const mg = Number(P.d.margen) || 3, nr = rondas + 1 + mg, cc = m.c || {};
+      if (!off && vivo) {
+        if (rondas >= 8 && rondas <= 13) off = 'Estamos cerca del descanso entre mitades: sin predicciones hasta pasarlo.';
+        else if (rondas >= 19) off = 'El mapa está acabando: sin predicciones hasta el siguiente.';
+        else if (!cc.ok) off = cc.why || 'Sin datos frescos del directo';
+      }
       const sc = vivo ? ((rev ? [vivo.teams?.[1], vivo.teams?.[0]] : vivo.teams) || []).map((t) => t?.score ?? 0) : [0, 0];
-      return { names, kind: 'ronda', match: m.id, ref: vivo ? String(vivo.name).toLowerCase() : '', n: rondas + 1, key: `ronda|${m.id}|${vivo ? vivo.name : ''}|${rondas + 1}`,
-        titulo: vivo ? `¿Quién gana la ronda ${rondas + 1} de ${vivo.name}?` : '¿Quién gana la siguiente ronda?', sub: vivo ? `${vivo.name} · ${sc[0]}:${sc[1]}` : '',
-        opts: [['1', nombres[0], P.d.ronda], ['2', nombres[1], P.d.ronda]],
-        nota: 'La apuesta vale para esa ronda. El servidor la comprueba después con el historial ronda a ronda de vlr.gg.', off };
+      return { names, kind: 'ronda', match: m.id, ref: vivo ? String(vivo.name).toLowerCase() : '', n: nr, key: `ronda|${m.id}|${vivo ? vivo.name : ''}|${nr}`,
+        titulo: vivo ? `¿Quién gana la ronda ${nr} de ${vivo.name}?` : '¿Quién gana la ronda?', sub: vivo ? `${vivo.name} · ${sc[0]}:${sc[1]} · vlr.gg marca ${rondas} rondas` : '',
+        opts: [['1', nombres[0], cc.c1], ['2', nombres[1], cc.c2]],
+        nota: 'El stream va por delante de vlr.gg, por eso se apuesta a una ronda que todavía no ha empezado, 3 rondas más allá de lo que marca vlr.gg. La cuota depende de cómo va el mapa y se queda fija al apostar.', off };
     }
     return { names, off: '' };
   }
   const ESTADO = { open: 'esperando', won: 'ganada', lost: 'perdida', void: 'devuelta' };
   function etiqueta(p) { return p.kind === 'gol' ? `Gol en 10 min · ${p.pick === 'si' ? 'Sí' : 'No'}` : `Ronda ${p.n} de ${String(p.ref || '').replace(/^./, (c) => c.toUpperCase())} · ${p.pick === '1' ? 'local' : 'visitante'}` }
   function htmlPred(q) {
+    if (Date.now() < (P.cerrado || 0)) q = { ...q, off: 'Predicciones cerradas un momento' };
     const max = P.d.max || 50, s = saldo(), tope = Math.max(1, Math.min(max, s == null ? max : Math.floor(s)));
     if (PX.key !== q.key) { PX.key = q.key || ''; PX.pick = null; PX.msg = '' }
     const chips = [...new Set([5, 10, 25, max, tope].filter((v) => v >= 1 && v <= tope))].sort((a, b) => a - b);
@@ -218,7 +234,7 @@
         <button class="go-s" data-xp="go" ${PX.pick && !PX.busy ? '' : 'disabled'}>Apostar ${PX.stake}</button></div>
         ${PX.msg ? `<p class="xq-msg ${PX.msgOk ? 'ok' : ''}">${PX.msg}</p>` : ''}<p class="xq-nota">${esc(q.nota)}</p>`;
     }
-    const inner = `<div class="xq-h">${BOLT}<b>Predicción rápida</b><small>${q.minuto ? esc(q.minuto) + ' · ' : ''}cuota fija · máximo ${N(max)}</small></div>
+    const inner = `<div class="xq-h">${BOLT}<b>Predicción rápida</b><small>${q.minuto ? esc(q.minuto) + ' · ' : ''}cuota fija al apostar · máximo ${N(max)}</small></div>
       <p class="xq-q">${esc(q.titulo)}</p>${q.sub ? `<p class="xq-sub">${esc(q.sub)}</p>` : ''}${cuerpo}${lista}`;
     return `<section class="xq" data-xq-box data-sig="${hash(inner)}">${inner}</section>`;
   }
@@ -245,19 +261,20 @@
         Q.q = q; Q.names = q ? q.names : '';
       } catch {}
       pintaPred();
-    }
+    } else if (P.d && (P.d.mine || []).some((x) => x.status === 'open') && !document.hidden) cargaPred();   // aunque no estes en Directo, se mira si ya han resuelto la tuya
     tPred = setTimeout(bucle, document.querySelector('.dv') ? 20e3 : 4e3);
   }
   async function apostarPred() {
     const q = Q.q; if (!q || q.off || !PX.pick || PX.busy) return;
     PX.busy = true; PX.msg = ''; pintaPred();
     try {
-      const r = q.kind === 'gol' ? await rpc('ex_pred_gol', { p_match: q.match, p_pick: PX.pick, p_stake: PX.stake })
-        : await rpc('ex_pred_ronda', { p_match: q.match, p_ref: q.ref, p_round: q.n, p_pick: PX.pick, p_stake: PX.stake });
-      PX.msg = q.kind === 'gol' ? `Has apostado ${PX.stake} · cuenta hasta las ${cuandoHM(r.hasta)}` : `Has apostado ${PX.stake} a la ronda ${q.n}`; PX.msgOk = true; PX.pick = null;
+      const visto = (q.opts.find((o) => o[0] === PX.pick) || [])[2];
+      const r = q.kind === 'gol' ? await rpc('ex_pred_gol', { p_match: q.match, p_pick: PX.pick, p_stake: PX.stake, p_odds: visto })
+        : await rpc('ex_pred_ronda', { p_match: q.match, p_ref: q.ref, p_round: q.n, p_pick: PX.pick, p_stake: PX.stake, p_odds: visto });
+      PX.msg = q.kind === 'gol' ? `Has apostado ${PX.stake} a ${O(r.odds)} · cuenta de ${cuandoHM(r.desde)} a ${cuandoHM(r.hasta)}` : `Has apostado ${PX.stake} a ${O(r.odds)} a la ronda ${q.n}`; PX.msgOk = true; PX.pick = null;
       avisa(`Predicción rápida: apostado <b>${N(PX.stake)}</b>`);
       await cargaPred(true); recarga();
-    } catch (e) { PX.msg = aviso(e); PX.msgOk = false; avisa(aviso(e)) }
+    } catch (e) { PX.msg = aviso(e); PX.msgOk = false; avisa(aviso(e)); cargaPred(true); if (e && (e.code === '42501' || /permission denied|insufficient/i.test(String(e.message || '')))) { P.cerrado = Date.now() + 120e3; PX.msg = 'Predicciones cerradas un momento'; PX.msgOk = false } }
     PX.busy = false; pintaPred();
   }
   const cuandoHM = (t) => { try { return new Intl.DateTimeFormat(lang(), { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t)) } catch { return '' } };

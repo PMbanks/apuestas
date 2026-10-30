@@ -7,7 +7,7 @@ const TZ = 'Europe/Madrid', DAY = 864e5, DOMAIN = '@apuestas.app';
 const TOP = new Set(['esp.1', 'eng.1', 'ger.1', 'ita.1', 'fra.1', 'uefa.champions', 'uefa.europa', 'esp.copa_del_rey']);
 const SP = { f: ['Fútbol', '../img/futbol.svg'], v: ['Valorant', '../img/valorant.svg'], c: ['CS2', '../img/cs2.png'], u: ['UFC', '../img/ufc.png'] };
 const DEP = ['f', 'v', 'c', 'u'];
-const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', tiempo: 'Tiempo en la app', trato: 'Trato entre colegas', mercado: 'Mercado', jackpot: 'Jackpot', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', ruleta_semana: 'Ruleta de la semana', premio_semana: 'Premio de la semana', moneda: 'Cara o cruz', crash: 'Crash', ruleta: 'Ruleta', blackjack: 'Blackjack', plinko: 'Plinko' };
+const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', tiempo: 'Tiempo en la app', trato: 'Trato entre colegas', mercado: 'Mercado', jackpot: 'Jackpot', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', ruleta_semana: 'Ruleta de la semana', premio_semana: 'Premio de la semana', moneda: 'Cara o cruz', crash: 'Crash', ruleta: 'Ruleta', blackjack: 'Blackjack', plinko: 'Plinko', cashout: 'Cash out', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta' };
 let TIEMPO = null, CLAIM = null, BOTE = null, REACT = new Map(), POLLS = new Map(), CAMPEON = null;
 
 /* ---------- estado ---------- */
@@ -81,8 +81,10 @@ function build(st, rows, chat, ex) {
     tv: r.details?.tv || [], espn: r.details?.espn || null, players: r.details?.players || null, recent: r.details?.recent || null, tier: r.details?.tier || null, tid: r.details?.ids || null, games: r.details?.games || null, tour: r.details?.bracket ? `${r.details.game}:${r.details.tour}` : null,
   }));
   MI = new Map(M.map((m) => [m.id, m]));
-  L = {}; for (const r of rows) if (!L[r.league]) L[r.league] = [r.league_name, r.league_logo || (r.sport === 'c' || r.sport === 'v' ? lgSigla(r.league_name, r.sport) : SP[r.sport][1]), r.sport];
-  ALL = st.bets.map((b) => ({ id: b.id, k: key.get(b.player), m: b.match, p: b.pick, stake: b.stake, o: Number(b.odds), st: b.status, pay: b.payout, at: b.created, set: b.settled }));
+  // logos de liga de ESPN a 128 px (se pintan a 40 y en pantallas de doble densidad se veian borrosos a 64)
+  L = {}; for (const r of rows) if (!L[r.league]) L[r.league] = [r.league_name, (r.league_logo || '').replace(/([?&])w=64&h=64/, '$1w=128&h=128') || (r.sport === 'c' || r.sport === 'v' ? lgSigla(r.league_name, r.sport) : SP[r.sport][1]), r.sport];
+  // cash out (db/024): una apuesta retirada cuenta como resuelta; con beneficio es 'won' (cobra pay), con perdida es 'lost' (pierde stake - pay). cash = true
+  ALL = st.bets.map((b) => { const c = b.status === 'cashout', w = c && b.payout > b.stake; return { id: b.id, k: key.get(b.player), m: b.match, p: b.pick, stake: b.stake, o: w ? b.payout / b.stake : Number(b.odds), st: c ? (w ? 'won' : 'lost') : b.status, pay: b.payout, at: b.created, set: b.settled, cash: c } });
   LEDGER = st.ledger.map((l) => ({ t: when(l.at), at: Date.parse(l.at), kind: l.kind, c: KIND[l.kind] || l.kind, d: l.note, a: l.amount }));
   chat = chat.filter((c) => c.player || !/^(Batalla (1v1|2v2) lista|.+ abre una batalla (1v1|2v2))/.test(c.body || ''));
   CHAT = chat.map((c) => ({ id: c.id, poll: c.poll_id || null, bet: c.bet_id || null, k: c.player ? key.get(c.player) : null, at: Date.parse(c.created_at), t: HM(Date.parse(c.created_at)), txt: c.body, img: c.image_url, aud: c.audio_url || null, secs: c.audio_secs || 0 }));
@@ -124,7 +126,7 @@ function build(st, rows, chat, ex) {
   if (won.length) { const b = won.reduce((a, c) => (c.o > a.o ? c : a)); AW.push(['Cuota más alta acertada', O(b.o), b.k, `${nm(b)} · ${N(b.stake)} a ${N(b.pay)}`]) }
   const wkBest = F.flatMap((f) => f.wk.map((v, i) => [v, f.id, i])).sort((a, b) => b[0] - a[0])[0];
   if (wkBest && wkBest[0] > 0) AW.push(['Mejor semana', '▲ ' + N(wkBest[0]) + coin(), wkBest[1], 'Semana ' + (wkBest[2] + 1)]);
-  if (lost.length) { const b = lost.reduce((a, c) => (c.stake > a.stake ? c : a)); AW.push(['Peor golpe', '▼ ' + N(b.stake) + coin(), b.k, nm(b)]) }
+  if (lost.length) { const b = lost.reduce((a, c) => (perd(c) > perd(a) ? c : a)); AW.push(['Peor golpe', '▼ ' + N(perd(b)) + coin(), b.k, nm(b)]) }
   const most = [...F].sort((a, b) => b.bets - a.bets)[0]; if (most?.bets) AW.push(['Más apuestas', String(most.bets), most.id, 'esta temporada']);
   const st2 = [...F].sort((a, b) => b.streak - a.streak)[0]; if (st2?.streak >= 2) AW.push(['Mejor racha', String(st2.streak), st2.id, 'ganadas seguidas']);
   if (!F.some((f) => f.id === S.pf)) S.pf = MEK;
@@ -138,7 +140,7 @@ function build(st, rows, chat, ex) {
   const reg = ex?.regalos || {}; for (const f of F) f.recibido += reg[f.uid] || 0;
   // campeon del mes pasado: el que mas gano con sus apuestas resueltas ese mes; lleva corona todo el mes
   { const d = new Date(NOW), ini = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1), fin = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1), tot = {};
-    for (const b of ALL) { const t = Date.parse(b.set || ''); if (!(t >= ini && t < fin) || (b.st !== 'won' && b.st !== 'lost')) continue; tot[b.k] = (tot[b.k] || 0) + (b.st === 'won' ? b.pay - b.stake : -b.stake) }
+    for (const b of ALL) { const t = Date.parse(b.set || ''); if (!(t >= ini && t < fin) || (b.st !== 'won' && b.st !== 'lost')) continue; tot[b.k] = (tot[b.k] || 0) + (b.st === 'won' ? b.pay - b.stake : -perd(b)) }
     const best = Object.entries(tot).sort((a, b) => b[1] - a[1])[0]; CAMPEON = best && best[1] > 0 ? { k: best[0], mes: fmt(ini, { month: 'long' }), v: best[1] } : null }
   for (const m of M) { const o = ODDS0[m.id]; m.mv = o && m.status === 'scheduled' ? m.o.map((x, i) => (x && o[i] ? Math.sign(x - o[i]) : 0)) : [0, 0, 0] }
   loaded = true;
@@ -184,7 +186,7 @@ const net = (f) => { const d = f.s - f.recibido; return `<span class="net ${d >=
 const img = (src, cls = '') => (src ? `<img class="${cls}" src="${esc(src)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<span class="noimg ${cls}"></span>`);
 const logo = (m, side) => img(side === 'a' ? m.la : m.lb, m.s === 'u' ? 'face' : 'tl');
 const form = (s) => `<span class="fm">${[...s].map((c) => `<b class="${c === 'G' ? 'g' : c === 'E' ? 'e' : ''}">${c}</b>`).join('')}</span>`;
-const board = () => M.filter((m) => (m.status === 'scheduled' || m.live) && (m.live || Date.parse(m.at) > NOW) && Date.parse(m.at) < NOW + (m.s === 'u' ? 72 : 8) * DAY);
+const board = () => M.filter((m) => (m.status === 'scheduled' || m.live) && (m.live || Date.parse(m.at) > NOW - 4 * 3600e3) && Date.parse(m.at) < NOW + (m.s === 'u' ? 72 : 8) * DAY);
 const inLeague = (m) => S.lg === 'fav' ? sigo(m) : S.lg === 'all' ? true : S.lg === 'top' ? m.live || m.s === 'v' || (m.s === 'c' ? 'sa'.includes(m.tier || 'x') : m.s === 'u' ? !!m.tag : TOP.has(m.lg)) || whoOn(m.id).length > 0 : m.lg === S.lg;
 const filtered = () => board().filter((m) => (S.f === 'all' || m.s === S.f) && inLeague(m)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
 const groups = (list) => { const g = new Map(); for (const m of list) { const k = DK(m.at); if (!g.has(k)) g.set(k, []); g.get(k).push(m) } return [...g.values()] };
@@ -343,73 +345,133 @@ const shMas = (n) => (n > SH_POR ? `<button class="sh-mas" data-act="sh-todos">$
 const shInfoBtn = (t) => `<button class="sh-info" data-act="sh-info"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>${t}</button>`;
 const shPorGrupo = (xs, clave, fila) => { const g = new Map(); for (const x of xs) { const k = clave(x) || 'Otros'; if (!g.has(k)) g.set(k, []); g.get(k).push(x) }
   return [...g.entries()].map(([k, l]) => `<div class="shs"><span class="lab">${esc(k)} · ${l.length}</span>${l.map(fila).join('')}</div>`).join('') };
-const EQP = new Map();
+/* ---------- Todo sobre el equipo (PM, 30-10: "que este bien hecho, esta terrible; los partidos tienen demasiado espacio";
+   "registros de victorias de torneos, earnings; que no se tenga que hacer scroll tanto, pon paginas, y varias categorias";
+   "que se pueda dar clic a los equipos con los que han jugado para ver tambien sus perfiles").
+   Panel con pestanas (Resumen, Partidos, Plantilla, Clasificacion, Palmares, Ganancias); las que no tienen datos no salen.
+   Cada equipo es una descripcion { s, n, logo, league+id (ESPN), tid (PandaScore), id (luchador) }; los rivales abren su panel
+   y Volver regresa al anterior. Palmares y ganancias: de vlr.gg (Valorant) y del campo nuevo de la tabla teams cuando exista */
+const EQD = new Map();
 let VLR_TEAMS = null;
-const normEq = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\b(esports?|gaming|team|club)\b/g, '').replace(/[^a-z0-9]/g, '');
-async function eqpData(m, side) {
-  const k = m.id + side, c = EQP.get(k); if (c && Date.now() - c.t < 6e5) return c.d;
-  let d = { tipo: m.s };
+const normEq = (t) => { const b = String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''), x = b.replace(/\b(esports?|gaming|team|club)\b/g, '').replace(/[^a-z0-9]/g, '');
+  return x.length >= 3 ? x : b.replace(/[^a-z0-9]/g, '') };
+const eqKey = (e) => `${e.s}:${e.id || e.tid || normEq(e.n)}`;
+const EQ_POR = 12, EQ_CARAS = 18;
+const eqDeMatch = (m, side) => ({ s: m.s, n: side === 'a' ? m.a : m.b, logo: (side === 'a' ? m.la : m.lb) || null, league: m.espn?.league || null, id: m.s === 'f' || m.s === 'u' ? m.espn?.ids?.[side] || null : null, tid: m.tid?.[side] || null, lg: m.lg });
+const getJ = (u) => fetch(u).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+async function eqCarga(e) {
+  const k = eqKey(e), c = EQD.get(k); if (c && Date.now() - c.t < 6e5) return c.d;
+  const d = { s: e.s };
   try {
-    const base0 = await sheetData(m, side);
-    if (m.s === 'f') { const id = String(m.espn?.ids?.[side] || '');
-      const tab = await fetch(`https://site.api.espn.com/apis/v2/sports/soccer/${m.espn.league}/standings`).then((r) => r.json()).catch(() => null);
-      const ents = (tab?.children || [tab]).flatMap((c) => c?.standings?.entries || []), e = ents.find((x) => String(x.team?.id) === id);
-      d = { tipo: 'f', team: base0?.sc?.team || null, st: e ? Object.fromEntries((e.stats || []).map((x) => [x.name, x.value])) : null, ro: base0?.ro, sc: base0?.sc } }
-    else if (m.s === 'u') d = { tipo: 'u', at: base0?.at || null }
-    else {
-      d = { tipo: m.s, yo: base0?.yo || null };
-      if (m.s === 'v') {
-        if (!VLR_TEAMS) VLR_TEAMS = await fetch('https://vlr.orlandomm.net/api/v1/teams?limit=all&region=all').then((r) => r.json()).then((x) => x.data || []).catch(() => []);
-        const nm = normEq(side === 'a' ? m.a : m.b), acr = String(base0?.yo?.acr || '').toLowerCase();
-        const t = VLR_TEAMS.find((x) => normEq(x.name) === nm) || VLR_TEAMS.find((x) => nm && (normEq(x.name).includes(nm) || nm.includes(normEq(x.name))) && normEq(x.name).length > 2);
-        if (t) d.vlr = await fetch(`https://vlr.orlandomm.net/api/v1/teams/${t.id}`).then((r) => r.json()).then((x) => x.data || null).catch(() => null);
+    if (e.s === 'f' && e.id && e.league) {
+      const base = `https://site.api.espn.com/apis/site/v2/sports/soccer/${e.league}/teams/${e.id}`;
+      const [sc, ro, tab] = await Promise.all([getJ(base + '/schedule'), getJ(base + '/roster'), getJ(`https://site.api.espn.com/apis/v2/sports/soccer/${e.league}/standings`)]);
+      const y = sc?.season?.year, prev = y ? await getJ(base + '/schedule?season=' + (y - 1)) : null;
+      if (sc && prev?.events?.length) sc.events = [...(sc.events || []), ...prev.events.filter((x) => !(sc.events || []).some((z) => z.id === x.id))];
+      Object.assign(d, { sc, ro, tab });
+    } else if ((e.s === 'v' || e.s === 'c') && (e.tid || e.n)) {
+      const juego = e.s === 'v' ? 'valorant' : 'csgo';
+      if (e.tid) { const { data } = await db.from('teams').select('data').eq('id', `${juego}:${e.tid}`).maybeSingle(); d.t = data?.data || null }
+      if (e.s === 'v') {
+        if (!VLR_TEAMS) VLR_TEAMS = await getJ('https://vlr.orlandomm.net/api/v1/teams?limit=all&region=all').then((x) => x?.data || []);
+        const nm = normEq(e.n), t = VLR_TEAMS.find((x) => normEq(x.name) === nm) || VLR_TEAMS.find((x) => nm.length > 2 && normEq(x.name).length > 2 && (normEq(x.name).includes(nm) || nm.includes(normEq(x.name))));
+        if (t) d.vlr = await getJ(`https://vlr.orlandomm.net/api/v1/teams/${t.id}`).then((x) => x?.data || null);
       }
-    }
+    } else if (e.s === 'u' && e.id) d.at = await getJ(`https://site.web.api.espn.com/apis/common/v3/sports/mma/ufc/athletes/${e.id}`);
   } catch {}
-  EQP.set(k, { t: Date.now(), d }); return d;
+  EQD.set(k, { t: Date.now(), d }); return d;
 }
-const persona = (img2, nombre, sub, extra = '') => `<div class="eqp-pl">${img2 ? `<img class="face" src="${esc(img2)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<span class="pl-i">${esc(String(nombre || '?').slice(0, 2).toUpperCase())}</span>`}<b>${esc(nombre)}</b><span>${esc(sub || '')}</span>${extra}</div>`;
-function eqpHtml(m, side, d) {
-  const nm = side === 'a' ? m.a : m.b, lg = side === 'a' ? m.la : m.lb;
-  let cab = '', cuerpo = '';
-  if (d.tipo === 'f') {
-    const t = d.team, st = d.st || {};
-    const k = [['Puesto', t?.standingSummary], ['Partidos', st.gamesPlayed], ['Ganados', st.wins], ['Empatados', st.ties], ['Perdidos', st.losses], ['Puntos', st.points], ['Goles a favor', st.pointsFor], ['Goles en contra', st.pointsAgainst], ['Diferencia', st.pointDifferential != null ? (st.pointDifferential > 0 ? '+' : '') + st.pointDifferential : null], ['Temporada', t?.seasonSummary]].filter((x) => x[1] != null && x[1] !== '');
-    cab = k.length ? `<div class="eqp-k">${k.map(([a, b]) => `<div><span class="lab">${a}</span><b>${esc(String(b))}</b></div>`).join('')}</div>` : '';
+// todo a un mismo formato: partidos jugados y proximos, jugadores, clasificacion, palmares y ganancias
+function eqNorm(e, d) {
+  const o = { jug: [], prox: [], gente: [], tabla: null, palm: [], gan: null, kpi: [] };
+  if (e.s === 'f') {
+    const id = String(e.id), ev = d.sc?.events || [];
+    for (const x of ev) { const c = x.competitions?.[0] || {}, yo = (c.competitors || []).find((z) => String(z.team?.id) === id), el = (c.competitors || []).find((z) => String(z.team?.id) !== id); if (!el) continue;
+      const sc = (z) => z?.score?.displayValue ?? z?.score ?? '', hecho = c.status?.type?.completed;
+      const fila = { at: Date.parse(x.date), riv: { s: 'f', n: el.team?.displayName || '', logo: el.team?.logos?.[0]?.href || el.team?.logo || null, league: e.league, id: el.team?.id }, casa: yo?.homeAway === 'home', torneo: x.league?.name || '', grupo: x.season?.displayName || '' };
+      if (hecho) o.jug.push({ ...fila, r: yo?.winner ? 'W' : el?.winner ? 'L' : 'D', marca: `${sc(yo)}:${sc(el)}` }); else o.prox.push(fila) }
+    o.gente = (d.ro?.athletes || []).map((a) => ({ img: a.headshot?.href || null, n: a.displayName, pais: a.citizenship || a.flag?.alt || '', rol: a.position?.displayName || a.position?.abbreviation || '', num: a.jersey || '', edad: a.age || '' }));
     const coach = (d.ro?.coach || []).length === 1 ? d.ro.coach[0] : null;
-    if (coach) cuerpo += `<section><h4>Cuerpo técnico</h4><div class="eqp-pls">${persona(null, `${coach.firstName || ''} ${coach.lastName || ''}`.trim(), 'Entrenador')}</div></section>`;
-    const at = d.ro?.athletes || [], G = { G: 'Porteros', D: 'Defensas', M: 'Centrocampistas', F: 'Delanteros' };
-    if (at.length) cuerpo += `<section><h4>Plantilla · ${at.length}</h4>${Object.entries(G).map(([p, n]) => { const xs = at.filter((a) => (a.position?.abbreviation || '')[0] === p); return xs.length ? `<span class="lab eqp-sub">${n}</span><div class="eqp-pls">${xs.map((a) => persona(a.headshot?.href, a.displayName, [a.jersey ? '#' + a.jersey : '', a.age ? a.age + ' años' : '', a.citizenship || a.flag?.alt || ''].filter(Boolean).join(' · '))).join('')}</div>` : '' }).join('')}</section>`;
-    const evs = (d.sc?.events || []).filter((e) => e.competitions?.[0]?.status?.type?.completed);
-    if (evs.length) cuerpo += `<p class="hint">Resultados de esta temporada y la anterior: en la ficha, Ver todos.</p>`;
-  } else if (d.tipo === 'u') {
+    if (coach) o.gente.unshift({ n: `${coach.firstName || ''} ${coach.lastName || ''}`.trim(), rol: 'Entrenador', staff: true });
+    const ents = (d.tab?.children || [d.tab]).flatMap((c) => c?.standings?.entries || []);
+    if (ents.length) { const v = (x, k) => (x.stats || []).find((z) => z.name === k)?.value; o.tabla = ents.map((x) => ({ id: String(x.team?.id), n: x.team?.displayName || '', logo: x.team?.logos?.[0]?.href || null, pj: v(x, 'gamesPlayed'), pts: v(x, 'points'), dg: v(x, 'pointDifferential'), rank: v(x, 'rank') }))
+      .sort((a, b) => (a.rank || 99) - (b.rank || 99)); const yo = o.tabla.find((x) => x.id === id);
+      if (yo) { const st = Object.fromEntries((ents.find((x) => String(x.team?.id) === id)?.stats || []).map((z) => [z.name, z.value])); o.kpi = [['Puesto', yo.rank ? yo.rank + 'º' : null], ['Puntos', st.points], ['G · E · P', st.wins != null ? `${st.wins} · ${st.ties} · ${st.losses}` : null], ['Goles', st.pointsFor != null ? `${st.pointsFor} : ${st.pointsAgainst}` : null]] } }
+  } else if (e.s === 'v' || e.s === 'c') {
+    const t = d.t || {}, v = d.vlr;
+    for (const x of t.hist || []) o.jug.push({ at: Date.parse(x.at || '') || 0, riv: { s: e.s, n: x.vs, logo: x.logo || null, tid: x.vsId || null }, torneo: corto(x.t || ''), grupo: corto(x.t || '') || 'Otros', r: x.won ? 'W' : 'L', marca: x.score || '' });
+    if (!o.jug.length && v?.results?.length) for (const x of v.results) { const [p, q] = x.teams || []; if (!p || !q) continue; const yo = normEq(p.name) === normEq(e.n) ? p : q, el = yo === p ? q : p;
+      o.jug.push({ at: Date.parse(x.utc) || 0, riv: { s: e.s, n: el.name, logo: el.logo || null }, torneo: x.event?.name || '', grupo: x.event?.name || 'Otros', r: +yo.points > +el.points ? 'W' : 'L', marca: `${yo.points}:${el.points}` }) }
+    for (const x of board().filter((z) => z.s === e.s && (z.a === e.n || z.b === e.n))) { const s2 = x.a === e.n ? 'b' : 'a'; o.prox.push({ at: Date.parse(x.at), riv: eqDeMatch(x, s2), torneo: corto(L[x.lg]?.[0] || ''), live: x.live }) }
+    const ext = (x) => ({ rol: x.rol || x.role || x.tag || '', gan: x.ganancias ?? x.earnings ?? null });
+    o.gente = v?.players?.length ? [...v.players.map((x) => ({ img: x.img, n: x.user, nombre: x.name, pais: (x.country || '').toUpperCase(), ...ext(x) })), ...(v.staff || []).map((x) => ({ img: x.img, n: x.user, nombre: x.name, pais: (x.country || '').toUpperCase(), rol: x.tag || 'staff', staff: true }))]
+      : (t.players || []).map((x) => ({ img: x.img, n: x.n, nombre: x.nombre, pais: x.nat || x.pais || '', edad: x.age || '', ...ext(x) }));
+    // palmares: el campo nuevo de teams (cuando exista) o los torneos de vlr.gg con su puesto
+    const pal = t.palmares || t.honours || t.trophies || t.placements || null;
+    if (Array.isArray(pal)) o.palm = pal.map((x) => ({ n: x.torneo || x.name || x.t || '', puesto: x.puesto || x.place || x.p || '', fecha: x.fecha || x.date || x.year || '', premio: x.premio ?? x.prize ?? x.earnings ?? null }));
+    else if (v?.events?.length) o.palm = v.events.map((x) => ({ n: x.name, puesto: (x.results || []).map((z) => String(z).replace(/\s+-\s+/g, ': ').replace(/[^\x20-\x7EÀ-ſ·:]/g, '·').replace(/·+/g, '·')).join(' · '), fecha: x.year || '' }));
+    const g = t.ganancias ?? t.earnings ?? null;
+    if (g != null) o.gan = typeof g === 'number' ? { total: g, anos: [] } : { total: g.total ?? null, anos: (g.anos || g.years || g.por_ano || []).map((x) => ({ a: x.a || x.year || x.ano, v: x.v ?? x.value ?? x.total })) };
+    const w = o.jug.filter((x) => x.r === 'W').length;
+    o.kpi = [['País', t.loc || null], ['Siglas', t.acr || v?.info?.tag || null], ['Victorias', o.jug.length ? `${Math.round((w / o.jug.length) * 100)}%` : null], ['Balance', o.jug.length ? `${w} · ${o.jug.length - w}` : null]];
+  } else if (e.s === 'u') {
     const a = d.at?.athlete, st = Object.fromEntries((a?.statsSummary?.statistics || []).map((x) => [x.abbreviation, x.displayValue]));
-    const k = [['Récord', st['W-L-D']], ['KO / TKO', st['(T)KO']], ['Sumisiones', st.SUB], ['Edad', a?.age], ['Altura', a?.displayHeight], ['Peso', a?.displayWeight], ['Alcance', a?.displayReach], ['Guardia', a?.stance?.text], ['País', a?.flag?.alt || a?.citizenship], ['Gimnasio', a?.association?.name], ['Categoría', a?.weightClass?.text]].filter((x) => x[1]);
-    cab = k.length ? `<div class="eqp-k">${k.map(([x, y]) => `<div><span class="lab">${x}</span><b>${esc(String(y).replace(/-/g, '·'))}</b></div>`).join('')}</div>` : '';
-    const pe = Object.values(d.at?.eventsMap || {}).filter((e) => e.gameResult).sort((x, y) => Date.parse(y.gameDate) - Date.parse(x.gameDate));
-    if (pe.length) cuerpo += `<section><h4>Todas sus peleas · ${pe.length}</h4>${pe.map((e) => `<div class="shr"><span class="nm">${esc(e.opponent?.displayName || '')}</span><span class="dt">${esc(e.shortName || '')} · ${dmy(Date.parse(e.gameDate))}</span>${res(e.gameResult === 'W' ? 'W' : e.gameResult === 'D' ? 'D' : 'L')}</div>`).join('')}</section>`;
-  } else {
-    const t = d.yo || {}, v = d.vlr, h = t.hist || [], w = h.filter((x) => x.won).length;
-    const k = [['País', t.loc], ['Siglas', t.acr || v?.info?.tag], ['Últimos ' + h.length, h.length ? `${w}-${h.length - w}` : null], ['Victorias', h.length ? Math.round((w / h.length) * 100) + '%' : null]].filter((x) => x[1]);
-    cab = k.length ? `<div class="eqp-k">${k.map(([x, y]) => `<div><span class="lab">${x}</span><b>${esc(String(y))}</b></div>`).join('')}</div>` : '';
-    const pls = v?.players?.length ? v.players.map((x) => persona(x.img, x.user, [x.name, (x.country || '').toUpperCase()].filter(Boolean).join(' · '))) : (t.players || m.players?.[side] || []).map((x) => persona(x.img, x.n, [x.nombre, x.nat, x.age ? x.age + ' años' : null].filter(Boolean).join(' · ')));
-    if (pls.length) cuerpo += `<section><h4>Plantilla</h4><div class="eqp-pls">${pls.join('')}</div></section>`;
-    if (v?.staff?.length) cuerpo += `<section><h4>Cuerpo técnico</h4><div class="eqp-pls">${v.staff.map((x) => persona(x.img, x.user, [x.tag, x.name].filter(Boolean).join(' · '))).join('')}</div></section>`;
-    if (v?.inactive?.length) cuerpo += `<section><h4>Inactivos</h4><div class="eqp-pls">${v.inactive.map((x) => persona(x.img && !/sil\.png/.test(x.img) ? x.img : null, x.user, x.name)).join('')}</div></section>`;
-    if (v?.events?.length) cuerpo += `<section><h4>Torneos</h4>${v.events.slice(0, 12).map((e) => `<div class="shr"><span class="nm">${esc(e.name)}<small>${esc((e.results || []).join(' · ').replace(/\s+-\s+/g, ': ').replace(/[^\x20-\x7E\u00C0-\u017F·:]/g, ' '))}</small></span><span class="dt">${esc(e.year || '')}</span><span></span></div>`).join('')}</section>`;
-    if (h.length) cuerpo += `<section><h4>Resultados · ${h.length}</h4>${shPorGrupo(h, (e) => corto(e.t) || 'Otros', (e) => `<div class="shr">${img(e.logo, 'tl')}<span class="nm">${esc(e.vs)}</span><span class="dt">${e.at ? dmy(Date.parse(e.at)) : ''}</span><span class="mk">${esc(e.score)}</span>${res(e.won ? 'W' : 'L')}</div>`)}</section>`;
+    for (const x of Object.values(d.at?.eventsMap || {}).filter((z) => z.gameResult)) o.jug.push({ at: Date.parse(x.gameDate) || 0, riv: { s: 'u', n: x.opponent?.displayName || '', logo: x.opponent?.headshot?.href || null, id: x.opponent?.id || null }, torneo: x.shortName || '', grupo: String(new Date(Date.parse(x.gameDate) || 0).getFullYear()), r: x.gameResult === 'W' ? 'W' : x.gameResult === 'D' ? 'D' : 'L', marca: '' });
+    o.kpi = [['Récord', st['W-L-D'] ? String(st['W-L-D']).replace(/-/g, '·') : null], ['KO / TKO', st['(T)KO']], ['Sumisiones', st.SUB], ['Edad', a?.age], ['Altura', a?.displayHeight], ['Alcance', a?.displayReach], ['Categoría', a?.weightClass?.text], ['País', a?.flag?.alt || a?.citizenship]];
   }
-  return `<header class="eqp-h">${img(lg, m.s === 'u' ? 'face' : 'tl')}<div><span class="lab">${esc(L[m.lg]?.[0] || '')}</span><h2>${esc(nm)}</h2></div><button class="rw-x" data-act="sh-info" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>${cab}${cuerpo || '<p class="hint">Las fuentes gratis no dan más datos de este equipo.</p>'}`;
+  // proximos que ya tenemos en Partidos (ESPN no siempre da el calendario que viene)
+  if (e.s !== 'v' && e.s !== 'c') for (const x of board().filter((z) => z.s === e.s && (z.a === e.n || z.b === e.n))) if (!o.prox.some((y) => Math.abs(y.at - Date.parse(x.at)) < 36e5)) o.prox.push({ at: Date.parse(x.at), riv: eqDeMatch(x, x.a === e.n ? 'b' : 'a'), torneo: corto(L[x.lg]?.[0] || ''), live: x.live });
+  o.jug.sort((a, b) => b.at - a.at); o.prox.sort((a, b) => a.at - b.at); o.kpi = o.kpi.filter((x) => x[1] != null && x[1] !== '');
+  if (!o.gan && o.gente.some((x) => x.gan != null)) o.gan = { total: o.gente.reduce((s, x) => s + (+x.gan || 0), 0), anos: [] };
+  return o;
+}
+const eqRes = (r) => `<b class="eq-res ${r === 'W' ? 'g' : r === 'D' ? 'e' : 'p'}">${r === 'W' ? 'G' : r === 'D' ? 'E' : 'P'}</b>`;
+const eqRiv = (x) => `<button class="eq-riv" data-eqv="${esc(JSON.stringify(x.riv))}">${img(x.riv.logo, x.riv.s === 'u' ? 'face' : 'tl')}<span>${x.casa === false ? '@ ' : ''}${esc(x.riv.n)}</span></button>`;
+const eqFila = (x) => `<div class="eq-f">${x.r ? eqRes(x.r) : `<b class="eq-res ${x.live ? 'v' : 'n'}">${x.live ? '●' : '·'}</b>`}<span class="eq-d">${x.at ? dmy(x.at) : ''}</span>${eqRiv(x)}<span class="eq-m">${esc(x.marca || (x.at && !x.r ? HM(x.at) : ''))}</span><span class="eq-t">${esc(x.torneo || '')}</span></div>`;
+const eqCara = (x) => `<div class="eq-c ${x.staff ? 'st' : ''}">${x.img ? `<img src="${esc(x.img)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<span class="eq-ci">${esc(String(x.n || '?').slice(0, 2).toUpperCase())}</span>`}
+  <b>${esc(x.n)}</b><small>${esc([x.num ? '#' + x.num : '', x.rol, x.pais, x.edad ? x.edad + ' años' : ''].filter(Boolean).join(' · '))}</small>${x.gan != null ? `<em>${N(x.gan)} $</em>` : ''}</div>`;
+const eqPags = (n, por, pg) => { const t = Math.ceil(n / por); return t > 1 ? `<nav class="pags eq-pags"><button data-eqpg="${pg - 1}" ${pg ? '' : 'disabled'} aria-label="Anterior">‹</button>${Array.from({ length: t }, (_, i) => `<button data-eqpg="${i}" class="${i === pg ? 'on' : ''}">${i + 1}</button>`).join('')}<button data-eqpg="${pg + 1}" ${pg < t - 1 ? '' : 'disabled'} aria-label="Siguiente">›</button></nav>` : '' };
+function eqHtml(e, o) {
+  const P = S.eqp, forma = o.jug.slice(0, 5).reverse();
+  const tabs = [['resumen', 'Resumen', true], ['partidos', 'Partidos', o.jug.length || o.prox.length], ['plantilla', e.s === 'u' ? '' : 'Plantilla', o.gente.length], ['tabla', 'Clasificación', !!o.tabla], ['palmares', 'Palmarés', o.palm.length], ['ganancias', 'Ganancias', !!o.gan]].filter(([, n, ok]) => n && ok);
+  const tab = tabs.some(([k]) => k === P.tab) ? P.tab : 'resumen';
+  let c = '';
+  if (tab === 'resumen') {
+    c = `${o.kpi.length ? `<div class="eq-k">${o.kpi.map(([a, b]) => `<div><span class="lab">${a}</span><b>${esc(String(b))}</b></div>`).join('')}</div>` : ''}
+      <div class="eq-2"><section><h4>Próximos</h4>${o.prox.slice(0, 4).map(eqFila).join('') || '<p class="hint">Nada a la vista.</p>'}</section>
+      <section><h4>Últimos resultados</h4>${o.jug.slice(0, 5).map(eqFila).join('') || '<p class="hint">Sin resultados.</p>'}</section></div>`;
+  } else if (tab === 'partidos') {
+    const xs = [...o.prox.map((x) => ({ ...x, grupo: 'Próximos' })), ...o.jug], pg = Math.min(P.pag || 0, Math.max(0, Math.ceil(xs.length / EQ_POR) - 1));
+    let g0 = '', h = ''; for (const x of xs.slice(pg * EQ_POR, pg * EQ_POR + EQ_POR)) { if (x.grupo !== g0) { h += `<span class="lab eq-g">${esc(x.grupo || 'Otros')}</span>`; g0 = x.grupo } h += eqFila(x) }
+    c = h + eqPags(xs.length, EQ_POR, pg);
+  } else if (tab === 'plantilla') {
+    const pg = Math.min(P.pag || 0, Math.max(0, Math.ceil(o.gente.length / EQ_CARAS) - 1));
+    c = `<div class="eq-cs">${o.gente.slice(pg * EQ_CARAS, pg * EQ_CARAS + EQ_CARAS).map(eqCara).join('')}</div>${eqPags(o.gente.length, EQ_CARAS, pg)}`;
+  } else if (tab === 'tabla') {
+    c = `<div class="eq-tb"><div class="eq-tr h"><span>#</span><span>Equipo</span><span>PJ</span><span>DG</span><span>Pts</span></div>${o.tabla.map((x) => `<div class="eq-tr ${x.id === String(e.id) ? 'yo' : ''}"><span>${x.rank ?? ''}</span><button class="eq-riv" data-eqv="${esc(JSON.stringify({ s: 'f', n: x.n, logo: x.logo, league: e.league, id: x.id }))}">${img(x.logo, 'tl')}<span>${esc(x.n)}</span></button><span>${x.pj ?? ''}</span><span>${x.dg ?? ''}</span><b>${x.pts ?? ''}</b></div>`).join('')}</div>`;
+  } else if (tab === 'palmares') {
+    const pg = Math.min(P.pag || 0, Math.max(0, Math.ceil(o.palm.length / EQ_POR) - 1));
+    c = o.palm.slice(pg * EQ_POR, pg * EQ_POR + EQ_POR).map((x) => `<div class="eq-p ${/^(1|1st|1º|campe|winner|ganador)/i.test(String(x.puesto)) ? 'oro' : ''}"><span class="eq-pi">${/^(1|1st|1º|campe|winner|ganador)/i.test(String(x.puesto)) ? '🏆' : '·'}</span><span class="eq-pn">${esc(x.n)}<small>${esc(x.puesto)}</small></span><span class="eq-pf">${esc(String(x.fecha || ''))}</span>${x.premio != null ? `<b>${N(x.premio)} $</b>` : '<span></span>'}</div>`).join('') + eqPags(o.palm.length, EQ_POR, pg);
+  } else if (tab === 'ganancias') {
+    const mx = Math.max(1, ...o.gan.anos.map((x) => +x.v || 0)), top = o.gente.filter((x) => x.gan != null).sort((a, b) => b.gan - a.gan).slice(0, 6);
+    c = `<div class="eq-gt"><span class="lab">En total</span><b>${o.gan.total != null ? N(o.gan.total) + ' $' : '·'}</b></div>${o.gan.anos.length ? `<div class="eq-ga">${o.gan.anos.map((x) => `<div><span>${esc(String(x.a))}</span><i style="width:${((+x.v || 0) / mx) * 100}%"></i><b>${N(x.v)} $</b></div>`).join('')}</div>` : ''}${top.length ? `<h4>Quién más ha ganado</h4><div class="eq-cs">${top.map(eqCara).join('')}</div>` : ''}`;
+  }
+  return `<header class="eq-h">${P.pila.length > 1 ? '<button class="eq-back" data-act="eq-atras" aria-label="Volver">‹</button>' : ''}${img(e.logo, e.s === 'u' ? 'face' : 'tl')}
+      <div class="eq-hn"><span class="lab">${esc(e.lg ? L[e.lg]?.[0] || '' : SP[e.s][0])}</span><h2>${esc(e.n)}</h2>${forma.length ? `<span class="eq-fm">${forma.map((x) => eqRes(x.r)).join('')}</span>` : ''}</div>
+      <button class="rw-x" data-act="sh-info" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+    <nav class="eq-tabs">${tabs.map(([k, n]) => `<button class="${k === tab ? 'on' : ''}" data-eqtab="${k}">${n}</button>`).join('')}</nav>
+    <div class="eq-cu">${c}</div>`;
 }
 async function pintaEq() {
   let el = document.getElementById('eqp');
-  const m = S.eqp && byId(S.eqp.m);
-  if (!m) { if (el) el.remove(); return }
+  const P = S.eqp, e = P?.pila?.[P.pila.length - 1];
+  if (!e) { if (el) el.remove(); return }
   if (!el) { el = document.createElement('div'); el.id = 'eqp'; document.body.appendChild(el); el.innerHTML = `<div class="rw-fondo" data-act="sh-info"></div><aside class="eqp abre" role="dialog" aria-label="Todo sobre el equipo"><p class="hint">Cargando…</p></aside>` }
-  const k = S.eqp.m + S.eqp.side; if (el.dataset.k === k) return;
-  const d = await eqpData(m, S.eqp.side);
-  if (!S.eqp || S.eqp.m + S.eqp.side !== k) return;
-  el.dataset.k = k; el.querySelector('.eqp').innerHTML = eqpHtml(m, S.eqp.side, d);
+  const k = eqKey(e) + '|' + P.tab + '|' + (P.pag || 0); if (el.dataset.k === k) return;
+  const box = el.querySelector('.eqp'); if (!EQD.has(eqKey(e))) box.innerHTML = `<header class="eq-h">${img(e.logo, e.s === 'u' ? 'face' : 'tl')}<div class="eq-hn"><h2>${esc(e.n)}</h2></div></header><p class="hint">Cargando…</p>`;
+  const d = await eqCarga(e);
+  const P2 = S.eqp, e2 = P2?.pila?.[P2.pila.length - 1]; if (!e2 || eqKey(e2) + '|' + P2.tab + '|' + (P2.pag || 0) !== k) return;
+  el.dataset.k = k; box.innerHTML = eqHtml(e, eqNorm(e, d)); box.scrollTop = 0;
   if (window.GM_LANG) GM_LANG.traduce(el);
 }
 function sheetFutbol(m, side, d) {
@@ -633,7 +695,7 @@ function avisos() {
       if (st === 'live') { avisa('Empieza ' + m.a + ' vs ' + m.b, 'Lo sigues · ' + (L[m.lg]?.[0] || '')); toast(`Empieza <b>${esc(m.a)} vs ${esc(m.b)}</b>`) }
       else if (st === 'final') { avisa('Final: ' + m.a + ' ' + (m.score || '') + ' ' + m.b, 'Lo sigues · ' + (L[m.lg]?.[0] || '')); toast(`Final: <b>${esc(m.a)} ${esc(m.score || '')} ${esc(m.b)}</b>`) } }
     for (const b of ALL.filter((x) => x.k === MEK)) {
-      const was = SNAP.bets.get(b.id); if (!was || was === b.st || was !== 'open') continue;
+      const was = SNAP.bets.get(b.id); if (!was || was === b.st || was !== 'open' || b.cash) continue;
       const m = byId(b.m); if (!m) continue;
       if (b.st === 'won') { confeti(); avisa('¡Has ganado ' + N(b.pay) + '!', `${pn(m, b.p)} · ${m.a} ${m.score || ''} ${m.b}`); toast(`¡Ganada! <b>+${N(b.pay)}</b> con ${esc(pn(m, b.p))}`) }
       else if (b.st === 'lost') avisa('Apuesta perdida', `${pn(m, b.p)} · ${m.a} ${m.score || ''} ${m.b}`);
@@ -689,12 +751,15 @@ function featured() {
 // PM, 30-10: "lo de live se ve terrible; que se vea en largo, estirado, no tan junto todo": una tarjeta ancha por partido
 // en vivo (escudos, nombres enteros, marcador grande con la serie y el mapa, juego y liga, quien ha apostado); si hay
 // muchos, carrusel con flechas
+// vivo.js da por equipo los mapas ganados y las rondas del mapa en juego (m.vivo, con "a" siempre el local) y la linea
+// "Mapa 2 de 3 · Haven" (o el minuto en futbol); aqui solo se pintan. Sin vivo.js o sin datos, queda lo de antes.
+const vN = (m, s) => (m.live && window.GM_VIVO ? GM_VIVO.n(m, s) : ''), vL = (m) => (m.live && window.GM_VIVO ? GM_VIVO.linea(m) : '');
 function vivoCard(m) {
   const sc = String(m.score || '0:0'), [g, ...resto] = sc.split(/\s+/), det = resto.join(' ').replace(/^[·(]\s*|\)$/g, ''), ws = whoOn(m.id), tot = ws.reduce((a, w) => a + w.stake, 0);
-  const lado = (s) => `<span class="lvc-t ${s}">${logo(m, s)}<b>${esc(s === 'a' ? m.a : m.b)}</b></span>`;
+  const lado = (s) => `<span class="lvc-t ${s}">${logo(m, s)}<b>${esc(s === 'a' ? m.a : m.b)}</b>${vN(m, s)}</span>`;
   return `<button class="lvc" data-vivo="${m.id}" style="--sc:${SPC[m.s]}">
     <span class="lvc-h"><i class="lvc-dot"></i><em>EN VIVO</em><img class="lvc-sp" src="${SP[m.s][1]}" alt=""><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt="" loading="lazy"><span class="lvc-lg">${esc(corto(L[m.lg]?.[0] || ''))}</span></span>
-    <span class="lvc-m">${lado('a')}<span class="lvc-sc"><strong>${esc(g)}</strong>${det ? `<small>${esc(det)}</small>` : m.s === 'v' || m.s === 'c' ? '<small>mapas</small>' : ''}</span>${lado('b')}</span>
+    <span class="lvc-m">${lado('a')}<span class="lvc-sc">${m.vivo ? vL(m) || '<strong>·</strong>' : `<strong>${esc(g)}</strong>${det ? `<small>${esc(det)}</small>` : m.s === 'v' || m.s === 'c' ? '<small>mapas</small>' : ''}`}</span>${lado('b')}</span>
     <span class="lvc-w">${ws.length ? `<span class="lvc-avs">${ws.slice(0, 5).map((w) => av(w.f, 'sm')).join('')}</span><span>${ws.length} ${ws.length === 1 ? 'apuesta' : 'apuestas'} · ${N(tot)}${coin()} en juego</span>` : '<span class="lvc-nadie">Nadie ha apostado</span>'}<span class="lvc-ir">Ver partido ›</span></span>
   </button>`;
 }
@@ -702,9 +767,19 @@ const vivosHtml = (ls) => `<section class="lv2 ${ls.length > 1 ? 'mas' : ''}"><d
 let LVX = 0;
 function lvFlechas() { const n = document.querySelector('[data-lv]'); if (!n) return; if (n.scrollLeft !== LVX) n.scrollLeft = LVX; n.onscroll = () => { LVX = n.scrollLeft } }
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lvx]'); if (!b) return; const n = document.querySelector('[data-lv]'); n?.scrollBy({ left: +b.dataset.lvx * (n.querySelector('.lvc')?.offsetWidth || 300) + +b.dataset.lvx * 14, behavior: 'smooth' }) });
+const jugados = () => M.filter((m) => m.status === 'final' && (S.f === 'all' || m.s === S.f) && inLeague(m)).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+function jugadosHtml() {
+  const l = jugados(); if (!l.length) return '';
+  const n = Math.min(l.length, S.jugN || 8), gan = (m, k) => { const [x, y] = String(m.score || '').split(' ')[0].split(':').map(Number); if (!(x >= 0 && y >= 0) || x === y) return ''; return (x > y) === (k === 'home') ? 'w' : 'l' };
+  return `<section class="jug"><div class="day"><b>Ya jugados</b><span>últimos dos días</span><i>${l.length}</i></div>${l.slice(0, n).map((m) => `<button class="jug-r" data-goto="${m.id}">
+    <span class="jug-t">${WD(m.at)} ${HM(m.at)}<small>${esc(L[m.lg]?.[0] || '')}</small></span>
+    <span class="jug-e ${gan(m, 'home')}">${logo(m, 'a')}<b>${esc(m.a)}</b></span><span class="jug-s">${esc(String(m.score || '').split(' ')[0] || 'final')}</span><span class="jug-e b ${gan(m, 'away')}"><b>${esc(m.b)}</b>${logo(m, 'b')}</span>
+    <span class="jug-w">${whoOn(m.id).slice(0, 4).map((k) => av(k, 'sm')).join('')}</span></button>`).join('')}
+    ${n < l.length ? `<button class="jug-mas" data-jugmas="1">Ver más (${l.length - n})</button>` : ''}</section>`;
+}
 function partidos() {
   const list = filtered();
-  if (!S.foc || !byId(S.foc) || !board().some((m) => m.id === S.foc)) S.foc = (featured()[0] || list[0] || {}).id;
+  if (!S.foc || !byId(S.foc) || !(board().some((m) => m.id === S.foc) || byId(S.foc).status === 'final')) S.foc = (featured()[0] || list[0] || {}).id;
   if (S.brk && byId(S.foc)?.tour) return `<div class="pad brk-full">${bracketSheet(byId(S.foc)).replace('class="det sheet', 'class="brk-page').replace(' open"', '"')}</div>`;
   const feat = featured();
   const lives = M.filter((m) => m.live).sort((a, b) => whoOn(b.id).length - whoOn(a.id).length).slice(0, 14);
@@ -716,21 +791,22 @@ function partidos() {
       <span class="ft-o">${picksOf(m).map((p) => `<span>${p} <b>${po(m, p) ? O(po(m, p)) : '·'}</b></span>`).join('')}</span></button>`).join('')}</div>` : ''}
     <nav class="fil">${filt()}</nav>${leagues()}`;
   if (!list.length) h += `<p class="hint" style="padding:30px 0">No hay partidos con este filtro en los próximos días.</p>`;
+  const jugH = jugadosHtml();
   let ri = 0;
   for (const ms of groups(list)) {
     h += `<div class="day"><b>${DD(ms[0].at)}</b><span>${dayLab(ms[0].at)}</span><i>${ms.length} ${ms.length > 1 ? 'partidos' : 'partido'}</i></div>`;
     for (const m of ms) {
       const open = isOpen(m);
-      h += `<div class="row ${S.foc === m.id ? 'on' : ''}" data-foc="${m.id}" style="--i:${Math.min(ri++, 14)}">
-        <span class="t">${m.live ? '<em>VIVO</em>' : HM(m.at)}${m.live ? `<small class="sc">${esc(String(m.score || '').split(' ')[0])}</small>` : `<small>${CD(m.at)}</small>`}</span>
+      h += `<div class="row ${S.foc === m.id ? 'on' : ''} ${m.live && m.vivo ? 'cv' : ''}" data-foc="${m.id}" style="--i:${Math.min(ri++, 14)}">
+        <span class="t">${m.live ? '<em>VIVO</em>' : HM(m.at)}${m.live ? (m.vivo ? '' : `<small class="sc">${esc(String(m.score || '').split(' ')[0])}</small>`) : Date.parse(m.at) <= NOW ? '<small class="pe">por empezar</small>' : `<small>${CD(m.at)}</small>`}</span>
         <span class="llw" title="${esc(L[m.lg][0])} · ${SP[m.s][0]}"><img class="ll" src="${esc(L[m.lg][1])}" alt="" loading="lazy">${m.s === 'c' || m.s === 'v' ? `<img class="lls" src="${SP[m.s][1]}" alt="">` : ''}</span>
-        <span class="tms"><span class="tm">${logo(m, 'a')}<span>${esc(m.a)}</span>${esFav(favK(m.s, m.a)) || esFav('pa:' + m.id) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${dailyTag(m)}</span><span class="tm">${logo(m, 'b')}<span>${esc(m.b)}</span>${esFav(favK(m.s, m.b)) ? `<i class="fav-i">${IC_FAV}</i>` : ''}</span></span>
-        <span class="who">${whoOn(m.id).filter((x) => x.f !== MEK).map((x) => av(x.f, 'sm')).join('')}</span>
+        <span class="tms"><span class="tm">${logo(m, 'a')}<span>${esc(m.a)}</span>${esFav(favK(m.s, m.a)) || esFav('pa:' + m.id) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${dailyTag(m)}${vN(m, 'a')}</span><span class="tm">${logo(m, 'b')}<span>${esc(m.b)}</span>${esFav(favK(m.s, m.b)) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${vN(m, 'b')}</span>${vL(m)}</span>
+        <span class="who">${[...new Set(whoOn(m.id).map((x) => x.f))].map((k) => av(k, 'sm')).join('')}</span>
         ${['1', 'X', '2'].map((p) => oddBtn(m, p, open)).join('')}
       </div>`;
     }
   }
-  return h + `</section>${byId(S.foc) ? ficha(byId(S.foc)) : '<section class="det"></section>'}</div>`;
+  return h + jugH + `</section>${byId(S.foc) ? ficha(byId(S.foc)) : '<section class="det"></section>'}</div>`;
 }
 function ficha(m) {
   if (S.brk && m.tour) return bracketSheet(m);
@@ -754,7 +830,7 @@ function ficha(m) {
     <div class="prob-l">${ps.map((p, i) => `<span>${esc(p === 'X' ? 'empate' : pn(m, p))} ${pct[i]}%</span>`).join('')}</div>` : ''}
     <div class="picks ${open ? '' : 'closed'}" style="--n:${Math.max(1, ps.length)}">${ps.map((p) => `<button class="pk ${isSel(m, p) ? 'on' : ''} ${isMine(m, p) ? 'mine' : ''}" data-pick="${m.id}|${p}" ${open ? '' : 'disabled'}><span class="k">${p === 'X' ? 'X · EMPATE' : p + ' · GANA'}</span><span class="n">${esc(pn(m, p))}</span><b>${O(po(m, p))}</b></button>`).join('')}</div>
     <p class="hint" style="margin-top:10px">${m.src === 'draftkings' ? 'Cuotas reales de DraftKings' : 'Cuotas calculadas con la forma y el récord'} · se congelan al apostar</p>`;
-  if (!open) h += `<p class="hint">${LOCK}Cerrado: ya ha empezado. Se paga solo al acabar.</p>`;
+  if (!open) h += m.status === 'final' ? `<p class="hint">${LOCK}Final ${esc(String(m.score || '').split(' ')[0])}. Ya se ha pagado.</p>` : `<p class="hint">${LOCK}Cerrado: ya ha empezado. Se paga solo al acabar.</p>`;
   else if (!sel) h += `<p class="hint">Elige ${ps.length > 2 ? '1, X o 2' : '1 o 2'} para apostar.</p>`;
   else {
     const o = po(m, S.sel.p), st = stakeNow(), pv = ((st / Math.max(1, me().s)) * 100).toFixed(1);
@@ -769,8 +845,8 @@ function ficha(m) {
   h += `<div id="espn-box" class="espn" data-m="${m.id}">${m.espn ? '<p class="hint">Cargando datos de ESPN…</p>' : tvHtml(m.tv || [], m)}</div>`;
   const rts = CH.filter((c) => c.m === m.id);
   if (isOpen(m) || rts.length) h += `<div class="d-retos">${rts.length ? retosHtml(rts, '') : ''}${isOpen(m) ? retoForm(m) : ''}</div>`;
-  const ws = whoOn(m.id).filter((x) => x.f !== MEK);
-  h += `<div class="d-fr"><span class="lab">Colegas en este partido</span>${F.filter((f) => !f.me).map((f) => {
+  const ws = whoOn(m.id);
+  h += `<div class="d-fr"><span class="lab">Colegas en este partido</span>${[...F].sort((a, b) => (b.me - a.me)).map((f) => {
     const x = ws.filter((y) => y.f === f.id);
     const st = !x.length ? `<span class="st">aún no ha apostado</span>` : x.map((y) => (y.p ? `<span class="st rev">${esc(pn(m, y.p))} ${O(y.o)} · ${N(y.stake)}${coin()}</span>` : `<span class="st">${LOCK}${N(y.stake)} · se ve a las ${HM(m.at)}</span>`)).join(' ');
     return `<div class="ifr">${av(f.id)}<span class="nm">${esc(f.n)}</span>${st}</div>` }).join('')}</div></section>`;
@@ -781,7 +857,8 @@ function ficha(m) {
 // PM, 30-10: "rework de My bets, se ve terrible" y luego "quiero que se vea mejor, un estilo NUEVO, se ve muy feo y simple":
 // estilo casa de apuestas. Arriba el balance y la curva de beneficio; lo abierto en boletos con muesca, codigo y escudos
 // con halo; lo resuelto en boletos pequenos con su sello (COBRADA verde, PERDIDA roja); entran con una animacion suave
-const neto = (b) => (b.st === 'won' ? b.pay - b.stake : b.st === 'lost' ? -b.stake : 0);
+const perd = (b) => (b.cash ? b.stake - b.pay : b.stake);   // lo que se pierde de verdad (en un cash out con perdida, solo la diferencia)
+const neto = (b) => (b.st === 'won' ? b.pay - b.stake : b.st === 'lost' ? -perd(b) : 0);
 const signo = (v) => `${v > 0 ? '▲' : v < 0 ? '▼' : ''} ${N(Math.abs(v))}`.trim();
 const SPC = { f: '#2bd47d', v: '#ff4655', c: '#f5a524', u: '#e0464f' };
 const codigo = (b) => 'Nº ' + String(b.id).padStart(6, '0');
@@ -789,9 +866,9 @@ function mbCard(b, i) {
   const m = byId(b.m); if (!m) return '';
   const t0 = Date.parse(b.at), t1 = Date.parse(m.at), fill = m.live ? 100 : Math.max(3, Math.min(100, ((NOW - t0) / Math.max(1, t1 - t0)) * 100));
   const lado = (s) => { const on = b.p === (s === 'a' ? '1' : '2');
-    return `<div class="bol-t ${on ? 'on' : ''}"><span class="bol-cr">${logo(m, s)}</span><b>${esc(s === 'a' ? m.a : m.b)}</b><em>${on ? '★ tu apuesta' : ''}</em></div>` };
+    return `<div class="bol-t ${on ? 'on' : ''}"><span class="bol-cr">${logo(m, s)}</span><b>${esc(s === 'a' ? m.a : m.b)}</b>${vN(m, s)}<em>${on ? '★ tu apuesta' : ''}</em></div>` };
   const [sg, ...sr] = String(m.score || '0:0').split(/\s+/), sdet = sr.join(' ').replace(/^[·(]\s*|\)$/g, '');
-  const mid = m.live ? `<span class="bol-sc">${esc(sg)}<small>${sdet ? esc(sdet) : m.s === 'v' || m.s === 'c' ? 'mapas' : 'marcador'}</small></span>` : b.p === 'X' ? '<span class="bol-x on">EMPATE<em>★ tu apuesta</em></span>' : '<span class="bol-x">VS</span>';
+  const mid = m.live ? `<span class="bol-sc">${m.vivo ? vL(m) || '·' : `${esc(sg)}<small>${sdet ? esc(sdet) : m.s === 'v' || m.s === 'c' ? 'mapas' : 'marcador'}</small>`}</span>` : b.p === 'X' ? '<span class="bol-x on">EMPATE<em>★ tu apuesta</em></span>' : '<span class="bol-x">VS</span>';
   return `<article class="bol ${m.live ? 'live' : ''}" data-goto="${m.id}" style="--sc:${SPC[m.s]};--i:${i}">
     <header><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt="" loading="lazy"><span class="bol-lg">${esc(corto(L[m.lg]?.[0] || ''))}</span>${dailyTag(m)}<span class="bol-no">${codigo(b)}</span></header>
     ${m.live ? '<span class="bol-live"><i></i>EN VIVO</span>' : ''}
@@ -805,7 +882,7 @@ function mbFila(b, i) {
   const m = byId(b.m); if (!m) return '';
   const t = Date.parse(b.set || b.at), v = neto(b);
   const cr = (s, p) => `<span class="bor-cr ${b.p === p ? 'on' : ''}">${logo(m, s)}</span>`;
-  const sello = b.st === 'won' ? `COBRADA<b>▲ ${N(v)}${coin()}</b>` : b.st === 'lost' ? `PERDIDA<b>▼ ${N(b.stake)}${coin()}</b>` : `ANULADA<b>${N(b.stake)}${coin()}</b>`;
+  const sello = b.cash ? `RETIRADA<b>${v >= 0 ? '▲' : '▼'} ${N(Math.abs(v))}${coin()}</b>` : b.st === 'won' ? `COBRADA<b>▲ ${N(v)}${coin()}</b>` : b.st === 'lost' ? `PERDIDA<b>▼ ${N(b.stake)}${coin()}</b>` : `ANULADA<b>${N(b.stake)}${coin()}</b>`;
   return `<article class="bor ${b.st}" data-goto="${m.id}" style="--sc:${SPC[m.s]};--i:${i}">
     <header><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt="" loading="lazy"><span>${DD(t)} ${MO(t)} · ${HM(t)}</span><span class="bol-no">${codigo(b)}</span></header>
     <div class="bor-vs">${cr('a', '1')}<b>${esc(m.a)}</b><i>${esc(m.score || 'vs')}</i><b>${esc(m.b)}</b>${cr('b', '2')}</div>
@@ -921,17 +998,65 @@ function betCard(f, b) {
   </div>`;
 }
 const histRow = (b) => { const m = byId(b.m); if (!m) return ''; const t = Date.parse(b.at);
-  const [c, r] = b.st === 'won' ? ['h-g', '▲ ' + N(b.pay) + coin()] : b.st === 'lost' ? ['h-p', '▼ ' + N(b.stake) + coin()] : b.st === 'void' ? ['h-e', 'anulada'] : [m.live ? 'h-o h-live' : 'h-o', m.live ? 'EN VIVO' : 'EN JUEGO'];
+  const [c, r] = b.cash ? [b.pay >= b.stake ? 'h-g' : 'h-p', 'RETIRADA ' + N(b.pay) + coin()] : b.st === 'won' ? ['h-g', '▲ ' + N(b.pay) + coin()] : b.st === 'lost' ? ['h-p', '▼ ' + N(b.stake) + coin()] : b.st === 'void' ? ['h-e', 'anulada'] : [m.live ? 'h-o h-live' : 'h-o', m.live ? 'EN VIVO' : 'EN JUEGO'];
   return `<div class="hst ${c}" data-goto="${m.id}"><span class="hd">${DD(t)} ${MO(t)}<small>${HM(t)}</small></span><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt="" loading="lazy"><span class="hm"><strong>${esc(m.a)} vs ${esc(m.b)}</strong><small>${b.p ? esc(pn(m, b.p)) + ' · ' + O(b.o) : 'oculta hasta empezar'} · ${N(b.stake)}${coin()} apostados</small></span><b>${r}</b></div>` };
 function historial(f) {
   const bs = ALL.filter((b) => b.k === f.id && byId(b.m)).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)), lim = S.histAll ? bs.length : 15;
-  const g = bs.filter((b) => b.st === 'won'), pe = bs.filter((b) => b.st === 'lost'), neto = g.reduce((a, b) => a + b.pay - b.stake, 0) - pe.reduce((a, b) => a + b.stake, 0);
+  const g = bs.filter((b) => b.st === 'won'), pe = bs.filter((b) => b.st === 'lost'), neto = g.reduce((a, b) => a + b.pay - b.stake, 0) - pe.reduce((a, b) => a + perd(b), 0);
   return `<section class="cs" id="historial"><div class="cs-h"><div><h3>Historial</h3><p>${bs.length} apuestas · ${g.length} ganadas · ${pe.length} perdidas · ${neto >= 0 ? '▲' : '▼'} ${N(Math.abs(neto))}${coin()} en total</p></div></div>
     <div class="hsts">${bs.slice(0, lim).map(histRow).join('') || '<p class="hint">Todavía no ha apostado.</p>'}</div>
     ${bs.length > lim ? `<button class="q hst-mas" data-act="hist-all">Ver las ${bs.length}</button>` : ''}</section>`;
 }
 // PM, 30-10: "all bets lo quiero mejor, esta raro y feo" y "que se vea con que equipo van":
 // arriba los jugadores; luego cada partido con sus opciones y las caras de quien va con cada una; al final lo resuelto
+// PM, 30-10: "que se vean en All bets todas las bets, pero con paginas y tal": todas las apuestas de todos y de siempre,
+// lo mas nuevo arriba, 12 por pagina, filtros por jugador, estado y deporte. Se piden por paginas a la base (bets_page,
+// db/026); si esa funcion aun no esta, se pagina en el navegador lo que ya trae get_state
+const AB_POR = 12;
+let ABP = null, cargandoAbp = null;
+const abMap = (b) => ({ id: b.id, k: kDe(b.player), m: b.match, p: b.pick, stake: b.stake, o: Number(b.odds), st: b.status, pay: b.payout, at: b.created, set: b.settled });
+const abEst = (b) => { const m = byId(b.m); return b.st === 'open' ? (m?.live ? 'live' : 'open') : b.st };
+const abFiltra = (f) => ALL.filter((b) => byId(b.m) && (!f.k || b.k === f.k) && (!f.sp || byId(b.m).s === f.sp) && (!f.st || abEst(b) === f.st)).sort((x, y) => Date.parse(y.at) - Date.parse(x.at) || y.id - x.id);
+async function cargaAbp() {
+  const f = S.abf || {}, pg = S.abpg || 0, key = JSON.stringify([f.k || '', f.st || '', f.sp || '', pg, ALL.length, ALL.filter((b) => b.st !== 'open').length]);
+  if (ABP?.key === key || cargandoAbp === key || ABP?.srv === false) return;
+  cargandoAbp = key;
+  const { data, error } = await db.rpc('bets_page', { p_player: f.k ? fr(f.k).uid : null, p_status: f.st || null, p_sport: f.sp || null, p_offset: pg * AB_POR, p_limit: AB_POR });
+  cargandoAbp = null;
+  ABP = error ? { key, srv: false } : { key, srv: true, total: data?.total || 0, rows: (data?.rows || []).map(abMap).filter((b) => b.k) };
+  if (S.scr === 'colegas') render();
+}
+function abTicket(b) {
+  const m = byId(b.m); if (!m) return '';
+  const est = abEst(b), t = Date.parse(b.set || b.at), v = b.st === 'won' ? b.pay - b.stake : 0;
+  const cr = (sd, p) => `<span class="bor-cr ${b.p === p ? 'on' : ''}">${logo(m, sd)}</span>`;
+  const sello = { won: `COBRADA<b>▲ ${N(v)}${coin()}</b>`, lost: `PERDIDA<b>▼ ${N(b.stake)}${coin()}</b>`, void: `ANULADA<b>${N(b.stake)}${coin()}</b>`, cashout: `RETIRADA<b>${N(b.pay)}${coin()}</b>`, live: `EN VIVO<b>${N(b.stake * b.o)}${coin()}</b>`, open: `EN JUEGO<b>${N(b.stake * b.o)}${coin()}</b>` }[est] || '';
+  return `<article class="bor abt ${est}" data-goto="${m.id}" style="--sc:${SPC[m.s]}">
+    <header>${av(b.k, 'sm')}<b class="abt-n">${esc(fr(b.k).n)}</b><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt="" loading="lazy"><span>${DD(t)} ${MO(t)} · ${HM(t)}</span></header>
+    <div class="bor-vs">${cr('a', '1')}<b>${esc(m.a)}</b><i>${esc(b.st === 'open' && !m.live ? 'vs' : String(m.score || 'vs').split(' ')[0])}</i><b>${esc(m.b)}</b>${cr('b', '2')}</div>
+    <p class="bor-p"><img class="mb-spi" src="${SP[m.s][1]}" alt="">${b.p ? `${esc(pn(m, b.p))} · ${O(b.o)}` : 'Oculta hasta empezar'} · ${N(b.stake)}${coin()} apostados</p>
+    <span class="bor-sello">${sello}</span>
+  </article>`;
+}
+function todasHtml() {
+  const f = S.abf || {}, pg0 = S.abpg || 0;
+  if (!ABP || ABP.srv !== false) setTimeout(cargaAbp, 0);
+  let filas, total;
+  if (ABP?.srv && ABP.key === JSON.stringify([f.k || '', f.st || '', f.sp || '', pg0, ALL.length, ALL.filter((b) => b.st !== 'open').length])) { filas = ABP.rows; total = ABP.total }
+  else { const xs = abFiltra(f); total = xs.length; filas = xs.slice(pg0 * AB_POR, pg0 * AB_POR + AB_POR) }
+  const pags = Math.max(1, Math.ceil(total / AB_POR)), pg = Math.min(pg0, pags - 1);
+  const ests = [['', 'Todas'], ['open', 'En juego'], ['live', 'En vivo'], ['won', 'Ganadas'], ['lost', 'Perdidas'], ['void', 'Devueltas'], ['cashout', 'Retiradas']].filter(([k]) => !k || k === f.st || ALL.some((b) => abEst(b) === k));
+  const deps = DEP.filter((k) => ALL.some((b) => byId(b.m)?.s === k));
+  const nums = (() => { const out = [], ver = new Set([0, pags - 1, pg - 1, pg, pg + 1]); for (let i = 0; i < pags; i++) if (ver.has(i)) { if (out.length && i - out[out.length - 1] > 1) out.push('…'); out.push(i) } return out })();
+  return `<div class="sec-h ab-sec"><h2>Todas las apuestas</h2><i>${N(total)} ${total === 1 ? 'apuesta' : 'apuestas'}</i></div>
+    <nav class="ab-fil">
+      <span class="ab-fg"><button class="ab-pl ${!f.k ? 'on' : ''}" data-abf="k|">Todos</button>${F.map((x) => `<button class="ab-pl ${f.k === x.id ? 'on' : ''}" data-abf="k|${x.id}">${av(x.id, 'sm')}<span>${esc(x.n)}</span></button>`).join('')}</span>
+      <span class="ab-fg">${ests.map(([k, n]) => `<button class="chip ${(f.st || '') === k ? 'on' : ''}" data-abf="st|${k}">${n}</button>`).join('')}</span>
+      ${deps.length > 1 ? `<span class="ab-fg">${[['', 'Todo', null], ...deps.map((k) => [k, ...SP[k]])].map(([k, n, im]) => `<button class="f ${(f.sp || '') === k ? 'on' : ''}" data-abf="sp|${k}">${im ? `<img src="${im}" alt="">` : ''}${n}</button>`).join('')}</span>` : ''}
+    </nav>
+    ${filas.length ? `<div class="mb-rs2 ab-ts">${filas.map(abTicket).join('')}</div>` : `<p class="hint">${ALL.length ? 'Nada con estos filtros.' : 'Todavía nadie ha apostado.'}</p>`}
+    ${pags > 1 ? `<nav class="pags"><button data-abpg="${pg - 1}" ${pg ? '' : 'disabled'} aria-label="Anterior">‹</button>${nums.map((i) => (i === '…' ? '<span class="pags-g">…</span>' : `<button data-abpg="${i}" class="${i === pg ? 'on' : ''}">${i + 1}</button>`)).join('')}<button data-abpg="${pg + 1}" ${pg < pags - 1 ? '' : 'disabled'} aria-label="Siguiente">›</button></nav>` : ''}`;
+}
 function colegas() {
   const rank = [...F].sort((a, b) => b.s - a.s), admin = me().admin;
   const abiertas = ALL.filter((b) => b.st === 'open' && byId(b.m));
@@ -964,8 +1089,7 @@ function colegas() {
     <div class="sec-h ab-sec"><h2>En juego</h2><i>${abiertas.length} ${abiertas.length === 1 ? 'apuesta' : 'apuestas'} · ${partidos.length} ${partidos.length === 1 ? 'partido' : 'partidos'}</i></div>
     ${partidos.map(partido).join('') || '<p class="hint">Nadie tiene nada en juego. Se apuesta desde Partidos.</p>'}
     ${CH.length ? `<div class="sec-h ab-sec"><h2>Retos 1 contra 1</h2><i>${retosAbiertos.length} abiertos</i></div>${retosHtml(CH.slice(0, 10), '')}` : ''}
-    <div class="sec-h ab-sec"><h2>Resueltas</h2><i>las últimas de todos</i></div>
-    ${hechas.map(hecha).join('') || '<p class="hint">Todavía no se ha resuelto ninguna. Cuando acabe un partido sale aquí quién acertó.</p>'}
+    ${todasHtml()}
   </div>`;
 }
 
@@ -1194,7 +1318,7 @@ function chat() {
   return `<div class="c-wrap ${live ? '' : 'solo'}"><section class="c-main">${tabs}${fd ? `<div class="fd-wrap" data-keep="fd">${feedHtml()}</div>` : `<div class="chat"><div class="ch-list" data-chat>${conDias(CHAT.filter((c) => c.k)) || '<p class="hint">Escribe el primero.</p>'}</div>
     ${S.pollForm ? `<div class="poll-f"><input type="text" id="poll-q" maxlength="140" placeholder="La pregunta" autocomplete="off">${[0, 1, 2, 3].map((i) => `<input type="text" id="poll-o${i}" maxlength="40" placeholder="Opción ${i + 1}${i > 1 ? ' (si quieres)' : ''}" autocomplete="off">`).join('')}<div class="poll-b"><button class="q" data-act="poll-x">Cancelar</button><button class="go-s" data-act="poll-ok">Crear encuesta</button></div></div>` : ''}<div class="ch-in"><button class="ic" data-act="img" aria-label="Mandar foto">${IC_IMG}</button><button class="ic" data-act="poll" aria-label="Encuesta">${IC_POLL}</button><button class="ic mic ${REC ? 'on' : ''}" data-act="mic" aria-label="${REC ? 'Parar y enviar' : 'Nota de voz'}">${IC_MIC}</button>${REC ? `<span class="rec" data-rec>${recTxt()}</span><button class="q rec-x" data-act="mic-x">Cancelar</button>` : ''}<input type="text" id="msg" data-msg placeholder="Escribe a tus colegas" maxlength="500" autocomplete="off"><button class="send" data-act="send" aria-label="Enviar">${IC_SEND}</button><input type="file" id="pic" accept="image/*" data-file hidden></div></div>`}</section>
     ${live ? `<aside class="c-side">
-      ${live ? `<section><span class="lab">En juego ahora</span><div class="live-m" data-goto="${live.id}" style="cursor:pointer"><div>${logo(live, 'a')}${esc(live.a)}</div><b>${esc(live.score || '')}</b><div>${logo(live, 'b')}${esc(live.b)}</div></div></section>
+      ${live ? `<section><span class="lab">En juego ahora</span><div class="live-m" data-goto="${live.id}" style="cursor:pointer"><div>${logo(live, 'a')}${esc(live.a)}${vN(live, 'a')}</div><b>${live.vivo ? vL(live) || '·' : esc(live.score || '')}</b><div>${logo(live, 'b')}${esc(live.b)}${vN(live, 'b')}</div></div></section>
       <section><span class="lab">Sus apuestas</span>${whoOn(live.id).map((x) => `<div class="ifr">${av(x.f)}<span class="nm">${esc(fr(x.f).n)}</span><span class="st rev">${x.p ? esc(pn(live, x.p)) + ' · ' : ''}${N(x.stake)}${coin()}</span></div>`).join('')}</section>` : ''}
     </aside>` : ''}</div>`;
 }
@@ -1203,7 +1327,7 @@ function chat() {
 // PM, 30-10: movimientos con paginas y separados (apuestas, cajas y skins, pagas y premios), con la foto de la caja
 // o contra quien fue la batalla; sin las reglas. Y la ruleta de la semana
 let WHEEL = null, CASOS = null, BATS = new Map();
-const movTipo = (k) => (['apuesta', 'premio', 'devolucion', 'pred_apuesta', 'pred_premio', 'pred_devol'].includes(k) ? 'apuestas' : ['caja', 'venta', 'batalla', 'trato', 'mercado', 'jackpot'].includes(k) ? 'cajas' : ['moneda', 'crash', 'ruleta', 'blackjack', 'plinko'].includes(k) ? 'juegos' : 'pagas');
+const movTipo = (k) => (['apuesta', 'premio', 'devolucion', 'pred_apuesta', 'pred_premio', 'pred_devol', 'cashout'].includes(k) ? 'apuestas' : ['caja', 'venta', 'batalla', 'trato', 'mercado', 'jackpot'].includes(k) ? 'cajas' : ['moneda', 'crash', 'ruleta', 'blackjack', 'plinko'].includes(k) ? 'juegos' : 'pagas');
 const RUEDA = [['50', 0], ['Caja', 1], ['100', 0], ['250', 0], ['Caja ★', 2], ['500', 0], ['150', 0], ['1.000', 3]];
 async function cargaMov() {
   let cambia = false;
@@ -1572,15 +1696,41 @@ const R = { novedades, juegos, mercado, directo, partidos, apuestas, colegas, li
 const cajasCtx = () => ({ db, me: ME, jugadores: F.map((f) => ({ id: f.uid, n: f.n, color: f.id, ini: f.ini, photo: !!f.photo })), saldo: me().s, toast, refresh });
 const photoCss = () => { document.getElementById('phs').textContent = F.filter((f) => f.photo).map((f) => `.av.${f.id}.ph{background-image:url("${encodeURI(f.photo)}")}`).join('') };
 // PM, 30-10: "si estas en una apuesta en directo ahora mismo, que salga toda la info en cualquier lado, encima del perfil,
-// y que se vaya actualizando en tiempo real". vivo.js repinta (render) cuando cambia el marcador
+// y que se vaya actualizando en tiempo real". vivo.js repinta (render) cuando cambia el marcador.
+// Rehecha (PM: "la tarjeta de live abajo esta como cortada, arreglala y hazla bonita"): dos filas, una por equipo, con su
+// marcador; el estado sale por equipo: primero la serie (o los goles) y, si van empatados, las rondas del mapa en juego
+const vyDatos = (m) => {
+  // m.vivo (vivo.js): { k:'e'|'f', a:{mapas, rondas}, b:{mapas, rondas}, mapa, n, total, minuto } con a = m.a y b = m.b siempre
+  const v = m.vivo && typeof m.vivo.a === 'object' ? m.vivo : null;
+  const sc = String(m.score || '').replace(/\u2060/g, ''), [g, ...r] = sc.split(/\s+/), det = r.join(' ').replace(/^[·(]\s*|\)$/g, '').trim();
+  const mm = g.match(/^(\d+)[:-](\d+)$/), rd = det.match(/^(.*?)\s*(\d+)\s*[-:]\s*(\d+)$/);
+  const num = (x) => (x == null || x === '' || isNaN(+x) ? null : +x);
+  return {
+    sa: num(v ? v.a.mapas : mm?.[1]), sb: num(v ? v.b.mapas : mm?.[2]),
+    ra: num(v ? v.a.rondas : rd?.[2]), rb: num(v ? v.b.rondas : rd?.[3]),
+    mapa: (v ? (v.k === 'f' ? v.minuto : [v.n && v.total ? `Mapa ${v.n} de ${v.total}` : '', v.mapa].filter(Boolean).join(' · ')) : rd ? rd[1] : det) || '',
+  };
+};
+// quien va por delante ahora mismo: '1', '2', 'X' (empatados del todo) o null si no se puede saber
+const vyLider = (m, d) => {
+  if (d.sa == null || d.sb == null) return null;
+  if (d.sa !== d.sb) return d.sa > d.sb ? '1' : '2';
+  if (m.s === 'v' || m.s === 'c') { if (d.ra != null && d.rb != null && d.ra !== d.rb) return d.ra > d.rb ? '1' : '2'; return null }
+  return 'X';
+};
+let VYX = 0;
 function vivoYoHtml() {
   const bs = ALL.filter((b) => b.k === MEK && b.st === 'open' && byId(b.m)?.live);
-  return bs.map((b) => { const m = byId(b.m), sc = String(m.score || '0:0'), [g, ...r] = sc.split(/\s+/), det = r.join(' ').replace(/^[·(]\s*|\)$/g, ''), mm = g.match(/^(\d+)[:-](\d+)$/);
-    const va = mm ? (+mm[1] > +mm[2] ? '1' : +mm[1] < +mm[2] ? '2' : 'X') : null, est = !mm ? '' : va === b.p ? 'gana' : 'pierde';
-    return `<button class="vy ${est}" data-vivo="${m.id}" style="--sc:${SPC[m.s]}"><span class="vy-h"><i></i>EN VIVO${det ? ` · <span>${esc(det)}</span>` : ''}</span>
-      <span class="vy-m">${logo(m, 'a')}<b>${esc(g)}</b>${logo(m, 'b')}</span>
-      <span class="vy-p"><em>${esc(pn(m, b.p))}</em> ${O(b.o)}</span>
-      <span class="vy-c"><span>Cobrarías <b>${N(b.stake * b.o)}${coin()}</b></span>${est ? `<strong>${est === 'gana' ? '▲ Vas ganando' : '▼ Vas perdiendo'}</strong>` : ''}</span></button>` }).join('');
+  if (!bs.length) return '';
+  const cards = bs.map((b) => {
+    const m = byId(b.m), d = vyDatos(m), lid = vyLider(m, d), est = !lid ? '' : lid === b.p ? 'gana' : 'pierde';
+    const fila = (s, p) => `<span class="vy-eq ${b.p === p ? 'mio' : ''}">${logo(m, s)}<b>${esc(s === 'a' ? m.a : m.b)}</b><strong>${(s === 'a' ? d.sa : d.sb) ?? '·'}</strong>${d.ra != null && d.rb != null ? `<small>${s === 'a' ? d.ra : d.rb}</small>` : ''}</span>`;
+    return `<button class="vy ${est}" data-vivo="${m.id}"><span class="vy-h"><i></i><em>EN VIVO</em><span>${esc(d.mapa || SP[m.s][0])}</span></span>
+      ${fila('a', '1')}${fila('b', '2')}
+      ${b.p === 'X' ? '<span class="vy-x">Vas con el empate</span>' : ''}
+      <span class="vy-c"><span>Cobrarías <b>${N(b.stake * b.o)}${coin()}</b></span>${est ? `<em class="vy-e">${est === 'gana' ? '▲ Ganando' : '▼ Perdiendo'}</em>` : ''}</span></button>`;
+  }).join('');
+  return `<div class="vy-pista" data-vyp>${cards}</div>${bs.length > 1 ? `<div class="vy-nav"><button data-vyx="-1" aria-label="Anterior">‹</button><span>${bs.length} en vivo</span><button data-vyx="1" aria-label="Siguiente">›</button></div>` : ''}`;
 }
 function pintaVivoYo() {
   const me0 = document.getElementById('me'); if (!me0) return;
@@ -1588,8 +1738,12 @@ function pintaVivoYo() {
   const h = vivoYoHtml();
   if (!h) { if (el) el.remove(); return }
   if (!el) { el = document.createElement('div'); el.id = 'vivoyo'; me0.before(el) }
-  if (el.dataset.h !== h) { el.dataset.h = h; el.innerHTML = h; if (window.GM_LANG) GM_LANG.traduce(el) }
+  if (el.dataset.h !== h) {
+    el.dataset.h = h; el.innerHTML = h; if (window.GM_LANG) GM_LANG.traduce(el);
+    const p = el.querySelector('[data-vyp]'); if (p) { p.scrollLeft = VYX; p.onscroll = () => { VYX = p.scrollLeft } }
+  }
 }
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-vyx]'); if (!b) return; const p = document.querySelector('#vivoyo [data-vyp]'); if (p) p.scrollBy({ left: +b.dataset.vyx * p.clientWidth, behavior: 'smooth' }) });
 function render() {
   if (!loaded) return;
   NOW = Date.now();
@@ -1715,7 +1869,7 @@ document.addEventListener('click', (e) => { const b = e.target.closest('[data-la
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lga]'); if (!b) return; const n = document.querySelector('[data-lgs]'); n?.scrollBy({ left: +b.dataset.lga * n.clientWidth * 0.8, behavior: 'smooth' }) });
 document.addEventListener('click', async (e) => {
   if (S.onl && !e.target.closest('.onl')) { S.onl = false; pintaOnline() }
-  const t = e.target.closest('[data-vivo],[data-fav],[data-nov],[data-ct],[data-ft],[data-tclaim],[data-bsp],[data-bp],[data-side],[data-bm],[data-dv],[data-dtv],[data-mt],[data-mp],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
+  const t = e.target.closest('[data-jugmas],[data-abf],[data-abpg],[data-eqv],[data-eqtab],[data-eqpg],[data-vivo],[data-fav],[data-nov],[data-ct],[data-ft],[data-tclaim],[data-bsp],[data-bp],[data-side],[data-bm],[data-dv],[data-dtv],[data-mt],[data-mp],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
   const d = t.dataset;
   if (d.side && t.matches('[data-side]')) { S.shTodos = false; S.side = d.side; document.querySelector('.det')?.scrollTo?.(0, 0); return render() }
   if (d.act === 'sheet-back') { S.side = null; return render() }
@@ -1759,7 +1913,13 @@ document.addEventListener('click', async (e) => {
   if (d.act === 'nvp') { S.nvp = !S.nvp; if (S.nvp) { S.rew = false; if (!NOVS) cargaNov(); novAbre() } return render() }
   if (d.act === 'anim') { if (window.GM_ANIM) GM_ANIM.set(!GM_ANIM.on()); toast(window.GM_ANIM && GM_ANIM.on() ? 'Animaciones encendidas' : 'Animaciones apagadas'); return render() }
   if (d.act === 'sh-todos') { S.shTodos = !S.shTodos; return render() }
-  if (d.act === 'sh-info') { const box = document.getElementById('sheet-box'); S.eqp = S.eqp ? null : box ? { m: box.dataset.m, side: box.dataset.side } : null; return render() }
+  if (d.act === 'sh-info') { const box = document.getElementById('sheet-box'), m = box && byId(box.dataset.m); S.eqp = S.eqp ? null : m ? { pila: [eqDeMatch(m, box.dataset.side)], tab: 'resumen', pag: 0 } : null; return render() }
+  if (d.abf) { const [k, v] = d.abf.split('|'); S.abf = { ...(S.abf || {}), [k]: v || '' }; S.abpg = 0; return render() }
+  if (d.abpg != null && t.matches('[data-abpg]')) { S.abpg = +d.abpg; render(); document.querySelector('.ab-fil')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); return }
+  if (d.act === 'eq-atras') { if (S.eqp?.pila.length > 1) { S.eqp.pila.pop(); S.eqp.tab = 'resumen'; S.eqp.pag = 0 } return render() }
+  if (d.eqv) { let x; try { x = JSON.parse(d.eqv) } catch { return } if (S.eqp) { S.eqp.pila.push(x); S.eqp.tab = 'resumen'; S.eqp.pag = 0 } return render() }
+  if (d.eqtab) { if (S.eqp) { S.eqp.tab = d.eqtab; S.eqp.pag = 0 } return render() }
+  if (d.eqpg != null && t.matches('[data-eqpg]')) { if (S.eqp) S.eqp.pag = +d.eqpg; return render() }
   if (d.act === 'ru-todos') { S.ruTodos = !S.ruTodos; return render() }
   if (d.act === 'rw') { S.rew = !S.rew; if (S.rew) S.nvp = false; return render() }
   if (d.tclaim) { const { data, error } = await db.rpc('claim_time_reward', { p_min: +d.tclaim }); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} por tu tiempo en la app`); return refresh() }
@@ -1800,6 +1960,7 @@ document.addEventListener('click', async (e) => {
   else if (d.vis) { const { error } = await db.rpc('admin_set', { p_key: 'vis', p_value: d.vis }); if (error) return toast(errMsg(error)); return refresh() }
   else if (d.pf) S.pf = d.pf;
   else if (d.prof) { if (S.scr !== 'perfil') S.prev = S.scr; S.prof = d.prof; S.scr = 'perfil'; S.sheet = false; document.getElementById('view').scrollTop = 0 }
+  else if (d.jugmas) S.jugN = (S.jugN || 8) + 8;
   else if (d.goto) { S.scr = 'partidos'; S.foc = d.goto; S.sheet = true; document.getElementById('view').scrollTop = 0 }
   else if (d.pick) { S.side = null; const [m, p] = d.pick.split('|'); S.sel = isSel(byId(m), p) ? null : { m, p }; if (S.foc !== m) { S.foc = m; S.sheet = true } }
   else if (d.stake) { S.stake = d.stake === 'all' ? me().s : +d.stake; return updStake() }

@@ -107,3 +107,53 @@ En `const R = [ ... ]` (frases con números o nombres; las de `Apostar N` y `Ver
   rondas posteriores a eso más las que han tenido tiempo de acabar desde entonces (155 s por ronda). Con el sincronizador cada 10 minutos
   quedan unas 3 a 5 rondas "dudosas" por mapa en las que alguien que mirase vlr.gg podría apostar a una ronda ya acabada (máximo 50 por
   apuesta, una por ronda y jugador). Con `PRED_WATCH_S=540` el hueco baja a menos de una ronda.
+
+## 022b: predicciones con retraso y cuotas según el estado (30-10, urgente)
+
+Cargar `db/022b_pred_retraso.sql` DESPUÉS de 022 (y probar con `db/022b_prueba.sql`, que acaba en PRUEBA SUPERADA; esa prueba sustituye a la
+de 022 para las reglas de predicción, que ya no son las mismas). Vuelve a dar el grant de `ex_pred_gol` y `ex_pred_ronda` solo a authenticated.
+Cambia: la ronda de Valorant tiene que estar 3 rondas por delante de lo que sabe la base (`pred_ronda_margen`), nada cerca del descanso ni con el
+mapa acabando, la ventana del gol empieza a los 3 minutos (`pred_gol_retraso`), y las cuotas salen del estado en vivo (`ex_live`, que escribe el
+sincronizador) con margen del 6 %, entre 1,15 y 4,00, congeladas al apostar. La app manda la cuota que enseña (`p_odds`): si la real ha bajado más
+de 0,05, avisa en vez de cobrar. Si la llamada falla por permisos, muestra "Predicciones cerradas un momento".
+
+Diccionario de inglés, en `D`:
+
+```js
+    'Predicciones cerradas un momento': 'Predictions closed for a moment', 'Prórroga: sin predicciones.': 'Extra time: no predictions.', 'Prórroga: sin predicciones': 'Extra time: no predictions',
+    'Sin datos frescos del directo': 'No fresh live data', 'Predicción rápida resuelta': 'Quick prediction settled',
+    'Estamos cerca del descanso entre mitades: sin predicciones hasta pasarlo.': 'Close to the half time break: no predictions until it is over.',
+    'El mapa está acabando: sin predicciones hasta el siguiente.': 'The map is about to end: no predictions until the next one.',
+    'Queda muy poco partido para una ventana de 10 minutos': 'Too little of the match is left for a 10 minute window',
+    '¿Quién gana la ronda?': 'Who wins the round?',
+    'Cuenta desde 3 minutos después de apostar, durante 10 minutos, porque ESPN va con retraso respecto al directo. La cuota depende del minuto y del marcador y se queda fija al apostar.': 'Counts from 3 minutes after you bet, for 10 minutes, because ESPN runs behind the live stream. The odds depend on the minute and the score and stay fixed once you bet.',
+    'El stream va por delante de vlr.gg, por eso se apuesta a una ronda que todavía no ha empezado, 3 rondas más allá de lo que marca vlr.gg. La cuota depende de cómo va el mapa y se queda fija al apostar.': 'The stream runs ahead of vlr.gg, so you bet on a round that has not started yet, 3 rounds beyond what vlr.gg shows. The odds depend on how the map is going and stay fixed once you bet.',
+```
+
+En `R` (sustituyen a las de `cuota fija · máximo` y `Has apostado` de arriba):
+
+```js
+    [/cuota fija al apostar · máximo ([\d.]+)$/, 'odds fixed when you bet · max $1'],
+    [/^Has apostado (\d+) a ([\d,]+) a la ronda (\d+)$/, 'You bet $1 at $2 on round $3'], [/^Has apostado (\d+) a ([\d,]+) · cuenta de (.+) a (.+)$/, 'You bet $1 at $2 · counts from $3 to $4'],
+    [/ · vlr\.gg marca (\d+) rondas$/, ' · vlr.gg shows $1 rounds'],
+    [/^La cuota ha cambiado: ahora es (.+) \(te enseñaban (.+)\)$/, 'The odds changed: now $1 (you were shown $2)'],
+```
+
+## Cash out (024): lo que está hecho y lo que falta (30-10)
+
+**Hecho y probado en PGlite:** `db/024_cashout.sql` y `db/024_prueba.sql` (PRUEBA SUPERADA, también con 020 y 021 cargadas). Carga: después de 022 y 022b
+(comparte con 022b `ex_live` y el modelo, con las mismas definiciones). Antes del partido vale importe × cuota apostada / cuota actual × 0,95; en directo
+importe × cuota × probabilidad × 0,90 (fútbol Poisson con marcador y minuto; Valorant y CS2 con mapas, rondas y BO; UFC solo antes), con tope en lo que
+paga si gana y mínimo 1, datos en vivo de menos de 3 minutos, sin cash out con cuota mejorada. `cash_out(p_bet, p_min)` recalcula en el servidor, cierra
+como `status 'cashout'`, apunta ledger `cashout`, avisa en el chat y hace `bump()`. El bote, los premios de la semana y los trofeos lo cuentan.
+`cash_out_quote(bet)` y `cash_out_quotes()` dan el valor. `sync/sync.mjs` ya escribe el estado en vivo (`sync_ex_live_put`: fútbol con ESPN, Valorant con
+vlr.gg, CS2 con PandaScore) en cada vuelta. `app.js` ya trata la apuesta retirada como resuelta (`won` con beneficio, `lost` con pérdida, `cash = true`):
+sello RETIRADA en Mis apuestas y en el historial, `perd()` para la pérdida real, KIND `cashout`.
+
+**Falta (la app):** el botón "Cash out N" con confirmación de dos toques y refresco cada 20 s. Está escrito en `app/nueva/cashout-pendiente.js.txt` sin
+probar. Para meterlo en `extras.js`: pegar su contenido antes de `/* ---------- clics ---------- */`, y además
+1. en `rev()`: `if (document.querySelector('.bol, #vivoyo .vy')) { cargaCO(); parcheaCash() }`;
+2. un listener de clic en fase de captura (para que el boleto no navegue): `document.addEventListener('click', (e) => { const c = e.target.closest('[data-xc]'); if (c) { e.stopPropagation(); e.preventDefault(); pideCO(+c.dataset.bet) } }, true)`;
+3. el CSS: `.xc-btn` (píldora dorada, `.sure` verde, `.neg` gris cuando cobras menos de lo apostado), `.bol-n .xc-btn{margin-left:auto}` y `.xc-vy{margin-top:6px}`;
+4. diccionario de inglés: `Cash out N`, `¿Cobrar? Toca otra vez N`, `Retirada` (RETIRADA).
+Tampoco está mirado: Discord (021) cuenta solo 'won' y 'lost', así que no cuenta el cash out.

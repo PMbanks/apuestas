@@ -120,13 +120,14 @@
   /* --- CS2, por la Edge Function --- */
   let edgeFallo = 0;
   async function edgeCs2() {
-    if (Date.now() - edgeFallo < 180000) return null;
+    // si falla (aun no desplegada, o un mal momento) se lanza el error: cached() devuelve entonces el ultimo dato bueno en vez de "no hay nada"
+    if (Date.now() - edgeFallo < 180000) throw new Error('edge en pausa');
     const probar = async (opts) => { const r = await fetch(`${EDGE}?cs2=1`, { cache: 'no-store', ...opts }); if (!r.ok) throw new Error(r.status); const j = await r.json(); if (!j.ok) throw new Error('mal'); return j.matches || [] };
     // la funcion pide la sesion del jugador (comprobacion de JWT encendida): se manda la de la app
     try { const tok = (typeof db !== 'undefined' && (await db.auth.getSession()).data?.session?.access_token) || null;
       if (tok) return await probar({ headers: { apikey: CFG.anon, authorization: 'Bearer ' + tok } }) } catch {}
     try { return await probar() } catch {}
-    edgeFallo = Date.now(); return null;
+    edgeFallo = Date.now(); throw new Error('edge no contesta');
   }
   const cs2Lista = () => cached('cs2', 15000, edgeCs2);
   async function serieCs2(a, b) {
@@ -212,7 +213,7 @@
       det = `<section class="vv-det ${m.est}"><header><h3>${esc(mapaNombre(m))}</h3><span class="${enCurso ? 'rojo' : ''}">${enCurso ? '<i class="pto"></i>' : ''}${estadoMapa}</span></header>${marcador}${cinta}${jug}</section>`;
     }
     const pb = s.picks?.length ? `<p class="vv-pb">${s.picks.map((x) => `<span class="${esc(x.accion)}">${x.accion === 'ban' ? 'ban' : x.accion === 'pick' ? 'pick' : 'queda'} ${esc(x.mapa)}${x.eq ? ' ' + esc(x.eq) : ''}</span>`).join('')}</p>` : '';
-    return `${cab}${chips}${det}${pb}<p class="vv-fuente">${esc(s.fuente)} · se actualiza cada 20 s</p>`;
+    return [cab, chips, det, `${pb}<p class="vv-fuente">${esc(s.fuente)} · se actualiza cada 20 s</p>`]; // secciones: se parchean una a una
   }
 
   /* ---------- futbol ---------- */
@@ -228,7 +229,7 @@
     cambio: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5h9M9.5 3l2.5 2.5L9.5 8M13 10.5H4M6.5 8L4 10.5 6.5 13"/></svg>',
   };
   function pintaFutbol(d) {
-    const comp = d?.header?.competitions?.[0]; if (!comp) return '';
+    const comp = d?.header?.competitions?.[0]; if (!comp) return null;
     const st = comp.status?.type || {}, h = comp.competitors?.find((x) => x.homeAway === 'home'), a = comp.competitors?.find((x) => x.homeAway === 'away');
     const logoF = (c) => c?.team?.logos?.[0]?.href || c?.team?.logo || '';
     const nom = (c) => c?.team?.shortDisplayName || c?.team?.displayName || '';
@@ -266,37 +267,90 @@
         const nx = parseFloat(x) || 0, ny = parseFloat(y) || 0, tot = nx + ny || 1;
         return `<div class="vv-st"><b class="${nx > ny ? 'ml' : ''}">${esc(x ?? '·')}${u}</b><span class="et">${n}</span><b class="${ny > nx ? 'ml' : ''}">${esc(y ?? '·')}${u}</b><div class="bs"><u class="a" style="width:${(nx / tot) * 100}%"></u><u class="b" style="width:${(ny / tot) * 100}%"></u></div></div>`;
       }).join('');
-    return `${hero}${linea}${filas ? `<div class="vv-sts">${filas}</div>` : ''}<p class="vv-fuente">ESPN · se actualiza cada 30 s</p>`;
+    return [hero, linea, `${filas ? `<div class="vv-sts">${filas}</div>` : ''}<p class="vv-fuente">ESPN · se actualiza cada 30 s</p>`];
   }
 
-  /* ---------- el marcador corto en toda la app, y que no se pierda ---------- */
-  const fijados = new Map(); // id del partido -> { txt, t }
+  /* ---------- el marcador corto y los datos por equipo en toda la app, y que no se pierdan ----------
+     m.score  = "1:0 · Haven 7-5" (serie y mapa en juego), para listas y chat.
+     m.vivo   = datos estructurados, siempre con "a" = el local de NUESTRO partido (m.a) y "b" = el visitante (m.b),
+                aunque vlr.gg o bo3.gg traigan los equipos al reves (se orienta por nombre en serieValorant y serieCs2):
+        { k:'e', a:{mapas, rondas}, b:{mapas, rondas}, mapa:'Haven', n:2, total:3, lidera:'a'|'b'|'' }   Valorant y CS2
+        { k:'f', a:{mapas:goles}, b:{mapas:goles}, minuto:"74'", lidera }                               futbol
+        lidera = quien gana la serie; si van empatados, quien gana el mapa en juego; si no, ''.            */
+  const fijados = new Map(); // id del partido -> { txt, vivo, t }
+  const EDAD = 15 * 60000;   // un partido en vivo conserva su ultimo dato 15 min aunque la fuente falle un rato
   function aplica() {
     if (typeof M === 'undefined') return;
     const ahora = Date.now();
-    for (const m of M) { const f = fijados.get(m.id); if (f && m.live && ahora - f.t < 240000 && m.score !== f.txt) m.score = f.txt }
+    for (const m of M) {
+      const f = fijados.get(m.id); if (!f || !m.live || ahora - f.t > EDAD) continue;
+      if (m.score !== f.txt) m.score = f.txt;
+      m.vivo = f.vivo;
+    }
   }
+  const totalMapas = (s) => num(String(s.fmt).replace(/\D/g, '')) || s.maps.length || null;
+  function estructura(s) {
+    const v = s.estado === 'live' ? enJuego(s) : null;
+    const ra = v && v.a != null ? v.a : null, rb = v && v.b != null ? v.b : null;
+    return {
+      k: 'e', a: { mapas: s.a.s, rondas: ra }, b: { mapas: s.b.s, rondas: rb }, mapa: v ? mapaNombre(v) : '', n: v ? v.n : null, total: totalMapas(s),
+      lidera: s.a.s !== s.b.s ? (s.a.s > s.b.s ? 'a' : 'b') : ra != null && rb != null && ra !== rb ? (ra > rb ? 'a' : 'b') : '',
+    };
+  }
+  function estructuraFutbol(d) {
+    const comp = d?.header?.competitions?.[0]; if (!comp) return null;
+    const h = comp.competitors?.find((x) => x.homeAway === 'home'), a = comp.competitors?.find((x) => x.homeAway === 'away'), st = comp.status?.type || {};
+    const gh = num(h?.score) ?? 0, ga = num(a?.score) ?? 0;
+    return { k: 'f', a: { mapas: gh, rondas: null }, b: { mapas: ga, rondas: null }, minuto: st.name === 'STATUS_HALFTIME' ? 'Descanso' : st.state === 'in' ? comp.status?.displayClock || '' : '', lidera: gh === ga ? '' : gh > ga ? 'a' : 'b' };
+  }
+  // para que app.js lo pinte: el numero de cada equipo (mapas en grande, rondas en pequeño) y la linea "Mapa 2 de 3 · Haven" / el minuto
+  const quienGana = (v, s) => { const x = v[s], y = v[s === 'a' ? 'b' : 'a']; return x.mapas > y.mapas || (x.mapas === y.mapas && x.rondas != null && y.rondas != null && x.rondas > y.rondas) };
+  function numHtml(m, s) {
+    const v = m?.vivo; if (!v || !m.live || !v[s]) return '';
+    const x = v[s];
+    return `<span class="vn${quienGana(v, s) ? ' ml' : ''}" data-eq="${s}"><em>${x.mapas}</em>${x.rondas != null ? `<small>${x.rondas}</small>` : ''}</span>`;
+  }
+  function lineaPartes(m) {
+    const v = m?.vivo; if (!v || !m.live) return [];
+    if (v.k === 'f') return v.minuto ? [/^\d/.test(v.minuto) ? 'Minuto ' + v.minuto : v.minuto] : [];
+    if (!v.mapa) return [];
+    return [v.total ? `Mapa ${v.n} de ${v.total}` : `Mapa ${v.n}`, v.mapa];
+  }
+  const lineaHtml = (m) => { const p = lineaPartes(m); return p.length ? `<span class="vl">${p.map((x) => `<i>${esc(x)}</i>`).join('')}</span>` : '' };
+  const lineaTxt = (m) => lineaPartes(m).join(' · ');
+
   // load() rehace M desde la base cada vez que se manda un mensaje, llega un pulso o pasan 5 minutos; render() repinta.
-  // Envolverlos aqui vuelve a poner el ultimo marcador antes de que nadie lo vea.
+  // Envolverlos aqui vuelve a poner el ultimo marcador y los datos por equipo antes de que nadie los vea.
   try {
     const b0 = window.build, r0 = window.render;
     if (typeof b0 === 'function') window.build = function () { const r = b0.apply(this, arguments); aplica(); return r };
     if (typeof r0 === 'function') window.render = function () { aplica(); return r0.apply(this, arguments) };
   } catch {}
 
+  const firma = (v) => (v ? JSON.stringify([v.a, v.b, v.mapa, v.n, v.minuto]) : '');
   let globalT = 0;
   async function marcadores() {
     clearTimeout(globalT);
     try {
       if (!document.hidden && typeof M !== 'undefined') {
         let cambia = false;
+        const pon1 = (m, txt, vivo) => {
+          fijados.set(m.id, { txt, vivo, t: Date.now() });
+          if (m.score !== txt || firma(m.vivo) !== firma(vivo)) cambia = true;
+          m.score = txt; m.vivo = vivo;
+        };
         for (const m of M.filter((x) => x.live && (x.s === 'v' || x.s === 'c')).slice(0, 12)) {
           let s = null; try { s = await serieDe(m) } catch {}
           if (!s) continue;
-          const txt = resumen(s);
-          fijados.set(m.id, { txt, t: Date.now() });
-          if (m.score !== txt) { m.score = txt; cambia = true }
-          memoria.set(m.id, s);
+          s._t = Date.now(); memoria.set(m.id, s);
+          pon1(m, resumen(s), estructura(s));
+        }
+        for (const m of M.filter((x) => x.live && x.s === 'f' && x.espn).slice(0, 8)) {
+          const ek = [m.espn.sport, m.espn.league, m.espn.event].join('|');
+          let d = null; try { d = await futbol(ek) } catch {}
+          const v = estructuraFutbol(d); if (!v) continue;
+          const cuerpoF = pintaFutbol(d); if (cuerpoF) htmlPor.set(m.id, cuerpoF);
+          pon1(m, `${v.a.mapas}:${v.b.mapas}`, v);
         }
         if (cambia && typeof render === 'function' && !document.activeElement?.matches('input,textarea')) render();
       }
@@ -306,21 +360,29 @@
   setTimeout(marcadores, 2500);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { marcadores(); tick() } });
 
-  /* ---------- montaje en la pantalla Directo ---------- */
-  const memoria = new Map(); // id -> serie
-  const htmlPor = new Map(); // id -> html (futbol)
+  /* ---------- montaje en la pantalla Directo ----------
+     Dentro de un partido nunca se ve un salto: lo ultimo que se tiene de ese partido se vuelve a poner al instante cuando la
+     app rehace la vista (se reutiliza el mismo elemento, con sus imagenes y su posicion) y luego se parchea por secciones,
+     solo lo que ha cambiado. Si la fuente falla un momento se sigue enseñando lo ultimo (hasta 5 min).               */
+  const memoria = new Map(); // id -> serie (Valorant, CS2)
+  const htmlPor = new Map(); // id -> secciones (futbol)
+  const nodos = new Map();   // id -> el elemento .vv que ya esta montado
   const sel = { id: null, idx: null };
-  let timer = 0;
+  let timer = 0, chipsX = 0;
   const dvId = () => (document.querySelector('.dv')?.dataset.dvKey || '').split('|')[0];
   const hash = (s) => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36) };
+  document.addEventListener('scroll', (e) => { if (e.target?.classList?.contains('vv-chips')) chipsX = e.target.scrollLeft }, true);
   async function tick() {
     clearTimeout(timer);
     const info = document.querySelector('.dv [data-dv-info]');
     if (info && !document.hidden) {
       const id = dvId(), m = typeof MI !== 'undefined' ? MI.get(id) : null, ek = info.dataset.espn || '';
       try {
-        if (/^soccer\|/.test(ek)) htmlPor.set(id, pintaFutbol(await futbol(ek)));
-        else if (m && (m.s === 'v' || m.s === 'c')) { const s = await serieDe(m); if (s) memoria.set(id, s); else memoria.delete(id) }
+        if (/^soccer\|/.test(ek)) { const c = pintaFutbol(await futbol(ek)); if (c) htmlPor.set(id, c) }
+        else if (m && (m.s === 'v' || m.s === 'c')) {
+          const s = await serieDe(m);
+          if (s) { s._t = Date.now(); memoria.set(id, s); if (m.live) { fijados.set(id, { txt: resumen(s), vivo: estructura(s), t: Date.now() }); aplica() } }
+        }
       } catch {}
       pon();
     }
@@ -328,19 +390,33 @@
   }
   function cuerpo(id) {
     const s = memoria.get(id);
-    if (s) return pintaSerie(s, sel.id === id ? sel.idx : null);
-    return htmlPor.get(id) || '';
+    if (s && Date.now() - s._t < 300000) return pintaSerie(s, sel.id === id ? sel.idx : null);
+    return htmlPor.get(id) || null;
   }
-  // la app repinta la informacion del directo cada poco: se vuelve a poner lo ultimo que hay
   function pon() {
     const info = document.querySelector('.dv [data-dv-info]'); if (!info) return;
-    const id = dvId(), inner = cuerpo(id), ya = info.querySelector('[data-vv]');
-    if (!inner) { if (ya) ya.remove(); return }
-    const hh = hash(inner);
-    if (ya && ya.dataset.h === hh) return;
-    const html = `<div class="vv" data-vv data-h="${hh}">${inner}</div>`;
-    if (ya) ya.outerHTML = html; else info.querySelector('.dv-meta')?.insertAdjacentHTML('afterend', html);
-    const nuevo = info.querySelector('[data-vv]'); if (nuevo && window.GM_LANG) GM_LANG.traduce(nuevo);
+    const id = dvId(), secs = cuerpo(id);
+    let ya = info.querySelector('[data-vv]');
+    if (!secs) { if (ya) ya.remove(); return }
+    if (!ya) {
+      ya = nodos.get(id);
+      if (!ya) { ya = document.createElement('div'); ya.className = 'vv'; ya.setAttribute('data-vv', '') }
+      nodos.set(id, ya);
+      const meta = info.querySelector('.dv-meta'); if (meta) meta.after(ya); else info.prepend(ya);
+    }
+    nodos.set(id, ya);
+    const lang = window.GM_LANG ? GM_LANG.get() : 'es';
+    secs.forEach((html, i) => {
+      let c = ya.children[i];
+      if (!c) { c = document.createElement('div'); c.className = 'vs'; ya.appendChild(c) }
+      const hh = hash(html + lang);
+      if (c.dataset.h === hh) return;
+      c.innerHTML = html; c.dataset.h = hh;
+      const nav = c.querySelector('.vv-chips'); if (nav) nav.scrollLeft = chipsX;
+      if (window.GM_LANG) GM_LANG.traduce(c);
+    });
+    while (ya.children.length > secs.length) ya.lastChild.remove();
+    const nav = ya.querySelector('.vv-chips'); if (nav && nav.scrollLeft !== chipsX) nav.scrollLeft = chipsX; // un elemento recien recolocado vuelve a su sitio
   }
   new MutationObserver(() => { if (document.querySelector('.dv [data-dv-info]') && !document.querySelector('[data-vv]')) pon() }).observe(document.documentElement, { childList: true, subtree: true });
   document.addEventListener('click', (e) => {
@@ -348,7 +424,7 @@
     if (c) { sel.id = dvId(); sel.idx = Number(c.dataset.vvmap); pon(); return }
     if (e.target.closest('[data-dv], .dv-btn')) setTimeout(tick, 300);
   });
-  window.GM_VIVO = { pintaSerie, pintaFutbol, resumen, parecido, serieValorant, serieCs2, memoria };
+  window.GM_VIVO = { estructura, estructuraFutbol, n: numHtml, linea: lineaHtml, lineaTxt, pintaSerie, pintaFutbol, resumen, parecido, serieValorant, serieCs2, memoria };
   tick();
 
   const css = document.createElement('style');
@@ -476,14 +552,26 @@
 /* el marcador corto en las listas del directo: una sola linea, sin recortar los nombres */
 .dv-it b{display:flex;flex-wrap:wrap;gap:0 4px;white-space:normal!important}
 .dv-it b i{flex:none;margin:0!important}
-/* y en el boleto de Mis apuestas y en el perfil: el texto es mas largo que un 1:0 */
-.bol-sc{font-size:19px!important;line-height:1.2;text-align:center;white-space:nowrap}
-.live-m b{font-size:17px;text-wrap:balance}
-@media (max-width:560px){.bol-sc{font-size:14px!important;white-space:normal;max-width:96px}}
-/* el marcador corto en la lista de Partidos: la columna de la hora se ensancha para que quepa en una linea (y si el mapa tiene un nombre largo, baja con gracia a dos) */
-.row .t small.sc{font-size:12px;line-height:1.25;white-space:normal}
-@media (min-width:861px){#view:has(.row .t small.sc) .row{grid-template-columns:116px 30px minmax(0,1fr) 44px 72px 72px 72px}}
-@media (max-width:860px){#view:has(.row .t small.sc) .row{grid-template-columns:84px minmax(0,1fr) repeat(3,52px)}.row .t small.sc{font-size:11px}}
+/* los datos por equipo (m.vivo) que pinta app.js: numeros al lado de cada equipo y una linea "Mapa 2 de 3 · Haven" */
+.vs{display:contents}
+.vn{display:inline-flex;align-items:baseline;gap:6px;flex:none;margin-left:auto;padding-left:10px;font-family:var(--mono);white-space:nowrap;overflow:visible!important;text-overflow:clip!important}
+.vn em{font:700 19px/1 var(--mono);font-style:normal;color:var(--mute);min-width:.65em;text-align:right}
+.vn small{font:500 12px/1 var(--mono);color:var(--dim);min-width:1.3em;text-align:center;padding:3px 6px;border-radius:999px;background:rgba(255,255,255,.08)}
+.vn.ml em{color:var(--ink)}.vn.ml small{color:var(--soft)}
+.vl{display:inline-flex;flex-wrap:wrap;gap:0 6px;font:500 11px/1.3 var(--mono);color:var(--mute);white-space:normal}
+.vl i{font-style:normal;font-weight:600}.vl i+i{color:#ff8f98}.vl i+i::before{content:'·';margin-right:6px;color:var(--dim)}
+.row.cv{height:82px}.row.cv .tms{row-gap:3px}
+@media (max-width:860px){.row.cv{height:88px}.row.cv .tm{gap:7px;font-size:14px}.row.cv .vn{padding-left:4px;gap:4px}.row.cv .vl{font-size:10px;gap:0 4px}.row.cv .vn em{font-size:17px}.row.cv .vn small{font-size:10.5px;padding:2px 5px;min-width:0}}
+.row .tms .vl{margin-top:-1px}
+.lvc-m:has(.vn){grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 14px}.lvc-m:has(.vn) .lvc-sc{grid-row:2;grid-column:1/-1;min-width:0}
+.lvc-t .vn{margin:0 0 0 auto;padding:0}.lvc-t.b .vn{margin:0 auto 0 0}
+.lvc-t .vn em{font-size:34px}.lvc-t .vn small{font-size:14px}
+.lvc-sc .vl{flex-direction:column;align-items:center;gap:2px;text-align:center}.lvc-sc .vl i+i::before{display:none}.lvc-sc .vl{font-size:12px}
+@media (max-width:560px){.lvc-t .vn em{font-size:26px}}
+.bol-t .vn{margin:6px auto 0;padding:0}.bol-t .vn em{font-size:30px}
+.bol-sc .vl{flex-direction:column;align-items:center;gap:2px;text-align:center}.bol-sc .vl i+i::before{display:none}
+.live-m .vn{margin:6px auto 0;padding:0}.live-m>b .vl{flex-direction:column;align-items:center;gap:2px;text-align:center}.live-m>b .vl i+i::before{display:none}
+.vy-m .vn{margin:0;padding:0}.vy-m .vn em{font-size:22px}
 html.sin-anim .vv-live i,html.sin-anim .pto{animation:none}html.sin-anim .vv-bar u{transition:none}`;
   document.head.appendChild(css);
 })();

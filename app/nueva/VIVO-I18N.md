@@ -48,3 +48,18 @@ partidos con cobertura completa; en los de torneos pequeños el mapa en juego sa
 Serie y mapa en juego con sus rondas, por ejemplo `1:0 · Haven 7-5`. Sin rondas (CS2 de torneos pequeños) queda `1:0 · Cache`.
 Lleva un unir-palabras invisible (U+2060) tras el guion para que `7-5` no se parta en dos líneas; no cambia nada de lo que se ve.
 Se guarda por partido y se vuelve a poner cada vez que `load()` rehace `M` o se llama a `render()` (envuelve `build` y `render` desde vivo.js).
+
+## Datos por equipo (`m.vivo`) y lo que pinta app.js con ellos
+
+`m.vivo` lo pone vivo.js en cada partido en vivo (Valorant, CS2 y fútbol) y se repone solo cuando `load()` rehace `M`. **"a" es siempre el local de nuestro
+partido (`m.a`) y "b" el visitante (`m.b`)**: vlr.gg y bo3.gg se orientan por nombre antes de rellenarlo, aunque traigan los equipos al revés.
+
+```js
+{ k:'e', a:{mapas:1, rondas:5}, b:{mapas:1, rondas:12}, mapa:'Split', n:3, total:3, lidera:'b' }   // Valorant y CS2 (rondas = null si la fuente no las da)
+{ k:'f', a:{mapas:0 /* goles */}, b:{mapas:1}, minuto:"74'", lidera:'b' }                              // fútbol
+```
+
+`lidera` = quien gana la serie; si van empatados, quien gana el mapa en juego; si no, `''`. Para pintar: `GM_VIVO.n(m, 'a'|'b')` (número del equipo y, pequeño,
+sus rondas) y `GM_VIVO.linea(m)` (la línea "Mapa 3 de 3 · Split", o "Minuto 74'" en fútbol); `GM_VIVO.lineaTxt(m)` da lo mismo como texto.
+
+Frase nueva para las reglas `R`: `[/^Minuto (.+)$/, 'Minute $1']`.
