@@ -2,6 +2,19 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "directo-0045",
+   "fecha": "2026-10-31",
+   "hora": "00:45",
+   "titulo": "Apostar en directo",
+   "texto": "Con el partido empezado, en su ficha salen cuotas en vivo que se mueven con el marcador. La apuesta queda en revisión hasta la siguiente lectura: si hubo gol o mapa justo al apostar, se anula y te devuelve todo. Hasta 1.000 por partido.",
+   "img": [
+    "novedades/directo.webp"
+   ],
+   "ir": "partidos",
+   "titulo_en": "Live betting",
+   "texto_en": "Once a match starts, its page shows live odds that move with the score. The bet stays under review until the next update: if a goal or map happened right as you bet, it is voided and refunded. Up to 1,000 per match."
+  },
+  {
    "id": "combinadas-todos-0015",
    "fecha": "2026-10-31",
    "hora": "00:15",

@@ -842,7 +842,8 @@ function ficha(m) {
     <div class="prob-l">${ps.map((p, i) => `<span>${esc(p === 'X' ? 'empate' : pn(m, p))} ${pct[i]}%</span>`).join('')}</div>` : ''}
     <div class="picks ${open ? '' : 'closed'}" style="--n:${Math.max(1, ps.length)}">${ps.map((p) => `<button class="pk ${isSel(m, p) ? 'on' : ''} ${isMine(m, p) ? 'mine' : ''}" data-pick="${m.id}|${p}" ${open ? '' : 'disabled'}><span class="k">${p === 'X' ? 'X · EMPATE' : p + ' · GANA'}</span><span class="n">${esc(pn(m, p))}</span><b>${O(po(m, p))}</b></button>`).join('')}</div>
     <p class="hint" style="margin-top:10px">${m.src === 'draftkings' ? 'Cuotas reales de DraftKings' : 'Cuotas calculadas con la forma y el récord'} · se congelan al apostar</p>`;
-  if (!open) h += m.status === 'final' ? `<p class="hint">${LOCK}Final ${esc(String(m.score || '').split(' ')[0])}. Ya se ha pagado.</p>` : `<p class="hint">${LOCK}Cerrado: ya ha empezado. Se paga solo al acabar.</p>`;
+  // en directo (db/031): directo.js rellena el hueco con las cuotas en vivo; si no hay, deja el aviso de cerrado
+  if (!open) h += m.status === 'final' ? `<p class="hint">${LOCK}Final ${esc(String(m.score || '').split(' ')[0])}. Ya se ha pagado.</p>` : m.live ? `<div class="lv-ap" data-lvap="${esc(m.id)}"><p class="hint">${LOCK}Cerrado: ya ha empezado. Se paga solo al acabar.</p></div>` : `<p class="hint">${LOCK}Cerrado: ya ha empezado. Se paga solo al acabar.</p>`;
   else if (!sel) h += `<p class="hint">Elige ${ps.length > 2 ? '1, X o 2' : '1 o 2'} para apostar.</p>`;
   else {
     const o = po(m, S.sel.p), st = stakeNow(), pv = ((st / Math.max(1, me().s)) * 100).toFixed(1);

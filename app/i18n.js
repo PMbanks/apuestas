@@ -17,6 +17,8 @@
 })();
 (function () {
   const D = {
+    // apostar en directo (31-10): frases enteras, antes de que las reglas sueltas cambien palabras sueltas
+    'la cuota se mueve con el marcador': 'odds move with the score',
     // Ajustes, moneda y ya jugados (30-10 noche)
     'Ajustes': 'Settings', 'Sonido y movimiento': 'Sound and motion', 'Sonidos': 'Sounds', 'Botones, ruletas, premios y mensajes': 'Buttons, spins, prizes and messages',
     'Ruletas, confeti y transiciones': 'Spins, confetti and transitions', 'Moneda': 'Currency', 'Cambia el logo y el nombre. Lo que tienes es lo mismo.': 'Changes the logo and the name. What you have stays the same.',
@@ -470,6 +472,12 @@
     // combinadas en Apuestas de todos y en el perfil (31-10)
     [/^(\d+) en juego$/, '$1 in play'], [/^perdida$/, 'lost'], [/^devuelta$/, 'refunded'], [/^Mejor cuota acertada$/, 'Best odds won'],
     [/^(\d+) hechas · (\d+) ganadas? · (\d+) perdidas?( · (\d+) en juego)?$/, (m, a, b, c, d, e) => `${a} made · ${b} won · ${c} lost${d ? ` · ${e} in play` : ''}`],
+    // apostar en directo (31-10, db/031)
+    [/^Apostar en directo$/, 'Live betting'], [/^la cuota se mueve con el marcador$/, 'odds move with the score'], [/^Cobrarías$/, 'You would get'],
+    [/^Apostar ([\d.,]+) a (.+) en directo$/, 'Bet $1 on $2 live'], [/^Apostando…$/, 'Placing…'], [/^Ha entrado a ([\d.,]+)\. En revisión hasta la siguiente lectura del marcador\.$/, 'Placed at $1. Under review until the next score update.'],
+    [/^Hasta ([\d.,]+) más en directo en este partido\. Tu apuesta queda en revisión hasta la siguiente lectura del marcador: si hubo gol o mapa justo al apostar, se anula y te devuelve todo\.$/, 'Up to $1 more live on this match. Your bet stays under review until the next score update: if a goal or map happened right as you bet, it is voided and fully refunded.'],
+    [/^(Esperando datos del directo|El partido no está en juego|La UFC no tiene apuestas en directo|Cerrado desde el minuto 80|Ahora no hay cuotas en directo)\. Se paga solo al acabar\.$/, (m, w) => `${{ 'Esperando datos del directo': 'Waiting for live data', 'El partido no está en juego': 'The match is not in play', 'La UFC no tiene apuestas en directo': 'UFC has no live betting', 'Cerrado desde el minuto 80': 'Closed from minute 80', 'Ahora no hay cuotas en directo': 'No live odds right now' }[w]}. Settles automatically at the end.`],
+    [/^Se paga solo al acabar\.$/, 'Settles automatically at the end.'], [/^En directo: ([\d.,]+) a ([\d.,]+)$/, 'Live: $1 at $2'],
     // decimales con punto en ingles (x1,25 a x1.25): esta va la ultima de la lista
     [/×(\d+),(\d\d)/g, '×$1.$2'],
   ];
