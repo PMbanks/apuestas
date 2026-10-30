@@ -1,4 +1,4 @@
-// Apuestas entre colegas: la app. Los datos viven en Supabase; aqui solo se pintan y se piden cosas.
+// Gambling Master: la app. Los datos viven en Supabase; aqui solo se pintan y se piden cosas.
 // El dinero nunca se calcula aqui: apostar, pagar y cobrar lo hacen las funciones de la base (db/001_init.sql).
 'use strict';
 const CFG = window.APP_CONFIG || {};

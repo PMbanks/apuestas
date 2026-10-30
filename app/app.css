@@ -559,3 +559,6 @@ body{min-height:100%}
 .pf-pass input{flex:1;min-width:0;padding:10px 0;background:none;border:0;border-bottom:1px solid var(--hair2);outline:none;font:500 16px var(--sans);color:var(--ink)}
 .pf-pass input:focus{border-bottom-color:var(--acc)}
 .pf-pass .go{width:auto;height:44px;margin:0;padding:0 22px}
+
+.lg-box>p.lockin{margin:12px 0 30px;font:800 13px var(--mono);letter-spacing:.42em;color:var(--acc)}
+.brand{font-size:12px;letter-spacing:.16em;white-space:nowrap}

@@ -685,3 +685,6 @@ a.tv:hover{text-decoration:underline}
 .calcrow{display:flex;align-items:center;flex-wrap:wrap;gap:10px 24px;padding:10px 0;border-bottom:1px solid var(--hair)}
 .calcrow .calc{margin-left:0}
 .calcrow .note{margin-left:auto;font:11px var(--mono);color:var(--dim)}
+
+.lg-box>p.lockin{margin:12px 0 30px;font:800 13px var(--mono);letter-spacing:.42em;color:var(--acc)}
+.brand{font-size:12px;letter-spacing:.16em;white-space:nowrap}

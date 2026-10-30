@@ -1,6 +1,6 @@
 {
-  "name": "Apuestas entre colegas",
-  "short_name": "Apuestas",
+  "name": "Gambling Master",
+  "short_name": "Gambling Master",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
