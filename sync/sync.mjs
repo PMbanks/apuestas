@@ -197,6 +197,7 @@ const ES = {
   csgo: { sport: 'c', tiers: new Set(['s', 'a', 'b', 'c']), ahead: 7 * DAY, up: 3, past: 3 },
 };
 const FICHA_VIEJA = 12 * 3600e3, FICHAS_POR_PASADA = 45;
+const FUERA_ES = /gamers ?club|betboom/i;
 const nombreLiga = (m) => {
   const l = m.league?.name || '', s = m.serie?.name || '';
   if (!s || s === l) return l || 'Torneo';
@@ -219,6 +220,7 @@ async function esports(game) {
     if (!t || t > NOW + cfg.ahead || t < NOW - 3 * DAY) continue;
     const tier = m.tournament?.tier;
     if (tier && !cfg.tiers.has(tier)) continue;
+    if (FUERA_ES.test(`${m.league?.name || ''} ${m.serie?.name || ''}`)) continue;           // PM, 01-11: fuera Gamers Club (CS2) y BetBoom (Valorant)
     const [A, B] = (m.opponents || []).map((o) => o.opponent);
     if (!A || !B) continue;
     const status = m.status === 'canceled' ? 'canceled' : m.status === 'finished' ? (m.winner_id ? 'final' : 'canceled') : m.status === 'running' ? 'live' : 'scheduled';

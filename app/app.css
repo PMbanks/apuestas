@@ -109,6 +109,10 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 .ft.on .ft-n{color:var(--acc)}
 .ft-o{display:flex;justify-content:space-between;font:500 16px var(--mono);color:var(--mute)}
 .ft-o b{font-weight:500;color:var(--ink)}
+/* PM 01-11: a 1280 a 1440 las tres cuotas se pegaban ("11,03X 7,882 1,28"): hueco fijo y, si no caben, letra mas pequena y sin el 1 X 2 */
+.ft{container-type:inline-size}.ft-o{gap:10px}.ft-o>span{white-space:nowrap}
+@container (max-width:210px){.ft-o{font-size:14px;gap:8px}}
+@container (max-width:170px){.ft-o{font-size:0;gap:8px}.ft-o b{font-size:13px}}
 .fil{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:26px;background:var(--bg);border-bottom:1px solid var(--hair);overflow-x:auto;scrollbar-width:none}
 .fil .note{margin-left:auto;font:11px var(--mono);color:var(--dim);white-space:nowrap}
 .day{display:flex;align-items:baseline;gap:12px;padding:24px 0 10px}
@@ -1730,6 +1734,8 @@ button.nvp-it:hover .nvp-im img{transform:scale(1.03)}
 .lv2.mas .lv2-row{grid-auto-columns:min(100%,max(440px,calc(50% - 7px)))}
 .lvc{scroll-snap-align:start;display:grid;gap:14px;min-width:0;padding:16px 20px 16px;border-radius:20px;background:radial-gradient(80% 120% at 50% 0%,rgba(224,100,111,.16),transparent 60%),linear-gradient(170deg,#2a2730,#21242c);text-align:left;transition:box-shadow var(--t)}
 .lvc:hover{box-shadow:0 0 0 1.5px rgba(224,100,111,.45)}
+/* PM 01-11 "va rarete": al llegar el marcador de vivo.js (mapas por equipo y "Mapa 3 de 5") la tarjeta crecia ~33 px y la lista de abajo saltaba; ahora tiene ya ese alto desde el principio */
+.lvc{min-height:193px;align-content:space-between}
 .lvc-h{display:flex;align-items:center;gap:8px;min-width:0;font:500 11px var(--mono);color:var(--mute)}
 .lvc-h em{font-style:normal;font-weight:700;letter-spacing:.16em;color:#ff8f98}
 .lvc-dot{width:8px;height:8px;border-radius:50%;background:#ff4d5e;animation:tkPulso 1.4s ease-out infinite}
@@ -1752,7 +1758,7 @@ button.nvp-it:hover .nvp-im img{transform:scale(1.03)}
 .lvc-nadie{color:var(--dim)}
 .lvc-ir{margin-left:auto;font:700 12px var(--sans);color:#ff8f98;white-space:nowrap}
 @media (max-width:860px){
-  .lvc{padding:14px 14px}
+  .lvc{padding:14px 14px;min-height:179px}
   .lvc-t{gap:8px}.lvc-t img{width:34px;height:34px}.lvc-t b{font-size:14px}
   .lvc-sc{min-width:64px}.lvc-sc strong{font-size:30px}
   .lvc-ir{display:none}

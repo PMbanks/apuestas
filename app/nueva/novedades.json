@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "directo-sin-saltos-0111",
+   "fecha": "2026-11-01",
+   "hora": "11:48",
+   "titulo": "Partidos sin saltos",
+   "texto": "Las tarjetas de En directo ya no crecen al llegar el marcador, así que la lista no se mueve sola. Las cuotas de arriba ya no se pegan, y fuera Gamers Club (CS2) y BetBoom (Valorant).",
+   "titulo_en": "Matches without jumps",
+   "texto_en": "Live cards no longer grow when the score arrives, so the list stays put. The top odds no longer run together, and Gamers Club (CS2) and BetBoom (Valorant) are gone.",
+   "img": "novedades/directo-sin-saltos.webp",
+   "ir": "partidos"
+  },
+  {
    "id": "perfil-pestanas-0105",
    "fecha": "2026-10-31",
    "hora": "01:05",
