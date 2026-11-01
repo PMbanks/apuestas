@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "liga-periodos-0111",
+   "fecha": "2026-11-01",
+   "hora": "21:15",
+   "titulo": "Ranking por periodos",
+   "texto": "En la Liga, el ranking de saldo se puede ver por Esta semana, Últimos 30 días o De siempre: cambia el orden, el primero destacado y lo que sube o baja cada uno. Sin mini gráficos en las filas, y al pasar el ratón por un jugador sale una tarjeta con su saldo, su puesto y sus mejores y peores semanas. Y las cuotas con flecha ya no se salen de su casilla.",
+   "titulo_en": "Rankings by period",
+   "texto_en": "In the League, the balance ranking can be viewed by This week, Last 30 days or All time: it changes the order, the highlighted leader and how much each one is up or down. No more mini charts on the rows, and hovering a player shows a card with their balance, rank and best and worst weeks. Odds with an arrow no longer spill out of their box.",
+   "img": "novedades/liga-periodos.webp",
+   "ir": "liga"
+  },
+  {
    "id": "ratio-0111",
    "fecha": "2026-11-01",
    "hora": "21:05",
