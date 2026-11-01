@@ -13,7 +13,7 @@
 --    El azar es de la base (cs_rand), nunca del navegador. La app lee con ruleta_global(): el ganador, los que entraron con sus
 --    colores (en el orden de los gajos) y la semilla para dibujar el giro igual en todos los moviles.
 -- 3) TIEMPO EN LA APP. PM: "por tiempo vamos a poner que 3h 300, asi la gente se queda mas". Tramo nuevo: 180 min = 300
---    (los de 30, 60 y 120 min siguen igual). La app los pinta sola desde time_status().
+--    (los de 30, 60 y 120 min siguen como esten en la base). La app los pinta sola desde time_status().
 -- 4) TU RULETA CADA 3 DIAS. PM: "la ruleta de weekly que tenemos ahora individual de cada uno sera cada 3 dias, asi que metele
 --    las opciones buenas mas pequenas para que toquen menos y menos dinero". spin_wheel (017) pasa a una tirada por periodo fijo
 --    de 3 dias en hora de Madrid (ruleta_periodo: desde el lunes 02/11/2026, de 3 en 3 dias; no "3 dias desde tu ultima tirada").
@@ -170,8 +170,10 @@ begin
 end $$;
 
 -- 3) tiempo en la app: el tramo de 3 h
-update settings set value = '[{"min":30,"amt":25},{"min":60,"amt":50},{"min":120,"amt":100},{"min":180,"amt":300}]'::jsonb where key = 'time_rewards';
-insert into settings(key, value) values ('time_rewards', '[{"min":30,"amt":25},{"min":60,"amt":50},{"min":120,"amt":100},{"min":180,"amt":300}]') on conflict (key) do nothing;
+-- (los tramos que ya hay se quedan como esten en la base: en la real son 30 min 50, 1 h 100 y 2 h 200; solo se pone el de 3 h)
+update settings set value = (select coalesce(jsonb_agg(t order by (t ->> 'min')::int), '[]'::jsonb) from jsonb_array_elements(value) t where (t ->> 'min')::int <> 180)
+                            || '[{"min":180,"amt":300}]'::jsonb
+ where key = 'time_rewards';
 
 -- 4) tu ruleta, cada 3 dias
 -- el primer dia del periodo de 3 dias en el que cae d (hora de Madrid). Periodos fijos desde el lunes 02/11/2026

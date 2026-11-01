@@ -140,7 +140,7 @@
       return `<article class="td-fila ${f.me ? 'me' : ''} ${i === 0 ? 'p1' : ''}" style="--i:${Math.min(i, 8)}">
         <span class="td-pos">${i + 1}</span>
         <div class="td-who" data-prof="${f.id}">${av(f.id, 'xl')}<div><b ${sinTr(f.id)}>${esc(nombre(f.id))}</b><small>${f.ac !== '·' ? `${esc(f.acn)} acertadas` : 'sin resueltas'}</small></div></div>
-        <div class="td-sal"><b class="num">${N(f.s)}${coin()}</b>${j ? `<small>${N(j)} en juego</small>` : '<small class="no">nada en juego</small>'}</div>
+        <div class="td-sal"><b class="num">${NS(f.s)}${coin()}</b>${j ? `<small>${N(j)} en juego</small>` : '<small class="no">nada en juego</small>'}</div>
         <div class="td-tks">${tks || '<span class="td-nada">Nada en juego</span>'}</div>
         ${ultimo(f)}
       </article>`;

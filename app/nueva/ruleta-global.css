@@ -1,0 +1,89 @@
+/* Ruleta global de la semana (ruleta-global.js, db/047): pantalla grande con la rueda de todos */
+.rg-ov{position:fixed;inset:0;z-index:95;display:grid;place-items:center;overflow-y:auto;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));animation:rgFon .3s var(--ease) both}
+.rg-ov.sale{animation:rgSale .26s var(--ease) forwards}
+.rg-fondo{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 42%,rgba(36,30,13,.96),rgba(6,8,11,.985) 62%);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.rg-c{position:relative;display:flex;flex-direction:column;align-items:center;width:100%;max-width:640px;text-align:center}
+.rg-x{position:absolute;top:-4px;right:-4px;z-index:3;display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.08);transition:background .15s}
+.rg-x:hover{background:rgba(255,255,255,.16)}
+.rg-x svg{width:20px;height:20px;fill:none;stroke:var(--ink);stroke-width:2;stroke-linecap:round}
+.rg-h .lab{color:var(--acc);font-size:12px;letter-spacing:.22em}
+.rg-h h2{margin-top:8px;font:800 clamp(26px,4.2vw,40px)/1.02 var(--disp);letter-spacing:-.035em;color:var(--ink)}
+.rg-w{--d:min(540px,88vw,calc(100dvh - 330px));position:relative;width:var(--d);height:var(--d);min-width:260px;min-height:260px;margin:30px 0 4px}
+.rg-glow{position:absolute;inset:-9%;border-radius:50%;background:radial-gradient(closest-side,rgba(242,193,78,.26),rgba(242,193,78,.06) 70%,transparent);pointer-events:none}
+.rg-rot{position:relative;width:100%;height:100%;transform-origin:50% 50%;will-change:transform}
+.rg-svg{display:block;width:100%;height:100%;filter:drop-shadow(0 24px 44px rgba(0,0,0,.6))}
+.rg-in{fill:#0d1015}
+.rg-g{stroke:rgba(10,12,16,.35);stroke-width:1}
+.rg-fb{fill:#0d1015;opacity:.85}
+.rg-ini{fill:#0d0b06;font-family:var(--disp);font-weight:800;text-anchor:middle;letter-spacing:-.02em}
+.rg-nm{fill:#fff;font:800 12px var(--disp);letter-spacing:.02em;text-anchor:middle;dominant-baseline:middle;text-transform:uppercase;paint-order:stroke;stroke:rgba(0,0,0,.55);stroke-width:3px}
+.rg-ra{stroke:rgba(255,224,150,.55);stroke-width:1.4}
+.rg-peg{fill:#ffe7a6;stroke:#6b4d12;stroke-width:1}
+.rg-led{fill:#fff6d6}
+.rg-led.b{opacity:.32}
+.rg-led.a{filter:drop-shadow(0 0 3px #ffd76a)}
+.rg-ov:not(.listo) .rg-led{animation:ruLed .36s steps(1) infinite}
+.rg-ov:not(.listo) .rg-led.b{animation-delay:-.18s}
+.rg-hc{fill:#12151b}
+.rg-s.gana .rg-g{filter:brightness(1.3) saturate(1.15);stroke:#ffe9a8;stroke-width:3}
+.rg-ov.listo:not(.quieta) .rg-s.gana .rg-g{animation:ruGana .5s ease-in-out 8 alternate}
+.rg-s:not(.gana) .rg-g{transition:filter .5s}
+.rg-ov.listo .rg-s:not(.gana) .rg-g{filter:brightness(.62) saturate(.7)}
+.rg-pin{position:absolute;left:50%;top:-22px;z-index:2;width:44px;height:62px;margin-left:-22px;pointer-events:none}
+.rg-pin svg{display:block;width:100%;height:100%;filter:drop-shadow(0 5px 6px rgba(0,0,0,.6))}
+.rg-pa{fill:#f2c14e;stroke:#7a5714;stroke-width:1.4}
+.rg-pc{fill:#7a5714}
+.rg-hub{position:absolute;left:50%;top:50%;z-index:2;display:grid;place-items:center;width:18%;height:18%;transform:translate(-50%,-50%);pointer-events:none}
+.rg-hub .cn{--s:min(56px,11vw);margin:0}
+.rg-gira{display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:20px}
+.rg-gira .lab{letter-spacing:.24em}
+.rg-tod{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.rg-tod .av{width:26px;height:26px;font-size:9px}
+.rg-gira p{font:13px/1.4 var(--sans);color:var(--mute)}
+.rg-ov.listo .rg-gira{display:none}
+.rg-res{display:none;flex-direction:column;align-items:center;margin-top:18px}
+.rg-ov.listo .rg-res{display:flex;animation:rgRes .5s cubic-bezier(.2,.9,.3,1.2) both}
+.rg-ov.quieta .rg-res{animation:none}
+.rg-gan{display:flex;align-items:center;gap:14px;text-align:left}
+.rg-gan .av{width:56px;height:56px;font-size:18px;box-shadow:0 0 0 3px #f2c14e,0 0 24px rgba(242,193,78,.45)}
+.rg-gan .lab{display:block;color:var(--mute)}
+.rg-gan b{display:block;margin-top:4px;font:800 clamp(26px,3.6vw,34px)/1 var(--disp);letter-spacing:-.03em}
+.rg-amt{display:flex;align-items:center;gap:10px;margin-top:12px;font:500 clamp(40px,6vw,58px)/1 var(--mono);letter-spacing:-.05em;color:var(--acc2)}
+.rg-amt .cn{--s:clamp(34px,5vw,48px);margin:0}
+.rg-sub{max-width:40ch;margin-top:10px;font:14px/1.45 var(--sans);color:var(--soft)}
+.rg-ok{margin-top:18px;padding:14px 44px;border-radius:999px;background:linear-gradient(180deg,var(--acc2),var(--acc));color:#141008;font:800 13px var(--disp);letter-spacing:.18em;text-transform:uppercase;box-shadow:0 10px 30px rgba(242,193,78,.25)}
+.rg-ok:hover{filter:brightness(1.06)}
+@keyframes rgFon{from{opacity:0}}
+@keyframes rgSale{to{opacity:0}}
+@keyframes rgRes{from{opacity:0;transform:translateY(14px) scale(.96)}}
+html.sin-anim .rg-ov,html.sin-anim .rg-res,html.sin-anim .rg-led,html.sin-anim .rg-s .rg-g{animation:none!important}
+@media (max-width:560px){
+  .rg-ov{place-items:start center;padding-top:22px}
+  .rg-w{--d:min(88vw,calc(100dvh - 360px));margin-top:28px}
+  .rg-x{top:-10px;right:-6px}
+  .rg-h{padding:0 40px}
+  .rg-nm{font-size:15px}
+  .rg-gan .av{width:48px;height:48px;font-size:15px}
+}
+/* la fila de Recompensas */
+.rg-ic{background:linear-gradient(135deg,rgba(242,193,78,.28),rgba(242,193,78,.08))}
+.rg-fw{display:inline-flex!important;align-items:center;gap:7px;margin-top:5px}
+.rg-fw b{font-weight:700;color:var(--ink)}
+.rg-fw i{font-style:normal;font-weight:500;color:var(--acc)}
+.rg-fw .cn{--s:15px;margin:0}
+/* saldos en negativo (047: el bote cobra a todos): signo menos y rojo */
+.neg-s{color:#e0646f}
+.top .bal .num.neg-s{color:#e0646f}
+.hint.sin-saldo{margin-top:14px;color:var(--soft)}
+/* tu ruleta cada 3 dias: el texto de los gajos finos */
+.ru-tx.fino{font-weight:800;letter-spacing:0;stroke-width:1px}
+/* en PC: la rueda a la izquierda y el ganador a la derecha, sin saltos al acabar */
+@media (min-width:900px){
+  .rg-c{display:grid;grid-template-columns:auto minmax(300px,360px);grid-template-areas:"h h" "w r";column-gap:64px;align-items:center;max-width:1080px;text-align:left}
+  .rg-h{grid-area:h;text-align:center}
+  .rg-w{grid-area:w;--d:min(580px,calc(100dvh - 200px));margin:34px 0 0}
+  .rg-gira,.rg-res{grid-area:r;align-items:flex-start;margin-top:0}
+  .rg-tod{justify-content:flex-start}
+  .rg-x{top:0;right:0}
+  .rg-amt{margin-top:18px}
+}

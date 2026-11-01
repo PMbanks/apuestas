@@ -6,7 +6,7 @@
 -- 3) con saldo negativo no se puede apostar ni jugar (y con saldo si: el partido de prueba vale).
 -- 4) ruleta_global() da el ganador, los que entraron con su color y la semilla; sin entrar, error; el sorteo no se puede llamar
 --    desde la app.
--- 5) tiempo en la app: el tramo de 3 h da 300 (los demas igual), una vez al dia y solo con 180 minutos.
+-- 5) tiempo en la app: el tramo de 3 h da 300 (los demas como estaban), una vez al dia y solo con 180 minutos.
 -- 6) tu ruleta cada 3 dias: periodos fijos, una tirada por periodo (otro periodo deja girar), y en 4.000 tiradas las
 --    probabilidades y los premios nuevos (25, 50, 100, 200, 75, 400 y cajas; media de unos 58 por tirada).
 create or replace function pg_temp.sal(p uuid) returns int language sql as $$ select coalesce(sum(amount), 0)::int from ledger where player = p $$;
@@ -99,6 +99,7 @@ begin
     if ruleta_global_sortea() <> 1 then raise exception 'FALLO: el sorteo no sortea'; end if;
     select * into rg from ruleta_global where week = wk;
     if not (rg.player = any(jug)) or rg.jugadores[rg.idx + 1] <> rg.player or rg.seed < 0 or rg.seed >= 1000000 then raise exception 'FALLO: sorteo raro %', rg; end if;
+    if (select player from ledger where kind = 'ruleta_global' and week = wk) is distinct from rg.player then raise exception 'FALLO: la ruleta paga a quien no ha ganado'; end if;
     if not (rg.player = any(vistos)) then vistos := vistos || rg.player; end if;
   end loop;
   if cardinality(vistos) <> n then raise exception 'FALLO: en 160 sorteos solo les ha tocado a % de %', cardinality(vistos), n; end if;
@@ -121,8 +122,11 @@ begin
   -- 5) tiempo en la app
   perform set_config('request.jwt.claims', jsonb_build_object('sub', rico, 'role', 'authenticated')::text, true);
   x := time_status();
-  if (select jsonb_agg(jsonb_build_array((t ->> 'min')::int, (t ->> 'amt')::int) order by (t ->> 'min')::int) from jsonb_array_elements(x -> 'tiers') t)
-     <> '[[30,25],[60,50],[120,100],[180,300]]'::jsonb then raise exception 'FALLO: los tramos de tiempo no son 30/25, 60/50, 120/100 y 180/300: %', x -> 'tiers'; end if;
+  if (select jsonb_agg((t ->> 'min')::int order by (t ->> 'min')::int) from jsonb_array_elements(x -> 'tiers') t) <> '[30,60,120,180]'::jsonb
+     or (select (t ->> 'amt')::int from jsonb_array_elements(x -> 'tiers') t where (t ->> 'min')::int = 180) <> 300
+     or (select (t ->> 'amt')::int from jsonb_array_elements(x -> 'tiers') t where (t ->> 'min')::int = 60) <> 50 then
+    raise exception 'FALLO: los tramos de tiempo no son 30, 60 (igual que antes), 120 y 180 = 300: %', x -> 'tiers';
+  end if;
   delete from ledger where player = rico and kind = 'tiempo' and week = madrid_day();
   insert into app_time(player, day, minutes) values (rico, madrid_day(), 179) on conflict (player, day) do update set minutes = 179;
   if not pg_temp.falla('select claim_time_reward(180)') then raise exception 'FALLO: el tramo de 3 h se cobra con 179 minutos'; end if;

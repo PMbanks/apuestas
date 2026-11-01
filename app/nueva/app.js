@@ -8,7 +8,7 @@ const TOP = new Set(['esp.1', 'eng.1', 'ger.1', 'ita.1', 'fra.1', 'uefa.champion
 const SP = { f: ['Fútbol', '../img/futbol.svg'], v: ['Valorant', '../img/valorant.svg'], c: ['CS2', '../img/cs2.png'], u: ['UFC', '../img/ufc.png'],
   b: ['NBA', 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" fill="#f58426"/><g fill="none" stroke="#1d1309" stroke-width="3.4"><circle cx="32" cy="32" r="29"/><path d="M3 32h58M32 3v58M13 10c8 6 12 13 12 22s-4 16-12 22M51 10c-8 6-12 13-12 22s4 16 12 22"/></g></svg>')] };   // NBA (nba.js, db/039)
 const DEP = ['f', 'v', 'c', 'u', 'b'];
-const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', tiempo: 'Tiempo en la app', trato: 'Trato entre amigos', mercado: 'Mercado', jackpot: 'Jackpot', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', ruleta_semana: 'Ruleta de la semana', premio_semana: 'Premio de la semana', moneda: 'Cara o cruz', crash: 'Crash', ruleta: 'Ruleta', blackjack: 'Blackjack', plinko: 'Plinko', cashout: 'Cash out', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta' };
+const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', tiempo: 'Tiempo en la app', trato: 'Trato entre amigos', mercado: 'Mercado', jackpot: 'Jackpot', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', ruleta_semana: 'Ruleta de premios', ruleta_global: 'Ruleta global', premio_semana: 'Premio de la semana', moneda: 'Cara o cruz', crash: 'Crash', ruleta: 'Ruleta', blackjack: 'Blackjack', plinko: 'Plinko', cashout: 'Cash out', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta' };
 let TIEMPO = null, CLAIM = null, BOTE = null, REACT = new Map(), POLLS = new Map(), CAMPEON = null;
 
 /* ---------- estado ---------- */
@@ -21,7 +21,9 @@ try { localStorage.removeItem('apuestas-calc') } catch {}
 let loaded = false;
 
 /* ---------- formato ---------- */
-const N = (x) => String(Math.round(x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, document.documentElement.lang === 'en' ? ',' : '.');
+const N = (x) => { const v = Math.round(x || 0); return (v < 0 ? '−' : '') + String(Math.abs(v)).replace(/\B(?=(\d{3})+(?!\d))/g, document.documentElement.lang === 'en' ? ',' : '.') };
+// 047: el bote cobra a todos y el saldo puede quedar por debajo de 0: en rojo
+const NS = (x) => (Math.round(x || 0) < 0 ? `<span class="neg-s">${N(x)}</span>` : N(x));
 const O = (x) => Number(x).toFixed(2).replace('.', document.documentElement.lang === 'en' ? '.' : ',');
 const fmt = (t, o) => new Intl.DateTimeFormat('es-ES', { timeZone: TZ, ...o }).format(new Date(t));
 const HM = (t) => fmt(t, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
@@ -765,7 +767,7 @@ function cuentaSaldo() {
   const to = me().s, from = lastBal; lastBal = to;
   if (from == null || from === to || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const t0 = performance.now(); el.classList.add(to > from ? 'sube' : 'baja');
-  (function f(t) { const k = Math.min(1, (t - t0) / 700), e = 1 - Math.pow(1 - k, 3); el.textContent = N(from + (to - from) * e); if (k < 1) requestAnimationFrame(f); else setTimeout(() => el.classList.remove('sube', 'baja'), 400) })(t0);
+  (function f(t) { const k = Math.min(1, (t - t0) / 700), e = 1 - Math.pow(1 - k, 3); el.textContent = N(from + (to - from) * e); el.classList.toggle('neg-s', from + (to - from) * e < -0.5); if (k < 1) requestAnimationFrame(f); else setTimeout(() => el.classList.remove('sube', 'baja'), 400) })(t0);
 }
 
 /* ---------- Partidos ---------- */
@@ -891,7 +893,8 @@ function ficha(m) {
   else if (!sel) h += `<p class="hint">Elige ${ps.length > 2 ? '1, X o 2' : '1 o 2'} para apostar.</p>`;
   else {
     const o = po(m, S.sel.p), st = stakeNow(), pv = ((st / Math.max(1, me().s)) * 100).toFixed(1);
-    h += `<div class="stk"><span class="lab">Apuestas</span><b data-sv>${N(st)}${coin()}</b>
+    if (me().s < 1) h += `<p class="hint sin-saldo">${me().s < 0 ? `Estás en negativo (<span class="neg-s">${N(me().s)}</span>): no puedes apostar hasta volver a tener saldo.` : 'No te queda saldo para apostar.'} La paga del lunes llega sola.</p>`;
+    else h += `<div class="stk"><span class="lab">Apuestas</span><b data-sv>${N(st)}${coin()}</b>
       <input type="range" id="stake" min="1" max="${Math.max(1, me().s)}" step="1" value="${st}" data-in style="--p:${pv}%" aria-label="Cuánto apuestas"><div class="chips">${chips()}</div></div>
       <div class="ret"><span>Si aciertas con <em>${esc(pn(m, S.sel.p))} ${O(o)}</em></span><b data-ret>${N(st * o)}${coin()}</b></div>
       <div class="ret2" data-gain>${N(st * o - st)} limpias</div>
@@ -1166,10 +1169,12 @@ const weekLabels = (n) => Array.from({ length: n }, (_, i) => (i === 0 ? 'INICIO
 const given = (n) => Array.from({ length: n }, (_, i) => WEEKLY * Math.max(1, i));
 function chLines(list, W, H, x0, x1, endLabels) {
   const n = Math.max(...list.map((f) => f.h.length)), g = given(n), labs = weekLabels(n);
-  const mx = nice(Math.max(...list.flatMap((f) => f.h), ...g) * 1.15), X = (i) => x0 + ((x1 - x0) * i) / Math.max(1, n - 1), Y = (v) => H - 34 - ((H - 60) * v) / mx;
+  const mx = nice(Math.max(...list.flatMap((f) => f.h), ...g) * 1.15), lo = Math.min(0, ...list.flatMap((f) => f.h)), mn = lo < 0 ? -nice(-lo * 1.15) : 0;
+  const X = (i) => x0 + ((x1 - x0) * i) / Math.max(1, n - 1), Y = (v) => H - 34 - ((H - 60) * (v - mn)) / (mx - mn);
   let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Saldo semana a semana">`;
+  if (mn < 0) s += `<line x1="${x0}" x2="${x1}" y1="${Y(mn)}" y2="${Y(mn)}" stroke="var(--hair)"/><text x="${x0 - 12}" y="${Y(mn) + 4}" class="tx-d" font-size="11" text-anchor="end">−${(-mn / 1000).toFixed(-mn % 1000 ? 1 : 0).replace('.', ',')}k</text>`;
   for (let k = 0; k <= 3; k++) { const v = (mx / 3) * k; s += `<line x1="${x0}" x2="${x1}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--hair)"/><text x="${x0 - 12}" y="${Y(v) + 4}" class="tx-d" font-size="11" text-anchor="end">${v ? (v / 1000).toFixed(v % 1000 ? 1 : 0).replace('.', ',') + 'k' : '0'}</text>` }
-  if (list.length === 1) { const f = list[0], pts = f.h.map((v, i) => `${X(i)},${Y(v)}`).join(' '); s += `<polygon points="${X(0)},${Y(0)} ${pts} ${X(f.h.length - 1)},${Y(0)}" fill="var(--f-${f.id})" opacity=".12"/>` }
+  if (list.length === 1) { const f = list[0], pts = f.h.map((v, i) => `${X(i)},${Y(v)}`).join(' '); s += `<polygon points="${X(0)},${Y(Math.max(0, mn))} ${pts} ${X(f.h.length - 1)},${Y(Math.max(0, mn))}" fill="var(--f-${f.id})" opacity=".12"/>` }
   s += `<polyline points="${g.map((v, i) => `${X(i)},${Y(v)}`).join(' ')}" fill="none" stroke="var(--dim)" stroke-width="1.4" stroke-dasharray="3 5"/>`;
   for (const f of [...list].sort((a, b) => (a.me ? 1 : b.me ? -1 : 0))) {
     s += `<polyline points="${f.h.map((v, i) => `${X(i)},${Y(v)}`).join(' ')}" fill="none" stroke="var(--f-${f.id})" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
@@ -1217,7 +1222,7 @@ const strips = () => F.some((f) => f.last) ? `<div class="strips">${F.map((f) =>
   <p class="strips-k"><span><i class="w" style="--c:var(--mute)"></i>ganada</span><span><i class="l"></i>perdida</span><span>la más reciente, a la derecha</span></p></div>` : '<p class="hint">Cuando se resuelvan las primeras apuestas saldrán aquí.</p>';
 const table = (rank) => `<div class="tbl"><div class="tr h"><span></span><span>Amigo</span><span>Saldo</span><span>Neto</span><span>Aciertos</span><span>Apuestas</span><span>Racha</span><span>Mejor premio</span><span>Fuerte en</span></div>
   ${rank.map((f, i) => `<div class="tr ${f.me ? 'me' : ''}"><span class="p">${i + 1}</span><span class="who2" data-prof="${f.id}" style="cursor:pointer">${av(f.id, 'xl')}${esc(f.n)}</span>
-    <span class="big">${N(f.s)}${coin()}</span>${net(f)}<span>${f.ac} <span class="dim">${f.acn}</span></span><span>${f.bets}</span>
+    <span class="big">${NS(f.s)}${coin()}</span>${net(f)}<span>${f.ac} <span class="dim">${f.acn}</span></span><span>${f.bets}</span>
     <span class="${f.racha.startsWith('▲') ? 'net up' : 'net'}">${f.racha}</span><span>${N(f.best)}${coin()}</span><span class="dim">${f.fuerte}</span></div>`).join('')}</div>`;
 // quien sabe mas de cada deporte: aciertos de lo resuelto
 function sabeHtml() {
@@ -1233,9 +1238,9 @@ function liga() {
   return `<div class="lc">${window.GM_APOST ? GM_APOST.tabs() : ''}
     <header class="lc-h"><span class="lab">Temporada · desde el ${esc(SEASON ? fmt(SEASON + 'T12:00:00Z', { day: 'numeric', month: 'short' }) : '')} · ${F.length} jugadores</span><h2 class="wk"><small>SEMANA</small>${String(nWeeks).padStart(2, '0')}</h2>
       <p class="l-pay">Paga de <b>+${N(WEEKLY)}</b> a cada uno en ${CD(PAY)}</p>${CAMPEON ? `<p class="l-rey">${av(CAMPEON.k, 'sm')}<b>${esc(fr(CAMPEON.k).n)}</b> es el campeón de ${esc(CAMPEON.mes)} (▲ ${N(CAMPEON.v)}) y lleva la corona todo el mes</p>` : ''}</header>
-    <div class="podium" style="--pdn:${rank.length}">${order.map((i) => { const f = rank[i]; return `<div class="pd ${f.me ? 'me' : ''} ${i >= 3 ? 'rest' : ''}" data-prof="${f.id}" style="cursor:pointer">${av(f.id, 'xl')}<span class="nm">${esc(f.n)}</span><b class="num">${N(f.s)}${coin()}</b>${net(f)}
+    <div class="podium" style="--pdn:${rank.length}">${order.map((i) => { const f = rank[i]; return `<div class="pd ${f.me ? 'me' : ''} ${i >= 3 ? 'rest' : ''}" data-prof="${f.id}" style="cursor:pointer">${av(f.id, 'xl')}<span class="nm">${esc(f.n)}</span><b class="num">${NS(f.s)}${coin()}</b>${net(f)}
       <span class="bar" style="height:${Math.max(6, Math.round((f.s / mx) * 180))}px;background:var(--f-${f.id})"></span><span class="ps">${i + 1}${en() ? ['st', 'nd', 'rd'][i] || 'th' : 'º'}</span></div>` }).join('')}</div>
-    ${rank.length > 3 ? `<div class="pd-rest">${rank.slice(3).map((f, j) => `<button class="pr-r ${f.me ? 'me' : ''}" data-prof="${f.id}"><span class="pr-p">${j + 4}${en() ? 'th' : 'º'}</span>${av(f.id)}<span class="pr-n">${esc(f.n)}</span><span class="pr-v"><b class="num">${N(f.s)}${coin()}</b>${net(f)}</span></button>`).join('')}</div>` : ''}
+    ${rank.length > 3 ? `<div class="pd-rest">${rank.slice(3).map((f, j) => `<button class="pr-r ${f.me ? 'me' : ''}" data-prof="${f.id}"><span class="pr-p">${j + 4}${en() ? 'th' : 'º'}</span>${av(f.id)}<span class="pr-n">${esc(f.n)}</span><span class="pr-v"><b class="num">${NS(f.s)}${coin()}</b>${net(f)}</span></button>`).join('')}</div>` : ''}
     <p class="gap" data-notr>${en() ? `${gapUp > 0 ? `You need <b>${N(gapUp)}</b> to catch ${esc(rank[meI - 1].n)}` : meI > 0 ? `Level with ${esc(rank[meI - 1].n)}` : 'You are first'}${gapDn > 0 ? ` · you lead ${esc(rank[meI + 1].n)} by <b>${N(gapDn)}</b>` : ''}`
       : `${gapUp > 0 ? `Te faltan <b>${N(gapUp)}</b> para alcanzar a ${esc(rank[meI - 1].n)}` : meI > 0 ? `Empatado con ${esc(rank[meI - 1].n)}` : 'Vas primero'}${gapDn > 0 ? ` · le sacas <b>${N(gapDn)}</b> a ${esc(rank[meI + 1].n)}` : ''}`}</p>
     ${sabeHtml()}
@@ -1325,7 +1330,7 @@ function feedItems() {
   for (const w of WHEEL || []) {
     const k = kDe(w.player); if (!k || !w.created_at) continue;
     const caja = /^Caja gratis: /.test(w.label) ? casoPorNombre(w.label.replace(/^Caja gratis: /, '')) : null;
-    out.push({ at: Date.parse(w.created_at), t: 'premios', html: `<div class="fd">${av(k)}<div class="fd-b"><p><b>${esc(fr(k).n)}</b> <span>gira la ruleta de la semana</span><small>${esc(w.label)}</small></p></div>${w.amount ? amt('+' + N(w.amount), 'won') : '<span></span>'}<span class="fd-vis">${caja ? `<img class="fd-case" src="${esc(casoSrc(caja.image, 128))}" alt="">` : '<span class="cn fd-coin"></span>'}</span>${hora(Date.parse(w.created_at))}</div>` });
+    out.push({ at: Date.parse(w.created_at), t: 'premios', html: `<div class="fd">${av(k)}<div class="fd-b"><p><b>${esc(fr(k).n)}</b> <span>gira la ruleta</span><small>${esc(w.label)}</small></p></div>${w.amount ? amt('+' + N(w.amount), 'won') : '<span></span>'}<span class="fd-vis">${caja ? `<img class="fd-case" src="${esc(casoSrc(caja.image, 128))}" alt="">` : '<span class="cn fd-coin"></span>'}</span>${hora(Date.parse(w.created_at))}</div>` });
   }
   // cajas: las aperturas seguidas de la misma persona (menos de 10 minutos entre una y otra) van en una sola fila
   if (FEED_CS) {
@@ -1385,7 +1390,23 @@ function chat() {
 let WHEEL = null, CASOS = null, BATS = new Map();
 // PM, 01-11: "las bets rapidas que se vean como categoria distinta y que no cuenten como apuestas reales": las predicciones en directo van aparte
 const movTipo = (k) => (['apuesta', 'premio', 'devolucion', 'cashout'].includes(k) ? 'apuestas' : ['pred_apuesta', 'pred_premio', 'pred_devol'].includes(k) ? 'rapidas' :['caja', 'venta', 'batalla', 'trato', 'mercado', 'jackpot'].includes(k) ? 'cajas' : ['moneda', 'crash', 'ruleta', 'blackjack', 'plinko'].includes(k) ? 'juegos' : 'pagas');
-const RUEDA = [['50', 0], ['Caja', 1], ['100', 0], ['250', 0], ['Caja ★', 2], ['500', 0], ['150', 0], ['1.000', 3]];
+// 047: una tirada cada 3 dias con premios mas pequenos. [texto, tipo, probabilidad]: cada gajo mide lo que toca (spin_wheel)
+const RUEDA = [['25', 0, .34], ['Caja', 1, .065], ['50', 0, .25], ['100', 0, .12], ['Caja ★', 2, .02], ['200', 0, .05], ['75', 0, .145], ['400', 3, .01]];
+const RU_A = RUEDA.reduce((a, r) => (a.push(a[a.length - 1] + r[2] * 360), a), [0]), RU_W = RUEDA.map((r) => r[2] * 360);
+// los periodos de 3 dias de la base (ruleta_periodo): fijos desde el lunes 02/11/2026, hora de Madrid
+const RU_ANCLA = Date.UTC(2026, 10, 2);
+function ruPer(t = Date.now()) {
+  const hoy = Date.parse(DK(t).split('/').reverse().join('-') + 'T00:00:00Z'), k = Math.floor((hoy - RU_ANCLA) / DAY / 3), dia = (j) => new Date(RU_ANCLA + j * 3 * DAY).toISOString().slice(0, 10);
+  const sig = dia(k + 1), sigT = ['+01:00', '+02:00'].map((z) => Date.parse(sig + 'T00:00:00' + z)).find((x) => DK(x).split('/').reverse().join('-') === sig && HM(x) === '00:00') || Date.parse(sig + 'T00:00:00+01:00');
+  return { ini: dia(k), sig, sigT, iniT: sigT - 3 * DAY };
+}
+// cuando toca la siguiente tirada: manana, en N dias o hoy a las HH:MM
+function ruSigTxt() {
+  const { sigT } = ruPer(), d0 = Date.parse(DK(Date.now()).split('/').reverse().join('-') + 'T00:00:00Z'), d1 = Date.parse(DK(sigT).split('/').reverse().join('-') + 'T00:00:00Z'), dd = Math.round((d1 - d0) / DAY);
+  return dd <= 0 ? (en() ? `today at ${HM(sigT)}` : `hoy a las ${HM(sigT)}`) : dd === 1 ? (en() ? 'tomorrow' : 'mañana') : en() ? `in ${dd} days` : `en ${dd} días`;
+}
+// tu tirada de este periodo (tambien una de la regla vieja de la semana hecha dentro del periodo)
+const ruMia = (uid) => { const p = ruPer(); return (WHEEL || []).find((w) => w.player === uid && (w.week === p.ini || Date.parse(w.created_at || 0) >= p.iniT)) };
 async function cargaMov() {
   let cambia = false;
   if (!CASOS) { const { data } = await db.rpc('cs_cases'); CASOS = new Map(((Array.isArray(data) ? data : data?.cases) || []).map((c) => [c.name, c.image])); cambia = true }
@@ -1421,8 +1442,8 @@ const casoPorNombre = (n) => (CAJAS_L || []).find((c) => c.name === n);
 // la caja barata y la buena de la ruleta (spin_wheel saca una de las 5 mas baratas o de las 3 mas caras de skins)
 const ruCajas = () => { const sk = (CAJAS_L || []).filter((c) => (c.cat || 'skins') === 'skins').sort((a, b) => a.price - b.price); return [sk[0]?.image, sk[sk.length - 1]?.image] };
 const ruAng = () => { if (!RU) return S.ruRot || 0; const p = Math.min(1, (Date.now() - RU.t0) / RU_DUR); return RU.from + (RU.to - RU.from) * (1 - Math.pow(1 - p, 3.4)) };
-// la aguja: cada pivote del borde la empuja al pasar por debajo y vuelve con muelle
-const ruEmpuje = (a) => { const d = ((a % 45) + 45) % 45, w = 11; return d > 45 - w ? -24 * (d - 45 + w) / w : 0 };
+// la aguja: cada pivote del borde la empuja al pasar por debajo y vuelve con muelle (los gajos ya no miden lo mismo)
+const ruEmpuje = (a) => { const w = 11, x = Math.min(...RU_A.slice(0, -1).map((b) => (((-(b + a)) % 360) + 360) % 360)); return x < w ? -24 * (w - x) / w : 0 };
 function ruLoop() {
   const a = ruAng(), el = document.getElementById('rueda'); if (el) el.style.transform = `rotate(${a.toFixed(2)}deg)`;
   const t = ruEmpuje(a); RU_P = t < RU_P ? t : RU_P + (t - RU_P) * 0.28;
@@ -1438,53 +1459,53 @@ function ruLoop() {
 function ruedaSvg(gana) {
   const C = 120, R = 103, pt = (r, g) => `${(C + r * Math.sin(g * Math.PI / 180)).toFixed(2)} ${(C - r * Math.cos(g * Math.PI / 180)).toFixed(2)}`;
   const [cBar, cBuena] = ruCajas(), vb = IMG + 'vbucks.webp';
-  const grad = [['g0', '#1b2140', '#3a4890'], ['g1', '#171b24', '#2f374a'], ['gc', '#13286f', '#3f62f0'], ['gb', '#3d1260', '#c02fd6'], ['gd', '#7c5410', '#ffe08a']];
+  const grad = [['g0', '#1b2140', '#3a4890'], ['g1', '#171b24', '#2f374a'], ['gc', '#13286f', '#3f62f0'], ['gb', '#3d1260', '#c02fd6'], ['gd', '#7c5410', '#ffe08a'], ['gt', '#0f2b2a', '#1e8577'], ['gr', '#36111a', '#b8364a']];
   const defs = `<defs>${grad.map(([id, a, b]) => `<radialGradient id="ru-${id}" gradientUnits="userSpaceOnUse" cx="${C}" cy="${C}" r="${R}"><stop offset=".25" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></radialGradient>`).join('')}
     <linearGradient id="ru-oro" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0bd"/><stop offset=".3" stop-color="#e2b24c"/><stop offset=".55" stop-color="#8a6418"/><stop offset=".8" stop-color="#f6d47a"/><stop offset="1" stop-color="#7a5714"/></linearGradient>
     <radialGradient id="ru-hub" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#fff0bd"/><stop offset=".55" stop-color="#d9a640"/><stop offset="1" stop-color="#7a5714"/></radialGradient></defs>`;
   const seg = RUEDA.map(([t, c], i) => {
-    const fill = c === 1 ? 'gc' : c === 2 ? 'gb' : c === 3 ? 'gd' : i % 2 ? 'g1' : 'g0', caja = c === 1 || c === 2, im = c === 1 ? cBar : cBuena;
-    const cont = caja
+    const fill = ['g1', 'gc', 'g0', 'gt', 'gb', 'gr', 'g0', 'gd'][i] || 'g0', caja = c === 1 || c === 2, im = c === 1 ? cBar : cBuena, a0 = RU_A[i], aw = RU_W[i];
+    // los gajos finos (caja buena 2 %, 400 1 %): el texto a lo largo del radio
+    const cont = aw < 25 ? `<text x="${C}" y="${C - 72}" class="ru-tx fino ${c === 3 ? 'osc' : ''}" transform="rotate(-90 ${C} ${C - 72})" style="font-size:${Math.max(5.5, Math.min(11, aw * 1.45)).toFixed(1)}px">${c === 2 ? 'CAJA ★' : c === 1 ? 'CAJA' : t}</text>`
+      : caja
       ? `${im ? `<image href="${esc(casoSrc(im, 128))}" x="${C - 25}" y="${C - 99}" width="50" height="38" preserveAspectRatio="xMidYMid meet"/>` : `<text x="${C}" y="${C - 74}" class="ru-ic">▣</text>`}<text x="${C}" y="${C - 50}" class="ru-tx sm">${c === 2 ? 'CAJA ★' : 'CAJA'}</text>`
       : `<image href="${vb}" x="${C - 12}" y="${C - 96}" width="24" height="24"/><text x="${C}" y="${C - 56}" class="ru-tx ${c === 3 ? 'osc' : ''}">${t}</text>`;
-    return `<g class="ru-s ${i === gana ? 'gana' : ''}"><path d="M${C} ${C}L${pt(R, i * 45)}A${R} ${R} 0 0 1 ${pt(R, (i + 1) * 45)}Z" fill="url(#ru-${fill})"/><g transform="rotate(${i * 45 + 22.5} ${C} ${C})">${cont}</g></g>`;
+    return `<g class="ru-s ${i === gana ? 'gana' : ''}"><path d="M${C} ${C}L${pt(R, a0)}A${R} ${R} 0 ${aw > 180 ? 1 : 0} 1 ${pt(R, a0 + aw)}Z" fill="url(#ru-${fill})"/><g transform="rotate(${(a0 + aw / 2).toFixed(2)} ${C} ${C})">${cont}</g></g>`;
   }).join('');
-  const rayas = RUEDA.map((_, i) => `<path d="M${pt(27, i * 45)}L${pt(R, i * 45)}" class="ru-ra"/><circle cx="${pt(R - 2, i * 45).split(' ')[0]}" cy="${pt(R - 2, i * 45).split(' ')[1]}" r="2.6" class="ru-peg"/>`).join('');
+  const rayas = RUEDA.map((_, i) => `<path d="M${pt(27, RU_A[i])}L${pt(R, RU_A[i])}" class="ru-ra"/><circle cx="${pt(R - 2, RU_A[i]).split(' ')[0]}" cy="${pt(R - 2, RU_A[i]).split(' ')[1]}" r="2.6" class="ru-peg"/>`).join('');
   const luces = Array.from({ length: 24 }, (_, k) => { const [x, y] = pt(111.5, k * 15 + 7.5).split(' '); return `<circle cx="${x}" cy="${y}" r="2.7" class="ru-led ${k % 2 ? 'b' : 'a'}"/>` }).join('');
-  return `<svg viewBox="0 0 240 240" class="ru2" id="rueda" style="transform:rotate(${ruAng().toFixed(2)}deg)" role="img" aria-label="Ruleta de la semana">${defs}
+  return `<svg viewBox="0 0 240 240" class="ru2" id="rueda" style="transform:rotate(${ruAng().toFixed(2)}deg)" role="img" aria-label="Ruleta de premios">${defs}
     <circle cx="${C}" cy="${C}" r="119" fill="url(#ru-oro)"/><circle cx="${C}" cy="${C}" r="106.5" class="ru-in"/>${luces}${seg}${rayas}
     <circle cx="${C}" cy="${C}" r="28" fill="url(#ru-hub)"/><circle cx="${C}" cy="${C}" r="22.5" class="ru-hc"/></svg>`;
 }
 function ruedaHtml() {
-  const wk = new Date(WEEK0 + DAY / 2).toISOString().slice(0, 10), mio = (WHEEL || []).find((w) => w.player === me().uid && w.week === wk);
-  const otros = (WHEEL || []).filter((w) => w.week === wk && w.player !== me().uid).map((w) => [F.find((f) => f.uid === w.player), w.label]).filter(([f]) => f);
+  const mio = ruMia(me().uid);
   if (!CAJAS_L) cargaCasos();
   // si ya giraste esta semana, la rueda se queda con tu premio debajo de la aguja
-  if (S.ruRot == null && mio && !RU) S.ruRot = -(mio.prize * 45 + 22.5);
+  if (S.ruRot == null && mio && !RU) S.ruRot = -(RU_A[mio.prize] + RU_W[mio.prize] / 2);
   const gana = RU ? -1 : S.ruWin ?? (mio ? mio.prize : -1), cel = !RU && S.ruCel && Date.now() - S.ruCel < 4000;
   const res = S.ruRes || mio, label = res?.label || '', esCaja = !!(S.ruRes ? S.ruRes.box : /^Caja gratis: /.test(label));
   const caja = esCaja ? casoPorNombre(label.replace(/^Caja gratis: /, '')) || (CAJAS_L || []).find((c) => c.id === S.ruRes?.box?.case) : null;
   RU_P = RU ? RU_P : ruEmpuje(ruAng());
   const premio = res && !RU ? `<div class="ru-win ${cel ? 'nuevo' : ''}">${esCaja ? (caja ? `<img src="${esc(casoSrc(caja.image, 256))}" alt="" class="ru-wc">` : `<span class="ru-wi">${IC_BOX}</span>`) : '<span class="cn ru-wv"></span>'}
-      <div><span class="lab">${cel ? '¡Te ha tocado!' : 'Tu premio de esta semana'}</span><b>${esc(esCaja ? (caja?.name || label.replace(/^Caja gratis: /, '')) : label)}</b>
+      <div><span class="lab">${cel ? '¡Te ha tocado!' : 'Tu premio de esta tirada'}</span><b>${esc(esCaja ? (caja?.name || label.replace(/^Caja gratis: /, '')) : label)}</b>
       <small>${esCaja ? 'Caja sin abrir: la tienes en Cajas › Inventario para abrirla tú' : 'Ya está en tu saldo'}</small>${esCaja ? '<button class="q ru-ir" data-act="rw-cajas">Ir a Cajas</button>' : ''}</div></div>` : '';
   return `<section class="ru-hero">
     <div class="ru-w ${RU ? 'gira' : ''} ${cel ? 'celebra' : ''}"><span class="ru-glow"></span>${ruedaSvg(gana)}
       <span class="ru-pin"><svg id="ru-pin" viewBox="0 0 32 46" style="transform:rotate(${RU_P.toFixed(2)}deg)"><path d="M16 44C10 30 3 22 3 14a13 13 0 0 1 26 0c0 8-7 16-13 30z" class="ru-pa"/><circle cx="16" cy="14" r="5" class="ru-pc"/></svg></span>
       ${mio || RU ? `<span class="ru-hub"><span class="cn"></span></span>` : `<button class="ru-hub can" data-act="girar" aria-label="Girar">GIRAR</button>`}</div>
-    <span class="lab">Ruleta de la semana</span>
+    <span class="lab">Tu ruleta · cada 3 días</span>
     <h3>${RU ? 'Girando…' : mio ? (cel ? '¡Premio!' : 'Ya has girado') : 'Una tirada gratis'}</h3>
-    <p>${RU ? 'Mira dónde para la aguja' : mio ? `La siguiente tirada, el lunes · en ${CD(PAY)}` : 'De 50 a 1.000 V-Bucks o una caja de CS2 para abrirla tú.'}</p>
+    <p>${RU ? 'Mira dónde para la aguja' : mio ? `<span data-notr>${en() ? `Next spin ${ruSigTxt()}` : `La siguiente, ${ruSigTxt()}`}</span>` : 'De 25 a 400 V-Bucks o una caja de CS2 para abrirla tú. Una tirada cada 3 días.'}</p>
     ${mio || RU ? '' : '<button class="ru-go" data-act="girar">Girar la ruleta</button>'}
     ${premio}
-    <div class="ru-todos ${S.ruTodos ? 'abre' : ''}"><button class="ru-tb" data-act="ru-todos" aria-expanded="${!!S.ruTodos}"><span class="ru-tav">${F.map((f) => av(f.id, 'sm')).join('')}</span><b>Todos</b><small>${(WHEEL || []).filter((w) => w.week === wk).length} de ${F.length} han girado</small><i>${S.ruTodos ? '▴' : '▾'}</i></button>
-      ${S.ruTodos ? `<div class="ru-tl">${F.map((f) => { const w = (WHEEL || []).find((x) => x.week === wk && x.player === f.uid); return `<span class="${w ? '' : 'no'}">${av(f.id, 'sm')}<b>${esc(f.n)}</b><em>${w ? esc(w.label) : 'aún no ha girado'}</em></span>` }).join('')}</div>` : ''}</div>
+    <div class="ru-todos ${S.ruTodos ? 'abre' : ''}"><button class="ru-tb" data-act="ru-todos" aria-expanded="${!!S.ruTodos}"><span class="ru-tav">${F.map((f) => av(f.id, 'sm')).join('')}</span><b>Todos</b><small>${F.filter((f) => ruMia(f.uid)).length} de ${F.length} han girado</small><i>${S.ruTodos ? '▴' : '▾'}</i></button>
+      ${S.ruTodos ? `<div class="ru-tl">${F.map((f) => { const w = ruMia(f.uid); return `<span class="${w ? '' : 'no'}">${av(f.id, 'sm')}<b>${esc(f.n)}</b><em>${w ? esc(w.label) : 'aún no ha girado'}</em></span>` }).join('')}</div>` : ''}</div>
   </section>`;
 }
 // lo que hay para reclamar: cuantas cosas esperan
 function rwPend() {
-  const wk = new Date(WEEK0 + DAY / 2).toISOString().slice(0, 10);
-  const rueda = !(WHEEL || []).some((w) => w.player === me().uid && w.week === wk);
+  const rueda = !ruMia(me().uid);
   const tiempo = (TIEMPO?.tiers || []).filter((t) => !t.claimed && TIEMPO.minutes >= t.min).length;
   return { diario: !!CLAIM && !CLAIM.today, rueda, rescate: puedeRescate(), tiempo };
 }
@@ -1525,6 +1546,7 @@ function pintaRw() {
     <header><span class="rw-gi">${IC_GIFT}</span><h2>Recompensas</h2><button class="rw-x" data-act="rw" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
     ${ruedaHtml()}
     <div class="rw-l">
+      ${window.GM_RGLOBAL ? GM_RGLOBAL.fila() : ''}
       ${tiempoHtml()}
       <div class="rw-r2"><span class="rw-t d"><span class="cn"></span></span><p><b>Premio diario</b><span>${N(CLAIM?.amount || 50)} V-Bucks cada día que lo reclames</span></p>${p.diario ? `<button class="go-s" data-act="claim">Reclamar</button>` : hecho('Hecho hoy')}</div>
       <div class="rw-r2"><span class="rw-t b">${IC_TICKET}</span><p><b>Bote de la semana</b><span>${BOTE?.pot ? `<i class="rw-pot">${N(BOTE.pot)}${coin()}</i> en el bote` : `Cada lunes, ${N(BOTE?.amount || 100)} de cada uno`} · se lo lleva quien más gane</span>${dentro.length ? `<span class="rw-av">${dentro.map((f) => av(f.id, 'sm')).join('')}<small>${dentro.length} dentro</small></span>` : ''}</p><button class="go-s res" data-apo-ir>Ver el bote</button></div>
@@ -1545,7 +1567,7 @@ function monedero() {
   if (!CASOS || LEDGER.some((m) => m.kind === 'batalla' && !BATS.has(+((m.d || '').match(/#(\d+)/) || [])[1]))) setTimeout(cargaMov, 0);
   return `<div class="pad">
     <div class="w-hero">${coin('big')}
-      <div><span class="lab">Tu saldo</span><div class="w-bal">${N(me().s)}</div>
+      <div><span class="lab">Tu saldo</span><div class="w-bal">${NS(me().s)}</div>
         <p class="w-pay">Paga del lunes <b>+${N(WEEKLY)}</b> · se acumula</p>
         <div class="w-cd" data-cdpay>${fmtPay(PAY)}</div>
         <div class="wk7">${days.map((d, i) => `<i class="${i <= di ? 'on' : ''}"></i>`).join('')}${days.map((d, i) => `<span class="${i === di ? 'on' : ''}">${d}</span>`).join('')}</div>
@@ -1860,12 +1882,12 @@ function render() {
   // lleva Inicio, Partidos, Apuestas, Todos y Más; Liga, Cajas, Juegos y Mercado (nv-x) van en la hoja de Más
   document.getElementById('nav').innerHTML = Object.entries(SCREENS).filter(([k]) => !['directo', 'novedades', 'ajustes', 'chat', 'monedero'].includes(k)).map(([k, [n, , ic]]) => `<button class="nv ${S.scr === k ? 'on' : ''} ${['liga', 'cajas', 'juegos', 'mercado'].includes(k) ? 'nv-x' : ''} ${k === 'mercado' && MERCADO_MANT ? 'nv-mant' : ''}" data-scr="${k}"><svg viewBox="0 0 24 24">${ic}</svg><span class="nl">${n}</span><span class="ns">${n.replace('Mis apuestas', 'Apuestas').replace('Apuestas de todos', 'Todos')}</span>${k === 'mercado' && MERCADO_MANT ? '<small>mantenimiento</small>' : ''}</button>`).join('');
   const rank = [...F].sort((a, b) => b.s - a.s);
-  document.getElementById('me').innerHTML = `${av(MEK, 'xl')}<b>${esc(me().n)}</b><em>${N(me().s)} · ${rank.indexOf(me()) + 1}º de ${F.length}</em>`;
+  document.getElementById('me').innerHTML = `${av(MEK, 'xl')}<b>${esc(me().n)}</b><em>${NS(me().s)} · ${rank.indexOf(me()) + 1}º de ${F.length}</em>`;
   document.getElementById('me').dataset.prof = MEK;
   document.getElementById('lang').innerHTML = `<button type="button" class="rail-aj ${S.scr === 'ajustes' ? 'on' : ''}" data-scr="ajustes"><svg viewBox="0 0 24 24">${SCREENS.ajustes[2]}</svg>Ajustes</button>`;
   const [t, sub] = S.scr === 'perfil' ? ['Perfil', ''] : SCREENS[S.scr];
   pintaRw(); pintaNv(); pintaVivoYo(); pintaEq();
-  document.getElementById('top').innerHTML = `<h1>${S.scr === 'colegas' ? '<span class="t-l">Apuestas de todos</span><span class="t-s">Todos</span>' : t}</h1>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}<span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>${M.some((x) => x.live) ? `<button class="dv-btn ${S.scr === 'directo' ? 'on' : ''}" data-scr="directo"><i></i>Directo <b>${M.filter((x) => x.live).length}</b></button>` : ''}${nvBoton()}${rwBoton()}<span class="onl ${S.onl ? 'abre' : ''}" data-onl>${onlineHtml()}</span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span><button class="mo-btn ${S.scr === 'monedero' ? 'on' : ''}" data-scr="monedero" aria-label="Monedero" title="Monedero"><svg viewBox="0 0 24 24">${SCREENS.monedero[2]}</svg></button><button class="aj-btn ${S.scr === 'ajustes' ? 'on' : ''}" data-scr="ajustes" aria-label="Ajustes" title="Ajustes"><svg viewBox="0 0 24 24">${SCREENS.ajustes[2]}</svg></button>`;
+  document.getElementById('top').innerHTML = `<h1>${S.scr === 'colegas' ? '<span class="t-l">Apuestas de todos</span><span class="t-s">Todos</span>' : t}</h1>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}<span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>${M.some((x) => x.live) ? `<button class="dv-btn ${S.scr === 'directo' ? 'on' : ''}" data-scr="directo"><i></i>Directo <b>${M.filter((x) => x.live).length}</b></button>` : ''}${nvBoton()}${rwBoton()}<span class="onl ${S.onl ? 'abre' : ''}" data-onl>${onlineHtml()}</span><span class="bal"><span class="num ${(lastBal ?? me().s) < 0 ? 'neg-s' : ''}">${N(lastBal ?? me().s)}</span>${coin()}</span><button class="mo-btn ${S.scr === 'monedero' ? 'on' : ''}" data-scr="monedero" aria-label="Monedero" title="Monedero"><svg viewBox="0 0 24 24">${SCREENS.monedero[2]}</svg></button><button class="aj-btn ${S.scr === 'ajustes' ? 'on' : ''}" data-scr="ajustes" aria-label="Ajustes" title="Ajustes"><svg viewBox="0 0 24 24">${SCREENS.ajustes[2]}</svg></button>`;
   photoCss();
   if (window.GM_MERCADO) GM_MERCADO.aplicaCosmeticos(mkCtx());
   const vw = document.getElementById('view'), cambia = vw.dataset.vista !== S.scr;
@@ -1992,7 +2014,7 @@ document.addEventListener('click', async (e) => {
   if (d.act === 'girar') {
     if (S.ruGira || RU) return; S.ruGira = true;
     const { data, error } = await db.rpc('spin_wheel'); S.ruGira = false; if (error) { render(); return toast(errMsg(error)) }
-    const from = S.ruRot || 0, fin = -(data.prize * 45 + 22.5) + (Math.random() - .5) * 30, giro = (((fin - from) % 360) + 360) % 360;
+    const from = S.ruRot || 0, fin = -(RU_A[data.prize] + RU_W[data.prize] / 2) + (Math.random() - .5) * RU_W[data.prize] * 0.66, giro = (((fin - from) % 360) + 360) % 360;
     S.ruWin = null; S.ruRes = null; S.ruCel = null; RU = { t0: Date.now(), from, to: from + 360 * 6 + giro, res: data }; render(); requestAnimationFrame(ruLoop);
     return;
   }
