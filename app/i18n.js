@@ -46,6 +46,16 @@
     'No hay partidos en esta lista.': 'No games in this list.',
     'se actualiza cada vez que abres la ficha': 'refreshed every time you open this page',
     'Casi seguro que no': 'Doubtful',
+    // Retos con mas gente (01-11, retos.js, activos.js, db/053): 2v1, 2v2, 3v1, la seccion de Inicio y el boton de unirse
+    'Retos activos': 'Active challenges', 'entra en un lado: el bote se reparte entre los que aciertan': 'join a side: the pot is split between those who are right',
+    'Nadie todavía': 'Nobody yet', 'Estás dentro': 'You are in', 'entras con': 'you join with', 'Unirme con': 'Join', 'pones': 'you put in', 'Reto de': 'Challenge from',
+    'Retos': 'Challenges', 'Gana un reto': 'Win a challenge', 'Van ganando': 'Winning', 'Tu parte si aciertas': 'Your share if you are right',
+    'en juego · se reparte entre los que acierten': 'at stake · split between those who are right', 'el empate': 'the draw',
+    '· crece si entra más gente': '· grows if more people join', 'Reto para ti': 'Challenge for you',
+    'Ya estás dentro de este reto': 'You are already in this challenge', 'Ese reto es para otro amigo': 'That challenge is for another friend',
+    'Ese reto es para ti: acéptalo': 'That challenge is for you: accept it', 'Ese reto está cerrado': 'That challenge is closed', 'Elige un resultado válido': 'Pick a valid result',
+    'No puedes entrar en tu propio reto': 'You cannot join your own challenge', 'Ese partido ya ha empezado': 'That match has already started',
+    'Perdiste el reto con': 'You lost the challenge against', 'Reto con': 'Challenge with',
     // Jugadores (01-11, jugadores.js): ficha de jugador, vista previa, copas y ganancias torneo a torneo
     'Agentes que más juega': 'Most played agents', 'Últimos 60 días, según vlr.gg. Iconos oficiales de Riot Games.': 'Last 60 days, from vlr.gg. Official icons by Riot Games.',
     'Rol en el equipo': 'Role in the team', 'Sus mejores premios': 'Biggest prizes', 'Todavía no tenemos sus ganancias: se cargan solas, jugador a jugador.': 'We do not have his earnings yet: they load by themselves, player by player.',
@@ -563,6 +573,11 @@
   const ORD = (n) => (/^1[123]$|[04-9]$/.test(n) ? 'th' : /1$/.test(n) ? 'st' : /2$/.test(n) ? 'nd' : 'rd');
   const MES_N = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const R = [
+    // Retos con mas gente (01-11, db/053): lo que escribe la base en el chat y en el monedero; van primero para que las reglas de mas abajo no las trocen
+    [/^(.+) entra en el reto de (.+?): (.+), ([\d.,]+) en juego$/, '$1 joins the challenge from $2: $3, $4 at stake'],
+    [/^(.+) ganó ([\d.,]+) en el reto contra (.+?) · (.+)$/, (m, a, n, b, r) => `${a} won ${n} in the challenge against ${b.replace(/ y /g, ' and ')} · ${r}`],
+    [/^(.+) ganaron ([\d.,]+) cada uno en el reto contra (.+?) · (.+)$/, (m, a, n, b, r) => `${a.replace(/ y /g, ' and ')} won ${n} each in the challenge against ${b.replace(/ y /g, ' and ')} · ${r}`],
+    [/^Ganan (.+)$/, 'Winners $1'], [/^y (\d+) reto más$/, 'and $1 more challenge'], [/^y (\d+) retos más$/, 'and $1 more challenges'],
     // repaso del ingles (01-11, ingles2): estas van primero porque las reglas de mas abajo cambian trozos sueltos (contra, con, en juego, a...)
     // y despues la frase entera ya no casa
     [/^Cara o cruz: ganas contra (.+)$/, 'Coin flip: you win against $1'], [/^Cara o cruz: pierdes contra (.+)$/, 'Coin flip: you lose against $1'],
@@ -620,6 +635,7 @@
     [/^cobraría ([\d.]+)$/, 'would get $1'], [/^· ([\d.]+) a ([\d.]+)$/, '· $1 at $2'],
     [/^· contra (.+)$/, '· against $1'], [/^contra (.+)$/, 'against $1'], [/^cobró ([\d.]+) a ×([\d.,]+)$/, 'cashed $1 at ×$2'],
     [/^combinada de (\d+)$/, 'parlay of $1'], [/^una combinada de (\d+)$/, 'a parlay of $1'], [/^y (\d+) más en juego$/, 'and $1 more in play'],
+    [/^Lleva (\d+) h (\d+) min$/, '$1 h $2 min in'], [/^Lleva (\d+) min$/, '$1 min in'],
     [/\bMinuto (?=\d)/g, 'Minute '], [/ · Descanso$/, ' · Half time'], [/\bmié(?= \d)/g, 'Wed'],
     [/(^|\s)(\d{1,2}) (ene|abr|ago|dic)(?=$| \d)/g, (m, s, d, mo) => `${s}${d} ${MESES[mo]}`],
     // boleto multiple (boleto.js, 30-10)

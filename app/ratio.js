@@ -49,9 +49,10 @@
     for (const b of g(() => ALL, [])) { const v = valorSuelta(b), a = vals.get(b.k); if (v != null && a) a.push(v) }
     const uk = new Map(F.map((f) => [f.uid, f.id]));
     for (const c of g(() => GM_CMB.todas(), null) || []) { const v = valorCombinada(c), a = vals.get(uk.get(c.player)); if (v != null && a) a.push(v) }
-    // PM 01-11: un reto 1 contra 1 resuelto cuenta como una apuesta a cuota 2,00 para cada uno de los dos (como en Mis apuestas)
-    for (const c of g(() => CH, [])) { if ((c.st !== 'won_from' && c.st !== 'won_to') || !c.set || !c.from || !c.to) continue; const gana = c.st === 'won_from' ? c.from : c.to;
-      for (const k of [c.from, c.to]) { const a = vals.get(k); if (a) a.push(k === gana ? 2 : 0) } }
+    // PM 01-11: un reto resuelto cuenta como una apuesta para cada participante, a la cuota efectiva del reto (bote entre los del lado que
+    // gana: 2,00 en un 1v1, 3,00 si gana el solo de un 2v1; 0 si pierde). Los devueltos o sin rival no cuentan. Como en Mis apuestas
+    for (const c of g(() => CH, [])) { if (!/^won_/.test(c.st) || !c.set || !window.GM_RETOS) continue;
+      for (const x of GM_RETOS.pl(c)) { const a = vals.get(x.k); if (a) a.push(GM_RETOS.cuotaEf(c, x.k)) } }
     return ranking(F.map((f) => ({ id: f.id, n: f.n, vals: vals.get(f.id) })), MIN);
   }
   // las combinadas llegan por su cuenta (cada 30 s como mucho): pedirlas cada vez que se pinta mantiene el puesto al dia

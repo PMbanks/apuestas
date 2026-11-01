@@ -51,13 +51,14 @@ function nextMonday() {
 const COLS = 'id,sport,league,league_name,league_logo,stage,tag,venue,home,away,home_logo,away_logo,starts_at,status,score,winner,odds_1,odds_x,odds_2,odds_src,bo,details';
 async function load() {
   const from = new Date(Date.now() - 2 * DAY).toISOString(), to = new Date(Date.now() + 72 * DAY).toISOString();
-  const [st, ms, ch, ex, wh, ti] = await Promise.all([
+  const [st, ms, ch, ex, wh, ti, rm] = await Promise.all([
     db.rpc('get_state'),
     db.from('matches').select(COLS).gte('starts_at', from).lte('starts_at', to).neq('status', 'canceled').order('starts_at').limit(3000),
     db.from('chat').select('*').order('id', { ascending: false }).limit(150),
     db.rpc('get_extras'),
     db.from('wheel_spins').select('player,week,prize,label,amount,created_at').order('id', { ascending: false }).limit(40),
     db.rpc('time_status'),
+    db.rpc('get_retos').then((r) => r, () => ({ error: 1 })),   // db/053: quien esta dentro de cada reto (con 053 sin cargar da error y los retos son de 2 como antes)
   ]);
   if (st.error) throw st.error;
   if (ms.error) throw ms.error;
@@ -69,7 +70,7 @@ async function load() {
   }
   WHEEL = wh.error ? null : wh.data || [];
   TIEMPO = ti.error ? null : ti.data || null;
-  build(st.data, rows, (ch.data || []).reverse(), ex.error ? null : ex.data);
+  build(st.data, rows, (ch.data || []).reverse(), ex.error ? null : { ...ex.data, retos: rm && !rm.error && rm.data && typeof rm.data === 'object' ? rm.data : null });
   avisos();
 }
 const LIGAS_FUERA = new Set(['eng.fa', 'usa.1', 'uefa.europa.conf', 'ned.1', 'bra.1', 'mex.1', 'por.1']);
@@ -86,7 +87,7 @@ function build(st, rows, chat, ex) {
   rows = rows.filter((r) => !(LIGAS_FUERA.has(r.league) || LIGAS_FUERA_NOMBRE.test(r.league_name || '')) || conBets.has(r.id));
   // ligas y juegos que cada jugador oculta (ocultas.js): no salen en Partidos, Inicio ni Directo, pero lo que ya tienes apostado
   // o retado sigue saliendo en Mis apuestas (esos partidos se quedan en MI y en L, fuera de M)
-  const oc = window.GM_OCULTAS ? GM_OCULTAS.parte(rows, { bets: st.bets, ch: ex?.challenges, me: ME }) : { vis: rows, ocu: [] };
+  const oc = window.GM_OCULTAS ? GM_OCULTAS.parte(rows, { bets: st.bets, ch: ex?.challenges, retos: ex?.retos, me: ME }) : { vis: rows, ocu: [] };
   rows = oc.vis;
   const mkM = (r) => ({
     id: r.id, s: r.sport, lg: r.league, a: r.home, b: r.away, la: r.home_logo, lb: r.away_logo, at: r.starts_at,
@@ -146,7 +147,15 @@ function build(st, rows, chat, ex) {
   const st2 = [...F].sort((a, b) => b.streak - a.streak)[0]; if (st2?.streak >= 2) AW.push(['Mejor racha', String(st2.streak), st2.id, 'ganadas seguidas']);
   if (!F.some((f) => f.id === S.pf)) S.pf = MEK;
   const uk = new Map(st.players.map((p) => [p.id, p.color]));
-  CH = (ex?.challenges || []).map((c) => ({ id: c.id, m: c.match, from: uk.get(c.from), to: uk.get(c.to), ab: c.to == null, fp: c.from_pick, tp: c.to_pick, stake: c.stake, st: c.status, at: c.created, set: c.settled }));
+  // retos con mas gente (db/053): pl = quien esta dentro y con que lado, en el orden de la base (quien reta, quien acepta, los demas); win = lado ganador
+  const RM = ex?.retos || {};
+  CH = (ex?.challenges || []).map((c) => {
+    const o = { id: c.id, m: c.match, from: uk.get(c.from), to: uk.get(c.to), ab: c.to == null, fp: c.from_pick, tp: c.to_pick, stake: c.stake, st: c.status, at: c.created, set: c.settled };
+    const r = RM[c.id];
+    o.pl = r && Array.isArray(r.e) ? r.e.map(([u, p]) => ({ k: uk.get(u), p })).filter((x) => x.k) : [{ k: o.from, p: o.fp }].concat(o.to && o.tp ? [{ k: o.to, p: o.tp }] : []);
+    o.win = r ? r.w || null : c.status === 'won_from' ? c.from_pick : c.status === 'won_to' ? c.to_pick : null;
+    return o;
+  });
   DAILY = ex?.daily || []; DAILY_ON = !!ex?.daily_on; DAILY_BONUS = Number(ex?.daily_bonus) || 1.25;
   // primera tanda de ideas (db/009): premio diario, rescate, bote, reacciones, encuestas
   CLAIM = ex?.claim || null; BOTE = ex?.bote || null;
@@ -672,21 +681,29 @@ function directo() {
   </div>`;
 }
 
-/* retos 1 contra 1 */
-const chName = (st) => ({ pending: 'Esperando respuesta', accepted: 'En juego', declined: 'Rechazado', expired: 'Sin contestar', canceled: 'Retirado', won_from: 'Ganado', won_to: 'Ganado', void: 'Sin ganador' }[st] || st);
+/* retos (1v1, 2v1, 2v2, 3v1...: db/053, las cuentas estan en retos.js) */
+const chName = (st) => ({ pending: 'Esperando respuesta', accepted: 'En juego', declined: 'Rechazado', expired: 'Sin contestar', canceled: 'Retirado', won_from: 'Ganado', won_to: 'Ganado', won_other: 'Ganado', void: 'Sin ganador' }[st] || st);
 function retoRow(c) {
   const m = byId(c.m); if (!m) return '';
+  const R = window.GM_RETOS;
   // retos.js (01-11): un reto abierto (c.ab) no tiene destinatario: lo coge el primero que entra. Los retos no se cancelan:
   // ya no hay boton Retirar (si nadie entra antes de empezar, la base devuelve lo puesto)
-  const forMe = (c.to === MEK || (c.ab && c.from !== MEK)) && c.st === 'pending' && isOpen(m);
-  const win = c.st === 'won_from' ? c.from : c.st === 'won_to' ? c.to : null;
+  const forMe = R ? R.paraMi(c) : (c.to === MEK || (c.ab && c.from !== MEK)) && c.st === 'pending' && isOpen(m);
+  const ls = R ? R.lados(c) : [{ p: c.fp, ks: [c.from] }].concat(c.tp ? [{ p: c.tp, ks: [c.to] }] : []);
+  const ws = R ? R.ganan(c) : [];
+  const grupo = (l) => l.ks.length === 1 ? esc(fr(l.ks[0]).n) : `${esc(fr(l.ks[0]).n)} +${l.ks.length - 1}`;
+  const caras = (l) => l.ks.slice(0, 3).map((k) => av(k, 'sm')).join('') + (l.ks.length > 3 ? `<span class="rt-n">+${l.ks.length - 3}</span>` : '');
   let act = '';
-  if (forMe) act = `<span class="rt-act">${window.GM_RETOS ? GM_RETOS.accion(c) : ''}</span>`;   // retos.js: "Aceptar · pones X, ganas Y" en un toque (el lado es el contrario) y No
-  const rival = c.ab ? '<span class="av sm rt-any" title="Cualquiera"><svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 6.2a3 3 0 0 1 0 5.6M17.5 14a5 5 0 0 1 3 5"/></svg></span>' : av(c.to, 'sm');
-  return `<div class="rt ${c.st} ${c.ab ? 'ab' : ''}"><div class="rt-who">${av(c.from, 'sm')}<i>vs</i>${rival}</div>
-    <div style="min-width:0"><strong>${esc(fr(c.from).n)} · ${esc(pn(m, c.fp))}${c.tp ? ` <i>contra</i> ${esc(fr(c.to).n)} · ${esc(pn(m, c.tp))}` : c.ab ? ` <i>reta a</i> cualquiera` : ` <i>reta a</i> ${esc(fr(c.to).n)}`}</strong>
-    <span class="m">${esc(m.a)} vs ${esc(m.b)} · ${m.live ? 'en juego' : c.st === 'pending' || c.st === 'accepted' ? WD(m.at).toLowerCase() + ' ' + HM(m.at) + ' · ' + CD(m.at) : when(c.set || c.at)}</span></div>
-    <div class="v"><b>${N(c.stake * 2)}${coin()}</b><span class="st">${win ? 'Gana ' + esc(fr(win).n) : c.ab && c.st === 'pending' ? 'Abierto a todos' : chName(c.st)}</span></div>${act}</div>`;
+  if (forMe) act = `<span class="rt-act">${R ? R.accion(c) : ''}</span>`;   // retos.js: "Aceptar · pones X, ganas Y" en un toque (el lado es el contrario) y No
+  const anyAv = '<span class="av sm rt-any" title="Cualquiera"><svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 6.2a3 3 0 0 1 0 5.6M17.5 14a5 5 0 0 1 3 5"/></svg></span>';
+  const rival = ls[1] ? caras(ls[1]) : c.ab ? anyAv : av(c.to, 'sm');
+  const vs = ls[1] ? ` <i>contra</i> ${grupo(ls[1])} · ${esc(pn(m, ls[1].p))}` : c.ab ? ` <i>reta a</i> cualquiera` : ` <i>reta a</i> ${esc(fr(c.to).n)}`;
+  const gana = ws.length ? (ws.length === 1 ? 'Gana ' + esc(fr(ws[0]).n) : 'Ganan ' + esc(fr(ws[0]).n) + ' +' + (ws.length - 1)) : '';
+  const nv = R ? R.nvm(c) : '1v1', bote = R ? R.bote(c) : c.stake * 2;
+  return `<div class="rt ${c.st} ${c.ab ? 'ab' : ''}"><div class="rt-who">${caras(ls[0])}<i>vs</i>${rival}</div>
+    <div style="min-width:0"><strong>${grupo(ls[0])} · ${esc(pn(m, ls[0].p))}${vs}</strong>
+    <span class="m"><b class="rt-nvm">${nv}</b> · ${esc(m.a)} vs ${esc(m.b)} · ${m.live ? 'en juego' : c.st === 'pending' || c.st === 'accepted' ? WD(m.at).toLowerCase() + ' ' + HM(m.at) + ' · ' + CD(m.at) : when(c.set || c.at)}</span></div>
+    <div class="v"><b>${N(bote)}${coin()}</b><span class="st">${gana || (c.ab && c.st === 'pending' ? 'Abierto a todos' : chName(c.st))}</span></div>${act}</div>`;
 }
 const retosHtml = (list, empty) => (list.length ? `<div class="rts">${list.map(retoRow).join('')}</div>` : `<p class="hint">${empty}</p>`);
 function retoForm(m) { return window.GM_RETOS ? GM_RETOS.btn(m, 'grande') : '' }   // retos.js: un boton Retar que abre un panel con todo a la vista
@@ -702,7 +719,7 @@ const LOGROS = [
   ['fiel', 'Fiel', '20 apuestas', (f, b) => b.length >= 20],
   ['ballena', 'Ballena', 'Apuesta 1.000 de una vez', (f, b) => b.some((x) => x.stake >= 1000)],
   ['verde', 'En verde', 'Ten más de lo que te han dado', (f) => f.s > f.recibido && f.bets > 0],
-  ['duelo', 'Duelista', 'Gana un reto 1 contra 1', (f) => CH.some((c) => (c.st === 'won_from' && c.from === f.id) || (c.st === 'won_to' && c.to === f.id))],
+  ['duelo', 'Duelista', 'Gana un reto', (f) => CH.some((c) => (window.GM_RETOS ? GM_RETOS.ganan(c).includes(f.id) : (c.st === 'won_from' && c.from === f.id) || (c.st === 'won_to' && c.to === f.id)))],
   ['dia', 'Del día', 'Acierta la apuesta del día', (f, b) => b.some((x) => x.st === 'won' && DAILY.some((d) => d.match === x.m))],
   ['rico', 'Rico', 'Llega a 5.000', (f) => f.s >= 5000],
 ];
@@ -727,7 +744,7 @@ function avisos() {
     for (const c of CH) {
       const was = SNAP.ch.get(c.id), m = byId(c.m); if (!m) continue;
       if (!was && c.to === MEK && c.st === 'pending') avisa(`${fr(c.from).n} te reta`, `${m.a} vs ${m.b} · pones ${N(c.stake)}, ganas ${N(c.stake * 2)}`);
-      if (was && was !== c.st && (c.st === 'won_from' || c.st === 'won_to')) { const w = c.st === 'won_from' ? c.from : c.to; if (w === MEK) confeti(); if (c.from === MEK || c.to === MEK) avisa(w === MEK ? '¡Reto ganado!' : 'Reto perdido', `${m.a} ${m.score || ''} ${m.b}`) }
+      if (was && was !== c.st && /^won_/.test(c.st)) { const gana = window.GM_RETOS ? GM_RETOS.ganan(c).includes(MEK) : (c.st === 'won_from' ? c.from : c.to) === MEK; if (gana) confeti(); if (window.GM_RETOS ? GM_RETOS.dentro(c) : (c.from === MEK || c.to === MEK)) avisa(gana ? '¡Reto ganado!' : 'Reto perdido', `${m.a} ${m.score || ''} ${m.b}`) }
       if (was === 'pending' && c.st === 'accepted' && c.from === MEK && !(window.GM_RETOS && GM_RETOS.fueAbierto(c.id))) avisa(`${fr(c.to).n} acepta tu reto`, `${m.a} vs ${m.b} · ${N(c.stake * 2)} en juego`);
     }
     for (const id of now.live) if (!SNAP.live.has(id)) { const m = byId(id); avisa('Empieza tu partido', `${m.a} vs ${m.b}`) }
@@ -855,9 +872,9 @@ function partidos() {
     for (const m of ms) {
       const open = isOpen(m), qn = window.GM_QUIEN ? GM_QUIEN.fila(m) : { cls: '', who: '', movil: '' };
       h += `<div class="row ${S.foc === m.id ? 'on' : ''} ${m.live && m.vivo ? 'cv' : ''} ${m.live ? 'envivo' : ''} ${qn.cls}" data-foc="${m.id}" style="--i:${Math.min(ri++, 14)}">
-        <span class="t">${m.live ? '<em>VIVO</em>' : HM(m.at)}${m.live ? (m.vivo ? '' : `<small class="sc">${esc(String(m.score || '').split(' ')[0])}</small>`) : Date.parse(m.at) <= NOW ? '<small class="pe">por empezar</small>' : `<small>${CD(m.at)}</small>`}${open && window.GM_RETOS ? GM_RETOS.btn(m, 'tiempo') : ''}</span>
+        <span class="t">${m.live ? '<em>VIVO</em>' : HM(m.at)}${m.live ? (m.vivo ? '' : `<small class="sc">${esc(String(m.score || '').split(' ')[0])}</small>`) : Date.parse(m.at) <= NOW ? '<small class="pe">por empezar</small>' : `<small>${CD(m.at)}</small>`}</span>
         <span class="llw" title="${esc(L[m.lg][0])} · ${SP[m.s][0]}"><img class="ll" src="${esc(L[m.lg][1])}" alt="" loading="lazy">${m.s === 'c' || m.s === 'v' ? `<img class="lls" src="${SP[m.s][1]}" alt="">` : ''}</span>
-        <span class="tms"><span class="tm">${logo(m, 'a')}<span>${esc(m.a)}</span>${esFav(favK(m.s, m.a)) || esFav('pa:' + m.id) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${dailyTag(m)}${vN(m, 'a')}</span><span class="tm">${logo(m, 'b')}<span>${esc(m.b)}</span>${esFav(favK(m.s, m.b)) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${vN(m, 'b')}</span>${vL(m)}${qn.movil}${open && window.GM_RETOS ? GM_RETOS.btn(m, 'fila') : ''}</span>
+        <span class="tms"><span class="tm">${logo(m, 'a')}<span>${esc(m.a)}</span>${esFav(favK(m.s, m.a)) || esFav('pa:' + m.id) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${dailyTag(m)}${vN(m, 'a')}</span><span class="tm">${logo(m, 'b')}<span>${esc(m.b)}</span>${esFav(favK(m.s, m.b)) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${vN(m, 'b')}</span>${vL(m)}${qn.movil}</span>
         <span class="who">${window.GM_QUIEN ? qn.who : [...new Set(whoOn(m.id).map((x) => x.f))].map((k) => av(k, 'sm')).join('')}</span>
         ${['1', 'X', '2'].map((p) => oddBtn(m, p, open)).join('')}
       </div>`;
@@ -984,7 +1001,7 @@ function apuestas() {
   const bf = ests.some(([k]) => k === S.bf) ? S.bf : 'all';
   const list = set.filter((b) => (bf === 'all' || b.st === bf) && (sp === 'all' || byId(b.m).s === sp));
   const POR = 9, pags = Math.max(1, Math.ceil(list.length / POR)), pg = Math.min(S.bp || 0, pags - 1);
-  const misRetos = CH.filter((c) => c.from === MEK || c.to === MEK);
+  const misRetos = CH.filter((c) => (window.GM_RETOS ? GM_RETOS.dentro(c) : c.from === MEK || c.to === MEK));
   return `<div class="pad mb mb2">
     <section class="mb2-hero">
       <div class="mb2-nums">
@@ -1155,7 +1172,7 @@ function colegas() {
     <div class="sec-h ab-sec"><h2>En juego</h2><i>${abiertas.length} ${abiertas.length === 1 ? 'apuesta' : 'apuestas'} · ${partidos.length} ${partidos.length === 1 ? 'partido' : 'partidos'}</i></div>
     ${partidos.map(partido).join('') || '<p class="hint">Nadie tiene nada en juego. Se apuesta desde Partidos.</p>'}
     <div id="cmb-todos"></div>
-    ${CH.length ? `<div class="sec-h ab-sec"><h2>Retos 1 contra 1</h2><i>${retosAbiertos.length} abiertos</i></div>${retosHtml(CH.slice(0, 10), '')}` : ''}
+    ${CH.length ? `<div class="sec-h ab-sec"><h2>Retos</h2><i>${retosAbiertos.length} abiertos</i></div>${retosHtml(CH.slice(0, 10), '')}` : ''}
     ${todasHtml()}
   </div>`;
 }

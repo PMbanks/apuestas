@@ -130,10 +130,10 @@
   }
   // PM 01-11: "en home no veo el challenge con Darkam": los retos 1 contra 1 abiertos tuyos entran en En juego con lo demas
   function abiertasYo() {
-    const rs = g(() => CH.filter((c) => (c.from === MEK || c.to === MEK) && (c.st === 'pending' || c.st === 'accepted') && byId(c.m)), []).map((c) => { const m = byId(c.m); return { tipo: 'r', r: c, m, at: t2(m.at), live: !!m.live } });
+    const rs = g(() => CH.filter((c) => (window.GM_RETOS ? GM_RETOS.dentro(c) : c.from === MEK || c.to === MEK) && (c.st === 'pending' || c.st === 'accepted') && byId(c.m)), []).map((c) => { const m = byId(c.m); return { tipo: 'r', r: c, m, at: t2(m.at), live: !!m.live } });
     return [...abiertas(MEK, ME), ...rs].sort((a, b) => (b.live - a.live) || a.at - b.at);
   }
-  const cobraria = (x) => (x.tipo === 'b' ? x.b.stake * x.b.o : x.tipo === 'r' ? x.r.stake * 2 : x.c.stake * Number(x.c.odds));
+  const cobraria = (x) => (x.tipo === 'b' ? x.b.stake * x.b.o : x.tipo === 'r' ? g(() => GM_RETOS.pagoDe(x.r, MEK), x.r.stake * 2) : x.c.stake * Number(x.c.odds));
   const valor = (r, v, extra) => `<span class="ini-rv" data-r="${r}"><small>${r === 'won' ? '▲' : r === 'lost' ? '▼' : ''}</small>${N(Math.abs(v || extra || 0))}${coin()}</span>`;
 
   /* ---------- Tu ---------- */
@@ -321,13 +321,15 @@
     const orden = [...conAlgo, ...quietos].map((x) => x.f);
     const head = `<div class="ini-colh"><div class="ini-stack">${orden.map((f, i) => av(f.id, i >= 4 ? 'ini-mas4' : '')).join('')}${orden.length > 4 ? `<span class="ini-stack-n">+${orden.length - 4}</span>` : ''}</div>
       <div class="ini-who"><h2>Amigos</h2><span class="lab">lo último de cada uno</span></div><div class="r"><span class="lab" data-notr>${en() ? 'in play' : 'en juego'}</span><b class="ini-big">${enJuego}</b></div></div>`;
-    if (!conAlgo.length) return head + vacio(IC_GENTE, 'Tus amigos aún no se han movido', 'Cuando apuesten, sale aquí. Se apuesta en Partidos: toca una cuota y dale a Apostar.', true);
+    // PM 01-11: los retos activos y quien esta dentro, arriba, antes de "Por orden de movimiento" (activos.js)
+    const act = window.GM_ACTIVOS ? g(() => GM_ACTIVOS.html(), '') : '';
+    if (!conAlgo.length) return head + act + vacio(IC_GENTE, 'Tus amigos aún no se han movido', 'Cuando apuesten, sale aquí. Se apuesta en Partidos: toca una cuota y dale a Apostar.', true);
     const persona = (x) => {
       const f = x.f, ab = x.ab.slice(0, 3);
       return `<article class="ini-pp"><header data-prof="${f.id}">${av(f.id)}<div class="ini-who"><b>${esc(f.n)}</b><small>${N(f.s)}${coin()} · ${puesto(f)}</small></div><span class="ini-when">${esc(hace(x.mov))}</span></header>
         ${x.ver.map(lineaRes).join('')}${ab.map((y) => lineaAb(y, f)).join('')}${x.ab.length > 3 ? `<button class="ini-mas2" data-scr="colegas">y ${x.ab.length - 3} más en juego</button>` : ''}</article>`;
     };
-    return head + `<div class="ini-sub"><h3>Por orden de movimiento</h3><span>${v.prev ? (nuevosTot ? `${nuevosTot} ${nuevosTot === 1 ? 'resultado nuevo' : 'resultados nuevos'}` : 'sin resultados nuevos') : ''}</span></div>
+    return head + act + `<div class="ini-sub"><h3>Por orden de movimiento</h3><span>${v.prev ? (nuevosTot ? `${nuevosTot} ${nuevosTot === 1 ? 'resultado nuevo' : 'resultados nuevos'}` : 'sin resultados nuevos') : ''}</span></div>
       <div class="ini-ppl">${conAlgo.map(persona).join('')}</div>
       ${quietos.length ? `<div class="ini-quietos"><span class="lab">Sin movimiento</span><span class="ini-quietos-c">${quietos.map((x) => av(x.f.id)).join('')}</span></div>` : ''}`;
   }

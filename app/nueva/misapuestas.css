@@ -250,3 +250,7 @@ html.sin-anim .mt-pt{animation:none}
 .mt-r .mt-meta{gap:8px}
 .mt-rt-ic .av{width:22px;height:22px;font-size:10px}
 .mt-rt-no{margin:10px 0 0;font:400 12px var(--mono);color:var(--mute)}
+
+/* PM 01-11: el tiempo que lleva el partido, junto a la liga */
+.mt-lleva{flex:none;margin-left:auto;font:600 12px/1 var(--mono);color:#ffc2c7;white-space:nowrap}
+.mt-lleva+.mt-no{margin-left:0}

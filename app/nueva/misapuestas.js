@@ -93,10 +93,10 @@
     const eq = (s) => { const p = s === 'a' ? '1' : '2', mio = lp === p, sc = s === 'a' ? d && d.sa : d && d.sb;
       return `<div class="mt-eq ${mio ? 'mio' : ''}"><span class="mt-cr">${logo(m, s)}</span><span class="mt-nm"><b>${esc(s === 'a' ? m.a : m.b)}</b>${mio ? '<em>Tu apuesta</em>' : ''}</span>${live ? `<span class="mt-pts">${rondas ? `<small>${s === 'a' ? d.ra : d.rb}</small>` : ''}<strong class="${lid === s ? 'w' : ''}">${sc ?? '·'}</strong></span>` : ''}</div>` };
     const pk = b.p === 'X' ? '<p class="mt-pk"><i>★</i><b>Empate</b></p>' : mkp ? `<p class="mt-pk"><i>★</i><b data-notr>${esc(pn(m, b.p))}</b></p>` : '';
-    const det0 = live ? (g(() => (window.GM_VIVO ? GM_VIVO.lineaTxt(m) : ''), '') || d.mapa || '') : '';
-    // PM 01-11: "no se ve el tiempo del partido, solo el marcador": si la linea no trae ya un minuto (futbol, NBA), se anade cuanto lleva jugandose
+    const det = live ? (g(() => (window.GM_VIVO ? GM_VIVO.lineaTxt(m) : ''), '') || d.mapa || '') : '';
+    // PM 01-11: "no se ve el tiempo del partido, solo el marcador": cuanto lleva jugandose (el futbol y la NBA ya traen su minuto en la cabecera)
     const lleva = live ? Math.max(0, Math.floor((Date.now() - t2(m.at)) / 60000)) : 0;
-    const det = live && lleva > 0 && lleva < 600 && !/^Minuto /.test(det0) && !/ · Minuto /.test(det0) && m.s !== 'b' ? (det0 ? det0 + ' · ' : '') + 'Lleva ' + (lleva >= 60 ? Math.floor(lleva / 60) + ' h ' + String(lleva % 60).padStart(2, '0') + ' min' : lleva + ' min') : det0;
+    const tiempo = live && lleva > 0 && lleva < 600 && !/Minuto /.test(det) && m.s !== 'b' ? `<span class="mt-lleva">Lleva ${lleva >= 60 ? Math.floor(lleva / 60) + ' h ' + String(lleva % 60).padStart(2, '0') + ' min' : lleva + ' min'}</span>` : '';
     const head = live
       ? `<span class="mt-st"><i class="mt-pt"></i><span>En vivo</span></span>${det ? `<span class="mt-det">${det.split(' · ').map((x) => `<span>${esc(x)}</span>`).join('<i>·</i>')}</span>` : ''}${va ? `<span class="mt-va ${va}">${VA[va]}</span>` : ''}`
       : banda(m, `<span class="mt-when">${empieza(t2(m.at))}</span>`);
@@ -106,7 +106,7 @@
     return `<article class="mt ${live ? 'live' : ''}" data-goto="${esc(m.id)}" style="--i:${i};--sc:${SPC[m.s] || 'var(--acc)'}">
       ${fondo(wm, m.s === 'u' && (lp === '1' || lp === '2'))}
       <header class="mt-band">${head}<span class="mt-bar"><i style="width:${fill.toFixed(1)}%"></i></span></header>
-      <div class="mt-meta"><img class="tl" src="${esc((L[m.lg] && L[m.lg][1]) || SP[m.s][1])}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><span class="lab ell">${esc(corto((L[m.lg] && L[m.lg][0]) || SP[m.s][0]))}</span>${dailyTag(m)}<span class="mt-no">${codigo(b)}</span></div>
+      <div class="mt-meta"><img class="tl" src="${esc((L[m.lg] && L[m.lg][1]) || SP[m.s][1])}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><span class="lab ell">${esc(corto((L[m.lg] && L[m.lg][0]) || SP[m.s][0]))}</span>${dailyTag(m)}${tiempo}<span class="mt-no">${codigo(b)}</span></div>
       <div class="mt-m">${eq('a')}${eq('b')}</div>${pk}
       <div class="mt-n">${cuadro('Cuota', O(b.o))}${cuadro('Apostado', N(b.stake) + coin())}${cuadro('Cobraría', N(b.stake * b.o) + coin(), 'hi')}</div>
       ${puede || live ? `<div class="mt-act ${live ? 'co' : ''}" data-cobet="${b.id}">${puede ? cancelBtn(b) : ''}</div>` : ''}
