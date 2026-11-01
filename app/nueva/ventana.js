@@ -104,7 +104,7 @@
     let h = '';
     const e = estado(m);
     if (e !== 'pend' && window.GM_VIVO) { const s = g(() => GM_VIVO.pintaFutbol(d), null); if (s) h += vv([s[2], s[1]].filter(Boolean)).replace(e === 'fin' ? /<p class="vv-fuente">[\s\S]*?<\/p>/ : /$^/, '') }   // eventos (goles, tarjetas, cambios) y estadisticas del equipo
-    let x = g(() => espnHtml({ ...m, live: false }, d), '');   // alineaciones, ultimos 5 y clasificacion (el directo ya sale arriba)
+    let x = g(() => espnHtml({ ...m, live: false, _vnt: 1 }, d), '');   // alineaciones, ultimos 5 y clasificacion (el directo ya sale arriba)
     if (e !== 'pend') x = x.replace(/<p class="hint">Las alineaciones salen[\s\S]*?<\/p>/, '');
     if (e === 'fin') { const i = x.lastIndexOf('<div class="ver">'); if (i >= 0) x = x.slice(0, i) }   // dónde verlo no sirve de nada ya
     if (x.trim()) h += `<div class="espn vnt-espn">${x}</div>`;

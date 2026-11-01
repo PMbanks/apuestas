@@ -284,19 +284,22 @@ function espnHtml(m, d) {
     const rows = STATS.map(([k, n, u]) => [n, val(tA, k), val(tB, k), u]).filter((r) => r[1] != null && r[2] != null);
     if (rows.length) h += `<div class="sts">${rows.map(([n, a, b, u]) => { const t = a + b || 1; return `<div class="st2"><span>${a}${u || ''}</span><span class="k">${n}</span><span>${b}${u || ''}</span><i class="bar"><b style="width:${(a / t) * 100}%"></b><b style="width:${(b / t) * 100}%"></b></i></div>` }).join('')}</div>`;
   }
+  // ficha pro (fichapro.js): alineaciones en el campo, forma, cara a cara y clasificacion con bandas; si no carga, queda lo de abajo
+  const fp = window.GM_FP && (m.s === 'f' || m.s === 'b') ? GM_FP.html(m, d) : '';
+  if (fp) h += fp;
   // alineaciones (ESPN las publica cerca del partido)
-  const ro = (d?.rosters || []).filter((r) => (r.roster || []).some((x) => x.starter));
+  const ro = fp ? [] : (d?.rosters || []).filter((r) => (r.roster || []).some((x) => x.starter));
   if (ro.length === 2) {
     const col = (r) => { const xi = r.roster.filter((x) => x.starter); return `<div class="xi"><span class="lab">${esc(r.team?.displayName || '')}${r.formation ? ' · ' + esc(r.formation) : ''}</span>${xi.map((x) => `<span class="xp"><b>${esc(x.jersey || '')}</b>${esc(x.athlete?.displayName || '')}<i>${esc(x.position?.abbreviation || '')}</i></span>`).join('')}</div>` };
     h += `<div class="alin"><span class="lab">Alineaciones</span><div class="alin2">${col(ro[0])}${col(ro[1])}</div></div>`;
-  } else if (!m.live && m.s === 'f') h += `<p class="hint">Las alineaciones salen cuando los equipos las dan, sobre una hora antes.</p>`;
+  } else if (!fp && !m.live && m.s === 'f') h += `<p class="hint">Las alineaciones salen cuando los equipos las dan, sobre una hora antes.</p>`;
   // ultimos 5 de cada uno
-  const l5 = d?.lastFiveGames;
+  const l5 = fp ? null : d?.lastFiveGames;
   if (Array.isArray(l5) && l5.length) {
     h += `<div class="l5"><span class="lab">Últimos 5</span>${l5.slice(0, 2).map((t) => `<div class="l5r"><span class="nm">${esc(t.team?.displayName || '')}</span><span class="fm">${(t.events || []).slice(0, 5).map((e) => { const r = (e.gameResult || '').toUpperCase(); const c = r === 'W' ? 'g' : r === 'D' ? 'e' : ''; return `<b class="${c}" title="${esc((e.atVs || '') + ' ' + (e.opponent?.displayName || '') + ' ' + (e.score || ''))}">${r === 'W' ? 'G' : r === 'D' ? 'E' : r === 'L' ? 'P' : '·'}</b>` }).join('')}</span></div>`).join('')}</div>`;
   }
   // clasificacion: las filas de los dos equipos y las de arriba
-  const ent = d?.standings?.groups?.[0]?.standings?.entries;
+  const ent = fp ? null : d?.standings?.groups?.[0]?.standings?.entries;
   if (Array.isArray(ent) && ent.length) {
     const ids = new Set((comp?.competitors || []).map((c) => c.team?.id || c.id));
     const val = (e, k) => e.stats?.find((s) => s.name === k || s.type === k)?.displayValue ?? '';
@@ -907,7 +910,7 @@ function ficha(m) {
   }
   const mineHere = myBetsOn(m.id);
   if (mineHere.length) h += `<div class="d-mine"><span class="lab">Tus apuestas aquí</span>${mineHere.map((b) => `<div class="dm" data-bet="${b.id}"><strong>${esc(pn(m, b.p))} <em>${O(b.o)}</em></strong><span>${N(b.stake)} → <b>${N(b.stake * b.o)}${coin()}</b></span><button class="x-share" data-share="${b.id}">Al chat</button>${cancelBtn(b)}</div>`).join('')}</div>`;
-  h += `<div id="espn-box" class="espn" data-m="${m.id}">${m.espn ? ESPN_HTML.get(m.id) || '<p class="hint">Cargando datos de ESPN…</p>' : tvHtml(m.tv || [], m)}</div>`;
+  h += `<div id="espn-box" class="espn" data-m="${m.id}">${m.espn ? ESPN_HTML.get(m.id) || (window.GM_FP && (m.s === 'f' || m.s === 'b') ? GM_FP.esqueleto(m) : '<p class="hint">Cargando datos de ESPN…</p>') : tvHtml(m.tv || [], m)}</div>`;
   const rts = CH.filter((c) => c.m === m.id);
   if (isOpen(m) || rts.length) h += `<div class="d-retos">${rts.length ? retosHtml(rts, '') : ''}${isOpen(m) ? retoForm(m) : ''}</div>`;
   const ws = whoOn(m.id);
