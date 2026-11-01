@@ -51,7 +51,7 @@
       const d = JSON.parse(localStorage.getItem(CLAVE) || 'null'); if (!d) return;
       const ahora = Date.now();
       B.k = d.k || ''; B.comun = Math.max(1, +d.comun || 50); B.modo = d.modo === 'comb' ? 'comb' : 'sueltas'; B.cst = Math.max(1, +d.cst || 50);
-      B.items = (Array.isArray(d.items) ? d.items : []).filter((x) => x && x.m && PICK_OK.test(x.p) && Date.parse(x.at) > ahora)
+      B.items = (Array.isArray(d.items) ? d.items : []).filter((x) => x && x.m && (PICK_OK.test(x.p) || !!(window.GM_MK && GM_MK.valido(x.p))) && Date.parse(x.at) > ahora)   // NBA: nba.js
         .map((x) => ({ m: x.m, p: x.p, st: Math.max(0, Math.floor(+x.st || 0)), at: x.at, a: x.a, b: x.b, la: x.la, lb: x.lb, s: x.s, o0: x.o0 ?? null, err: '' }));
     } catch {}
   }
