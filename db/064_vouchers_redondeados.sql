@@ -28,5 +28,5 @@ begin
   update cs_inv i set item_id = c.canon from _vc v, _canon c where i.item_id = v.id and c.nv = v.nv and v.id <> c.canon;
 
   -- 3) el nombre y el precio del que se queda
-  update cs_items i set name = c.nv || '€ Voucher', price = c.nv from _canon c where i.id = c.canon;
+  update cs_items i set name = c.nv || '€ Voucher', price = array_fill(c.nv, array[10]) from _canon c where i.id = c.canon;   -- el precio es una lista de 10 (uno por desgaste), aqui todos iguales
 end $$;
