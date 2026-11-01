@@ -1625,6 +1625,8 @@ html.sin-anim .ft:hover>*,html.sin-anim .bol:hover .bol-cr img,html.sin-anim .bo
   .nov-art{height:170px}
 }
 @media (max-width:440px){.nv{font-size:9px;letter-spacing:-.01em}.nv svg{width:20px;height:20px}}
+/* 01-11: con Inicio son 10 en la barra de abajo; en movil estrecho cada uno ocupa lo que mide su nombre (Monedero no pisa a Juegos) */
+@media (max-width:440px){.nv{flex:1 1 auto;min-width:0}}
 html.sin-anim #view.entra .nov-hero,html.sin-anim #view.entra .nov-c{animation:none}html.sin-anim .nov-c:hover .nov-art img{transform:none}
 
 /* quinto jugador: Darkam (30-10) */

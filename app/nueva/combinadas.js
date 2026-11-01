@@ -38,10 +38,18 @@
       if (error) throw error;
       C.todas = data || []; C.list = C.todas.filter((c) => c.player === me); C.err = '';
     } catch (e) { C.err = /does not exist|PGRST/.test(String(e && (e.message || e.code))) ? '' : 'No se han podido cargar tus combinadas'; if (!C.list) C.list = [] }
-    C.t = Date.now(); C.vivo = false; pinta(true);
+    C.t = Date.now(); C.vivo = false; pinta(true); avisaIni();
     if (C.list.some((c) => c.status === 'open' && (c.combo_legs || []).some((l) => l.matches && empezado(l.matches)))) cargaCQ();
   }
 
+  // Inicio (inicio.js, 01-11) lee de aqui las combinadas de todos y se repinta cuando cambian (sin pedir nada mas a la base)
+  let firmaIni = '';
+  function avisaIni() {
+    const f = JSON.stringify((C.todas || []).map((c) => [c.id, c.status, (c.combo_legs || []).map((l) => [l.result, l.matches && l.matches.status])]));
+    if (f === firmaIni) return; firmaIni = f;
+    try { window.dispatchEvent(new CustomEvent('gm:cmb-datos')) } catch {}
+  }
+  window.GM_CMB = { todas: () => C.todas || null, carga: (f) => carga(f) };
   const nombre = (m, p) => (p === '1' ? m.home : p === '2' ? m.away : 'Empate');
   const empezado = (m) => m.status !== 'scheduled' || Date.parse(m.starts_at) <= Date.now();
   function estadoPata(l) {

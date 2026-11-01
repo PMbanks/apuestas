@@ -19,7 +19,7 @@
   let ctx = null, root = null;
   const S = {
     juego: (() => { const j = lee('jg-juego'); return JUEGOS.some((x) => x[0] === j) ? j : 'crash' })(), stake: Math.max(1, parseInt(lee('jg-stake'), 10) || 100), saldo: 0,
-    lado: 'cara', para: null, riesgo: 'medio', color: 'rojo', auto: '', busy: 0, err: null, ocupa: false, rk: { modo: lee('jg-rk-m') === 'mayor' ? 'mayor' : 'neto', periodo: lee('jg-rk-p') === 'semana' ? 'semana' : 'siempre', todos: false, d: {} }, aviso: '', pd: 0, bjRest: null,
+    lado: 'cara', para: null, riesgo: 'medio', color: 'rojo', auto: '', busy: 0, err: null, ocupa: false, rk: { modo: lee('jg-rk-m') === 'mayor' ? 'mayor' : 'neto', periodo: lee('jg-rk-p') === 'semana' ? 'semana' : 'siempre', riv: null, sig: '', n: 0, recarga: false, d: {} }, aviso: '', pd: 0, bjRest: null,
     mo: { vistos: parseInt(lee('jg-mo-visto'), 10) || null, lado: 'cara', msg: '' },
     cr: { ultima: null },
     ru: { ang: 0, spin: null, hecho: null, msg: '' },
@@ -83,10 +83,11 @@
       if (n !== cargaId) return;
       D[j] = d; D.res = res; S.err = null;
       if (j === 'blackjack') { if (S.busy) S.bjRestPend = rest; else S.bjRest = rest }
-      if (CON_RANKING.includes(j) && !S.busy) S.rk.d[j] = rank;                          // el ranking enseña resultados: no se toca mientras una animacion los esconde
+      if (CON_RANKING.includes(j) && !S.busy) S.rk.d[j] = rank || S.rk.d[j] || null;                          // el ranking enseña resultados: no se toca mientras una animacion los esconde
       aplica(j);
     } catch (e) { if (n !== cargaId) return; S.err = msgErr(e) }
     pintaSi();
+    if (!S.busy) pintaRank();
   }
   // solo repinta si lo que se ve ha cambiado
   function pintaSi(fuerza) {
@@ -96,7 +97,7 @@
   }
   function firma() {
     const d = D[S.juego] || {}, r = D.res || {};
-    const base = [S.juego, S.err, r.crash && r.crash.id, r.ruleta && r.ruleta.estado, r.moneda, r.bj, S.bjRest, S.lado, S.para, S.riesgo, S.color, S.rk.d[S.juego], S.rk.todos, S.rk.periodo, S.rk.modo, S.mo.lado, S.mo.msg, S.ru.msg, S.pl.msg];
+    const base = [S.juego, S.err, r.crash && r.crash.id, r.ruleta && r.ruleta.estado, r.moneda, r.bj, S.bjRest, S.lado, S.para, S.riesgo, S.color, S.mo.lado, S.mo.msg, S.ru.msg, S.pl.msg];
     return JSON.stringify([base, d, S.juego === 'crash' ? crFase() : S.juego === 'ruleta' ? ruFase() : 0], (k, v) => (k === 'now' ? undefined : v));
   }
   // lo propio de cada juego al llegar datos nuevos
@@ -164,6 +165,7 @@
     if (S.saldoPend != null) { S.saldo = S.saldoPend; S.saldoPend = null }
     if (S.bjRestPend !== undefined) { S.bjRest = S.bjRestPend; S.bjRestPend = undefined; pend = true }
     if (pend) pinta();
+    if (S.rk.recarga) { S.rk.recarga = false; cargaRank() }
     root && root.querySelectorAll('[data-saldo]').forEach((e) => (e.textContent = N(S.saldo)));
     if (ctx.refresh) ctx.refresh();
   }
@@ -173,7 +175,9 @@
     return JUEGOS.map(([k, n]) => `<button class="jg-tab ${S.juego === k ? 'on' : ''}" data-jg="tab" data-v="${k}">${n}${k === 'moneda' ? `<b class="${r.moneda > 0 ? '' : 'off'}">${r.moneda || 0}</b>` : `<i class="${pt[k] ? '' : 'off'}"></i>`}</button>`).join('');
   }
   function vista() {
-    return { moneda: vMoneda, crash: vCrash, ruleta: vRuleta, blackjack: vBj, plinko: vPlinko }[S.juego]().replace(/<\/section>\s*$/, rankingHtml() + '</section>');
+    const hs = stripHtml(), hd = duelHtml();
+    S.rk.sig = hs + hd;
+    return hs + { moneda: vMoneda, crash: vCrash, ruleta: vRuleta, blackjack: vBj, plinko: vPlinko }[S.juego]().replace(/<\/section>\s*$/, () => hd + '</section>');
   }
   function post() {
     if (!root) return;
@@ -190,33 +194,102 @@
   function paraLoops() { cancelAnimationFrame(crRaf); clearTimeout(crPoll); cancelAnimationFrame(ruRaf); clearTimeout(ruPoll); clearTimeout(ruTimer); crRaf = crPoll = ruRaf = ruPoll = ruTimer = 0 }
   function reanuda() { if (S.juego === 'crash') crLoop(); if (S.juego === 'ruleta') ruLoop() }
 
-  /* ---------- ranking: podio con los 3 primeros y "Ver todos" (la base lo da ya agregado: db/017b) ---------- */
-  function rankingHtml() {
+  /* ---------- ranking (modelo F "Tira y duelo", PM 01-11): una tira de caras con su cifra ENCIMA del juego y, a la derecha (en movil debajo),
+     "Tu posicion" y el duelo contra el rival que se elige tocando su cara. La base lo da ya agregado (db/017b). Se repinta SOLO esta parte
+     (pintaRank), nunca el juego: asi la tira no parpadea, el juego no salta y una animacion en curso no se toca. ---------- */
+  function rkFilas() {
     const j = S.juego, rk0 = S.rk.d[j];
-    if (!CON_RANKING.includes(j) || !rk0) return '';
+    if (!Array.isArray(rk0)) return null;
     const crash = j === 'crash', mayor = S.rk.modo === 'mayor';
-    // "Mas ganado": ganancia neta (como llega). "Mayor ×" (crash) o "Mayor premio": la mejor jugada suelta de cada uno
-    const val = (x) => (crash ? x.mejor : x.mayor);
-    const rk = mayor ? rk0.filter((x) => val(x) > 0).sort((a, b) => val(b) - val(a)) : rk0;
-    const top = rk.slice(0, 3), resto = rk.slice(3);
-    const neto = (n) => (n >= 0 ? '+' + N(n) : '▼ ' + N(-n));
-    const fil = (x, i, clase) => {
-      const nombre = esc(nom(x.player)) + (mayor ? (crash ? '' : x.mayor_x ? `<em class="jg-pm">×${X(x.mayor_x)}</em>` : '') : crash && x.mejor ? `<em class="jg-pm">×${X(x.mejor)}</em>` : '');
-      const dcha = mayor ? (crash ? `<span class="jg-pg num win">×${X(x.mejor)}</span>` : `<span class="jg-pg num win">+${N(x.mayor)}</span>`) : `<span class="jg-pg num ${x.neto >= 0 ? 'win' : 'lose'}">${neto(x.neto)}</span>`;
-      return `<div class="jg-pd ${clase}"><b class="jg-pn num">${i + 1}</b>${av(x.player, 'xl')}<span class="jg-pnm">${nombre}</span>${dcha}</div>`;
-    };
-    const cab = `<div class="jg-rk-h"><span class="lab">Ranking</span><div class="chips"><button class="chip ${!mayor ? 'on' : ''}" data-jg="rkM" data-v="neto">Más ganado</button><button class="chip ${mayor ? 'on' : ''}" data-jg="rkM" data-v="mayor">${crash ? 'Mayor ×' : 'Mayor premio'}</button></div></div>
-      <div class="chips jg-rk-p"><button class="chip ${S.rk.periodo === 'siempre' ? 'on' : ''}" data-jg="rkP" data-v="siempre">De siempre</button><button class="chip ${S.rk.periodo === 'semana' ? 'on' : ''}" data-jg="rkP" data-v="semana">Esta semana</button></div>`;
-    if (!rk.length) return `<aside class="jg-rk">${cab}<p class="jg-rk-v">${mayor ? 'Todavía no ha ganado nadie' : 'Todavía no ha jugado nadie'}</p></aside>`;
-    return `<aside class="jg-rk">${cab}
-      <div class="jg-pod">${top.map((x, i) => fil(x, i, 'p' + (i + 1))).join('')}</div>
-      ${resto.length ? `<button class="jg-vt" data-jg="rkT">${S.rk.todos ? 'Ocultar' : 'Ver todos'} <i>${resto.length}</i></button>${S.rk.todos ? `<div class="jg-rk-l jg-pod">${resto.map((x, i) => fil(x, i + 3, 'pr')).join('')}</div>` : ''}` : ''}
-    </aside>`;
+    const val = (x) => (mayor ? (crash ? x.mejor : x.mayor) : x.neto) || 0;
+    // "Mas ganado": ganancia neta. "Mayor ×" (crash) o "Mayor premio": la mejor jugada suelta; quien no ha ganado nada no sale
+    const l = rk0.map((x) => ({ ...x, v: val(x) })).filter((x) => !mayor || x.v > 0).sort((a, b) => b.v - a.v);
+    l.forEach((x, i) => { x.rank = i + 1 });
+    return l;
+  }
+  const rkRival = (l, me) => {
+    if (!me || l.length < 2) return null;
+    const pick = S.rk.riv && l.find((x) => x.player === S.rk.riv && x.player !== me.player);
+    return pick || (me.rank > 1 ? l[me.rank - 2] : l[1]);
+  };
+  const ord = (n) => (document.documentElement.lang === 'en' ? n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] || 'th')) : n + 'º');
+  const rkOn = () => CON_RANKING.includes(S.juego) && S.rk.d[S.juego] !== null;
+  function rkVal(x, crash, mayor) {
+    if (mayor) return crash ? `<b class="num jg-hi">×${X(x.v)}</b>` : `<b class="num win">▲ ${N(x.v)}${coin()}</b>`;
+    return x.v >= 0 ? `<b class="num win">▲ ${N(x.v)}${coin()}</b>` : `<b class="num lose">▼ ${N(-x.v)}${coin()}</b>`;
+  }
+  function stripHtml() {
+    if (!rkOn()) return '';
+    const j = S.juego, crash = j === 'crash', mayor = S.rk.modo === 'mayor', l = rkFilas();
+    const seg = (ev, act, o) => `<div class="jg-seg">${o.map(([v, t]) => `<button class="${act === v ? 'on' : ''}" data-jg="${ev}" data-v="${v}">${t}</button>`).join('')}</div>`;
+    const nombreJ = (JUEGOS.find((x) => x[0] === j) || [0, ''])[1];
+    const ctl = `<div class="jg-ctl"><span class="lab">Ranking · <span>${nombreJ}</span></span>${seg('rkM', S.rk.modo, [['neto', 'Más ganado'], ['mayor', crash ? 'Mayor ×' : 'Mayor premio']])}${seg('rkP', S.rk.periodo, [['siempre', 'De siempre'], ['semana', 'Esta semana']])}</div>`;
+    let ppl = '';
+    if (l) {
+      const me = l.find((x) => x.player === ctx.me), rv = rkRival(l, me);
+      ppl = l.length ? l.map((x) => `<button class="jg-pe ${x.player === ctx.me ? 'me' : ''} ${rv && rv.player === x.player ? 'sel' : ''}" data-jg="rkR" data-v="${esc(x.player)}"><span class="jg-avw">${av(x.player, 'xl')}<span class="jg-rkn num">${x.rank}</span></span><span class="jg-nm">${esc(nom(x.player))}</span><span class="jg-vl">${rkVal(x, crash, mayor)}</span></button>`).join('')
+        : `<p class="jg-rk-v">${mayor ? 'Todavía no ha ganado nadie' : 'Todavía no ha jugado nadie'}</p>`;
+    }
+    return `<section class="jg-strip">${ctl}<div class="jg-ppl">${ppl}</div></section>`;
+  }
+  function duelHtml() {
+    if (!rkOn()) return '';
+    const j = S.juego, rk0 = S.rk.d[j], crash = j === 'crash', mayor = S.rk.modo === 'mayor', l = rkFilas();
+    if (!l) return '<aside class="jg-rk"></aside>';
+    const me = l.find((x) => x.player === ctx.me), rv = rkRival(l, me);
+    const sinJugar = ctx.jugadores.filter((p) => p.uuid !== ctx.me && !rk0.some((x) => x.player === p.uuid)).map((p) => esc(p.n));
+    const nota = sinJugar.length ? `<p class="jg-note">Sin jugar · ${sinJugar.join(' · ')}</p>` : '';
+    if (!me) {
+      const jugo = rk0.some((x) => x.player === ctx.me);
+      return `<aside class="jg-rk"><div class="jg-pos"><span class="lab">Tu posición</span><p class="jg-pl0">${jugo ? 'Todavía no has ganado ningún premio' : 'Todavía no has jugado'}</p></div>${nota}</aside>`;
+    }
+    const dtxt = (v) => (mayor && crash ? '×' + X(v) : N(v) + coin());
+    const nxt = l[me.rank - 2], prv = l[me.rank];
+    const linea = (nxt ? `<span>Delante</span> <b>${esc(nom(nxt.player))}</b> <span class="num">a&nbsp;${dtxt(nxt.v - me.v)}</span>` : '')
+      + (prv ? `${nxt ? ' <i>·</i> ' : ''}<span>${nxt ? 'detrás' : 'Detrás'}</span> <b>${esc(nom(prv.player))}</b> <span class="num">a&nbsp;${dtxt(me.v - prv.v)}</span>` : '');
+    let duelo = '';
+    if (rv) {
+      const col = (x) => `var(--f-${jug(x.player).color})`;
+      const stats = [['Más ganado', (x) => x.neto || 0, (v) => (v >= 0 ? '▲ ' : '▼ ') + N(Math.abs(v)), true]];
+      if (crash) stats.push(['Mayor ×', (x) => x.mejor || 0, (v) => (v > 0 ? '×' + X(v) : '0'), false]);
+      stats.push(['Mayor premio', (x) => x.mayor || 0, (v) => (v > 0 ? N(v) : '0'), false]);
+      const filas = stats.map(([t, f, fm, neg]) => {
+        const a = f(me), b = f(rv), mx = Math.max(Math.abs(a), Math.abs(b), 1), gana = a >= b;
+        const cl = (v) => (neg ? (v >= 0 ? 'win' : 'lose') : '');
+        return `<div class="jg-rd"><span class="lab">${t}</span>
+          <div class="jg-bars"><div class="${gana ? 'w' : ''}"><i style="width:${Math.max(2, Math.abs(a) / mx * 100)}%;background:${col(me)}"></i></div><div class="${!gana ? 'w' : ''}"><i style="width:${Math.max(2, Math.abs(b) / mx * 100)}%;background:${col(rv)}"></i></div></div>
+          <div class="jg-nu num"><b class="${cl(a)}">${fm(a)}</b><b class="${cl(b)}">${fm(b)}</b></div></div>`;
+      }).join('');
+      const d = Math.abs(rv.v - me.v), ahead = rv.rank < me.rank, rn = esc(nom(rv.player));
+      const veredicto = d === 0 ? '<span>Vais igualados</span>' : ahead ? `<span>${rn} te saca</span> <b>${dtxt(d)}</b><span>. Te falta eso para pasarle.</span>` : `<span>Vas por delante de ${rn} por</span> <b>${dtxt(d)}.</b>`;
+      duelo = `<div class="jg-vs"><div class="jg-sd me">${av(me.player, 'xl')}<b>${esc(nom(me.player))}</b></div><span class="jg-mid2">VS</span><div class="jg-sd">${av(rv.player, 'xl')}<b>${rn}</b></div></div>${filas}<p class="jg-vd">${veredicto}</p>`;
+    }
+    return `<aside class="jg-rk"><div class="jg-pos"><span class="lab">Tu posición</span><div class="jg-ps"><em>${ord(me.rank)}</em> <span>de ${l.length}</span></div><p class="jg-lin">${linea}</p></div>${duelo}${nota}</aside>`;
+  }
+  // repinta solo la tira y el duelo (no el juego), y solo si han cambiado; la tira conserva su desplazamiento lateral
+  function pintaRank() {
+    if (!root || !ctx) return;
+    const s = root.querySelector('.jg-strip'), d = root.querySelector('.jg-rk');
+    const hs = stripHtml(), hd = duelHtml(), sig = hs + hd;
+    if (sig === S.rk.sig) return;
+    S.rk.sig = sig;
+    const mk = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content.firstElementChild };
+    if (s && hs) {
+      const x = (s.querySelector('.jg-ppl') || {}).scrollLeft || 0, e = mk(hs);
+      s.replaceWith(e); tr(e);
+      const n = e.querySelector('.jg-ppl'); if (n && x) n.scrollLeft = x;
+    }
+    if (d && hd) { const e = mk(hd), y = d.scrollTop; d.replaceWith(e); tr(e); e.scrollTop = y }
   }
   async function cargaRank() {
     const j = S.juego; if (!CON_RANKING.includes(j)) return;
-    try { S.rk.d[j] = await rpc('jg_ranking', { p_juego: j, p_periodo: S.rk.periodo }) } catch { S.rk.d[j] = null }
-    pintaSi(true);
+    if (S.busy) { S.rk.recarga = true; return }                                           // mientras una animacion esconde el resultado no se pide
+    const n = ++S.rk.n;
+    let r = null; try { r = await rpc('jg_ranking', { p_juego: j, p_periodo: S.rk.periodo }) } catch {}
+    if (n !== S.rk.n || j !== S.juego) return;
+    if (S.busy) { S.rk.recarga = true; return }
+    S.rk.d[j] = r || S.rk.d[j] || null;
+    pintaRank();
   }
 
   /* ---------- eventos ---------- */
@@ -244,12 +317,12 @@
     S.juego = v; guarda('jg-juego', v); paraLoops(); sigs.v = null;
     pinta(); cargar();
   };
-  A.rkP = ({ v }) => { S.rk.periodo = v === 'semana' ? 'semana' : 'siempre'; guarda('jg-rk-p', S.rk.periodo); cargaRank() };
+  A.rkP = ({ v }) => { S.rk.periodo = v === 'semana' ? 'semana' : 'siempre'; guarda('jg-rk-p', S.rk.periodo); pintaRank(); cargaRank() };
   A.rkP.libre = true;
-  A.rkM = ({ v }) => { S.rk.modo = v === 'mayor' ? 'mayor' : 'neto'; guarda('jg-rk-m', S.rk.modo); pintaSi(true) };
+  A.rkM = ({ v }) => { S.rk.modo = v === 'mayor' ? 'mayor' : 'neto'; guarda('jg-rk-m', S.rk.modo); pintaRank() };
   A.rkM.libre = true;
-  A.rkT = () => { S.rk.todos = !S.rk.todos; pintaSi(true) };
-  A.rkT.libre = true;
+  A.rkR = ({ v }) => { if (!v || v === ctx.me) return; S.rk.riv = v; pintaRank() };
+  A.rkR.libre = true;
   A.q = ({ v }) => {
     let sal = Math.max(0, S.saldo || ctx.saldo || 0);
     if (S.juego === 'blackjack' && S.bjRest != null) sal = Math.min(sal, Math.max(0, S.bjRest));

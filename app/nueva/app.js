@@ -7,7 +7,7 @@ const TZ = 'Europe/Madrid', DAY = 864e5, DOMAIN = '@apuestas.app';
 const TOP = new Set(['esp.1', 'eng.1', 'ger.1', 'ita.1', 'fra.1', 'uefa.champions', 'uefa.europa', 'esp.copa_del_rey']);
 const SP = { f: ['Fútbol', '../img/futbol.svg'], v: ['Valorant', '../img/valorant.svg'], c: ['CS2', '../img/cs2.png'], u: ['UFC', '../img/ufc.png'] };
 const DEP = ['f', 'v', 'c', 'u'];
-const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', tiempo: 'Tiempo en la app', trato: 'Trato entre colegas', mercado: 'Mercado', jackpot: 'Jackpot', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', ruleta_semana: 'Ruleta de la semana', premio_semana: 'Premio de la semana', moneda: 'Cara o cruz', crash: 'Crash', ruleta: 'Ruleta', blackjack: 'Blackjack', plinko: 'Plinko', cashout: 'Cash out', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta' };
+const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', tiempo: 'Tiempo en la app', trato: 'Trato entre amigos', mercado: 'Mercado', jackpot: 'Jackpot', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', ruleta_semana: 'Ruleta de la semana', premio_semana: 'Premio de la semana', moneda: 'Cara o cruz', crash: 'Crash', ruleta: 'Ruleta', blackjack: 'Blackjack', plinko: 'Plinko', cashout: 'Cash out', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta' };
 let TIEMPO = null, CLAIM = null, BOTE = null, REACT = new Map(), POLLS = new Map(), CAMPEON = null;
 
 /* ---------- estado ---------- */
@@ -15,7 +15,7 @@ let NOW = Date.now(), PAY = 0, WEEK0 = 0;
 let ME = null, MEK = 'pm', VIS = 'open', WEEKLY = 1000, SEASON = '';
 let F = [], M = [], MI = new Map(), L = {}, ALL = [], LEDGER = [], CHAT = [], AW = [], H2H = {};
 let CH = [], DAILY = [], DAILY_ON = false, DAILY_BONUS = 1.25;
-let S = { side: null, scr: 'partidos', f: 'all', lg: 'top', sel: null, stake: 200, foc: null, sheet: false, bf: 'all', pf: 'pm', prof: 'pm', prev: 'colegas', calc: 0, reto: null, sure: null };
+let S = { side: null, scr: 'inicio', f: 'all', lg: 'top', sel: null, stake: 200, foc: null, sheet: false, bf: 'all', pf: 'pm', prof: 'pm', prev: 'colegas', calc: 0, reto: null, sure: null };
 try { localStorage.removeItem('apuestas-calc') } catch {}
 let loaded = false;
 
@@ -667,13 +667,13 @@ function retoRow(c) {
 }
 const retosHtml = (list, empty) => (list.length ? `<div class="rts">${list.map(retoRow).join('')}</div>` : `<p class="hint">${empty}</p>`);
 function retoForm(m) {
-  const r = S.reto; if (!r || r.m !== m.id) return `<button class="go ghost" data-retar="${m.id}">Retar a un colega en este partido</button>`;
+  const r = S.reto; if (!r || r.m !== m.id) return `<button class="go ghost" data-retar="${m.id}">Retar a un amigo en este partido</button>`;
   const others = F.filter((f) => !f.me), st = Math.max(0, Math.min(r.stake, me().s));
   return `<div class="rform"><span class="lab">Reto 1 contra 1 · el que acierte se lleva lo de los dos</span>
     <div class="rf-row">${others.map((f) => `<button class="rf-to ${r.to === f.id ? 'on' : ''}" data-rto="${f.id}">${av(f.id)}<span>${esc(f.n)}</span></button>`).join('')}</div>
     <div class="rf-row">${picksOf(m).map((p) => `<button class="chip ${r.p === p ? 'on' : ''}" data-rpick="${p}">${esc(pn(m, p))}</button>`).join('')}</div>
     <div class="rf-row">${[100, 250, 500, 1000].map((v) => `<button class="chip ${r.stake === v ? 'on' : ''}" data-rstake="${v}">${N(v)}</button>`).join('')}</div>
-    <p class="hint">${r.to && r.p ? `Pones ${N(st)}. Si ${esc(fr(r.to).n)} acepta, hay ${N(st * 2)} en juego.` : 'Elige colega y resultado.'}</p>
+    <p class="hint">${r.to && r.p ? `Pones ${N(st)}. Si ${esc(fr(r.to).n)} acepta, hay ${N(st * 2)} en juego.` : 'Elige amigo y resultado.'}</p>
     <div class="rf-row"><button class="go" data-act="reto-send" ${r.to && r.p && st >= 1 ? '' : 'disabled'}>Enviar reto de ${N(st)}</button><button class="chip q" data-act="reto-close">Cerrar</button></div></div>`;
 }
 
@@ -860,7 +860,7 @@ function ficha(m) {
   const rts = CH.filter((c) => c.m === m.id);
   if (isOpen(m) || rts.length) h += `<div class="d-retos">${rts.length ? retosHtml(rts, '') : ''}${isOpen(m) ? retoForm(m) : ''}</div>`;
   const ws = whoOn(m.id);
-  h += `<div class="d-fr"><span class="lab">Colegas en este partido</span>${[...F].sort((a, b) => (b.me - a.me)).map((f) => {
+  h += `<div class="d-fr"><span class="lab">Amigos en este partido</span>${[...F].sort((a, b) => (b.me - a.me)).map((f) => {
     const x = ws.filter((y) => y.f === f.id);
     const st = !x.length ? `<span class="st">aún no ha apostado</span>` : x.map((y) => (y.p ? `<span class="st rev">${esc(pn(m, y.p))} ${O(y.o)} · ${N(y.stake)}${coin()}</span>` : `<span class="st">${LOCK}${N(y.stake)} · se ve a las ${HM(m.at)}</span>`)).join(' ');
     return `<div class="ifr">${av(f.id)}<span class="nm">${esc(f.n)}</span>${st}</div>` }).join('')}</div></section>`;
@@ -1167,7 +1167,7 @@ const heat = () => { const ramp = (v) => (v >= 60 ? ['#f2c14e', '#14100a'] : v >
 const strips = () => F.some((f) => f.last) ? `<div class="strips">${F.map((f) => { const w = [...f.last].filter((c) => c === 'W').length; return `<div class="strip">${av(f.id)}<span class="nm">${esc(f.n)}</span>
   <span class="dots">${[...f.last].map((c) => `<i class="${c === 'W' ? 'w' : 'l'}" style="--c:var(--f-${f.id})" title="${c === 'W' ? 'ganada' : 'perdida'}"></i>`).join('')}</span><b>${w} de ${f.last.length}</b><span class="rc ${f.racha.startsWith('▲') ? 'up' : ''}">${f.racha}</span></div>` }).join('')}
   <p class="strips-k"><span><i class="w" style="--c:var(--mute)"></i>ganada</span><span><i class="l"></i>perdida</span><span>la más reciente, a la derecha</span></p></div>` : '<p class="hint">Cuando se resuelvan las primeras apuestas saldrán aquí.</p>';
-const table = (rank) => `<div class="tbl"><div class="tr h"><span></span><span>Colega</span><span>Saldo</span><span>Neto</span><span>Aciertos</span><span>Apuestas</span><span>Racha</span><span>Mejor premio</span><span>Fuerte en</span></div>
+const table = (rank) => `<div class="tbl"><div class="tr h"><span></span><span>Amigo</span><span>Saldo</span><span>Neto</span><span>Aciertos</span><span>Apuestas</span><span>Racha</span><span>Mejor premio</span><span>Fuerte en</span></div>
   ${rank.map((f, i) => `<div class="tr ${f.me ? 'me' : ''}"><span class="p">${i + 1}</span><span class="who2" data-prof="${f.id}" style="cursor:pointer">${av(f.id, 'xl')}${esc(f.n)}</span>
     <span class="big">${N(f.s)}${coin()}</span>${net(f)}<span>${f.ac} <span class="dim">${f.acn}</span></span><span>${f.bets}</span>
     <span class="${f.racha.startsWith('▲') ? 'net up' : 'net'}">${f.racha}</span><span>${N(f.best)}${coin()}</span><span class="dim">${f.fuerte}</span></div>`).join('')}</div>`;
@@ -1333,7 +1333,7 @@ function chat() {
   const un = fd ? unread() : 0;
   const tabs = `<nav class="ch-tabs"><button class="${fd ? '' : 'on'}" data-ct="chat">Chat${un ? `<i>${un}</i>` : ''}</button><button class="${fd ? 'on' : ''}" data-ct="feed">Feed${!fd && feedNuevo() ? '<i class="nv-pt"></i>' : ''}</button></nav>`;
   return `<div class="c-wrap ${live ? '' : 'solo'}"><section class="c-main">${tabs}${fd ? `<div class="fd-wrap" data-keep="fd">${feedHtml()}</div>` : `<div class="chat"><div class="ch-list" data-chat>${conDias(CHAT.filter((c) => c.k)) || '<p class="hint">Escribe el primero.</p>'}</div>
-    ${S.pollForm ? `<div class="poll-f"><input type="text" id="poll-q" maxlength="140" placeholder="La pregunta" autocomplete="off">${[0, 1, 2, 3].map((i) => `<input type="text" id="poll-o${i}" maxlength="40" placeholder="Opción ${i + 1}${i > 1 ? ' (si quieres)' : ''}" autocomplete="off">`).join('')}<div class="poll-b"><button class="q" data-act="poll-x">Cancelar</button><button class="go-s" data-act="poll-ok">Crear encuesta</button></div></div>` : ''}<div class="ch-in"><button class="ic" data-act="img" aria-label="Mandar foto">${IC_IMG}</button><button class="ic" data-act="poll" aria-label="Encuesta">${IC_POLL}</button><button class="ic mic ${REC ? 'on' : ''}" data-act="mic" aria-label="${REC ? 'Parar y enviar' : 'Nota de voz'}">${IC_MIC}</button>${REC ? `<span class="rec" data-rec>${recTxt()}</span><button class="q rec-x" data-act="mic-x">Cancelar</button>` : ''}<input type="text" id="msg" data-msg placeholder="Escribe a tus colegas" maxlength="500" autocomplete="off"><button class="send" data-act="send" aria-label="Enviar">${IC_SEND}</button><input type="file" id="pic" accept="image/*" data-file hidden></div></div>`}</section>
+    ${S.pollForm ? `<div class="poll-f"><input type="text" id="poll-q" maxlength="140" placeholder="La pregunta" autocomplete="off">${[0, 1, 2, 3].map((i) => `<input type="text" id="poll-o${i}" maxlength="40" placeholder="Opción ${i + 1}${i > 1 ? ' (si quieres)' : ''}" autocomplete="off">`).join('')}<div class="poll-b"><button class="q" data-act="poll-x">Cancelar</button><button class="go-s" data-act="poll-ok">Crear encuesta</button></div></div>` : ''}<div class="ch-in"><button class="ic" data-act="img" aria-label="Mandar foto">${IC_IMG}</button><button class="ic" data-act="poll" aria-label="Encuesta">${IC_POLL}</button><button class="ic mic ${REC ? 'on' : ''}" data-act="mic" aria-label="${REC ? 'Parar y enviar' : 'Nota de voz'}">${IC_MIC}</button>${REC ? `<span class="rec" data-rec>${recTxt()}</span><button class="q rec-x" data-act="mic-x">Cancelar</button>` : ''}<input type="text" id="msg" data-msg placeholder="Escribe a tus amigos" maxlength="500" autocomplete="off"><button class="send" data-act="send" aria-label="Enviar">${IC_SEND}</button><input type="file" id="pic" accept="image/*" data-file hidden></div></div>`}</section>
     ${live ? `<aside class="c-side">
       ${live ? `<section><span class="lab">En juego ahora</span><div class="live-m" data-goto="${live.id}" style="cursor:pointer"><div>${logo(live, 'a')}${esc(live.a)}${vN(live, 'a')}</div><b>${live.vivo ? vL(live) || '·' : esc(live.score || '')}</b><div>${logo(live, 'b')}${esc(live.b)}${vN(live, 'b')}</div></div></section>
       <section><span class="lab">Sus apuestas</span>${whoOn(live.id).map((x) => `<div class="ifr">${av(x.f)}<span class="nm">${esc(fr(x.f).n)}</span><span class="st rev">${x.p ? esc(pn(live, x.p)) + ' · ' : ''}${N(x.stake)}${coin()}</span></div>`).join('')}</section>` : ''}
@@ -1698,7 +1698,7 @@ const novVistas = () => { try { return JSON.parse(localStorage.getItem('gm-nov-v
 const novSinVer = () => { const v = novVistas(); return (NOVS || []).filter((x) => !v.includes(x.id)).length };
 const novCuando = (x) => { const t = Date.parse((x.fecha || '') + 'T12:00:00Z'); return isFinite(t) ? `${WD(t)} ${DD(t)} ${MO(t)}${x.hora ? ' · ' + x.hora : ''}` : '' };
 const novDia = (f) => { const t = Date.parse(f + 'T12:00:00Z'); return isFinite(t) ? (DK(t) === DK(NOW) ? 'Hoy' : DK(t) === DK(NOW - DAY) ? 'Ayer' : `${WD(t)} ${DD(t)} ${MO(t)}`) : '' };
-const NOV_IR = { partidos: 'Ir a Partidos', apuestas: 'Ver mis apuestas', colegas: 'Ver las apuestas de todos', liga: 'Ir a la Liga', cajas: 'Ir a Cajas', chat: 'Ir al Chat', monedero: 'Ir al Monedero', juegos: 'Ir a Juegos', directo: 'Ver el directo', recompensas: 'Abrir Recompensas', ajustes: 'Abrir Ajustes' };
+const NOV_IR = { inicio: 'Ir a Inicio', partidos: 'Ir a Partidos', apuestas: 'Ver mis apuestas', colegas: 'Ver las apuestas de todos', liga: 'Ir a la Liga', cajas: 'Ir a Cajas', chat: 'Ir al Chat', monedero: 'Ir al Monedero', juegos: 'Ir a Juegos', directo: 'Ver el directo', recompensas: 'Abrir Recompensas', ajustes: 'Abrir Ajustes' };
 const novArte = (x, grande) => { const ims = (Array.isArray(x.img) ? x.img : x.img ? [x.img] : []).slice(0, 3);
   return `<div class="nov-art n${ims.length} ${grande ? 'g' : ''}">${ims.map((p, i) => `<img src="${esc(novImg(p))}" alt="" loading="lazy" style="--k:${i}" onerror="this.style.display='none'">`).join('') || `<span class="nov-ic">${STAR}</span>`}</div>` };
 const novT = (x, k) => esc((window.GM_LANG && GM_LANG.get() === 'en' && x[k + '_en']) || x[k] || '');
@@ -1737,6 +1737,7 @@ function novedades() {
 
 /* ---------- motor ---------- */
 const SCREENS = {
+  inicio: ['Inicio', '', '<path d="M4 10.6 12 4l8 6.6V19a1.5 1.5 0 0 1-1.5 1.5H15v-5.2a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5.2H5.5A1.5 1.5 0 0 1 4 19z"/>'],
   partidos: ['Partidos', '', '<rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'],
   apuestas: ['Mis apuestas', '', '<path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5V10a2 2 0 0 0 0 4v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5V14a2 2 0 0 0 0-4z"/><path d="M14.5 6.5v11" stroke-dasharray="1.5 2"/>'],
   colegas: ['Apuestas de todos', '', '<circle cx="9" cy="8.5" r="3.2"/><path d="M3.2 19.5a5.8 5.8 0 0 1 11.6 0"/><circle cx="16.8" cy="9.6" r="2.6"/><path d="M15.4 14.4a4.6 4.6 0 0 1 5.6 4.5"/>'],
@@ -1756,7 +1757,7 @@ const mkCtx = () => ({ db, me: ME, meKey: MEK, jugadores: F.map((f) => ({ id: f.
 // PM 30-10: el Mercado no esta terminado, en mantenimiento hasta que diga (el modulo y la base siguen ahi)
 const MERCADO_MANT = true;
 const mercado = () => (MERCADO_MANT ? `<div class="pad mant"><svg viewBox="0 0 24 24">${SCREENS.mercado[2]}</svg><b>En mantenimiento</b><p>El Mercado está casi listo. Intercambios, ventas, contratos y jackpot llegan pronto.</p></div>` : window.GM_MERCADO ? GM_MERCADO.html(mkCtx()) : '');
-const R = { ajustes, novedades, juegos, mercado, directo, partidos, apuestas, colegas, liga, chat, monedero, perfil, cajas: () => (window.GM_CAJAS ? GM_CAJAS.html() : '') };
+const R = { inicio: () => (window.GM_INICIO ? GM_INICIO.html() : ''), ajustes, novedades, juegos, mercado, directo, partidos, apuestas, colegas, liga, chat, monedero, perfil, cajas: () => (window.GM_CAJAS ? GM_CAJAS.html() : '') };
 const cajasCtx = () => ({ db, me: ME, jugadores: F.map((f) => ({ id: f.uid, n: f.n, color: f.id, ini: f.ini, photo: !!f.photo })), saldo: me().s, toast, refresh });
 const photoCss = () => { document.getElementById('phs').textContent = F.filter((f) => f.photo).map((f) => `.av.${f.id}.ph{background-image:url("${encodeURI(f.photo)}")}`).join('') };
 // PM, 30-10: "si estas en una apuesta en directo ahora mismo, que salga toda la info en cualquier lado, encima del perfil,
@@ -2133,7 +2134,8 @@ async function start() {
     if (sesionMuerta(e)) return showLogin();
     toast(errMsg(e)); setTimeout(start, 6000); return
   }
-  const h = location.hash.slice(1); if (R[h] && h !== 'perfil') S.scr = h;
+  // PM, 01-11: al abrir la app siempre sale Inicio (antes mandaba el #pantalla de la direccion, que deja Me sumo)
+  S.scr = 'inicio'; if (location.hash) try { history.replaceState(null, '', location.pathname + location.search) } catch {}
   S.prof = MEK; showApp(); render(); live(); latido(); cargaNov();
 }
 window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (R[h] && h !== 'perfil') { S.scr = h; render() } });

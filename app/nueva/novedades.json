@@ -2,6 +2,28 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "inicio-0111",
+   "fecha": "2026-11-01",
+   "hora": "12:43",
+   "titulo": "Inicio",
+   "texto": "Al abrir la app sale Inicio: lo que has ganado o perdido desde la última vez, lo que tienes en juego y lo que hacen tus amigos. Y ya no son colegas: son amigos.",
+   "titulo_en": "Home",
+   "texto_en": "The app now opens on Home: what you won or lost since last time, what you have in play and what your friends are up to.",
+   "img": "novedades/inicio.webp",
+   "ir": "inicio"
+  },
+  {
+   "id": "ranking-juegos-0111",
+   "fecha": "2026-11-01",
+   "hora": "12:43",
+   "titulo": "Ranking de Juegos nuevo",
+   "texto": "En Crash, Blackjack y Cara o cruz tienes a tus amigos en una tira encima del juego. Toca una cara y te sale el duelo cara a cara y a quién tienes delante.",
+   "titulo_en": "New games ranking",
+   "texto_en": "In Crash, Blackjack and Coin flip your friends sit in a strip above the game. Tap a face for a head to head and see who is ahead of you.",
+   "img": "novedades/ranking-juegos.webp",
+   "ir": "juegos"
+  },
+  {
    "id": "directo-sin-saltos-0111",
    "fecha": "2026-11-01",
    "hora": "11:48",

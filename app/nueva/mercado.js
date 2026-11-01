@@ -276,7 +276,7 @@
         </div>
         <div class="mk-cambio" aria-hidden="true">⇄</div>
         <div class="mk-lado-e">
-          <span class="lab">Pides a ${para ? esc(para.n) : 'tu colega'}</span>
+          <span class="lab">Pides a ${para ? esc(para.n) : 'tu amigo'}</span>
           <div class="mk-sel">${lados(sel(S.pide))}</div>
           <button class="mk-link" data-mk="elige" data-v="pide">${S.pide.length ? 'Cambiar piezas' : 'Elegir piezas'}</button>
           <label class="mk-vbin"><input data-in="pideVb" inputmode="numeric" placeholder="0" value="${esc(S.pideVb)}" aria-label="V-Bucks que pides">${coin()}</label>
@@ -289,7 +289,7 @@
     ${recibidos.length ? `<section class="mk-sec"><h2>Te proponen</h2>${recibidos.map((t) => filaTrato(t, 'rec')).join('')}</section>` : ''}
     ${enviados.length ? `<section class="mk-sec"><h2>Tus propuestas</h2>${enviados.map((t) => filaTrato(t, 'env')).join('')}</section>` : ''}
     ${cerrados.length ? `<section class="mk-sec"><h2>Últimos tratos</h2>${cerrados.map((t) => filaTrato(t, 'fin')).join('')}</section>` : ''}
-    ${!abiertos.length && !cerrados.length ? '<p class="mk-hint">Aún no hay tratos. Elige a un colega y propón el primero.</p>' : ''}`;
+    ${!abiertos.length && !cerrados.length ? '<p class="mk-hint">Aún no hay tratos. Elige a un amigo y propón el primero.</p>' : ''}`;
   }
   const lados = (items) => (items.length ? `<span class="mk-fila">${items.map((it) => tile(it, { cls: 'mini', btn: `data-mk="quita" data-v="${it.id}"` })).join('')}</span>` : '<span class="mk-nada">Nada de momento</span>');
   const ESTADO = { aceptado: 'Aceptado', rechazado: 'Rechazado', cancelado: 'Cancelado' };
@@ -468,7 +468,7 @@
     ${grupo('marco', 'Marcos', 'Aún no tienes ningún marco. Salen en la Caja Aros, la Caja Neón y la Caja Oro.')}
     ${grupo('fondo', 'Fondos', 'Aún no tienes ningún fondo. Salen en la Caja Fondos y en la Caja Neón.')}
     ${grupo('objeto', 'Objetos de colección', 'Aún no tienes objetos. Salen en la Caja Calle y en la Caja Oro.')}
-    <section class="mk-sec"><h2>Los colegas</h2><div class="mk-colegas">${ctx.jugadores.map((j) => { const x = (e.equipados || []).find((q) => q.player === j.uuid) || {}; return `<div>${avDe(j.uuid, x.marco).replace('mk-pv', 'mk-pv big')}<span>${esc(j.n)}</span></div>` }).join('')}</div></section>`;
+    <section class="mk-sec"><h2>Los amigos</h2><div class="mk-colegas">${ctx.jugadores.map((j) => { const x = (e.equipados || []).find((q) => q.player === j.uuid) || {}; return `<div>${avDe(j.uuid, x.marco).replace('mk-pv', 'mk-pv big')}<span>${esc(j.n)}</span></div>` }).join('')}</div></section>`;
   }
 
   /* ---------- selector de piezas ---------- */

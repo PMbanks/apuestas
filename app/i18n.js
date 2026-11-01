@@ -17,6 +17,25 @@
 })();
 (function () {
   const D = {
+    // Inicio (01-11) y "amigos" en vez de "colegas" (PM: "no pongas colegas, pon amigos")
+    'Inicio': 'Home', 'Amigos': 'Friends', 'Amigo': 'Friend', 'lo último de cada uno': 'the latest from each one', 'esta semana': 'this week',
+    'desde ayer': 'since yesterday', 'desde el lunes': 'since Monday', 'desde el martes': 'since Tuesday', 'desde el miércoles': 'since Wednesday',
+    'desde el jueves': 'since Thursday', 'desde el viernes': 'since Friday', 'desde el sábado': 'since Saturday', 'desde el domingo': 'since Sunday',
+    'Acaba de pasar': 'Just happened', 'Tus últimos resultados': 'Your latest results', 'nada nuevo desde tu última visita': 'nothing new since your last visit',
+    'Ganaste': 'You won', 'Retiraste': 'Cashed out', 'Devuelta': 'Refunded', 'te pagan': 'paid', 'te devuelven': 'refunded',
+    'si aciertas todo': 'if everything wins', 'Vas ganando': 'Winning', 'Vas perdiendo': 'Losing', 'Vas empatando': 'Level', 'cobrarías': 'payout',
+    'Por orden de movimiento': 'By latest move', 'sin resultados nuevos': 'no new results', 'Sin movimiento': 'No moves lately',
+    'Ganó con': 'Won with', 'Perdió con': 'Lost with', 'Retiró con': 'Cashed out with', 'Ganó con el': 'Won with the', 'Perdió con el': 'Lost with the', 'Retiró con el': 'Cashed out with the',
+    'Ganó una': 'Won a', 'Perdió una': 'Lost a', 'Retiró una': 'Cashed out a', 'Ganó en': 'Won at', 'Ganó a': 'Won at', 'Perdió a': 'Lost at',
+    'cara o cruz': 'coin flip', 'la ruleta': 'roulette', 'va ganando': 'winning', 'va perdiendo': 'losing', 'va empatando': 'level',
+    '· contra ti': '· against you', 'Tú también': 'You too', 'ahora': 'now',
+    'Ver todas en Mis apuestas': 'See them all in My bets', 'Todavía no has apostado': 'You have not placed a bet yet', 'Nada en juego': 'Nothing in play',
+    'Se apuesta en Partidos: toca una cuota y dale a Apostar.': 'You bet in Matches: tap any odds and hit Bet.',
+    'Tus amigos aún no se han movido': 'Your friends have not moved yet', 'Cuando apuesten, sale aquí. Se apuesta en Partidos: toca una cuota y dale a Apostar.': 'When they bet, it shows up here. You bet in Matches: tap any odds and hit Bet.',
+    'Aún no hay amigos en la app': 'No friends in the app yet', 'Cuando entren, verás aquí lo que apuestan.': 'When they join, you will see their bets here.',
+    'Amigos en este partido': 'Friends in this match', 'Retar a un amigo en este partido': 'Challenge a friend on this match', 'Elige amigo y resultado.': 'Pick a friend and a result.',
+    'Escribe a tus amigos': 'Message your friends', 'Pides a tu amigo': 'You ask your friend for', 'Elige a un amigo': 'Pick a friend', 'Los amigos': 'The friends',
+    'Aún no hay tratos. Elige a un amigo y propón el primero.': 'No trades yet. Pick a friend and make the first offer.', 'Trato entre amigos': 'Trade between friends',
     // apostar en directo (31-10): frases enteras, antes de que las reglas sueltas cambien palabras sueltas
     'la cuota se mueve con el marcador': 'odds move with the score', 'Combinada de la semana': 'Parlay of the week', 'CANCELADA': 'CANCELLED', 'Combinada cancelada: cobras': 'Parlay cancelled: you get',
     // perfil con pestanas (31-10)
@@ -198,7 +217,7 @@
     'Feed': 'Feed', 'Ruleta semanal': 'Weekly wheel', 'Avisos': 'Notices', 'se ve al empezar': 'shown at kick-off', 'acierta con': 'wins with', 'falla con': 'loses with', 'gira la ruleta de la semana': 'spins the weekly wheel',
     'abre una caja': 'opens a box', 'le sale': 'gets', 'gana la batalla a': 'wins the battle against', 'ganan la batalla a': 'win the battle against', 'Todavía no ha pasado nada por aquí.': 'Nothing has happened here yet.', 'Ver más': 'Show more', 'de CS2': 'CS2',
     // novedades (30-10)
-    'Novedades': 'News', 'Nuevo': 'New', 'Todo lo nuevo de la app, con fotos': 'Everything new in the app', 'Ir a Partidos': 'Go to Matches', 'Ver mis apuestas': 'See my bets', 'Ver las apuestas de todos': 'See everyone\'s bets',
+    'Novedades': 'News', 'Nuevo': 'New', 'Todo lo nuevo de la app, con fotos': 'Everything new in the app', 'Ir a Partidos': 'Go to Matches', 'Ir a Inicio': 'Go to Home', 'Ver mis apuestas': 'See my bets', 'Ver las apuestas de todos': 'See everyone\'s bets',
     'Ir a la Liga': 'Go to the League', 'Ir al Chat': 'Go to Chat', 'Ir al Monedero': 'Go to Wallet', 'Ir a Juegos': 'Go to Games', 'Ver el directo': 'Watch live', 'Abrir Recompensas': 'Open Rewards', 'Todavía no hay novedades.': 'No news yet.',
     // juegos (JUEGOS-INTEGRAR.md, las que faltaban)
     'Crash': 'Crash', 'Blackjack': 'Blackjack', 'Contra': 'Against', 'cara': 'heads', 'cruz': 'tails', 'Máx': 'Max',
@@ -311,9 +330,23 @@
     'Todas las apuestas': 'All bets', 'En vivo': 'Live', 'Devueltas': 'Refunded', 'Retiradas': 'Cashed out', 'RETIRADA': 'CASHED OUT', 'EN JUEGO': 'OPEN', 'Oculta hasta empezar': 'Hidden until kick-off', 'Nada con estos filtros.': 'Nothing with these filters.', 'Todavía nadie ha apostado.': 'Nobody has bet yet.',
     // todas las apuestas con paginas (30-10)
     'Todas las apuestas': 'All bets', 'En vivo': 'Live', 'Devueltas': 'Refunded', 'Retiradas': 'Cashed out', 'RETIRADA': 'CASHED OUT', 'EN JUEGO': 'OPEN', 'Oculta hasta empezar': 'Hidden until kick-off', 'Nada con estos filtros.': 'Nothing with these filters.', 'Todavía nadie ha apostado.': 'Nobody has bet yet.',
+    // ranking de Juegos: tira de caras y duelo (modelo F, 01-11)
+    'Ranking ·': 'Leaderboard ·', 'Tu posición': 'Your position', 'Delante': 'Ahead', 'detrás': 'behind', 'Detrás': 'Behind', 'Vais igualados': 'You are level',
+    'Todavía no has jugado': 'You have not played yet', 'Todavía no has ganado ningún premio': 'You have not won a prize yet', '. Te falta eso para pasarle.': '. You need that much to pass them.',
   };
   const DIAS = { LUN: 'MON', 'MIÉ': 'WED', JUE: 'THU', VIE: 'FRI', 'SÁB': 'SAT', DOM: 'SUN', HOY: 'TODAY', ENE: 'JAN', ABR: 'APR', AGO: 'AUG', DIC: 'DEC' };
+  const MESES = { ene: 'jan', feb: 'feb', mar: 'mar', abr: 'apr', may: 'may', jun: 'jun', jul: 'jul', ago: 'aug', sep: 'sep', sept: 'sep', oct: 'oct', nov: 'nov', dic: 'dec' };
   const R = [
+    // Inicio (01-11): van primero porque son frases enteras de un nodo
+    [/^desde las ([\d:]+)$/, 'since $1'], [/^desde el (\d+) ([a-z]+)$/, (m, d, mo) => `since ${d} ${MESES[mo] || mo}`],
+    [/^mañana ([\d:]+)$/, 'tomorrow $1'], [/^hace (\d+) min$/, '$1 min ago'], [/^hace (\d+) h$/, '$1 h ago'], [/^en vivo\b/, 'live'],
+    [/^(\d+) resultados? nuevos?$/, (m, n) => `${n} new result${n === '1' ? '' : 's'}`],
+    [/^\d+ (ganadas?|perdidas?|devueltas?)( · \d+ (ganadas?|perdidas?|devueltas?))*$/, (m) => m.replace(/(\d+) (ganadas?|perdidas?|devueltas?)/g, (x, n, w) => `${n} ${/^g/.test(w) ? 'won' : /^p/.test(w) ? 'lost' : 'refunded'}`)],
+    [/^cobraría ([\d.]+)$/, 'would get $1'], [/^· ([\d.]+) a ([\d.]+)$/, '· $1 at $2'],
+    [/^· contra (.+)$/, '· against $1'], [/^contra (.+)$/, 'against $1'], [/^cobró ([\d.]+) a ×([\d.,]+)$/, 'cashed $1 at ×$2'],
+    [/^combinada de (\d+)$/, 'parlay of $1'], [/^una combinada de (\d+)$/, 'a parlay of $1'], [/^y (\d+) más en juego$/, 'and $1 more in play'],
+    [/\bMinuto (?=\d)/g, 'Minute '], [/ · Descanso$/, ' · Half time'], [/\bmié(?= \d)/g, 'wed'],
+    [/(^|\s)(\d{1,2}) (ene|abr|ago|dic)(?=$| \d)/g, (m, s, d, mo) => `${s}${d} ${MESES[mo]}`],
     // boleto multiple (boleto.js, 30-10)
     [/^Apostar las (\d+)$/, 'Bet all $1'], [/^Apostando (\d+) de (\d+)…$/, 'Placing $1 of $2…'], [/^Han entrado las (\d+)$/, 'All $1 placed'], [/^Han entrado (\d+) de (\d+)$/, '$1 of $2 placed'],
     [/^La cuota mejorada admite hasta ([\d.]+) por jugador en este partido y te quedan ([\d.]+)$/, 'Boosted odds allow up to $1 per player on this match and you have $2 left'],
@@ -486,6 +519,8 @@
     [/^Hasta ([\d.,]+) más en directo en este partido\. Tu apuesta queda en revisión hasta la siguiente lectura del marcador: si hubo gol o mapa justo al apostar, se anula y te devuelve todo\.$/, 'Up to $1 more live on this match. Your bet stays under review until the next score update: if a goal or map happened right as you bet, it is voided and fully refunded.'],
     [/^(Esperando datos del directo|El partido no está en juego|La UFC no tiene apuestas en directo|Cerrado desde el minuto 80|Ahora no hay cuotas en directo)\. Se paga solo al acabar\.$/, (m, w) => `${{ 'Esperando datos del directo': 'Waiting for live data', 'El partido no está en juego': 'The match is not in play', 'La UFC no tiene apuestas en directo': 'UFC has no live betting', 'Cerrado desde el minuto 80': 'Closed from minute 80', 'Ahora no hay cuotas en directo': 'No live odds right now' }[w]}. Settles automatically at the end.`],
     [/^Se paga solo al acabar\.$/, 'Settles automatically at the end.'], [/^En directo: ([\d.,]+) a ([\d.,]+)$/, 'Live: $1 at $2'],
+    // ranking de Juegos: tira de caras y duelo (01-11)
+    [/^de (\d+)$/, 'of $1'], [/^a[\s\u00a0]([\d.,×]+)$/, 'by $1'], [/^(.+) te saca$/, '$1 is ahead by'], [/^Vas por delante de (.+) por$/, 'You are ahead of $1 by'], [/^Sin jugar · (.+)$/, 'Not played · $1'],
     // decimales con punto en ingles (x1,25 a x1.25): esta va la ultima de la lista
     [/×(\d+),(\d\d)/g, '×$1.$2'],
   ];

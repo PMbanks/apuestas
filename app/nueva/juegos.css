@@ -271,55 +271,25 @@ html.sin-anim .jg *{transition:none!important}html.sin-anim .jg.jg-in{animation:
 .jg-r.ko{background:linear-gradient(90deg,rgba(224,100,111,.09),rgba(224,100,111,0) 80%)}
 .jg-r[data-pl]{padding:0 6px;margin:0 -6px;border-radius:8px}
 
-/* ranking: podio de tres columnas iguales y el resto plegado */
-.jg-rk{margin-top:72px;max-width:720px}
-.jg-rk-h{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.jg-rk-h .chips{margin-top:0}
-.jg-rk-v{margin-top:22px;font:13px var(--mono);color:var(--dim)}
-.jg-pod{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:26px}
-.jg-pd{display:grid;justify-items:center;align-content:start;gap:9px;padding:0 6px;text-align:center}
-.jg-pn{font:500 40px/1 var(--mono);letter-spacing:-.06em;color:var(--dim)}
-.jg-pd.p1 .jg-pn{color:var(--acc);text-shadow:0 0 22px rgba(242,193,78,.4)}
-.jg-pd.p2 .jg-pn{color:#cfd5dd}.jg-pd.p3 .jg-pn{color:#d8935a}
-.jg-pd .av{width:48px;height:48px;font-size:15px}
-.jg-pnm{font:700 15px var(--disp);letter-spacing:-.02em}
-.jg-pg{font:600 17px var(--mono);letter-spacing:-.03em}
-.jg-pm{font:11px var(--mono);font-style:normal;color:var(--acc)}
-.jg-vt{display:flex;align-items:center;gap:8px;margin:28px auto 0;padding:8px 18px;border-radius:999px;background:rgba(255,255,255,.07);font:600 12px var(--sans);color:var(--soft);transition:background .18s,color .18s}
-.jg-vt:hover{background:rgba(255,255,255,.12);color:var(--ink)}
-.jg-vt i{font:500 11px var(--mono);font-style:normal;color:var(--dim)}
-.jg-rk-l{margin-top:14px}
-.jg-rk-l .jg-r{grid-template-columns:22px minmax(0,1fr) auto auto}
-
 /* ===== distribucion: mesa o grafica en el centro, controles a la izquierda y ranking a la derecha =====
    En movil todo apilado (juego, controles, ranking). Hasta 1360 de ancho: juego y controles lado a lado y el ranking debajo.
    Desde 1360 (escritorio): tres columnas y todo dentro de la altura de la pantalla, sin scroll. */
 .jg-g{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "side" "rk";gap:36px}
 .jg-stage{grid-area:stage}.jg-side{grid-area:side}.jg-rk{grid-area:rk;max-width:none;margin:0}
-.jg-rk-h{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;flex-wrap:wrap}
-.jg-pod{display:grid;grid-template-columns:minmax(0,1fr);margin-top:10px}
-.jg-pd{display:grid;grid-template-columns:30px 38px minmax(0,1fr) auto;align-items:center;justify-items:start;gap:10px;padding:10px 0;border-top:1px solid var(--hair);text-align:left}
-.jg-pn{font:500 26px/1 var(--mono);letter-spacing:-.06em}
-.jg-pd.pr .jg-pn{font-size:15px;color:var(--dim);text-shadow:none}
-.jg-pd .av{width:36px;height:36px;font-size:12px}
-.jg-pnm{display:grid;gap:2px;min-width:0;font:700 14px var(--disp);letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.jg-pg{font:600 15px var(--mono);letter-spacing:-.03em;white-space:nowrap}
-.jg-vt{margin:14px 0 0}
-.jg-rk-l{margin-top:0}
 .jg-mo-l{display:grid;grid-template-columns:minmax(0,1fr);gap:0 28px;width:100%;margin-top:26px}
 .jg-mo-l .jg-sec{margin-top:0;margin-bottom:4px}
 .jg-mo-b .jg-r-n{overflow:visible}
 @media (min-width:981px){
   .jg-g{grid-template-columns:minmax(0,1fr) 320px;grid-template-areas:"stage side" "rk rk";gap:40px}
-  .jg-rk .jg-pod{max-width:420px}
 }
 @media (min-width:1360px){
   .jg{height:100%;display:flex;flex-direction:column;max-width:none;padding:14px 26px 16px}
   .jg-tabs{flex:none;margin:-10px 0 14px}
-  .jg-g{flex:1;min-height:0;grid-template-columns:274px minmax(0,1fr) 252px;grid-template-areas:"side stage rk";gap:30px;align-items:stretch}
+  .jg-strip{flex:none;margin:0 0 14px;padding:10px 16px}
+  .jg-ppl{min-height:92px}
+  .jg-g{flex:1;min-height:0;grid-template-columns:262px minmax(0,1fr) 300px;grid-template-areas:"side stage rk";gap:30px;align-items:stretch}
   .jg-side,.jg-rk{min-height:0;overflow-y:auto;scrollbar-width:none;overscroll-behavior:contain}
   .jg-side::-webkit-scrollbar,.jg-rk::-webkit-scrollbar{display:none}
-  .jg-rk .jg-pod{max-width:none}
   .jg-stage{min-height:0;display:flex;flex-direction:column}
   .jg-side .go{margin-top:20px}.jg-gap{margin-top:22px}.jg-sec{margin-top:26px}
   .jg-amt input{font-size:32px}
@@ -344,12 +314,6 @@ html.sin-anim .jg *{transition:none!important}html.sin-anim .jg.jg-in{animation:
 .jg-mo-a .jg-sec:not(:first-child){margin-top:18px}
 @media (min-width:1360px){.jg-felt{max-height:700px;align-self:center}}
 @media (min-width:1360px){.jg-mo-l{grid-template-columns:repeat(2,minmax(0,1fr))}}
-
-/* ranking: modo (mas ganado / mayor jugada) y periodo en dos filas */
-.jg-rk-h{flex-direction:column;align-items:flex-start;gap:8px}
-.jg-rk-h .chips{margin-top:0}
-.jg-rk-p{margin-top:2px;gap:16px}
-.jg-rk-p .chip{font-size:12px;color:var(--dim)}.jg-rk-p .chip.on{color:var(--soft)}
 
 /* "En la ronda": un sitio propio bajo la grafica, con columnas fijas para que nada se corte */
 .jg-ron{margin-top:14px;flex:none}
@@ -385,3 +349,79 @@ html.sin-anim .jg *{transition:none!important}html.sin-anim .jg.jg-in{animation:
 .jg-rr>.jg-rav{display:flex;flex-wrap:nowrap;gap:0}
 .jg-ra .av{width:20px;height:20px}
 @media (max-width:560px){.jg-ro .rap,.jg-ro .rcx{display:none}.jg-ro{grid-template-columns:28px minmax(0,1fr) auto auto}}
+
+/* ===== ranking, modelo F "Tira y duelo" (PM, 01-11): tira de caras encima del juego y "Tu posicion" + duelo en la columna de la derecha ===== */
+.jg{--jg-card:#242933}
+.jg-strip{display:flex;align-items:center;gap:18px;min-width:0;margin:-6px 0 28px;padding:14px 18px;border-radius:22px;background:var(--bg2)}
+.jg-ctl{display:flex;flex-direction:column;align-items:flex-start;gap:7px;flex:none}
+.jg-ctl .lab{margin-left:4px}
+.jg-seg{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.06)}
+.jg-seg button{min-height:30px;padding:7px 13px;border-radius:999px;font:500 12.5px var(--sans);color:var(--mute);white-space:nowrap;transition:background .18s,color .18s}
+.jg-seg button:hover{color:var(--ink)}
+.jg-seg button.on{background:var(--acc);color:#1b1408;font-weight:600}
+.jg-ppl{flex:1;display:flex;gap:4px;min-width:0;min-height:104px;overflow-x:auto;scrollbar-width:none}
+.jg-ppl::-webkit-scrollbar{display:none}
+.jg-ppl .jg-rk-v{margin:0;align-self:center}
+.jg-pe{position:relative;flex:1 1 0;min-width:84px;max-width:150px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 6px;border-radius:16px;text-align:center;transition:background .18s}
+.jg-pe:hover{background:rgba(255,255,255,.06)}
+.jg-pe.sel,.jg-pe.sel:hover{background:rgba(255,255,255,.1)}
+.jg-pe.me,.jg-pe.me:hover{background:linear-gradient(180deg,rgba(242,193,78,.24),rgba(242,193,78,.05))}
+.jg-avw{position:relative;display:inline-flex}
+.jg-avw .av{width:42px;height:42px;font-size:14px}
+.jg-pe.me .av{box-shadow:0 0 0 2px var(--bg2),0 0 0 4px var(--acc)}
+.jg-rkn{position:absolute;right:-5px;bottom:-3px;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--bg);color:var(--soft);font-size:10px;letter-spacing:0}
+.jg-pe.me .jg-rkn{background:#3a321b;color:var(--acc)}
+.jg-nm{margin-top:3px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 13.5px var(--disp)}
+.jg-pe.me .jg-nm{color:var(--acc2)}
+.jg-pe.sel .jg-nm::after{content:"";display:inline-block;width:5px;height:5px;margin-left:5px;border-radius:50%;background:var(--acc);vertical-align:2px}
+.jg-vl{font-size:13px;white-space:nowrap}
+.jg-vl b{font-weight:500}
+.jg-vl .cn{--s:12px;margin-left:4px}
+.jg-hi{color:var(--acc2)}
+
+/* tu posicion y el duelo */
+.jg-rk{display:flex;flex-direction:column;gap:16px;padding:20px 18px 18px;border-radius:26px;background:var(--jg-card)}
+.jg-rk:empty{display:none}
+.jg-rk>*{flex:none}
+.jg-pos{display:flex;flex-direction:column;gap:3px}
+.jg-ps{font:700 30px/1.05 var(--disp);letter-spacing:-.02em}
+.jg-ps em{font-style:normal;color:var(--acc)}
+.jg-lin{font-size:12.5px;line-height:1.5;color:var(--mute)}
+.jg-lin b{font-weight:500;color:var(--soft)}
+.jg-lin i{font-style:normal}
+.jg-lin .cn,.jg-vd .cn{--s:12px;margin-left:3px}
+.jg-pl0{margin-top:6px;font-size:14px;line-height:1.4;color:var(--soft)}
+.jg-vs{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;justify-items:center;gap:6px;padding-top:4px}
+.jg-sd{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.jg-sd .av{width:54px;height:54px;font-size:18px}
+.jg-sd.me .av{box-shadow:0 0 0 2px var(--jg-card),0 0 0 4px var(--acc)}
+.jg-sd b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 15px var(--disp)}
+.jg-sd.me b{color:var(--acc2)}
+.jg-mid2{font:800 22px var(--disp);font-style:italic;letter-spacing:.04em;color:var(--dim)}
+.jg-rd{display:flex;flex-direction:column;gap:6px}
+.jg-rd .lab{text-align:center}
+.jg-bars{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.jg-bars>div{display:flex;height:12px}
+.jg-bars>div:first-child{justify-content:flex-end}
+.jg-bars i{display:block;height:100%;opacity:.4;transition:width .3s var(--ease),opacity .3s}
+.jg-bars>div:first-child i{border-radius:99px 3px 3px 99px}
+.jg-bars>div:last-child i{border-radius:3px 99px 99px 3px}
+.jg-bars .w i{opacity:1}
+.jg-nu{display:flex;justify-content:space-between;gap:10px;font-size:13px}
+.jg-nu b{font-weight:500}
+.jg-vd{padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05);font-size:13px;line-height:1.45;color:var(--soft);text-align:center}
+.jg-vd b{font-weight:600;color:var(--ink);white-space:nowrap}
+.jg-vd i{font-style:normal}
+.jg-note{font:400 11px/1.5 var(--mono);letter-spacing:.04em;color:var(--dim)}
+@media (min-width:981px) and (max-width:1359px){.jg-rk{max-width:560px}}
+@media (min-width:1360px){.jg-rk{align-self:start;max-height:100%}}
+@media (max-width:700px){
+  .jg-strip{flex-direction:column;align-items:stretch;gap:10px;margin:-10px -4px 22px;padding:14px 10px 10px}
+  .jg-ctl{flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;padding:0 4px}
+  .jg-ctl .lab{flex:0 0 100%;margin:0}
+  .jg-seg button{min-height:34px;padding:7px 13px;font-size:13px}
+  .jg-pe{min-width:68px;padding:8px 2px}
+  .jg-vl{font-size:11.5px}
+}
+/* en pantallas bajas la mesa del blackjack ya va justa: fuera el rotulo de fondo para que no pise "Tú" */
+@media (min-width:1360px) and (max-height:960px){.jg-arco{display:none}}

@@ -1,0 +1,210 @@
+/* ===== Inicio (PM, 01-11: modelo C de modelos/m1101/inicio) =====
+   Dos columnas (Tú y Amigos) a partir de 1181 px; por debajo, el conmutador Tú | Amigos y una sola columna. */
+.ini{--ic:#252a33;--ic2:#2b313b;--ic3:#333a46;--rojo:#e0646f;max-width:1240px;margin:0 auto;padding:30px 32px 64px}
+.ini .ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.ini .up{color:var(--win)}.ini .dn{color:var(--rojo)}
+.ini-segw{display:none}
+.ini-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}
+.ini-col{min-width:0}
+
+/* cabecera de cada columna */
+.ini-colh{display:flex;align-items:center;gap:14px;padding:6px 4px 18px;margin-bottom:6px;box-shadow:inset 0 -2px 0 var(--hair)}
+.ini-colh.yo{box-shadow:inset 0 -2px 0 rgba(242,193,78,.55)}
+.ini-who{min-width:0}
+.ini-colh h2{font:800 30px/1 var(--disp);letter-spacing:-.04em}
+.ini-colh .ini-who .lab{display:block;margin-top:7px;text-transform:none;letter-spacing:.02em;font-size:12px;white-space:nowrap}
+.ini-colh .lab .cn{--s:1em}
+.ini-colh .r{margin-left:auto;text-align:right;flex:none}
+.ini-colh .r .lab{display:block;margin:0 0 7px;text-transform:none;letter-spacing:.02em;font-size:12px}
+.ini-net{display:flex;align-items:center;justify-content:flex-end;font:700 28px/1 var(--mono);letter-spacing:-.05em;color:var(--soft);white-space:nowrap}
+.ini-net small{font-size:.55em;margin-right:.12em}
+.ini-net .cn{--s:.66em}
+.ini-net.up{color:var(--win)}.ini-net.dn{color:var(--rojo)}
+.ini-big{display:block;font:700 28px/1 var(--mono);letter-spacing:-.05em;color:var(--ink)}
+.av.ini-yo{width:46px;height:46px;font-size:16px}
+.ini-stack{display:flex;flex:none}
+.ini-stack .av{width:30px;height:30px;font-size:10.5px;box-shadow:0 0 0 3px var(--bg)}
+.ini-stack .av+.av{margin-left:1px}
+.ini-stack-n{display:none}
+
+.ini-sub{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:24px 2px 12px}
+.ini-sub h3{font:700 13px/1.2 var(--disp);letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}
+.ini-sub h3 i{font:500 12px var(--mono);color:var(--dim);font-style:normal;margin-left:8px;letter-spacing:0}
+.ini-sub>span{font:400 12px var(--mono);color:var(--mute);white-space:nowrap;text-align:right}
+.ini-sub>span b{color:var(--acc);font-weight:600}
+.ini-sub .cn{--s:1em}
+.ini-when{margin-left:auto;font:400 11px var(--mono);color:var(--dim);white-space:nowrap}
+
+/* tus resultados: la cifra manda */
+.ini-res{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ini-rc{position:relative;border-radius:18px;background:var(--ic);padding:14px 14px 16px;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden;cursor:pointer;transition:transform .2s var(--ease)}
+.ini-rc:hover{transform:translateY(-2px)}
+.ini-rc-h{align-self:stretch;display:flex;align-items:center;gap:8px;min-width:0}
+.ini-rc-h img,.ini-rc-h .noimg{width:22px;height:22px;object-fit:contain;flex:none}
+.ini-rc-h .face{border-radius:50%;object-fit:cover}
+.ini-rc-h b{font:700 14px/1.2 var(--disp);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.ini-two{display:flex;flex:none}.ini-two img{width:20px!important;height:20px!important}.ini-two img+img{margin-left:-6px}
+.ini-rc-c{margin-top:14px;padding:12px 0 2px;align-self:stretch;border-radius:14px}
+.ini-rc-st{font:700 10px/1 var(--mono);letter-spacing:.28em;padding-left:.28em;text-transform:uppercase}
+.ini-rc-v{display:flex;align-items:center;justify-content:center;font:700 40px/1 var(--mono);letter-spacing:-.05em;margin:8px 0 8px}
+.ini-rc-v small{font-size:.45em;margin-right:.1em}
+.ini-rc-v .cn{--s:.6em}
+.ini-rc-sm{font:400 12px/1.3 var(--mono);color:var(--mute)}
+.ini-rc-sm b{color:var(--soft);font-weight:600}
+.ini-rc-sm .cn{--s:1em}
+.ini-sc0{color:var(--soft)}
+
+/* ===== FICHAS DE RESULTADO: como se marca ganada, perdida o devuelta (aislado) =====
+   PM aun va a elegir este estilo (seccion "resultado" de modelos/m1101). Para cambiarlo, tocar SOLO este bloque.
+   .ini-rc = ficha grande de Tú; .ini-rv = cifra pequeña de los amigos. data-r = won | lost | void */
+.ini-rc{--k:var(--win);--kb:43,212,125}
+.ini-rc[data-r=lost]{--k:#e0646f;--kb:224,100,111}
+.ini-rc[data-r=void]{--k:var(--mute);--kb:153,160,170}
+.ini-rc::before{content:"";position:absolute;left:18%;right:18%;top:0;height:3px;border-radius:0 0 3px 3px;background:var(--k)}
+.ini-rc .ini-rc-c{background:radial-gradient(55% 70% at 50% 55%,rgba(var(--kb),.2),transparent 75%)}
+.ini-rc[data-r=void] .ini-rc-c{background:none}
+.ini-rc .ini-rc-st{color:var(--k)}
+.ini-rc .ini-rc-v{color:var(--k);text-shadow:0 6px 24px rgba(var(--kb),.3)}
+.ini-rv{display:flex;align-items:center;font:700 18px/1 var(--mono);letter-spacing:-.04em;white-space:nowrap;color:var(--soft)}
+.ini-rv small{font-size:.6em;margin-right:.14em}
+.ini-rv .cn{--s:.8em}
+.ini-rv[data-r=won]{color:var(--win)}
+.ini-rv[data-r=lost]{color:#e0646f}
+/* ===== fin de las fichas de resultado ===== */
+
+/* tus apuestas en juego */
+.ini-tk{display:block;border-radius:18px;background:var(--ic);padding:14px 16px;margin-bottom:12px;cursor:pointer;transition:transform .2s var(--ease)}
+.ini-tk:hover{transform:translateY(-2px)}
+.ini-tk.live{background:radial-gradient(70% 120% at 100% 0%,rgba(239,91,91,.14),transparent 60%),var(--ic)}
+.ini-tk-h{display:flex;align-items:center;gap:9px;min-height:24px;min-width:0}
+.ini-tk-h img,.ini-tk-h .noimg{width:16px;height:16px;object-fit:contain;flex:none}
+.ini-tk-h .dot{margin-right:0;flex:none}
+.ini-tk-h .rd{color:#ff6b78}
+.ini-tk-h .lab.r{margin-left:auto;flex:none;color:var(--mute)}
+.ini-va{margin-left:auto;flex:none;font:600 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:6px 8px;border-radius:999px;white-space:nowrap}
+.ini-va.gana{color:var(--win);background:rgba(43,212,125,.12)}
+.ini-va.pierde{color:#ff7a86;background:rgba(224,100,111,.12)}
+.ini-va.empata{color:var(--soft);background:rgba(255,255,255,.07)}
+.ini-tk-m{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px;margin-top:12px}
+.ini-eq{display:flex;align-items:center;gap:9px;min-width:0}
+.ini-eq.r{flex-direction:row-reverse;text-align:right}
+.ini-eq img,.ini-eq .noimg{width:30px;height:30px;object-fit:contain;flex:none}
+.ini-eq .face{border-radius:50%;object-fit:cover}
+.ini-eq span{font:700 15px/1.2 var(--disp);color:var(--mute);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ini-eq.pick span{color:var(--ink)}
+.ini-sc{font:700 28px/1 var(--mono);letter-spacing:-.05em;color:var(--soft);white-space:nowrap}
+.ini-sc i{font-style:normal;color:var(--dim);margin:0 4px}
+.ini-sc .w{color:var(--win)}
+.ini-vs{font:700 11px var(--disp);color:var(--dim);letter-spacing:.12em;text-transform:uppercase}
+.ini-vs.pick{color:var(--acc)}
+.ini-tk-f{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:12px;box-shadow:0 -1px 0 var(--hair)}
+.ini-tk-f .k{display:flex;align-items:baseline;min-width:0;font:400 12px var(--mono);color:var(--mute);white-space:nowrap}
+.ini-tk-f .k em{font-style:normal;color:var(--acc);font-weight:600;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ini-tk-f .k em i{font-style:normal;margin-right:5px}
+.ini-k2{flex:none}
+.ini-tk-f .k em+.ini-k2{margin-left:.45em}
+.ini-tk-f .cn{--s:1em}
+.ini-tk-f .p{display:flex;align-items:baseline;gap:8px;flex:none;font:400 12px var(--mono);color:var(--mute);white-space:nowrap}
+.ini-tk-f .p b{display:flex;align-items:center;font:700 22px/1 var(--mono);letter-spacing:-.04em;color:var(--acc)}
+.ini-tk-f .p b .cn{--s:.7em}
+.ini-cmb-ic{display:grid;place-items:center;width:18px;height:18px;color:var(--acc);flex:none}
+.ini-cmb-ic svg{width:18px;height:18px}
+.ini-patas{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:12px}
+.ini-pata{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--bg2);font:600 13px var(--sans);color:var(--soft)}
+.ini-pata i{font-style:normal;font:700 11px var(--mono)}
+.ini-pata.ok i{color:var(--win)}.ini-pata.ko{color:var(--mute)}.ini-pata.ko i{color:#e0646f}.ini-pata.vivo i{color:#ff6b78}.ini-pata.nul{color:var(--dim)}
+
+/* amigos, por persona */
+.ini-ppl{background:var(--ic);border-radius:20px;padding:4px 18px}
+.ini-pp{padding:14px 0 12px}
+.ini-pp+.ini-pp{box-shadow:0 -1px 0 var(--hair)}
+.ini-pp header{display:flex;align-items:center;gap:12px;cursor:pointer}
+.ini-pp header .av{width:36px;height:36px;font-size:13px}
+.ini-pp header b{display:block;font:700 16px/1.1 var(--disp)}
+.ini-pp header small{display:block;font:400 12px var(--mono);color:var(--mute);margin-top:3px;white-space:nowrap}
+.ini-pp header small .cn{--s:1em}
+.ini-pp .ini-when{font-size:12px}
+.ini-ln{display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;gap:12px;margin:10px 0 0 48px;padding:9px 12px;border-radius:12px;background:var(--bg2);cursor:pointer;transition:background .15s}
+.ini-ln:hover{background:#15181e}
+.ini-ln>img,.ini-ln>.noimg{width:26px;height:26px;object-fit:contain}
+.ini-ln>.face{border-radius:50%;object-fit:cover}
+.ini-ico{width:26px;height:26px;border-radius:8px;background:var(--ic2);display:grid;place-items:center;color:var(--acc)}
+.ini-ico svg{width:15px;height:15px}
+.ini-ico-c svg{width:17px;height:17px}
+.ini-ln p{font:400 14px/1.25 var(--sans);color:var(--soft);min-width:0}
+.ini-ln p b{color:var(--ink);font-weight:600}
+.ini-ln p small{display:block;margin-top:2px;font:400 11px/1.3 var(--mono);color:var(--dim)}
+.ini-ln p small .cn{--s:1em}
+.ini-tag{display:inline-flex;align-items:center;gap:5px;font:600 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--acc);margin-right:7px;vertical-align:1px}
+.ini-tag.rd{color:#ff6b78}
+.ini-pt{display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;animation:latir 1.4s ease-in-out infinite}
+html.sin-anim .ini-pt{animation:none}
+.ini-o{font:700 18px/1 var(--mono);letter-spacing:-.04em;color:var(--acc);white-space:nowrap}
+.ini-join{padding:7px 12px;font-size:12px;white-space:nowrap}
+.ini-tam{font:500 11px var(--mono);color:var(--dim);white-space:nowrap}
+.ini-lock{color:var(--dim)}.ini-lock .lock{width:14px;height:14px;margin:0}
+.ini-mas2{display:block;margin:10px 0 0 48px;padding:4px 0;font:500 12px var(--mono);color:var(--mute)}
+.ini-mas2:hover{color:var(--ink)}
+.ini-mas{display:block;margin:4px auto 0;padding:9px 18px;border-radius:999px;background:rgba(255,255,255,.06);font:600 12px var(--sans);color:var(--soft);transition:background .15s,color .15s}
+.ini-res+.ini-mas{margin-top:14px}
+.ini-mas:hover{background:rgba(255,255,255,.11);color:var(--ink)}
+.ini-quietos{display:flex;align-items:center;gap:14px;margin:16px 4px 0}
+.ini-quietos .lab{text-transform:none;letter-spacing:.02em;font-size:12px;color:var(--dim)}
+.ini-quietos-c{display:flex;gap:6px}
+.ini-quietos-c .av{width:26px;height:26px;font-size:9px;opacity:.75}
+
+/* cuando no hay nada */
+.ini-vacio{display:grid;justify-items:center;gap:8px;margin-top:18px;padding:34px 24px 30px;border-radius:20px;text-align:center;background:radial-gradient(60% 80% at 50% 0%,rgba(242,193,78,.08),transparent 70%),var(--ic)}
+.ini-vacio-i{display:grid;place-items:center;width:52px;height:52px;margin-bottom:6px;border-radius:50%;background:rgba(242,193,78,.12);color:var(--acc)}
+.ini-vacio-i svg{width:26px;height:26px}
+.ini-vacio b{font:700 18px/1.25 var(--disp);letter-spacing:-.02em}
+.ini-vacio p{max-width:340px;font:400 14px/1.5 var(--sans);color:var(--mute)}
+.ini-ir{margin-top:10px;padding:10px 20px;border-radius:999px;background:linear-gradient(180deg,var(--acc2),var(--acc));color:#141008;font:800 13px var(--disp);letter-spacing:.04em;transition:filter .15s}
+.ini-ir:hover{filter:brightness(1.06)}
+
+/* entrada */
+#view.entra .ini-rc,#view.entra .ini-tk,#view.entra .ini-pp{animation:tkIn .5s var(--ease) both;animation-delay:calc(var(--i,0) * 50ms + 60ms)}
+html.sin-anim #view.entra .ini-rc,html.sin-anim #view.entra .ini-tk,html.sin-anim #view.entra .ini-pp{animation:none}
+html.sin-anim .ini-rc:hover,html.sin-anim .ini-tk:hover{transform:none}
+
+/* una columna con conmutador */
+@media (max-width:1180px){
+  .ini{max-width:720px}
+  /* el conmutador se queda arriba al bajar, sobre una franja del color del fondo para que no se vea nada detras */
+  .ini-segw{display:block;position:sticky;top:0;z-index:5;margin:-30px -32px 14px;padding:16px 32px 12px;background:linear-gradient(180deg,var(--bg) calc(100% - 10px),rgba(29,33,41,0))}
+  .ini-seg{display:flex;gap:4px;padding:5px;border-radius:999px;background:var(--bg2);box-shadow:0 8px 20px rgba(0,0,0,.25)}
+  .ini-seg button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;padding:10px 0;border-radius:999px;font:700 14px var(--disp);color:var(--mute);text-align:center;transition:background .15s,color .15s}
+  .ini-seg button.on{background:var(--ic3);color:var(--ink)}
+  .ini-seg i{font:500 11px var(--mono);font-style:normal;color:var(--dim);white-space:nowrap}
+  .ini-seg i.up{color:var(--win)}.ini-seg i.dn{color:var(--rojo)}
+  .ini-cols{grid-template-columns:minmax(0,1fr)}
+  .ini[data-tab=tu] .ini-am,.ini[data-tab=am] .ini-tu{display:none}
+}
+@media (max-width:860px){
+  .ini{padding:14px 16px 48px}
+  .ini-segw{margin:-14px -16px 10px;padding:10px 16px 10px}
+  .ini-colh{gap:12px;padding:4px 2px 16px}
+  .ini-colh h2{font-size:26px}
+  .ini-net,.ini-big{font-size:24px}
+  .av.ini-yo{width:42px;height:42px;font-size:15px}
+  .ini-res{gap:10px}
+  .ini-rc{padding:12px 10px 14px}
+  .ini-rc-h b{font-size:13px}
+  .ini-rc-h .ini-when{display:none}
+  .ini-rc-v{font-size:34px}
+  .ini-rc-sm{font-size:11px}
+  .ini-eq span{font-size:14px}
+  .ini-tk{padding:13px 14px}
+  .ini-tk-f{flex-wrap:wrap;row-gap:8px}
+  .ini-ppl{padding:2px 14px}
+  .ini-ln{margin-left:0;gap:10px;padding:9px 10px}
+  .ini-mas2{margin-left:0}
+  .ini-stack .av.ini-mas4{display:none}
+  .ini-stack-n{display:grid;place-items:center;width:30px;height:30px;margin-left:1px;border-radius:50%;background:var(--ic3);box-shadow:0 0 0 3px var(--bg);font:600 10px var(--mono);color:var(--soft)}
+}
+@media (max-width:400px){
+  .ini-colh .ini-who .lab{font-size:11px}
+  .ini-rc-v{font-size:30px}
+  .ini-eq{gap:7px}.ini-eq img,.ini-eq .noimg{width:26px;height:26px}
+  .ini-sc{font-size:24px}
+}
