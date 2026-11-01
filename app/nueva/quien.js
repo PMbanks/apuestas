@@ -97,6 +97,7 @@
       <div class="rc-duel">${lado(A, 'a', lA)}<div class="rc-mid">${centro}</div>${lado(B, 'b', lB)}</div>
       ${op.sinPartido ? '' : `<p class="rc-pt" data-notr>${esc(m.a)} vs ${esc(m.b)}</p>`}
       <footer class="rc-pie"><span class="rc-bote"><b class="num">${N(c.stake * 2)}${coin()}</b><small>en juego · se lo lleva quien acierte</small></span><span class="rc-no">${LOCK}<span>Sin cancelar · se paga al final</span></span></footer>
+      ${window.GM_RETOS && GM_RETOS.paraMi(c) ? `<div class="rc-acc">${GM_RETOS.accion(c, 'en-rc')}</div>` : ''}
     </article>`;
   }
   function apuesta(m, x) {

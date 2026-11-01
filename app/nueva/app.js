@@ -678,7 +678,7 @@ function retoRow(c) {
   const forMe = (c.to === MEK || (c.ab && c.from !== MEK)) && c.st === 'pending' && isOpen(m);
   const win = c.st === 'won_from' ? c.from : c.st === 'won_to' ? c.to : null;
   let act = '';
-  if (forMe) act = `<span class="rt-act">${picksOf(m).filter((p) => p !== c.fp).map((p) => `<button class="chip" data-accept="${c.id}|${p}">${c.ab ? 'Entro con' : 'Acepto'} ${esc(pn(m, p))}</button>`).join('')}${c.ab ? '' : `<button class="chip q" data-decline="${c.id}">No</button>`}</span>`;
+  if (forMe) act = `<span class="rt-act">${window.GM_RETOS ? GM_RETOS.accion(c) : ''}</span>`;   // retos.js: "Aceptar · pones X, ganas Y" en un toque (el lado es el contrario) y No
   const rival = c.ab ? '<span class="av sm rt-any" title="Cualquiera"><svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 6.2a3 3 0 0 1 0 5.6M17.5 14a5 5 0 0 1 3 5"/></svg></span>' : av(c.to, 'sm');
   return `<div class="rt ${c.st} ${c.ab ? 'ab' : ''}"><div class="rt-who">${av(c.from, 'sm')}<i>vs</i>${rival}</div>
     <div style="min-width:0"><strong>${esc(fr(c.from).n)} · ${esc(pn(m, c.fp))}${c.tp ? ` <i>contra</i> ${esc(fr(c.to).n)} · ${esc(pn(m, c.tp))}` : c.ab ? ` <i>reta a</i> cualquiera` : ` <i>reta a</i> ${esc(fr(c.to).n)}`}</strong>
@@ -686,18 +686,7 @@ function retoRow(c) {
     <div class="v"><b>${N(c.stake * 2)}${coin()}</b><span class="st">${win ? 'Gana ' + esc(fr(win).n) : c.ab && c.st === 'pending' ? 'Abierto a todos' : chName(c.st)}</span></div>${act}</div>`;
 }
 const retosHtml = (list, empty) => (list.length ? `<div class="rts">${list.map(retoRow).join('')}</div>` : `<p class="hint">${empty}</p>`);
-function retoForm(m) {
-  const ab = !!(window.GM_RETOS && GM_RETOS.abiertoOK());   // db/042: reto abierto a cualquiera
-  const r = S.reto; if (!r || r.m !== m.id) return `<button class="go ghost" data-retar="${m.id}">${ab ? 'Retar a un amigo o a cualquiera' : 'Retar a un amigo en este partido'}</button>`;
-  const others = F.filter((f) => !f.me), st = Math.max(0, Math.min(r.stake, me().s)), any = r.to === 'any';
-  return `<div class="rform"><span class="lab">Reto 1 contra 1 · el que acierte se lleva lo de los dos</span>
-    <div class="rf-row">${ab ? `<button class="rf-to rf-any ${any ? 'on' : ''}" data-rto="any"><span class="av sm rt-any"><svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 6.2a3 3 0 0 1 0 5.6M17.5 14a5 5 0 0 1 3 5"/></svg></span><span>Cualquiera</span></button>` : ''}${others.map((f) => `<button class="rf-to ${r.to === f.id ? 'on' : ''}" data-rto="${f.id}">${av(f.id)}<span>${esc(f.n)}</span></button>`).join('')}</div>
-    <div class="rf-row">${picksOf(m).map((p) => `<button class="chip ${r.p === p ? 'on' : ''}" data-rpick="${p}">${esc(pn(m, p))}</button>`).join('')}</div>
-    <div class="rf-row">${[100, 250, 500, 1000].map((v) => `<button class="chip ${r.stake === v ? 'on' : ''}" data-rstake="${v}">${N(v)}</button>`).join('')}</div>
-    <p class="hint">${r.to && r.p ? (any ? `Pones ${N(st)}. El primero que entre se lo queda y hay ${N(st * 2)} en juego. Si nadie entra antes de empezar, te lo devolvemos.` : `Pones ${N(st)}. Si ${esc(fr(r.to).n)} acepta, hay ${N(st * 2)} en juego.`) : 'Elige a quién retas y el resultado.'}</p>
-    <p class="hint rf-no">Un reto no se puede cancelar después.</p>
-    <div class="rf-row"><button class="go" data-act="reto-send" ${r.to && r.p && st >= 1 ? '' : 'disabled'}>Enviar reto de ${N(st)}</button><button class="chip q" data-act="reto-close">Cerrar</button></div></div>`;
-}
+function retoForm(m) { return window.GM_RETOS ? GM_RETOS.btn(m, 'grande') : '' }   // retos.js: un boton Retar que abre un panel con todo a la vista
 
 /* logros (se calculan con lo que ya hay) */
 const LOGROS = [
@@ -734,7 +723,7 @@ function avisos() {
     }
     for (const c of CH) {
       const was = SNAP.ch.get(c.id), m = byId(c.m); if (!m) continue;
-      if (!was && c.to === MEK && c.st === 'pending') avisa(`${fr(c.from).n} te reta`, `${m.a} vs ${m.b} · ${N(c.stake)} a ${pn(m, c.fp)}`);
+      if (!was && c.to === MEK && c.st === 'pending') avisa(`${fr(c.from).n} te reta`, `${m.a} vs ${m.b} · pones ${N(c.stake)}, ganas ${N(c.stake * 2)}`);
       if (was && was !== c.st && (c.st === 'won_from' || c.st === 'won_to')) { const w = c.st === 'won_from' ? c.from : c.to; if (w === MEK) confeti(); if (c.from === MEK || c.to === MEK) avisa(w === MEK ? '¡Reto ganado!' : 'Reto perdido', `${m.a} ${m.score || ''} ${m.b}`) }
       if (was === 'pending' && c.st === 'accepted' && c.from === MEK && !(window.GM_RETOS && GM_RETOS.fueAbierto(c.id))) avisa(`${fr(c.to).n} acepta tu reto`, `${m.a} vs ${m.b} · ${N(c.stake * 2)} en juego`);
     }
@@ -861,9 +850,9 @@ function partidos() {
     for (const m of ms) {
       const open = isOpen(m), qn = window.GM_QUIEN ? GM_QUIEN.fila(m) : { cls: '', who: '', movil: '' };
       h += `<div class="row ${S.foc === m.id ? 'on' : ''} ${m.live && m.vivo ? 'cv' : ''} ${m.live ? 'envivo' : ''} ${qn.cls}" data-foc="${m.id}" style="--i:${Math.min(ri++, 14)}">
-        <span class="t">${m.live ? '<em>VIVO</em>' : HM(m.at)}${m.live ? (m.vivo ? '' : `<small class="sc">${esc(String(m.score || '').split(' ')[0])}</small>`) : Date.parse(m.at) <= NOW ? '<small class="pe">por empezar</small>' : `<small>${CD(m.at)}</small>`}</span>
+        <span class="t">${m.live ? '<em>VIVO</em>' : HM(m.at)}${m.live ? (m.vivo ? '' : `<small class="sc">${esc(String(m.score || '').split(' ')[0])}</small>`) : Date.parse(m.at) <= NOW ? '<small class="pe">por empezar</small>' : `<small>${CD(m.at)}</small>`}${open && window.GM_RETOS ? GM_RETOS.btn(m, 'tiempo') : ''}</span>
         <span class="llw" title="${esc(L[m.lg][0])} · ${SP[m.s][0]}"><img class="ll" src="${esc(L[m.lg][1])}" alt="" loading="lazy">${m.s === 'c' || m.s === 'v' ? `<img class="lls" src="${SP[m.s][1]}" alt="">` : ''}</span>
-        <span class="tms"><span class="tm">${logo(m, 'a')}<span>${esc(m.a)}</span>${esFav(favK(m.s, m.a)) || esFav('pa:' + m.id) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${dailyTag(m)}${vN(m, 'a')}</span><span class="tm">${logo(m, 'b')}<span>${esc(m.b)}</span>${esFav(favK(m.s, m.b)) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${vN(m, 'b')}</span>${vL(m)}${qn.movil}</span>
+        <span class="tms"><span class="tm">${logo(m, 'a')}<span>${esc(m.a)}</span>${esFav(favK(m.s, m.a)) || esFav('pa:' + m.id) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${dailyTag(m)}${vN(m, 'a')}</span><span class="tm">${logo(m, 'b')}<span>${esc(m.b)}</span>${esFav(favK(m.s, m.b)) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${vN(m, 'b')}</span>${vL(m)}${qn.movil}${open && window.GM_RETOS ? GM_RETOS.btn(m, 'fila') : ''}</span>
         <span class="who">${window.GM_QUIEN ? qn.who : [...new Set(whoOn(m.id).map((x) => x.f))].map((k) => av(k, 'sm')).join('')}</span>
         ${['1', 'X', '2'].map((p) => oddBtn(m, p, open)).join('')}
       </div>`;
@@ -880,6 +869,7 @@ function ficha(m) {
   const cell = (v) => (String(v).startsWith('F:') ? form(String(v).slice(2)) : esc(v));
   let h = `<section class="det ${S.sheet ? 'open' : ''}" data-keep="dt">
     <button class="det-x" data-act="close">← Partidos</button>
+    ${open && window.GM_RETOS ? `<div class="d-ret">${GM_RETOS.btn(m, 'grande')}</div>` : ''}
     <div class="d-meta"><span class="d-sp"><img src="${SP[m.s][1]}" alt="">${SP[m.s][0]}</span><img src="${esc(L[m.lg][1])}" alt="">${esc(L[m.lg][0])}${m.stage ? ' · ' + esc(m.stage) : ''}</div>
     ${m.tour ? `<button class="d-brk" data-act="bracket"><svg viewBox="0 0 24 24"><path d="M4 5h5v5H4zM4 14h5v5H4zM9 7.5h3v9H9M12 12h3M15 9.5h5v5h-5z"/></svg>Ver bracket</button>` : ''}
     ${mainTv(m) ? `<a class="d-ver" href="${esc(mainTv(m).u)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>${m.live ? 'Verlo en directo' : 'Dónde verlo'} · ${esc(mainTv(m).n)}${mainTv(m).l ? ' en ' + esc(LANG[mainTv(m).l] || mainTv(m).l) : ''}</a>` : ''}
@@ -909,7 +899,7 @@ function ficha(m) {
   if (mineHere.length) h += `<div class="d-mine"><span class="lab">Tus apuestas aquí</span>${mineHere.map((b) => `<div class="dm" data-bet="${b.id}"><strong>${esc(pn(m, b.p))} <em>${O(b.o)}</em></strong><span>${N(b.stake)} → <b>${N(b.stake * b.o)}${coin()}</b></span><button class="x-share" data-share="${b.id}">Al chat</button>${cancelBtn(b)}</div>`).join('')}</div>`;
   h += `<div id="espn-box" class="espn" data-m="${m.id}">${m.espn ? ESPN_HTML.get(m.id) || '<p class="hint">Cargando datos de ESPN…</p>' : tvHtml(m.tv || [], m)}</div>`;
   const rts = CH.filter((c) => c.m === m.id);
-  if (isOpen(m) || rts.length) h += `<div class="d-retos">${rts.length ? retosHtml(rts, '') : ''}${isOpen(m) ? retoForm(m) : ''}</div>`;
+  if (rts.length) h += `<div class="d-retos">${retosHtml(rts, '')}</div>`;
   const ws = whoOn(m.id);
   h += `<div class="d-fr"><span class="lab">Amigos en este partido</span>${[...F].sort((a, b) => (b.me - a.me)).map((f) => {
     const x = ws.filter((y) => y.f === f.id);
@@ -2080,16 +2070,11 @@ document.addEventListener('click', async (e) => {
     toast(`Cancelada: te devuelvo <b>${N(data.devuelto)}</b>`); return refresh();
   }
   if (d.calc != null && d.calc !== undefined && t.matches('[data-calc]')) { S.calc = +d.calc; try { localStorage.setItem('apuestas-calc', S.calc) } catch {} return render() }
-  if (d.retar) { S.reto = { m: d.retar, to: window.GM_RETOS && GM_RETOS.abiertoOK() ? 'any' : F.find((f) => !f.me)?.id || null, p: null, stake: 250 }; return render() }
-  if (d.rto) { S.reto.to = d.rto; return render() }
-  if (d.rpick) { S.reto.p = d.rpick; return render() }
-  if (d.rstake) { S.reto.stake = +d.rstake; return render() }
+  if (d.retar) return window.GM_RETOS && GM_RETOS.abre(d.retar);   // retos.js: panel para enviar un reto
   if (d.accept) { e.stopPropagation(); const [id, p] = d.accept.split('|'); return window.GM_RETOS && GM_RETOS.entra(+id, p) }   // retos.js: doble confirmacion y challenge_answer / challenge_join
   if (d.decline) { e.stopPropagation(); const { error } = await db.rpc('challenge_answer', { p_id: +d.decline, p_accept: false }); if (error) return toast(errMsg(error)); toast('Reto rechazado'); return refresh() }
   if (d.retirar) { e.stopPropagation(); return toast('Un reto no se puede cancelar') }   // PM, 01-11: los retos no se cancelan
   if (d.daily) { const { error } = await db.rpc('admin_set', { p_key: 'daily_on', p_value: d.daily === 'true' }); if (error) return toast(errMsg(error)); return refresh() }
-  if (d.act === 'reto-close') { S.reto = null; return render() }
-  if (d.act === 'reto-send') return window.GM_RETOS && GM_RETOS.crea();   // retos.js: doble confirmacion y challenge_create
   if (d.act === 'notif') { try { const r = await Notification.requestPermission(); toast(r === 'granted' ? 'Avisos activados' : 'El navegador no ha dado permiso') } catch {} return render() }
   if (d.scr) { S.scr = d.scr; S.sheet = false; S.nvp = false; S.eqp = null; document.getElementById('view').scrollTop = 0 }
   else if (d.f) S.f = d.f;

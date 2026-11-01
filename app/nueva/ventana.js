@@ -53,7 +53,8 @@
     }
     return `<div class="vv vnt-hero"><div class="vv-top">${pill}<span class="vv-sub">${sub.map((x) => `<u>${esc(x)}</u>`).join('')}</span></div>
       <div class="vv-hero ${m.s === 'f' ? 'fut' : ''}">${eq('a')}${centro}${eq('b')}</div>
-      ${m.venue ? `<p class="vnt-sede">${esc(m.venue)}</p>` : ''}</div>`;
+      ${m.venue ? `<p class="vnt-sede">${esc(m.venue)}</p>` : ''}
+      ${e === 'pend' && window.GM_RETOS ? `<div class="vnt-ret">${GM_RETOS.btn(m, 'grande')}</div>` : ''}</div>`;
   }
 
   /* ---------- las apuestas ---------- */
