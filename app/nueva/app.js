@@ -1709,7 +1709,7 @@ function ajustes() {
     ${window.GM_OCULTAS ? GM_OCULTAS.seccion() : ''}
     ${window.GM_ALARMAS ? GM_ALARMAS.seccion() : ''}
     <section class="aj-s"><h3 class="lab">Idioma</h3><div class="aj-ops">${[['es', 'Español'], ['en', 'English']].map(([l, n]) => `<button type="button" class="aj-m ${lg === l ? 'on' : ''}" data-lang="${l}"><b data-notr>${n}</b></button>`).join('')}</div></section>
-    <section class="aj-s"><h3 class="lab">Avisos</h3>${avisos}</section>
+    ${window.GM_AVISOS ? GM_AVISOS.seccion() : `<section class="aj-s"><h3 class="lab">Avisos</h3>${avisos}</section>`}
     <section class="aj-s"><h3 class="lab">Cuenta</h3><div class="aj-ops"><button class="aj-a" data-act="pass">Cambiar contraseña</button><button class="aj-a q" data-act="logout">Cerrar sesión</button></div>
       <div class="pf-pass" ${S.pw ? '' : 'hidden'}><input type="password" id="newpass" autocomplete="new-password" placeholder="Contraseña nueva (6 o más)" minlength="6"><button class="go" data-act="setpass">Guardar</button></div></section>
   </div>`;
