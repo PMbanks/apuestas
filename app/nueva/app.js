@@ -1171,27 +1171,18 @@ const table = (rank) => `<div class="tbl"><div class="tr h"><span></span><span>A
   ${rank.map((f, i) => `<div class="tr ${f.me ? 'me' : ''}"><span class="p">${i + 1}</span><span class="who2" data-prof="${f.id}" style="cursor:pointer">${av(f.id, 'xl')}${esc(f.n)}</span>
     <span class="big">${N(f.s)}${coin()}</span>${net(f)}<span>${f.ac} <span class="dim">${f.acn}</span></span><span>${f.bets}</span>
     <span class="${f.racha.startsWith('▲') ? 'net up' : 'net'}">${f.racha}</span><span>${N(f.best)}${coin()}</span><span class="dim">${f.fuerte}</span></div>`).join('')}</div>`;
-function boteHtml() {
-  if (!BOTE) return '';
-  const desde = Date.parse((BOTE.desde || '') + 'T00:00:00+01:00'), ents = Object.entries(BOTE.players || {}).map(([u, v]) => [F.find((f) => f.uid === u)?.id, v]).filter(([k]) => k).sort((a, b) => b[1] - a[1]);
-  const last = (BOTE.last || []).map((x) => F.find((f) => f.uid === x.player)).filter(Boolean);
-  const cab = `<div class="sec-h"><h2>Bote de la semana</h2><i>cada lunes ${N(BOTE.amount || 100)} cada uno · se lo lleva el que más gane</i></div>`;
-  if (!ents.length) return `<section class="bote">${cab}<p class="hint">${NOW < desde ? `Empieza el lunes ${DD(desde)} ${MO(desde)}: ese día cada uno pone ${N(BOTE.amount || 100)} y el que más gane en la semana se lleva todo.` : 'Este lunes nadie tenía para entrar.'}</p></section>`;
-  return `<section class="bote">${cab}<div class="bote-pot"><span class="num">${N(BOTE.pot)}${coin()}</span><span>en el bote · se reparte en ${CD(PAY)}</span></div>
-    ${ents.map(([k, v], i) => `<div class="bote-r ${i === 0 && v > 0 ? 'lider' : ''}">${av(k, 'sm')}<b>${esc(fr(k).n)}</b><span class="${v >= 0 ? 'up' : 'dn'}">${v >= 0 ? '▲' : '▼'} ${N(Math.abs(v))}${coin()}</span>${i === 0 && v > 0 ? '<em>se lo lleva</em>' : ''}</div>`).join('')}
-    ${last.length ? `<p class="hint">La semana pasada se lo llevó ${last.map((f) => esc(f.n)).join(' y ')}.</p>` : ''}</section>`;
-}
 // quien sabe mas de cada deporte: aciertos de lo resuelto
 function sabeHtml() {
   const filas = DEP.map((k) => { const r = F.map((f) => ({ f, w: f.sp[k][0], t: f.sp[k][1] })).filter((x) => x.t).sort((a, b) => b.w / b.t - a.w / a.t || b.t - a.t); return [k, r] }).filter(([, r]) => r.length);
   return `<section class="sabe"><div class="sec-h"><h2>Quién sabe más</h2><i>aciertos por deporte</i></div>${filas.length ? filas.map(([k, r]) => `<div class="sabe-r"><span class="sd"><img src="${SP[k][1]}" alt="">${SP[k][0]}</span><span class="sw">${r.map((x, i) => `<span class="${i === 0 ? 'top' : ''}">${av(x.f.id, 'sm')}${esc(x.f.n)} <em>${x.w} de ${x.t}</em></span>`).join('')}</span></div>`).join('') : '<p class="hint">Sale cuando se resuelvan las primeras apuestas.</p>'}</section>`;
 }
 function liga() {
+  if (window.GM_APOST && GM_APOST.tab() === 'apost') return GM_APOST.html();   // pestana Apostadores con el bote (apostadores.js, 01-11)
   const rank = [...F].sort((a, b) => b.s - a.s), mx = Math.max(1, rank[0]?.s || 1), meI = rank.findIndex((f) => f.me);
   const open = ALL.filter((b) => b.st === 'open').reduce((a, b) => a + b.stake, 0), set = ALL.filter((b) => b.st === 'won' || b.st === 'lost'), won = set.filter((b) => b.st === 'won').length;
   const gapUp = meI > 0 ? rank[meI - 1].s - me().s : 0, gapDn = meI >= 0 && meI < rank.length - 1 ? me().s - rank[meI + 1].s : 0;
   const order = rank.length >= 3 ? [1, 0, ...rank.map((_, i) => i).slice(2)] : rank.map((_, i) => i), nWeeks = Math.max(1, me().h.length - 1);
-  return `<div class="lc">
+  return `<div class="lc">${window.GM_APOST ? GM_APOST.tabs() : ''}
     <header class="lc-h"><span class="lab">Temporada · desde el ${esc(SEASON ? fmt(SEASON + 'T12:00:00Z', { day: 'numeric', month: 'short' }) : '')} · ${F.length} jugadores</span><h2 class="wk"><small>SEMANA</small>${String(nWeeks).padStart(2, '0')}</h2>
       <p class="l-pay">Paga de <b>+${N(WEEKLY)}</b> a cada uno en ${CD(PAY)}</p>${CAMPEON ? `<p class="l-rey">${av(CAMPEON.k, 'sm')}<b>${esc(fr(CAMPEON.k).n)}</b> es el campeón de ${esc(CAMPEON.mes)} (▲ ${N(CAMPEON.v)}) y lleva la corona todo el mes</p>` : ''}</header>
     <div class="podium" style="--pdn:${rank.length}">${order.map((i) => { const f = rank[i]; return `<div class="pd ${f.me ? 'me' : ''} ${i >= 3 ? 'rest' : ''}" data-prof="${f.id}" style="cursor:pointer">${av(f.id, 'xl')}<span class="nm">${esc(f.n)}</span><b class="num">${N(f.s)}${coin()}</b>${net(f)}
@@ -1199,7 +1190,6 @@ function liga() {
     ${rank.length > 3 ? `<div class="pd-rest">${rank.slice(3).map((f, j) => `<button class="pr-r ${f.me ? 'me' : ''}" data-prof="${f.id}"><span class="pr-p">${j + 4}${en() ? 'th' : 'º'}</span>${av(f.id)}<span class="pr-n">${esc(f.n)}</span><span class="pr-v"><b class="num">${N(f.s)}${coin()}</b>${net(f)}</span></button>`).join('')}</div>` : ''}
     <p class="gap" data-notr>${en() ? `${gapUp > 0 ? `You need <b>${N(gapUp)}</b> to catch ${esc(rank[meI - 1].n)}` : meI > 0 ? `Level with ${esc(rank[meI - 1].n)}` : 'You are first'}${gapDn > 0 ? ` · you lead ${esc(rank[meI + 1].n)} by <b>${N(gapDn)}</b>` : ''}`
       : `${gapUp > 0 ? `Te faltan <b>${N(gapUp)}</b> para alcanzar a ${esc(rank[meI - 1].n)}` : meI > 0 ? `Empatado con ${esc(rank[meI - 1].n)}` : 'Vas primero'}${gapDn > 0 ? ` · le sacas <b>${N(gapDn)}</b> a ${esc(rank[meI + 1].n)}` : ''}`}</p>
-    ${boteHtml()}
     ${sabeHtml()}
     <div class="kpis">
       <div class="kpi"><span class="lab">En juego ahora</span><b>${N(open)}${coin()}</b><span>entre todos</span></div>
@@ -1443,13 +1433,12 @@ function ruedaHtml() {
 }
 // lo que hay para reclamar: cuantas cosas esperan
 function rwPend() {
-  const wk = new Date(WEEK0 + DAY / 2).toISOString().slice(0, 10), di = Math.floor((NOW - WEEK0) / DAY);
+  const wk = new Date(WEEK0 + DAY / 2).toISOString().slice(0, 10);
   const rueda = !(WHEEL || []).some((w) => w.player === me().uid && w.week === wk);
-  const dentroBote = !!BOTE?.players?.[me().uid], boteAbierto = BOTE && (!BOTE.desde || wk >= BOTE.desde) && di <= 2;
   const tiempo = (TIEMPO?.tiers || []).filter((t) => !t.claimed && TIEMPO.minutes >= t.min).length;
-  return { diario: !!CLAIM && !CLAIM.today, rueda, rescate: puedeRescate(), bote: boteAbierto && !dentroBote, dentroBote, boteAbierto, tiempo };
+  return { diario: !!CLAIM && !CLAIM.today, rueda, rescate: puedeRescate(), tiempo };
 }
-function rwBoton() { const p = rwPend(), n = [p.diario, p.rueda, p.rescate, p.bote].filter(Boolean).length + p.tiempo;
+function rwBoton() { const p = rwPend(), n = [p.diario, p.rueda, p.rescate].filter(Boolean).length + p.tiempo;
   return `<button class="claim ${n ? '' : 'nada'} ${S.rew ? 'on' : ''}" data-act="rw" aria-label="Recompensas">${IC_GIFT}<span>Recompensas</span>${n ? `<b>${n}</b>` : ''}</button>` }
 const IC_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 // PM, 30-10: premios por estar en la app (db/019): 30 min, 1 h y 2 h al dia. La app manda un latido por minuto a la vista
@@ -1488,7 +1477,7 @@ function pintaRw() {
     <div class="rw-l">
       ${tiempoHtml()}
       <div class="rw-r2"><span class="rw-t d"><span class="cn"></span></span><p><b>Premio diario</b><span>${N(CLAIM?.amount || 50)} V-Bucks cada día que lo reclames</span></p>${p.diario ? `<button class="go-s" data-act="claim">Reclamar</button>` : hecho('Hecho hoy')}</div>
-      <div class="rw-r2"><span class="rw-t b">${IC_TICKET}</span><p><b>Bote de la semana</b><span>${BOTE?.pot ? `<i class="rw-pot">${N(BOTE.pot)}${coin()}</i> en el bote` : `${N(BOTE?.amount || 100)} cada uno, de lunes a miércoles`} · se lo lleva quien más gane</span>${dentro.length ? `<span class="rw-av">${dentro.map((f) => av(f.id, 'sm')).join('')}<small>${dentro.length} dentro</small></span>` : ''}</p>${p.bote ? `<button class="go-s" data-act="bote">Entrar</button>` : p.dentroBote ? hecho('Estás dentro') : `<em>${BOTE?.desde && new Date(WEEK0 + DAY / 2).toISOString().slice(0, 10) < BOTE.desde ? 'Empieza el lunes' : 'Cerrado hasta el lunes'}</em>`}</div>
+      <div class="rw-r2"><span class="rw-t b">${IC_TICKET}</span><p><b>Bote de la semana</b><span>${BOTE?.pot ? `<i class="rw-pot">${N(BOTE.pot)}${coin()}</i> en el bote` : `Cada lunes, ${N(BOTE?.amount || 100)} de cada uno`} · se lo lleva quien más gane</span>${dentro.length ? `<span class="rw-av">${dentro.map((f) => av(f.id, 'sm')).join('')}<small>${dentro.length} dentro</small></span>` : ''}</p><button class="go-s res" data-apo-ir>Ver el bote</button></div>
       ${p.rescate ? `<div class="rw-r2"><span class="rw-t p">${IC_GIFT}</span><p><b>Rescate</b><span>Te has quedado a cero: ${N(CLAIM.rescue)} para seguir, una vez por semana</span></p><button class="go-s" data-act="rescue">Pedir</button></div>` : ''}
     </div>
   </aside>`;
@@ -1992,7 +1981,6 @@ document.addEventListener('click', async (e) => {
   if (d.act === 'rw') { S.rew = !S.rew; if (S.rew) S.nvp = false; return render() }
   if (d.tclaim) { const { data, error } = await db.rpc('claim_time_reward', { p_min: +d.tclaim }); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} por tu tiempo en la app`); return refresh() }
   if (d.act === 'rw-cajas') { S.rew = false; S.scr = 'cajas'; document.getElementById('view').scrollTop = 0; return render() }
-  if (d.act === 'bote') { const { error } = await db.rpc('join_bote'); if (error) return toast(errMsg(error)); toast('Estás dentro del bote de esta semana'); return refresh() }
   if (d.act === 'claim') { const { data, error } = await db.rpc('claim_daily'); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} del premio diario`); return refresh() }
   if (d.act === 'rescue') { const { data, error } = await db.rpc('claim_rescue'); if (error) return toast(errMsg(error)); toast(`Rescate: +${N(data)}${coin()}`); return refresh() }
   if (d.act === 'poll') { S.pollForm = !S.pollForm; render(); if (S.pollForm) document.getElementById('poll-q')?.focus(); return }

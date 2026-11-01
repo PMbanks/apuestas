@@ -319,6 +319,18 @@
     'Cuota más alta acertada': 'Highest odds hit', 'Todavía nadie': 'Nobody yet', 'Campeón de cada mes': 'Champion of each month', 'Bote y premios de la semana': 'Pot and prizes of the week',
     'Aún no ha acabado ningún mes con ganador.': 'No month has ended with a winner yet.', 'Aún no se ha repartido ninguno.': 'None handed out yet.', 'Ver menos': 'Show less',
     'Bote de la semana': 'Pot of the week', 'Más dinero de la semana': 'Most money of the week', 'Mejor ratio de la semana': 'Best ratio of the week',
+    // Liga > Apostadores y el bote automatico (01-11, apostadores.js)
+    'Apostadores': 'Bettors', 'Semana': 'Week', 'Mes': 'Month', 'Apostador': 'Bettor', 'Neto en apuestas': 'Net from bets', 'TÚ': 'YOU',
+    'Va ganándolo': 'In the lead', 'Premios de la semana': 'Prizes of the week', 'Más dinero': 'Most money', 'el que más gane apostando': 'whoever wins the most betting',
+    'Mejor apuesta': 'Best bet', 'la suelta acertada con la cuota más alta': 'the single won at the highest odds', 'la combinada acertada con la cuota más alta': 'the parlay won at the highest odds',
+    'Nadie todavía': 'Nobody yet', 'Ver cómo se llenó': 'Watch it fill up', 'Toca para seguir': 'Tap to continue', 'Ver el bote': 'See the pot', 'fuera del bote': 'not in the pot',
+    'Se lleva el bote si acaba así': 'Takes the pot if it ends like this', 'Premio al que más gane': 'Prize for the biggest winner', 'No tenía para poner en el bote': 'Did not have enough for the pot',
+    'Premio a la mejor apuesta': 'Prize for the best bet', 'Tu semana': 'Your week', 'Tu mes': 'Your month', 'Tu historial': 'All time', 'Periodo': 'Period', 'Orden': 'Order',
+    'Cómo se cuenta': 'How it counts', 'Solo apuestas en partidos': 'Only bets on matches',
+    'Sueltas y combinadas ya resueltas: ganadas, perdidas o retiradas con cash out.': 'Settled singles and parlays: won, lost or cashed out.',
+    'Dinero es lo cobrado menos lo apostado.': 'Money is what you collected minus what you staked.', 'Mejor cuota es tu suelta acertada con la cuota más alta.': 'Best odds is your single won at the highest odds.',
+    'Aciertos, con 3 apuestas resueltas como mínimo. Una combinada cuenta como una.': 'Hit rate needs at least 3 settled bets. A parlay counts as one.',
+    'Cajas, Crash, Cara o cruz, Blackjack y el mercado no cuentan.': 'Boxes, Crash, Coin flip, Blackjack and the market do not count.', 'La semana va de lunes a domingo, hora de España.': 'The week runs Monday to Sunday, Spanish time.',
     // mercado y extras 2: frases de la app nueva
     'Mercado': 'Market',
     // tarjeta en vivo nueva (30-10)
@@ -477,6 +489,7 @@
     [/^(\d+) apuestas · (\d+) ganadas · (\d+) perdidas · (.) ([\d.]+)$/, '$1 bets · $2 won · $3 lost · $4 $5'], [/^en juego · (\d+) apuestas?$/, (m, n) => `in play · ${n} bet${n === '1' ? '' : 's'}`],
     // ruleta Todos y apuestas en vivo (30-10)
     [/^(\d+) de (\d+) han girado$/, '$1 of $2 have spun'],
+    [/^Cada lunes, ([\d.]+) de cada uno · se lo lleva quien más gane$/, 'Every Monday, $1 from each one · the biggest winner takes it'],   // Recompensas: bote automatico (01-11)
     // fichas: ver todos y todo sobre el equipo (30-10)
     [/^Ver todos · (\d+)$/, 'See all · $1'], [/^Plantilla · (\d+)$/, 'Squad · $1'], [/^Resultados · (\d+)$/, 'Results · $1'], [/^Todas sus peleas · (\d+)$/, 'All fights · $1'],
     // extras 2 (30-10)
