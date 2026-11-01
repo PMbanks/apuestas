@@ -153,6 +153,8 @@
     'Todavía no hay resultados.': 'No results yet.', 'Ver el Feed': 'See the Feed', 'ganó': 'won', 'perdió': 'lost', 'retiró': 'cashed out', 'recupera': 'gets back',
 
     // boleto multiple (boleto.js, 30-10)
+    // boleto separado por secciones (01-11)
+    'Tipo de apuesta': 'Bet type', 'Tus elecciones': 'Your picks', 'Cuota total': 'Total odds',
     'Boleto': 'Bet slip', 'Vaciar': 'Clear', 'Mismo importe para todas': 'Same stake for all', 'Abrir el boleto': 'Open the bet slip', 'Ir al partido': 'Go to the match',
     'La mitad de tu saldo, repartida': 'Half your balance, split', 'Todo tu saldo, repartido': 'Your whole balance, split',
     'Total apostado': 'Total stake', 'Cobrarías si aciertas todas': 'Payout if all win', 'Cobrarías si aciertas': 'Payout if it wins',
