@@ -106,6 +106,10 @@
       barrido(1.6, 0.45 * v, 1800, 60, { q: 0.5, ataque: 0.004 });
     },
     chat: () => { nota(1319, 0.5, 0.06); nota(1760, 0.6, 0.05, { en: 0.09 }) },
+    // la mesa de blackjack (bjmesa.js): carta que se desliza, fichas que caen y aviso de que te toca
+    carta: () => barrido(0.11, 0.07, 3200, 900, { tipo: 'bandpass', q: 1.1, ataque: 0.004 }),
+    ficha: () => { nota(2400, 0.05, 0.05, { onda: 'triangle', ataque: 0.001 }); nota(1900, 0.06, 0.04, { en: 0.04, onda: 'triangle', ataque: 0.001 }) },
+    turno: () => { nota(880, 0.18, 0.07, { onda: 'triangle' }); nota(1175, 0.3, 0.06, { en: 0.11, onda: 'triangle' }) },
     sticker: () => { nota(380, 0.09, 0.12, { a: 640, onda: 'triangle', ataque: 0.004 }); nota(760, 0.12, 0.09, { en: 0.07, a: 1100, onda: 'triangle' }) },
   };
   let crash = null;

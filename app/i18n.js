@@ -392,12 +392,30 @@
     'Se vuelve a mostrar desde Ajustes.': 'You can show it again in Settings.',
     'Lo que ocultes no sale en Partidos, Inicio ni Directo. Tus apuestas de ahí siguen en Mis apuestas. También puedes mantener pulsado el escudo de una liga en Partidos.': 'Whatever you hide does not show in Matches, Home or Live. Your bets there stay in My bets. You can also press and hold a league badge in Matches.',
     'Todavía no has jugado': 'You have not played yet', 'Todavía no has ganado ningún premio': 'You have not won a prize yet', '. Te falta eso para pasarle.': '. You need that much to pass them.',
+    // la mesa de blackjack compartida (bjmesa.js, db/040)
+    'Mesa abierta': 'Table open', 'Apuesta para empezar una mano': 'Bet to start a hand', 'Siéntate y apuesta para empezar una mano': 'Take a seat and bet to start a hand',
+    'Se reparte al acabar la cuenta': 'Cards are dealt when the countdown ends', 'Repartiendo': 'Dealing', 'Tu turno': 'Your turn', 'Pide carta, plántate o dobla': 'Hit, stand or double',
+    'Juega la banca': 'Dealer plays', 'Blackjack de la banca': 'Dealer blackjack', 'La banca se pasa': 'Dealer busts', 'Nueva mano en cuanto alguien apueste': 'New hand as soon as someone bets',
+    'Gana': 'Wins', 'Pierde': 'Loses', 'Empata': 'Push', 'Se pasa': 'Bust', 'Ganas': 'You win', 'Pierdes': 'You lose', 'Te pasas': 'Bust', 'Te plantas': 'You stand',
+    'Te plantas sin tiempo': 'Out of time, you stand', 'Te toca': 'Your move', 'Esperas tu turno': 'Waiting for your turn', 'Te devuelvo la apuesta': 'Bet returned',
+    'Tu mano': 'Your hand', 'Mano en juego': 'Hand in play', 'Apuesta para la siguiente mano': 'Bet on the next hand', 'Siguiente mano': 'Next hand', 'Entras en esta mano': 'You join this hand',
+    'Quitar apuesta': 'Take bet back', 'Pedir carta': 'Hit', 'La banca juega cuando acaben todos': 'The dealer plays when everyone is done', 'para decidir': 'to decide',
+    'La mesa está llena': 'The table is full', 'Levantarse': 'Leave seat', 'Tus últimas manos': 'Your last hands', 'Todavía no has jugado en la mesa': 'You have not played at the table yet',
+    'de 7 asientos': 'of 7 seats', 'Blackjack paga 3 a 2 · La banca se planta en 17': 'Blackjack pays 3 to 2 · Dealer stands on 17',
+    'La mesa aún no está en la base: falta cargar db/040': 'The table is not in the database yet: db/040 still has to be loaded',
+    'Ese asiento no existe': 'That seat does not exist', 'Ese asiento ya está ocupado': 'That seat is taken', 'La mesa está llena: espera a que se levante alguien': 'The table is full: wait for someone to leave',
+    'Espera a que acabe la mano para cambiar de asiento': 'Wait for the hand to end to change seats', 'Espera a la siguiente mano': 'Wait for the next hand', 'Ya has apostado en esta mano': 'You already bet on this hand',
+    'Ya se ha repartido: la apuesta sigue en juego': 'Cards are out: your bet stays in play', 'No tienes apuesta en esta mano': 'You have no bet on this hand', 'No hay ninguna mano en juego': 'No hand in play',
+    'No juegas en esta mano': 'You are not in this hand', 'No es tu turno': 'It is not your turn',
+    'Blackjack: apuesta retirada': 'Blackjack: bet taken back', 'Blackjack: mano devuelta al abrir la mesa': 'Blackjack: hand refunded when the table opened',
   };
   const DIAS = { LUN: 'MON', 'MIÉ': 'WED', JUE: 'THU', VIE: 'FRI', 'SÁB': 'SAT', DOM: 'SUN', HOY: 'TODAY', ENE: 'JAN', ABR: 'APR', AGO: 'AUG', DIC: 'DEC' };
   const MESES = { ene: 'jan', feb: 'feb', mar: 'mar', abr: 'apr', may: 'may', jun: 'jun', jul: 'jul', ago: 'aug', sep: 'sep', sept: 'sep', oct: 'oct', nov: 'nov', dic: 'dec' };
   const R = [
     [/^Pones ([\d.]+)\. El primero que entre se lo queda y hay ([\d.]+) en juego\. Si nadie entra antes de empezar, te lo devolvemos\.$/, 'You put in $1. The first to join takes it and $2 is at stake. If nobody joins before the match starts, you get it back.'], [/^Pones ([\d.]+)\. Si (.+) acepta, hay ([\d.]+) en juego\.$/, 'You put in $1. If $2 accepts, $3 is at stake.'],
     [/^(\d+) resueltas?$/, (m, n) => `${n} settled`], [/^(\d+) en vivo$/, '$1 live'],   // Mis apuestas (01-11)
+    // la mesa de blackjack (bjmesa.js)
+    [/^Turno de (.+)$/, 'Turn: $1'], [/^La banca tiene (\d+)$/, 'Dealer has $1'], [/^Asiento (\d)$/, 'Seat $1'],
     [/^(\d+) en directo$/, '$1 live'],   // menu A (01-11): la tira de directo de movil
     [/^(\d+) resultados?$/, (m, n) => `${n} result${n === '1' ? '' : 's'}`],   // Ya jugados B (01-11)
     // Apuestas de todos (01-11, todos.js)
@@ -433,8 +451,6 @@
     [/^te reta, va a cara$/, 'challenges you, goes for heads'], [/^te reta, va a cruz$/, 'challenges you, goes for tails'], [/^va a cara$/, 'goes for heads'], [/^va a cruz$/, 'goes for tails'],
     [/^le gana a (.+) · (cara|cruz)$/, 'beats $1 · $2'], [/^le ganas a (.+) · (cara|cruz)$/, 'you beat $1 · $2'], [/^(beats|you beat) (.+) · cara$/, '$1 $2 · heads'], [/^(beats|you beat) (.+) · cruz$/, '$1 $2 · tails'], [/^beats ti · /, 'beats you · '],
     [/^Ganas ▲ ([\d.]+)$/, 'You win ▲ $1'], [/^Te pasas · ▼ ([\d.]+)$/, 'Bust · ▼ $1'], [/^Pierdes ▼ ([\d.]+)$/, 'You lose ▼ $1'],
-    [/^Hoy solo puedes arriesgar ([\d.]+) más en el blackjack$/, 'Today you can only risk $1 more in blackjack'],
-    [/^Hoy ya has perdido 500 en el blackjack\. Vuelve mañana$/, 'You have already lost 500 today in blackjack. Come back tomorrow'],
     [/^(\d+)º$/, '$1th'],
     [/×(\d+),(\d\d)/g, '×$1.$2'],   // decimales con punto (juegos.js ya los pinta con punto en ingles; esta regla solo es por si acaso): va el ultimo
     // mas tipos de apuesta (db/036, 01-11): lo que escribe la base en el monedero y en el chat (la app ya los pinta en ingles)
