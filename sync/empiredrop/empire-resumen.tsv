@@ -1,0 +1,60 @@
+id	sustituye	slugED	nombre	grupo	n	precioED	precioApp	devolucionApp	suma%
+lujo-gaming	lujo-gaming	gaming-empire	Imperio Gamer	tec	28	89.92	90	0.9045	100.0000
+lujo-tecnologia-basica	lujo-tecnologia-basica	black-deals	Ofertas Black	tec	22	2.76	4	0.8569	100.0000
+lujo-tecnologia	lujo-tecnologia	exclusive-5-tech	Tecnología exclusiva 5 %	tec	20	321.34	321	0.9008	100.0000
+lujo-tecnologia-2026	lujo-tecnologia-2026	apple-degens	Fanáticos de Apple	tec	23	75.67	76	0.9023	100.0000
+lujo-camaras	lujo-camaras	shutter-sanctuary	Santuario del obturador	tec	50	78.6	79	0.8967	100.0000
+lujo-relojes-calle	lujo-relojes-calle	affordable-watch	Reloj asequible	relojes	35	8.02	8	0.9095	100.0000
+lujo-relojes-2026	lujo-relojes-2026	5-watches	Relojes 5 %	relojes	27	16.55	17	0.9012	100.0000
+lujo-relojes	lujo-relojes	10-rolex	Rolex 10 %	relojes	23	1497.07	1497	0.9001	100.0000
+lujo-joyas	lujo-joyas	gems-addict	Adicto a las gemas	relojes	21	161.89	162	0.9009	100.0000
+lujo-moda-joyas	lujo-moda-joyas	luxury-jewelry	Joyería de lujo	relojes	24	164.76	165	0.9008	100.0000
+lujo-zapatillas-basicas	lujo-zapatillas-basicas	nike-vs-adidas	Nike contra Adidas	moda	27	102.37	102	0.9064	100.0000
+lujo-zapatillas	lujo-zapatillas	grail-kicks	Zapatillas grial	moda	42	271.68	272	0.8992	100.0000
+lujo-zapatillas-2026	lujo-zapatillas-2026	sneakers-drip	Estilo sneakers	moda	28	129.28	129	0.9033	100.0000
+lujo-moda-calle	lujo-moda-calle	stone-island	Stone Island	moda	22	75.52	76	0.8944	100.0000
+lujo-streetwear	lujo-streetwear	palm-angels	Palm Angels	moda	50	422.8	423	0.8996	100.0000
+lujo-bolsos	lujo-bolsos	bag-enthusiast	Amante de los bolsos	moda	26	123.67	124	0.901	100.0000
+lujo-perfumes	lujo-perfumes	private-perfume	Perfume privado	moda	22	20.36	21	0.9069	100.0000
+lujo-motos	lujo-motos	bikers-bounty	Botín del motero	motor	16	129.43	129	0.9022	100.0000
+lujo-coches	lujo-coches	10-cars	Coches 10 %	motor	31	2625.83	2626	0.8999	100.0000
+lujo-motor	lujo-motor	autobahn	Autobahn	motor	35	434.96	435	0.8996	100.0000
+lujo-viajes	lujo-viajes	10-travel	Viajes 10 %	motor	21	51.54	52	0.9035	100.0000
+lujo-oro	lujo-oro	precious-duo	Dúo precioso	inv	28	141.57	142	0.8991	100.0000
+lujo-cripto	lujo-cripto	blockchain-bundle	Pack blockchain	inv	14	9.46	10	0.899	100.0000
+lujo-cartas	lujo-cartas	pokemon-stash	Alijo Pokémon	inv	36	197.96	198	0.8995	100.0000
+lujo-ed-xbox-vs-playstation	(nueva)	xbox-vs-playstation	Xbox contra PlayStation	tec	29	3.51	4	0.9342	100.0000
+lujo-ed-5-console-legends	(nueva)	5-console-legends	Consolas legendarias 5 %	tec	30	9.64	11	0.8655	100.0000
+lujo-ed-10-gaming	(nueva)	10-gaming	Gaming 10 %	tec	27	6.97	7	0.9432	100.0000
+lujo-ed-full-send-gaming	(nueva)	full-send-gaming	Gaming a tope	tec	29	35.28	35	0.9195	100.0000
+lujo-ed-pro-setup	(nueva)	pro-setup	Equipo pro	tec	50	156.54	157	0.8974	100.0000
+lujo-ed-streamer-setup	(nueva)	streamer-setup	Equipo de streamer	tec	19	8.75	10	0.8812	100.0000
+lujo-ed-only-mac	(nueva)	only-mac	Solo Mac	tec	11	308.97	309	0.9014	100.0000
+lujo-ed-cinematic-view	(nueva)	cinematic-view	Vista de cine	tec	18	104.36	104	0.903	100.0000
+lujo-ed-1-patek	(nueva)	1-patek	Patek 1 %	relojes	32	362.5	363	0.9005	100.0000
+lujo-ed-master-of-time	(nueva)	master-of-time	Maestro del tiempo	relojes	28	121.25	121	0.9012	100.0000
+lujo-ed-rado-vs-tudor	(nueva)	rado-vs-tudor	Rado contra Tudor	relojes	31	946.79	947	0.9001	100.0000
+lujo-ed-cartier-treasure	(nueva)	cartier-treasure	Tesoro Cartier	relojes	19	624.35	624	0.9006	100.0000
+lujo-ed-pandora	(nueva)	pandora	Pandora	relojes	21	97.08	97	0.9009	100.0000
+lujo-ed-1-versace	(nueva)	1-versace	Versace 1 %	moda	21	7.79	8	0.8762	100.0000
+lujo-ed-1-louis-vuitton	(nueva)	1-louis-vuitton	Louis Vuitton 1 %	moda	21	42.9	43	0.8998	100.0000
+lujo-ed-chanel-prestige	(nueva)	chanel-prestige	Prestigio Chanel	moda	20	427.17	427	0.9004	100.0000
+lujo-ed-birkin-addict	(nueva)	birkin-addict	Adicto a los Birkin	moda	18	1596.75	1597	0.8997	100.0000
+lujo-ed-100-bags	(nueva)	100-bags	Bolsos 100 %	moda	35	352.1	352	0.9003	100.0000
+lujo-ed-nike	(nueva)	nike	Nike	moda	50	49.24	49	0.908	100.0000
+lujo-ed-jordan	(nueva)	jordan	Jordan	moda	50	107.99	108	0.8999	100.0000
+lujo-ed-street-soles	(nueva)	street-soles	Suelas de calle	moda	49	390.15	390	0.9004	100.0000
+lujo-ed-1-cars	(nueva)	1-cars	Coches 1 %	motor	35	537.44	537	0.9007	100.0000
+lujo-ed-1-mercedes	(nueva)	1-mercedes	Mercedes 1 %	motor	21	821.61	822	0.8999	100.0000
+lujo-ed-german-engine	(nueva)	german-engine	Motor alemán	motor	50	1324.03	1324	0.9	100.0000
+lujo-ed-heritage-motors	(nueva)	heritage-motors	Motores de herencia	motor	19	1824.4	1824	0.9002	100.0000
+lujo-ed-tesla	(nueva)	tesla	Tesla	motor	14	635.9	636	0.9002	100.0000
+lujo-ed-american-driver	(nueva)	american-driver	Conductor americano	motor	21	71.48	71	0.9113	100.0000
+lujo-ed-yacht-club	(nueva)	yacht-club	Club náutico	motor	27	979.26	979	0.9007	100.0000
+lujo-ed-luxury-garage	(nueva)	luxury-garage	Garaje de lujo	motor	31	7047.22	7047	0.9	100.0000
+lujo-ed-gold-digger	(nueva)	gold-digger	Buscador de oro	inv	35	121.14	121	0.9036	100.0000
+lujo-ed-fortune-box	(nueva)	fortune-box	Caja de la fortuna	inv	43	77.41	77	0.9012	100.0000
+lujo-ed-poke-starter	(nueva)	poke-starter	Inicial Pokémon	inv	45	7.72	8	0.9282	100.0000
+lujo-ed-5-pokemon	(nueva)	5-pokemon	Pokémon 5 %	inv	49	21.87	22	0.8942	100.0000
+lujo-ed-legendary-pulls	(nueva)	legendary-pulls	Sobres legendarios	inv	50	352.74	353	0.8992	100.0000
+lujo-ed-panini	(nueva)	panini	Panini	inv	21	72.85	73	0.8993	100.0000
