@@ -2352,3 +2352,6 @@ html[data-moneda="robux"] .cn{background-image:url(../img/monedas/robux.svg)}
 .row.cv .tm{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center}
 .row.cv .tm .vn{margin-left:0;justify-self:end;padding-left:8px}
 .row.cv .tm>.fav-i,.row.cv .tm>.dly{grid-column:auto}
+/* PM 01-11 ("los numeros estan fuera de sus casillas"): la flechita de subida o bajada de una cuota usa la clase .mv, que tambien es la fila del Monedero
+   (rejilla de 62 px con borde): dentro de una cuota tiene que ser solo un signo pequeno al lado del numero */
+.o .mv{display:inline;grid-template-columns:none;min-height:0;height:auto;padding:0;border:0;column-gap:0;margin-right:4px;vertical-align:2px;line-height:1}
