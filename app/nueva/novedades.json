@@ -2,6 +2,28 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "cajas-empire-0211",
+   "fecha": "2026-11-02",
+   "hora": "04:40",
+   "titulo": "Cajas de lujo de EmpireDrop",
+   "texto": "Las cajas de lujo ahora son las de EmpireDrop: los mismos objetos, los mismos precios y las mismas probabilidades, con la foto de cada producto. La caja de tecnología ya trae las Nvidia, la Xbox y el micro de HyperX. Hay 35 cajas nuevas de tecnología, relojes, moda, motor e inversión.",
+   "titulo_en": "EmpireDrop luxury boxes",
+   "texto_en": "The luxury boxes are now the EmpireDrop ones: the same items, prices and odds, with a photo of every product. The tech box now has the Nvidia cards, the Xbox and the HyperX mic. There are 35 new boxes for tech, watches, fashion, motors and investments.",
+   "img": "novedades/cajas-empire.webp",
+   "ir": "cajas"
+  },
+  {
+   "id": "alarmas-0211",
+   "fecha": "2026-11-02",
+   "hora": "04:41",
+   "titulo": "Alarmas de partidos",
+   "texto": "Ahora puedes poner una alarma en un partido: 5, 15, 30 o 60 minutos antes, o cuando empiece. También en tus apuestas pendientes, para que no se te pase ninguna. Tus alarmas están en Ajustes y suenan con la app abierta.",
+   "titulo_en": "Match alarms",
+   "texto_en": "You can now set an alarm on a match: 5, 15, 30 or 60 minutes before, or when it starts. Also on your pending bets, so you never miss one. Your alarms are in Settings and ring while the app is open.",
+   "img": "novedades/alarmas.webp",
+   "ir": "partidos"
+  },
+  {
    "id": "f1-0211",
    "fecha": "2026-11-02",
    "hora": "04:10",
