@@ -56,7 +56,7 @@
       if (!b || b.st === 'open' || !b.set || (k && b.k !== k)) continue;
       const m = partido(b.m), t = Date.parse(b.set);
       if (!isFinite(t)) continue;
-      if (b.st === 'void' && m && t < Date.parse(m.at)) continue;   // la cancelo el jugador antes de empezar: no es un resultado
+      if (b.st === 'void') continue;   // PM 02-11: las devueltas (y las canceladas) no salen en Resultados
       out.push({ key: 'b' + b.id, k: b.k, t, tipo: b.cash ? 'cash' : 'apuesta', res: b.st === 'won' ? 'won' : b.st === 'lost' ? 'lost' : 'void', m, side: lado(b.p), pick: eleccion(m, b.p), o: b.cash ? null : b.o, stake: b.stake, pay: b.pay || 0 });
     }
     return out;
@@ -99,15 +99,17 @@
     return { key: 'r' + c.id, k, t: Date.parse(c.set), tipo: 'reto', res: c.st === 'void' ? 'void' : ws.includes(k) ? 'won' : 'lost', m, side: lado(p), pick: eleccion(m, p), rival: rivales[0], mas: Math.max(0, rivales.length - 1), nv: R.nvm(c), o: null, stake: c.stake, pay: R.pagoDe(c, k) };
   });
   const rv = (x) => nombre(x.rival) + (x.mas ? ` +${x.mas}` : '');
-  // PM 02-11: "en results no salen los challenges": en De todos tambien salen los retos resueltos de los colegas (una fila por reto, la del primero que gana)
-  const retosTodos = () => g(() => CH, []).filter((c) => /^won_/.test(c.st) && c.set).map((c) => {
-    const R = window.GM_RETOS; if (!R) return null;
-    const ws = R.ganan(c); if (!ws.length) return null;
-    const k = ws[0], e = R.pl(c).find((x) => x.k === k), p = e ? e.p : c.fp, m = partido(c.m);
-    const otros = R.pl(c).filter((x) => x.p !== p).map((x) => x.k);
-    return { key: 'rt' + c.id, k, t: Date.parse(c.set), tipo: 'reto', res: 'won', m, side: lado(p), pick: eleccion(m, p), rival: otros[0], mas: Math.max(0, otros.length - 1), nv: R.nvm(c), o: null, stake: c.stake, pay: R.pagoDe(c, k) };
+  // PM 02-11: "que salga en results everyone quien gana y quien pierde y cuanto de los challenges": en De todos cada reto resuelto saca una fila por
+  // participante (los que ganan con lo que cobran, los que pierden con lo que pierden), ordenadas con los ganadores primero
+  const retosTodos = () => g(() => CH, []).filter((c) => /^won_/.test(c.st) && c.set).flatMap((c) => {
+    const R = window.GM_RETOS; if (!R) return [];
+    const ws = R.ganan(c), t = Date.parse(c.set), m = partido(c.m); if (!ws.length || !isFinite(t)) return [];
+    return R.pl(c).map((e, i) => {
+      const gana = ws.includes(e.k), otros = R.pl(c).filter((x) => x.p !== e.p).map((x) => x.k);
+      return { key: 'rt' + c.id + ':' + e.k, k: e.k, t: t - (gana ? 0 : 1) - i * 0.001, tipo: 'reto', res: gana ? 'won' : 'lost', m, side: lado(e.p), pick: eleccion(m, e.p), rival: otros[0], mas: Math.max(0, otros.length - 1), nv: R.nvm(c), o: null, stake: c.stake, pay: gana ? R.pagoDe(c, e.k) : 0 };
+    });
   }).filter((x) => x && isFinite(x.t));
-  const mios = () => [...apuestasDe(yo()), ...predicciones(), ...premios(), ...retosDe(yo())].filter((x) => isFinite(x.t)).sort((a, b) => b.t - a.t);
+  const mios = () => [...apuestasDe(yo()), ...predicciones(), ...premios(), ...retosDe(yo())].filter((x) => isFinite(x.t) && x.res !== 'void').sort((a, b) => b.t - a.t);
 
   /* ---------- lo ya enseñado ---------- */
   let EST = null;

@@ -464,7 +464,7 @@ function eqNorm(e, d) {
   return o;
 }
 const eqRes = (r) => `<b class="eq-res ${r === 'W' ? 'g' : r === 'D' ? 'e' : 'p'}">${r === 'W' ? 'G' : r === 'D' ? 'E' : 'P'}</b>`;
-const eqRiv = (x) => `<button class="eq-riv" data-eqv="${esc(JSON.stringify(x.riv))}">${img(x.riv.logo, x.riv.s === 'u' ? 'face' : 'tl')}<span>${x.casa === false ? '@ ' : ''}${esc(x.riv.n)}</span></button>`;
+const eqRiv = (x) => `<button class="eq-riv" data-eqv="${esc(JSON.stringify(x.riv))}">${img(x.riv.logo, x.riv.s === 'u' ? 'face' : 'tl')}<span>${esc(x.riv.n)}</span></button>`;
 const eqFila = (x) => `<div class="eq-f">${x.r ? eqRes(x.r) : `<b class="eq-res ${x.live ? 'v' : 'n'}">${x.live ? '●' : '·'}</b>`}<span class="eq-d">${x.at ? dmy(x.at) : ''}</span>${eqRiv(x)}<span class="eq-m">${esc(x.marca || (x.at && !x.r ? HM(x.at) : ''))}</span><span class="eq-t">${esc(x.torneo || '')}</span></div>`;
 const eqCara = (x) => `<div class="eq-c ${x.staff ? 'st' : ''}">${x.img ? `<img src="${esc(x.img)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<span class="eq-ci">${esc(String(x.n || '?').slice(0, 2).toUpperCase())}</span>`}
   <b>${esc(x.n)}</b><small>${window.GM_EQ ? GM_EQ.flag(x.pais, x.bandera, '', x.bandera ? x.pais : '') : ''}${esc([x.num ? '#' + x.num : '', x.rol, window.GM_EQ && GM_EQ.flag(x.pais, x.bandera, '', x.bandera ? x.pais : '') ? '' : x.pais, x.edad ? x.edad + ' años' : ''].filter(Boolean).join(' · '))}</small>${x.gan != null ? `<em>${N(x.gan)} $</em>` : ''}</div>`;
@@ -522,7 +522,7 @@ function sheetFutbol(m, side, d) {
     const r = hecho ? (yo?.winner ? 'W' : el?.winner ? 'L' : 'D') : null;
     return { at: Date.parse(e.date), hecho, r, rival: el?.team?.displayName || el?.team?.shortDisplayName || '', logo: el?.team?.logos?.[0]?.href || el?.team?.logo || null, casa: yo?.homeAway === 'home', marca: hecho ? `${sc(yo)}:${sc(el)}` : '', temp: e.season?.displayName || e.league?.name || '' } });
   const todos = evs.filter((e) => e.hecho).sort((a, b) => b.at - a.at), jugados = todos.slice(0, SH_POR), proximos = evs.filter((e) => !e.hecho).sort((a, b) => a.at - b.at).slice(0, 4);
-  const fila = (e) => `<div class="shr">${img(e.logo, 'tl')}<span class="nm">${e.casa ? '' : '@ '}${esc(e.rival)}</span><span class="dt">${dmy(e.at)}</span>${e.hecho ? `<span class="mk">${esc(e.marca)}</span>${res(e.r)}` : `<span class="mk">${HM(e.at)}</span>`}</div>`;
+  const fila = (e) => `<div class="shr">${img(e.logo, 'tl')}<span class="nm">${esc(e.rival)}</span><span class="dt">${dmy(e.at)}</span>${e.hecho ? `<span class="mk">${esc(e.marca)}</span>${res(e.r)}` : `<span class="mk">${HM(e.at)}</span>`}</div>`;
   let h = shInfoBtn('Todo sobre el equipo') + (jugados.length ? `<div class="shs"><span class="lab">Forma</span><span class="fm big">${jugados.slice(0, 5).reverse().map((e) => res(e.r)).join('')}</span></div>` : '');
   if (todos.length) h += S.shTodos ? shPorGrupo(todos, (e) => e.temp, fila) + shMas(todos.length) : `<div class="shs"><span class="lab">Últimos partidos</span>${jugados.map(fila).join('')}${shMas(todos.length)}</div>`;
   if (proximos.length) h += `<div class="shs"><span class="lab">Próximos</span>${proximos.map(fila).join('')}</div>`;
