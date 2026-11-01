@@ -2,6 +2,39 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "mis-apuestas-0111",
+   "fecha": "2026-11-01",
+   "hora": "16:35",
+   "titulo": "Mis apuestas, nueva",
+   "texto": "Arriba lo que tienes en juego, con el directo, la cuenta atrás y lo que cobrarías. Debajo tus números con la curva de beneficio, y todo tu historial con las combinadas.",
+   "titulo_en": "My bets, redesigned",
+   "texto_en": "What you have in play comes first, with live scores, countdowns and your payout. Below, your numbers with the profit curve and your full history with parlays.",
+   "img": "novedades/mis-apuestas-nueva.webp",
+   "ir": "apuestas"
+  },
+  {
+   "id": "mapas-0111",
+   "fecha": "2026-11-01",
+   "hora": "16:34",
+   "titulo": "Apuesta a cada mapa",
+   "texto": "En CS2 y Valorant puedes apostar a quién gana cada mapa (Mapa 1, Mapa 2, Mapa 3…) o a que un equipo gana todos los mapas. Si un mapa no se llega a jugar, te devolvemos lo apostado.",
+   "titulo_en": "Bet on each map",
+   "texto_en": "In CS2 and Valorant you can bet on who wins each map (Map 1, Map 2, Map 3…) or on a team winning every map. If a map is never played, you get your stake back.",
+   "img": "novedades/mapas-sueltos.webp",
+   "ir": "partidos"
+  },
+  {
+   "id": "liga-quieta-0111",
+   "fecha": "2026-11-01",
+   "hora": "16:20",
+   "titulo": "Liga sin saltos",
+   "texto": "En Liga los botones de Semana, Mes y De siempre ya no se mueven al cambiar. En Partidos las ligas de cada deporte van juntas, y tu moneda (V-Bucks, dólares, Solana o Robux) se guarda en tu cuenta y se ve igual en el móvil y en el PC.",
+   "titulo_en": "Steady League",
+   "texto_en": "In League the Week, Month and All time buttons no longer move when you switch. In Matches each sport keeps its leagues together, and your coin (V-Bucks, dollars, Solana or Robux) is saved to your account on every device.",
+   "img": "novedades/liga-quieta.webp",
+   "ir": "liga"
+  },
+  {
    "id": "mas-apuestas-0111",
    "fecha": "2026-11-01",
    "hora": "14:13",

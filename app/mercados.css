@@ -40,3 +40,7 @@
 @media (max-width:560px){.rsl-sc em.rsl-mk{max-width:104px}}
 .bol-vs:has(.mq-bol){grid-template-columns:minmax(0,1fr) 128px minmax(0,1fr)}
 @media (max-width:860px){.bol-vs:has(.mq-bol){grid-template-columns:minmax(0,1fr) 104px minmax(0,1fr)}}
+/* Mapas (mercados.js, db/037): una columna por equipo (su nombre arriba, en dos lineas si es largo) y, arriba del todo, gana todos los mapas */
+.mq-mapas .mq-ch{min-width:0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:normal;overflow-wrap:anywhere;letter-spacing:.08em;line-height:1.35}
+.mq-mapas .mq-todos .mq-l{color:var(--ink)}
+.mq-mapas .mq-todos+.mq-r{border-top-color:var(--hair2)}
