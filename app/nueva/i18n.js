@@ -416,6 +416,8 @@
     [/ \+(\d+),5 mapas/g, ' +$1.5 maps'], [/Ambos marcan: sí/g, 'Both teams score: yes'], [/Ambos marcan: no/g, 'Both teams score: no'],
     [/ en (.+ vs .+) no tiene resultado de los 90 minutos$/, ' in $1 has no 90 minute result'], [/ en (.+ vs .+) no tiene una serie completa$/, ' in $1 was not a full series'],
     [/^Una combinada lleva un solo pronóstico por partido$/, 'A parlay takes one pick per match'],
+    // mapas sueltos (db/037): 'Mapa 2: FaZe' en el monedero y el chat, y el mapa que no se jugo (va antes que ' no se ha jugado')
+    [/\bMapa (\d): /g, 'Map $1: '], [/ en (.+ vs .+) no se ha jugado$/, ' in $1 was not played'],
     // mercado (30-10)
     [/^Pides a (.+)$/, 'You ask $1 for'], [/^Lo que pides a (.+)$/, 'What you ask $1 for'], [/^(.+) te propone$/, '$1 offers you a trade'], [/^Le propones a (.+)$/, 'You offer $1 a trade'], [/^Tú a (.+)$/, 'You to $1'], [/^(.+) a ti$/, '$1 to you'],
     [/^Trato propuesto a (.+)$/, 'Trade offered to $1'], [/^A la venta por ([\d.]+)$/, 'For sale at $1'], [/^Comprado por ([\d.]+)$/, 'Bought for $1'],
