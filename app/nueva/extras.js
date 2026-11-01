@@ -242,7 +242,7 @@
     const info = infoEl(); if (!info) return;
     const ya = info.querySelector('[data-xq-box]');
     const names = nombresDe(info).join('|');
-    if (!Q.q || Q.names !== names || !P.d) { if (ya) ya.remove(); return }
+    if (!Q.q || !(Q.q.opts || Q.q.off) || Q.names !== names || !P.d) { if (ya) ya.remove(); return }   // CS2, UFC y NBA: sin predicciones (antes rompia)
     const h = htmlPred(Q.q), sig = /data-sig="([^"]+)"/.exec(h)[1];
     if (ya && ya.dataset.sig === sig) return;
     if (ya) ya.remove();

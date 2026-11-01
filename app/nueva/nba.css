@@ -52,7 +52,7 @@
 .nb-br span:last-child{padding-right:8px}
 .nb-br .pt{color:var(--ink);font-weight:600}
 .nb-br.apo b::after{content:"";display:inline-block;width:6px;height:6px;margin-left:7px;border-radius:50%;background:var(--acc);vertical-align:.18em}
-@container (max-width:430px){.nb-br{grid-template-columns:minmax(0,1fr) 30px 34px 34px 34px 40px;gap:2px}.nb-lr{grid-template-columns:minmax(0,1fr) repeat(var(--q,4),minmax(24px,38px)) 46px}}
+@container (max-width:430px){.nb-br{grid-template-columns:minmax(0,1fr) 28px 32px 32px 30px 50px;gap:3px}.nb-lr{grid-template-columns:minmax(0,1fr) repeat(var(--q,4),minmax(24px,38px)) 46px}}
 /* ficha del partido: clasificacion de la conferencia y bajas */
 .nb-tbs{display:grid;gap:26px}
 .nb-tb .tr2{grid-template-columns:30px minmax(0,1fr) 34px 34px 50px}
@@ -70,3 +70,10 @@
 /* graficas de Liga: una columna mas por la NBA */
 .heat{grid-template-columns:120px repeat(5,minmax(0,1fr))}
 @media (max-width:560px){.heat{grid-template-columns:84px repeat(5,minmax(0,1fr))}.heat .hh{font-size:10px;gap:4px}.heat .hc{font-size:13px}}
+/* nombre del jugador: entero si cabe, "F. Wagner" en la ficha estrecha */
+.nb{container-type:inline-size}
+.nb-n .nb-ct{display:none}
+@container (max-width:480px){.nb-n .nb-lg{display:none}.nb-n .nb-ct{display:inline}}
+/* la ficha de un equipo: .mk de mercado.css (padding grande) se colaba en el marcador de cada partido (tambien en futbol) */
+#sheet-box .shr .mk{padding:0;margin:0;max-width:none;text-align:right}
+.nb-lh{text-align:center}

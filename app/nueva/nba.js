@@ -26,7 +26,7 @@
   const O = (x) => Number(x).toFixed(2).replace('.', en() ? '.' : ',');
   const MENOS = '−';                                       // signo menos de verdad (no es un guion)
   const ST = { P: ['puntos', 'points', 'Puntos', 'Points'], R: ['rebotes', 'rebounds', 'Rebotes', 'Rebounds'], A: ['asistencias', 'assists', 'Asistencias', 'Assists'],
-    T: ['triples', 'threes', 'Triples', 'Threes'], X: ['pts + reb + asist', 'pts + reb + ast', 'Pts + Reb + Asist', 'Pts + Reb + Ast'] };
+    T: ['triples', 'threes', 'Triples', 'Threes'], X: ['pts + reb + asist', 'pts + reb + ast', 'P+R+A', 'P+R+A'] };
   const IX = { P: 0, R: 1, A: 2, T: 3 };
   const cara = (id, w = 96) => `https://a.espncdn.com/combiner/i?img=/i/headshots/nba/players/full/${id}.png&w=${w}&h=${Math.round(w * 0.73)}`;
 
@@ -35,6 +35,7 @@
   const PJ = new Map();                                         // id de jugador -> nombre (de matches.details.pj)
   const PJM = new Set();                                        // partidos con props del modelo (sin DraftKings)
   const nombreJ = (id) => PJ.get(String(id)) || T('Jugador', 'Player');
+  const corto = (n) => { const w = String(n).split(' '); return w.length > 1 ? w[0][0] + '. ' + w.slice(1).join(' ') : n };   // "F. Wagner" si no cabe
   const equipos = (m) => [m?.a ?? m?.home ?? '', m?.b ?? m?.away ?? ''];
   function nombre(m, p) {
     const [A, B] = equipos(m); let x;
@@ -140,9 +141,9 @@
       const filas = js.filter((x) => x[3] === V.st).sort((a, b) => +b[5] - +a[5] || nombreJ(a[2]).localeCompare(nombreJ(b[2])));
       const tabs = hay.map((s) => `<button type="button" class="nb-tab ${s === V.st ? 'on' : ''}" data-nbst="${s}">${esc(ST[s][en() ? 3 : 2])}</button>`).join('');
       const fila = (x) => { const id = x[2], o = x[0], u = o.replace(/O(\d)/, 'U$1'), tm = x[1] === '1' ? m.la : m.lb;
-        return `<div class="nb-r"><span class="nb-p"><span class="nb-f"><img src="${esc(cara(id))}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">${tm ? `<img class="nb-e" src="${esc(tm)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span><span class="nb-n"><b data-notr>${esc(nombreJ(id))}</b><small data-notr>${esc(x[1] === '1' ? A : B)}</small></span></span><span class="nb-l">${dec(x[5])}</span>${boton(m, o, '', mine, mk)}${boton(m, u, '', mine, mk)}</div>` };
+        return `<div class="nb-r"><span class="nb-p"><span class="nb-f"><img src="${esc(cara(id))}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">${tm ? `<img class="nb-e" src="${esc(tm)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span><span class="nb-n"><b data-notr title="${esc(nombreJ(id))}"><span class="nb-lg">${esc(nombreJ(id))}</span><span class="nb-ct">${esc(corto(nombreJ(id)))}</span></b><small data-notr>${esc(x[1] === '1' ? A : B)}</small></span></span><span class="nb-l">${dec(x[5])}</span>${boton(m, o, '', mine, mk)}${boton(m, u, '', mine, mk)}</div>` };
       h += `<section class="mq-g nb-j"><div class="mq-hd nb-hd"><span class="lab">${T('Jugadores', 'Players')}</span></div><nav class="nb-tabs" role="tablist">${tabs}</nav>
-        <div class="nb-r nb-rh"><span class="lab">${T('Jugador', 'Player')}</span><span class="lab nb-l">${T('Línea', 'Line')}</span><span class="lab mq-ch">${T('Más', 'Over')}</span><span class="lab mq-ch">${T('Menos', 'Under')}</span></div>
+        <div class="nb-r nb-rh"><span class="lab">${T('Jugador', 'Player')}</span><span class="lab nb-lh">${T('Línea', 'Line')}</span><span class="lab mq-ch">${T('Más', 'Over')}</span><span class="lab mq-ch">${T('Menos', 'Under')}</span></div>
         ${filas.map(fila).join('')}</section>`;
     }
     if (!h) return '';
