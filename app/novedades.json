@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "ajusta-foto-0211",
+   "fecha": "2026-11-02",
+   "hora": "07:10",
+   "titulo": "Ajusta tu foto",
+   "texto": "En Ajustes puedes mover y acercar tu foto dentro del círculo hasta dejarla bien centrada. Todos la ven como la dejes.",
+   "titulo_en": "Adjust your photo",
+   "texto_en": "In Settings you can move and zoom your photo inside the circle until it is centred. Everyone sees it the way you leave it.",
+   "img": "novedades/ajusta-foto.webp",
+   "ir": "ajustes"
+  },
+  {
    "id": "ocultas-nba-0211",
    "fecha": "2026-11-02",
    "hora": "06:20",
