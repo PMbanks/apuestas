@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "monedas-reales-0211",
+   "fecha": "2026-11-02",
+   "hora": "05:30",
+   "titulo": "Monedas con sus dibujos reales",
+   "texto": "Las gemas de Clash, Bitcoin, Valorant Points y la esmeralda de Minecraft ahora son los iconos de verdad. El dólar, el euro y el yen salen sin fondo, solo con su símbolo. Y en la galería de fotos de perfil quitamos ocho que sobraban.",
+   "titulo_en": "Coins with their real icons",
+   "texto_en": "Clash gems, Bitcoin, Valorant Points and the Minecraft emerald now use the real icons. Dollar, euro and yen have no background, just their symbol. And we removed eight extra pictures from the profile photo gallery.",
+   "img": "novedades/monedas-reales.webp",
+   "ir": "ajustes"
+  },
+  {
    "id": "cajas-empire-0211",
    "fecha": "2026-11-02",
    "hora": "04:40",
