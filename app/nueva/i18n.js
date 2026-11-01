@@ -422,10 +422,14 @@
     'Ya se ha repartido: la apuesta sigue en juego': 'Cards are out: your bet stays in play', 'No tienes apuesta en esta mano': 'You have no bet on this hand', 'No hay ninguna mano en juego': 'No hand in play',
     'No juegas en esta mano': 'You are not in this hand', 'No es tu turno': 'It is not your turn',
     'Blackjack: apuesta retirada': 'Blackjack: bet taken back', 'Blackjack: mano devuelta al abrir la mesa': 'Blackjack: hand refunded when the table opened',
+    // Quien esta dentro, retos y patas (quien.js, 01-11)
+    'Quién está dentro': 'Who is in', 'Reto': 'Challenge', 'Reto 1 contra 1': '1 vs 1 challenge', 'cada uno': 'each', 'en juego': 'at stake', 'Apuesta oculta': 'Hidden bet', 'Esperando a que entre alguien': 'Waiting for someone to join',
+    'Sin cancelar · se paga al final': 'No cancelling · paid at the end', 'en juego · se lo lleva quien acierte': 'at stake · winner takes all', 'Va ganando': 'Winning', 'Nadie ha apostado a este partido.': 'Nobody has bet on this match.',
   };
   const DIAS = { LUN: 'MON', 'MIÉ': 'WED', JUE: 'THU', VIE: 'FRI', 'SÁB': 'SAT', DOM: 'SUN', HOY: 'TODAY', ENE: 'JAN', ABR: 'APR', AGO: 'AUG', DIC: 'DEC' };
   const MESES = { ene: 'jan', feb: 'feb', mar: 'mar', abr: 'apr', may: 'may', jun: 'jun', jul: 'jul', ago: 'aug', sep: 'sep', sept: 'sep', oct: 'oct', nov: 'nov', dic: 'dec' };
   const R = [
+    [/^(\d+) amigos?$/, (m, n) => `${n} ${n === '1' ? 'friend' : 'friends'}`], [/^Esperando a que (.+) acepte$/, 'Waiting for $1 to accept'],   // quien.js (01-11)
     [/^Pones ([\d.]+)\. El primero que entre se lo queda y hay ([\d.]+) en juego\. Si nadie entra antes de empezar, te lo devolvemos\.$/, 'You put in $1. The first to join takes it and $2 is at stake. If nobody joins before the match starts, you get it back.'], [/^Pones ([\d.]+)\. Si (.+) acepta, hay ([\d.]+) en juego\.$/, 'You put in $1. If $2 accepts, $3 is at stake.'],
     [/^(\d+) resueltas?$/, (m, n) => `${n} settled`], [/^(\d+) en vivo$/, '$1 live'],   // Mis apuestas (01-11)
     // la mesa de blackjack (bjmesa.js)

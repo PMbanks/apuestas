@@ -128,7 +128,12 @@
       out.push({ tipo: 'c', c, at: t2(ls[0] && ls[0].matches && ls[0].matches.starts_at), puesta: t2(c.created_at), live: ls.some((l) => pata(l) === 'vivo') }) }
     return out.sort((a, b) => (b.live - a.live) || a.at - b.at);
   }
-  const cobraria = (x) => (x.tipo === 'b' ? x.b.stake * x.b.o : x.c.stake * Number(x.c.odds));
+  // PM 01-11: "en home no veo el challenge con Darkam": los retos 1 contra 1 abiertos tuyos entran en En juego con lo demas
+  function abiertasYo() {
+    const rs = g(() => CH.filter((c) => (c.from === MEK || c.to === MEK) && (c.st === 'pending' || c.st === 'accepted') && byId(c.m)), []).map((c) => { const m = byId(c.m); return { tipo: 'r', r: c, m, at: t2(m.at), live: !!m.live } });
+    return [...abiertas(MEK, ME), ...rs].sort((a, b) => (b.live - a.live) || a.at - b.at);
+  }
+  const cobraria = (x) => (x.tipo === 'b' ? x.b.stake * x.b.o : x.tipo === 'r' ? x.r.stake * 2 : x.c.stake * Number(x.c.odds));
   const valor = (r, v, extra) => `<span class="ini-rv" data-r="${r}"><small>${r === 'won' ? '▲' : r === 'lost' ? '▼' : ''}</small>${N(Math.abs(v || extra || 0))}${coin()}</span>`;
 
   /* ---------- Tu ---------- */
@@ -166,6 +171,7 @@
   }
   function ticket(x) {
     if (x.tipo === 'c') return ticketC(x.c);
+    if (x.tipo === 'r') return window.GM_QUIEN ? GM_QUIEN.cartaReto(x.r, { ir: true }) : '';
     const { b, m } = x, sd = lado(b.p), sc = m.live ? marcador(m) : null, va = comoVa(m, b.p), ld = m.live ? lider(m) : null;
     const head = m.live
       ? `<i class="dot"></i><span class="lab rd ell">${esc(['En vivo', linea(m)].filter(Boolean).join(' · '))}</span>${va ? `<span class="ini-va ${va}">${{ gana: 'Vas ganando', pierde: 'Vas perdiendo', empata: 'Vas empatando' }[va]}</span>` : ''}`
@@ -187,7 +193,7 @@
     const quien = sc ? `${la}${esc(md.home || m.a)} <b>${sc[0]}:${sc[1]}</b> ${lb}${esc(md.away || m.b)}` : `${la}${esc(md.home || '')} <i>vs</i> ${lb}${esc(md.away || '')}`;
     const cuando = k === 'vivo' ? `<span class="rd">${esc(['En vivo', m ? linea(m) : ''].filter(Boolean).join(' · '))}</span>`
       : k === 'pend' ? esc(empieza(t2(md.starts_at))) : { ok: 'Acertada', ko: 'Fallada', nul: 'Anulada' }[k];
-    return `<div class="ini-pl ${k}" ${l.match_id ? `data-goto="${esc(l.match_id)}"` : ''}><i class="ini-pl-i">${{ ok: '✓', ko: '✗', nul: '·', vivo: '●', pend: '○' }[k]}</i>
+    return `<div class="ini-pl ${k}" ${l.match_id ? `data-goto="${esc(l.match_id)}"` : ''}><i class="ini-pl-i">${{ ok: '<svg viewBox="0 0 12 12"><path d="M2.5 6.3l2.3 2.3L9.5 3.8"/></svg>', ko: '<svg viewBox="0 0 12 12"><path d="M3.5 3.5l5 5M8.5 3.5l-5 5"/></svg>', nul: '<svg viewBox="0 0 12 12"><path d="M3.5 6h5"/></svg>', vivo: '<b class="ini-pl-pt"></b>', pend: '<svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="3.6"/></svg>' }[k]}</i>
       <span class="ini-pl-t"><b>${esc(nombrePata(l))}</b><small>${cuando} · ${quien}</small></span>${l.odds ? `<span class="ini-pl-o">${O(l.odds)}</span>` : ''}</div>`;
   }
   function ticketC(c) {
@@ -224,7 +230,7 @@
     let p = PER; if (p === 'visita' && !hay) p = null;
     p = p || (hay ? 'visita' : 'sem');
     const lista = p === 'visita' ? nuevos : res.filter((x) => x.t >= (p === 'sem' ? WEEK0 : p === 'mes' ? iniMes() : 0));
-    return { res, nuevos, hay, p, lista, neto: lista.reduce((a, x) => a + x.v, 0), ab: abiertas(MEK, ME) };
+    return { res, nuevos, hay, p, lista, neto: lista.reduce((a, x) => a + x.v, 0), ab: abiertasYo() };
   }
   const etiqueta = (d, v, p) => (p === 'visita' ? desde(v.prev) : { sem: 'esta semana', mes: 'últimos 30 días', todo: 'de siempre' }[p]);
   const pastilla = (neto) => `Tú${neto ? ` <i class="${neto > 0 ? 'up' : 'dn'}">${neto > 0 ? '▲' : '▼'} ${N(Math.abs(neto))}</i>` : ''}`;
