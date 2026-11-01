@@ -7,7 +7,8 @@
 import { avisos } from './discord.mjs';
 import { equiposExtra } from './equipos-extra.mjs';
 import { nba, liveNba } from './nba.mjs';                                               // NBA (db/039_nba.sql)
-import { f1, anulaF1 } from './f1.mjs';                                                // Formula 1 (db/052_f1.sql)
+import { f1, anulaF1 } from './f1.mjs';
+import { cierraRapido } from './cierre-rapido.mjs';                                 // paga Valorant y CS2 al acabar, sin esperar a la pasada siguiente                                                // Formula 1 (db/052_f1.sql)
 
 const SB = process.env.SUPABASE_URL, ANON = process.env.SUPABASE_ANON_KEY, SECRET = process.env.SYNC_SECRET, PS = process.env.PANDASCORE_KEY;
 const DRY = !!process.env.DRY;
@@ -552,6 +553,7 @@ async function extras(vrows, frows = [], crows = [], brows = []) {
   const watch = Math.min(540, +process.env.PRED_WATCH_S || 0), t0 = Date.now();
   for (;;) {
     vlrLista = null; espnCache.clear();
+    await cierraRapido({ rows: [...vrows, ...crows], getJson, rpc, secret: SECRET, ps: PS }).catch((e) => console.log('cierre rapido:', e.message || e));
     const o = await obsValorant(vrows), [abiertas, cerradas] = await resolverPredicciones();
     const lf = await liveFutbol(frows).catch(() => 0), lc = await liveCs2(crows).catch(() => 0), lb = await liveNba(brows, { getJson, ponLive }).catch(() => 0);
     console.log(`predicciones: ${o} mapas en directo apuntados · ${abiertas} abiertas · ${cerradas} resueltas · cash out: ${lf} partidos de futbol, ${lc} de CS2 y ${lb} de NBA al día`);
