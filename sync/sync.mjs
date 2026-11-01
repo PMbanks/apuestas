@@ -486,7 +486,8 @@ async function liveFutbol(frows) {
     const min = Number(st.clock) > 0 ? Math.floor(Number(st.clock) / 60) : /HALFTIME/i.test(st.type?.name || '') ? 45 : mt ? +mt[1] + (+mt[2] || 0) : null;
     const per = Number(st.period) || (/SECOND|2ND/i.test(st.type?.name || '') ? 2 : /EXTRA|PENALT/i.test(st.type?.name || '') ? 3 : 1);
     if (!h || !a || min == null) continue;
-    out.push({ match: r.id, data: { k: 'f', hs: Number(h.score) || 0, as: Number(a.score) || 0, min, per } });
+    const pau = /SUSPEND|DELAY|INTERRUPT|STOPPAGE|PAUSE|WEATHER|ABANDON/i.test(`${st.type?.name || ''} ${st.type?.description || ''}`);   // partido parado: sin predicciones (db/049)
+    out.push({ match: r.id, data: { k: 'f', hs: Number(h.score) || 0, as: Number(a.score) || 0, min, per, ...(pau ? { pau: 1 } : {}) } });
   }
   return ponLive(out);
 }
