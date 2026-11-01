@@ -20,7 +20,8 @@ const DAY = 864e5;
 export const CFG = {
   vida: 3 * DAY,                 // una ficha no se rehace antes de 3 dias
   presupuestoMs: 170e3,          // lo maximo que puede alargar una pasada
-  maxEsports: 3,                 // equipos de Valorant y CS2 por pasada (1 action=parse cada 32 s)
+  maxEsports: 2,                 // equipos de Valorant y CS2 por pasada (2 action=parse cada uno, la pagina y su Results, 1 cada 32 s)
+  ver: 2,                        // version del formato de extra (v2: titulares y banquillo, roles de CS2, agentes de Valorant, titulos de siempre, cambios)
   maxFutbol: 8,
   maxUfc: 4,
   ventana: 14 * DAY,             // solo equipos con partido en las proximas 2 semanas
@@ -104,7 +105,10 @@ const ordinal = (txt, sortVal) => {
 export function leerPaginaLp(html, wiki) {
   const t = tablas(html);
   const posOrg = html.search(/id="Organi[sz]ation"/), posRes = html.search(/id="Results"/);
-  const out = { palmares: [], activos: [], antiguos: [], staff: [], total: null, porAno: null };
+  // titulos de seccion (h2 y h3) para saber a que grupo pertenece cada tabla: Active, Inactive, Former, Stand-in, y lo mismo bajo Organization
+  const cabezas = [...html.matchAll(/<h[23][^>]*\bid="([^"]+)"/g)].map((m) => ({ pos: m.index, id: dec(m[1]).toLowerCase().replace(/_\d+$/, '') }));
+  const seccion = (pos) => { let s = ''; for (const c of cabezas) { if (c.pos < pos) s = c.id; else break; } return s; };
+  const out = { palmares: [], activos: [], suplentes: [], inactivos: [], antiguos: [], staff: [], exstaff: [], total: null, porAno: null };
 
   // ganancias del equipo ("Approx. Total Winnings: $13,732,460"; incluye lo que ganaron los jugadores mientras representaban al equipo)
   const g = html.match(/Total Winnings[\s\S]{0,200}?<div>\s*(?:<[^>]+>)*\s*\$\s*([\d,]+(?:\.\d+)?)/);
@@ -121,7 +125,7 @@ export function leerPaginaLp(html, wiki) {
 
   for (const tb of t) {
     const cab = tb.filas[0].map((c) => c.txt);
-    // palmares: Date | Place | Tier | ... | Tournament | Result | Prize
+    // palmares: Date | Place | Tier | ... | Tournament | Result | Prize  (sirve igual para la pagina de Results, que trae todos)
     if (cab.includes('Date') && cab.includes('Place') && cab.includes('Prize') && !cab.includes('Opponent')) {
       for (const f of tb.filas.slice(1)) {
         const n = f.length; if (n < 7) continue;
@@ -140,28 +144,49 @@ export function leerPaginaLp(html, wiki) {
     }
     // plantillas: ID | Name | [rol] | Join Date | [Inactive Date] | [Leave Date] | [New Team]
     if (cab[0] === 'ID' && cab.includes('Join Date')) {
-      const iId = 0, iNom = cab.indexOf('Name'), iJoin = cab.indexOf('Join Date'), iLeave = cab.indexOf('Leave Date'), iNew = cab.indexOf('New Team');
-      const iRol = cab.findIndex((c, i) => c === '' && i > 0);
-      const region = tb.pos > posRes && posRes > 0 ? 'despues' : posOrg > 0 && tb.pos > posOrg ? 'org' : 'jugadores';
-      if (region === 'despues') continue;
+      const iId = 0, iNom = cab.indexOf('Name'), iJoin = cab.indexOf('Join Date'), iInac = cab.indexOf('Inactive Date'), iLeave = cab.indexOf('Leave Date'), iNew = cab.indexOf('New Team');
+      let iRol = -1; cab.forEach((c, i) => { if (c === '' && i > 0 && i < iJoin) iRol = i; });   // la ultima columna sin titulo antes de Join Date lleva el rol (Coach, Loan, Substitute...)
+      if (tb.pos > posRes && posRes > 0) continue;
+      const org = posOrg > 0 && tb.pos > posOrg, sec = seccion(tb.pos);
       for (const f of tb.filas.slice(1)) {
         if (f.length < 3) continue;
+        const ancla = f[iId].html.match(/<a href="\/[^"\/]+\/([^"?#]+)"[^>]*?title="([^"]*)"/);
         const p = {
-          id: limpio(f[iId].html), pais: banderaLp(f[iId].html), nombre: iNom >= 0 ? f[iNom]?.txt || null : null,
-          rol: iRol >= 0 ? f[iRol]?.txt || null : null, desde: fechaLp(f[iJoin]?.txt), hasta: iLeave >= 0 ? fechaLp(f[iLeave]?.txt) : null,
-          nuevo: iNew >= 0 ? f[iNew]?.txt || null : null,
+          id: limpio(f[iId].html), pais: banderaLp(f[iId].html), titulo: ancla ? dec(ancla[2]).replace(/ \(page does not exist\)$/, '') : null,
+          capitan: /fa-crown|title="Captain"/.test(f[iId].html), nombre: iNom >= 0 ? f[iNom]?.txt || null : null,
+          rol: iRol >= 0 ? f[iRol]?.txt || null : null, desde: fechaLp(f[iJoin]?.txt), inactivo: iInac >= 0 ? fechaLp(f[iInac]?.txt) : null,
+          hasta: iLeave >= 0 ? fechaLp(f[iLeave]?.txt) : null, nuevo: iNew >= 0 ? f[iNew]?.txt || null : null,
         };
         if (!p.id && !p.nombre) continue;
         const rol = (p.rol || '').toLowerCase();
-        const esStaff = region === 'org' || /coach|analyst|manager|director|owner|ceo|founder|streamer|caster|chairman|president/.test(rol);
-        if (p.hasta || iLeave >= 0) { if (esStaff) continue; out.antiguos.push(p); }
-        else if (esStaff) out.staff.push(p);
+        const esStaff = org || /coach|analyst|manager|director|owner|ceo|founder|streamer|caster|chairman|president|psycholog|physio|scout/.test(rol);
+        if (esStaff) { (p.hasta || sec.startsWith('former') ? out.exstaff : out.staff).push(p); continue; }
+        if (p.hasta || sec.startsWith('former')) out.antiguos.push(p);
+        else if (/inactive/.test(sec) || (cab.includes('Inactive Date') && p.inactivo)) out.inactivos.push(p);
+        else if (/stand|sub|loan/.test(sec) || /substitute|stand-?in|trial/.test(rol)) out.suplentes.push(p);
         else out.activos.push(p);
       }
     }
   }
   out.antiguos.sort((a, b) => String(b.hasta || '').localeCompare(String(a.hasta || '')));
+  out.exstaff.sort((a, b) => String(b.hasta || '').localeCompare(String(a.hasta || '')));
   return out;
+}
+
+// todos los torneos ganados de siempre (pagina "Equipo/Results" de Liquipedia): total, por categoria y la lista compacta
+export function resumirTitulos(res) {
+  const ok = (res || []).filter((x) => x.fecha);
+  if (!ok.length) return null;
+  const torneo = (x) => /^[SABCD]$/.test(x.tier || '') && !/qualifier|showmatch|exhibition/i.test(x.torneo || '');   // S, A, B, C, D son torneos; clasificatorias, exhibiciones y Points no cuentan como titulo
+  const gan = ok.filter((x) => x.puesto_n === 1 && torneo(x));
+  const porTier = {};
+  for (const x of gan) porTier[x.tier] = (porTier[x.tier] || 0) + 1;
+  return {
+    total: gan.length, otros: ok.filter((x) => x.puesto_n === 1 && !torneo(x)).length,
+    segundos: ok.filter((x) => x.puesto_n === 2 && torneo(x)).length, terceros: ok.filter((x) => x.puesto_n === 3 && torneo(x)).length, jugados: ok.filter(torneo).length,
+    por_tier: porTier, desde: ok[ok.length - 1].fecha,
+    lista: gan.slice(0, 120).map((x) => ({ f: x.fecha, t: x.torneo, k: x.tier, p: x.premio, r: x.rival || null, m: x.marcador || null })),
+  };
 }
 
 async function lpTitulo(wiki, nombre) {
@@ -171,6 +196,24 @@ async function lpTitulo(wiki, nombre) {
   const s = await lp(wiki, { action: 'query', list: 'search', srsearch: nombre, srlimit: 5, srnamespace: 0 });
   const ok = (s.query?.search || []).find((x) => norm(x.title) === norm(nombre));
   return ok ? ok.title : null;
+}
+
+// roles de CS2 (igl, awp, rifle, entry, support, lurk...): "|roles=" de la ficha de cada jugador, solo la seccion 0 de su pagina
+async function rolesLp(wiki, titulos) {
+  const lista = [...new Set(titulos.filter(Boolean))].slice(0, 40), res = new Map();
+  if (!lista.length) return res;
+  const j = await lp(wiki, { action: 'query', titles: lista.join('|'), redirects: 1, prop: 'revisions', rvprop: 'content', rvslots: 'main', rvsection: 0 });
+  const alias = new Map();
+  for (const x of j.query?.normalized || []) alias.set(x.from, x.to);
+  for (const x of j.query?.redirects || []) alias.set(x.from, x.to);
+  for (const p of j.query?.pages || []) {
+    const c = p.revisions?.[0]?.slots?.main?.content || '';
+    const m = c.match(/\|\s*roles?\s*=\s*([^\n|]*)/i);
+    const roles = m ? m[1].split(/[,;/]/).map((r) => r.trim().toLowerCase()).filter((r) => /^[a-z][a-z -]{1,20}$/.test(r)).slice(0, 3) : [];
+    if (roles.length) res.set(p.title, roles);
+  }
+  const buscar = (t) => { let x = t; for (let i = 0; i < 3 && alias.has(x); i++) x = alias.get(x); return res.get(x) || res.get(t.replace(/_/g, ' ')) || null; };
+  return new Map(lista.map((t) => [t, buscar(t)]).filter(([, r]) => r));
 }
 
 // ---------- PandaScore: jugadores ----------
@@ -203,11 +246,13 @@ function fechaVlr(txt) {   // "joined in January 2024" -> "2024-01"
 async function vlrAnteriores(equipoVlr, nicks) {
   const res = new Map();
   const lista = [...(equipoVlr.players || []), ...(equipoVlr.staff || [])];
-  for (const nick of nicks.slice(0, 7)) {
+  for (const nick of nicks.slice(0, 10)) {
     const p = lista.find((x) => normFuerte(x.user) === normFuerte(nick)); if (!p) continue;
     try {
       const d = (await web(`${VLR}/players/${p.id}`)).data;
-      res.set(nick, { desde_vlr: fechaVlr(d?.team?.joined), anteriores: (d?.pastTeams || []).filter((x) => x.name).slice(0, 6).map((x) => ({ equipo: x.name, hasta: fechaVlr(x.info), nota: x.info || null })) });
+      const agentes = (d?.agents || []).filter((a) => a.name).slice(0, 4).map((a) => ({ a: String(a.name).toLowerCase(), pj: a.mapsPlayed ?? null, pct: a.pickRate ?? null }));
+      const foto = d?.info?.img && !/\/ph\/sil\.png/.test(d.info.img) ? d.info.img : null;
+      res.set(nick, { agentes, foto_vlr: foto, vlr_url: d?.info?.url || p.url || null, pais_vlr: d?.info?.flag ? String(d.info.flag).toUpperCase() : null, desde_vlr: fechaVlr(d?.team?.joined), anteriores: (d?.pastTeams || []).filter((x) => x.name).slice(0, 6).map((x) => ({ equipo: x.name, hasta: fechaVlr(x.info), nota: x.info || null })) });
     } catch {}
   }
   return res;
@@ -231,7 +276,7 @@ function palmaresVlr(equipoVlr) {
 export async function fichaEsports(c, ps) {
   const wiki = c.game === 'valorant' ? 'valorant' : 'counterstrike';
   const fuente = [], atribucion = [];
-  const extra = { v: 1, tipo: c.game === 'valorant' ? 'v' : 'c', nombre: c.nombre, fuente, atribucion, actualizado: iso2(Date.now()), palmares: [], ganancias: null, jugadores: [], exjugadores: [], staff: [] };
+  const extra = { v: 1, ver: CFG.ver, tipo: c.game === 'valorant' ? 'v' : 'c', nombre: c.nombre, fuente, atribucion, actualizado: iso2(Date.now()), palmares: [], titulos: null, ganancias: null, jugadores: [], exjugadores: [], staff: [], exstaff: [] };
   jugadoresPS.equipo = null;
   const psJug = await jugadoresPS(c.game, c.id, ps).catch(() => []);
   if (jugadoresPS.equipo) extra.equipo = jugadoresPS.equipo;
@@ -244,26 +289,46 @@ export async function fichaEsports(c, ps) {
     if (titulo) {
       const r = await lp(wiki, { action: 'parse', page: titulo, prop: 'text', redirects: 1, disablelimitreport: 1, disabletoc: 1 }, true);
       const pag = leerPaginaLp(r.parse.text, wiki);
-      const solapan = pag.activos.some((p) => nicks.has(normFuerte(p.id)));
+      const gente = [...pag.activos, ...pag.suplentes, ...pag.inactivos];
+      const solapan = gente.some((p) => nicks.has(normFuerte(p.id)));
       const exacto = norm(titulo) === norm(c.nombre);
-      if (pag.activos.length || pag.palmares.length || pag.total != null) {
+      if (gente.length || pag.palmares.length || pag.total != null) {
         if (!psJug.length && !exacto) throw new Error(`la pagina "${titulo}" no se puede confirmar`);
-        if (psJug.length && pag.activos.length && !solapan && !exacto) throw new Error(`la pagina "${titulo}" no coincide con la plantilla`);
+        if (psJug.length && gente.length && !solapan && !exacto) throw new Error(`la pagina "${titulo}" no coincide con la plantilla`);
         lpOk = true;
         extra.palmares = pag.palmares.slice(0, 12);
         extra.ganancias = pag.total != null ? { total: pag.total, moneda: 'USD', por_ano: pag.porAno, nota: 'Aproximado; incluye lo que ganaron los jugadores mientras representaban al equipo' } : null;
-        extra.jugadores = pag.activos.map((p) => {
+        // titulares (Active), suplentes (Substitute, Stand-in) e inactivos (Inactive): el estado dice a cual pertenece cada uno
+        const estadoDe = (p, grupo) => (grupo === 'inactivos' ? 'Inactive' : grupo === 'suplentes' ? (/stand/i.test(p.rol || '') ? 'Stand-in' : 'Substitute') : /loan/i.test(p.rol || '') ? 'Loan' : null);
+        const jug = [];
+        for (const grupo of ['activos', 'suplentes', 'inactivos']) for (const p of pag[grupo]) {
           const q = nicks.get(normFuerte(p.id));
-          return { nombre: p.id, nombre_real: p.nombre || q?.nombre_real || null, pais: (q?.pais || p.pais || null), rol: q?.rol || null, estado: p.rol || null,
-            desde: p.desde, foto: q?.foto || null, edad: q?.edad || null, ganancias: null, anteriores: null };
-        });
-        extra.exjugadores = pag.antiguos.slice(0, 25).map((p) => ({ nombre: p.id, pais: p.pais, desde: p.desde, hasta: p.hasta, nuevo_equipo: p.nuevo || null }));
-        extra.staff = pag.staff.slice(0, 12).map((p) => ({ nombre: p.id, nombre_real: p.nombre || null, rol: p.rol || null, pais: p.pais, desde: p.desde }));
+          jug.push({ nombre: p.id, nombre_real: p.nombre || q?.nombre_real || null, pais: (q?.pais || p.pais || null), rol: q?.rol || null, estado: estadoDe(p, grupo),
+            capitan: p.capitan || undefined, desde: p.desde, inactivo_desde: p.inactivo || undefined, foto: q?.foto || null, edad: q?.edad || null, ganancias: null, anteriores: null, _t: p.titulo });
+        }
+        extra.jugadores = jug;
+        extra.exjugadores = pag.antiguos.slice(0, 70).map((p) => ({ nombre: p.id, pais: p.pais, desde: p.desde, hasta: p.hasta, nuevo_equipo: p.nuevo || null }));
+        extra.staff = pag.staff.slice(0, 16).map((p) => ({ nombre: p.id, nombre_real: p.nombre || null, rol: p.rol || null, pais: p.pais, desde: p.desde }));
+        extra.exstaff = pag.exstaff.slice(0, 25).map((p) => ({ nombre: p.id, rol: p.rol || null, pais: p.pais, desde: p.desde, hasta: p.hasta, nuevo_equipo: p.nuevo || null }));
         fuente.push('Liquipedia');
         atribucion.push({ fuente: 'Liquipedia', texto: 'Datos de Liquipedia', url: `https://liquipedia.net/${wiki}/${encodeURIComponent(titulo.replace(/ /g, '_'))}`, licencia: 'CC BY-SA 3.0', licencia_url: 'https://creativecommons.org/licenses/by-sa/3.0/' });
       }
     }
   } catch (e) { extra.aviso_liquipedia = String(e.message || e).slice(0, 120); }
+
+  if (lpOk && c.game !== 'valorant') {   // CS2: roles (IGL, AWPer, rifler, entry, support, lurker) desde la ficha de cada jugador
+    try {
+      const roles = await rolesLp(wiki, extra.jugadores.filter((j) => j.estado !== 'Inactive').map((j) => j._t));
+      for (const j of extra.jugadores) { const r = j._t && roles.get(j._t); if (r) j.roles = r; }
+    } catch (e) { extra.aviso_roles = String(e.message || e).slice(0, 120); }
+  }
+  for (const j of extra.jugadores) delete j._t;
+  if (lpOk && titulo) {   // todos los torneos del equipo de siempre: Equipo/Results
+    try {
+      const r = await lp(wiki, { action: 'parse', page: `${titulo}/Results`, prop: 'text', redirects: 1, disablelimitreport: 1, disabletoc: 1 }, true);
+      extra.titulos = resumirTitulos(leerPaginaLp(r.parse.text, wiki).palmares);
+    } catch (e) { extra.aviso_results = String(e.message || e).slice(0, 120); }
+  }
 
   if (!extra.jugadores.length && psJug.length) {
     extra.jugadores = psJug.map((q) => ({ nombre: q.nick, nombre_real: q.nombre_real, pais: q.pais, rol: q.rol, estado: null, desde: null, foto: q.foto, edad: q.edad, ganancias: null, anteriores: null }));
@@ -274,7 +339,10 @@ export async function fichaEsports(c, ps) {
       const ev = await vlrEquipo(c.nombre, c.acr);
       if (ev) {
         const ant = await vlrAnteriores(ev, extra.jugadores.map((j) => j.nombre));
-        for (const j of extra.jugadores) { const a = ant.get(j.nombre); if (a) { j.anteriores = a.anteriores; if (!j.desde && a.desde_vlr) j.desde = a.desde_vlr; } }
+        for (const j of extra.jugadores) {
+          const a = ant.get(j.nombre);
+          if (a) { j.anteriores = a.anteriores; if (!j.desde && a.desde_vlr) j.desde = a.desde_vlr; if (a.agentes?.length) j.agentes = a.agentes; if (!j.foto && a.foto_vlr) j.foto = a.foto_vlr; if (!j.pais && a.pais_vlr) j.pais = a.pais_vlr; if (a.vlr_url) j.vlr = a.vlr_url; }
+        }
         if (!extra.palmares.length) extra.palmares = palmaresVlr(ev);
         if (ant.size || extra.palmares.length) { fuente.push('vlr.gg'); atribucion.push({ fuente: 'vlr.gg', texto: 'Datos de vlr.gg', url: ev.info?.name ? 'https://www.vlr.gg/' : null }); }
       }
@@ -465,7 +533,7 @@ export function toca(c, cache, ahora = Date.now()) {
   const k = cache?.[c.clave];
   if (!k) return true;
   if (k.i) { const espera = Math.min(24, 2 ** (k.f || 0)) * 3600e3; if (ahora - k.i < (k.f ? espera : 3600e3)) return false; }
-  return !k.t || ahora - k.t > CFG.vida;
+  return !k.t || ahora - k.t > CFG.vida || (c.tipo === 'esports' && k.p != null && k.p < CFG.ver);
 }
 
 export async function equiposExtra({ rows, rpc, secret, dry = false, ps = process.env.PANDASCORE_KEY, log = console.log, cache: cacheFija, apuestas: apFija } = {}) {
@@ -483,7 +551,7 @@ export async function equiposExtra({ rows, rpc, secret, dry = false, ps = proces
     else { hechos.ok++; }
     if (!rpc || !secret || dry) return;
     let fila = error ? { id: c.clave, fallo: true } : { id: c.clave, extra };
-    if (!error && JSON.stringify(extra).length > CFG.tamMax) { extra.exjugadores = (extra.exjugadores || []).slice(0, 10); extra.palmares = extra.palmares.slice(0, 8); fila = { id: c.clave, extra }; }
+    if (!error && JSON.stringify(extra).length > CFG.tamMax) { extra.exjugadores = (extra.exjugadores || []).slice(0, 20); extra.exstaff = (extra.exstaff || []).slice(0, 5); extra.palmares = extra.palmares.slice(0, 8); if (extra.titulos) extra.titulos.lista = extra.titulos.lista.slice(0, 40); fila = { id: c.clave, extra }; }
     try { await rpc('sync_equipos_extra_put', { p_secret: secret, p_rows: [fila] }); } catch (e) { log('equipos extra: no pude guardar', c.clave, e.message); }
   };
   const correr = async (cs) => {
