@@ -105,7 +105,7 @@
     if (!yo) return `<div class="qn-rt">${sello}<span class="qn-rl2"><b data-notr>${nom(c.from)}</b> <span>le reta</span></span></div><div class="qn-pl oc"><span class="qn-pt"><small><span>aún no ha contestado</span> <i>·</i> ${N(c.stake)}${coin()}</small></span></div>`;
     const rivales = otros.length ? `<i>contra</i> <b data-notr>${nomsG(otros)}</b>` : `<i>contra</i> <span>Cualquiera</span>`;
     return `<div class="qn-rt">${sello}<span class="qn-rl2">${rivales}</span></div>
-      <div class="qn-pl"><span class="qn-pe">${escudoDe(m, yo.p)}</span><span class="qn-pt"><b ${yo.p === 'X' ? '' : 'data-notr'}>${esc(pn(m, yo.p))}</b><small><span class="nw">${N(c.stake)}${coin()} <span>cada uno</span></span> <span class="nw">${N(bote)}${coin()} <span>en juego</span></span></small></span></div>`;
+      <div class="qn-pl"><span class="qn-pe">${escudoDe(m, yo.p)}</span><span class="qn-pt"><b ${yo.p === 'X' ? '' : 'data-notr'}>${esc(pn(m, yo.p))}</b><small><span class="nw">${N(c.stake)}${coin()} <span>cada uno</span></span> <span class="nw">${N(bote)}${coin()} <span>en juego</span></span>${c.v2 ? ` <span class="nw"><i>→</i> ${N(g(() => GM_RETOS.pagoDe(c, k), 0))}${coin()} <span>si acierta</span></span>` : ''}</small></span></div>`;
   };
   function previa(k, mid) {
     const m = g(() => byId(mid)); if (!m) return '';
@@ -220,7 +220,10 @@
       : c.st === 'pending' ? `<span class="rc-st">${c.to ? 'Esperando respuesta' : 'Abierto a todos'}</span>`
       : `<span class="rc-st"><span>Empieza en</span> <b>${g(() => CD(t), '')}</b></span>`;
     const nv = nvmDe(c), bote = g(() => R.bote(c), c.stake * 2), varios = g(() => R.nEntradas(c) > 2, false), dentroYo = g(() => R.dentro(c), false);
-    const miParte = dentroYo && varios ? g(() => R.pagoDe(c, yo), 0) : 0;
+    // db/066: en un reto contra la banca, lo que te llevas si aciertas es tu cuota de la banca + lo de los rivales (siempre se ensena)
+    const miParte = dentroYo && (varios || c.v2) ? g(() => R.pagoDe(c, yo), 0) : 0;
+    const quienes = g(() => R.pl(c).length, 1), cierre = g(() => R.retirarBtn(c, 'en-rc'), '') || (quienes > 1 || c.st === 'accepted' ? `<span class="rc-no">${LOCK}<span>Sin cancelar · se paga al final</span></span>` : '');
+    const boteTxt = c.v2 ? 'en juego entre vosotros · el que acierta cobra además su cuota de la banca' : varios ? 'en juego · se reparte entre los que acierten' : 'en juego · se lo lleva quien acierte';
     // quien mas hay: un tercer lado (por ejemplo el empate en un reto de dos equipos)
     const extra = mas.length ? `<p class="rc-ex">${mas.map((l) => `<span class="rc-ex1">${l.ks.slice(0, 2).map((k) => cara(k, 'sm')).join('')}<b data-notr>${nomsG(l.ks)}</b><i>con</i><span ${l.p === 'X' ? '' : 'data-notr'}>${esc(l.p === 'X' ? 'el empate' : pn(m, l.p))}</span></span>`).join('')}</p>` : '';
     // unirte: un boton por lado si el reto esta abierto y no estas dentro; si es un reto para ti, el de aceptar de siempre
@@ -230,7 +233,7 @@
       <header class="rc-top"><span class="qn-seal">${SVS}<span>Reto</span> <span class="rc-nv">${nv}</span></span>${estado}</header>
       <div class="rc-duel">${lado(A, 'a', lA)}<div class="rc-mid">${centro}</div>${lado(B, 'b', lB)}</div>
       ${extra}${op.sinPartido ? '' : `<p class="rc-pt" data-notr>${esc(m.a)} vs ${esc(m.b)}</p>`}
-      <footer class="rc-pie"><span class="rc-bote"><b class="num">${N(bote)}${coin()}</b><small>${varios ? 'en juego · se reparte entre los que acierten' : 'en juego · se lo lleva quien acierte'}</small>${miParte ? `<small class="rc-yo"><span>Tu parte si aciertas</span> <b class="num">${N(miParte)}${coin()}</b></small>` : ''}</span><span class="rc-no">${LOCK}<span>Sin cancelar · se paga al final</span></span></footer>
+      <footer class="rc-pie"><span class="rc-bote"><b class="num">${N(bote)}${coin()}</b><small>${boteTxt}</small>${miParte ? `<small class="rc-yo"><span>${c.v2 ? 'Si aciertas cobras' : 'Tu parte si aciertas'}</span> <b class="num">${N(miParte)}${coin()}</b></small>` : ''}</span>${cierre}</footer>
       ${acc}
     </article>`;
   }

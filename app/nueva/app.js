@@ -100,8 +100,15 @@ function build(st, rows, chat, ex) {
   MI = new Map(M.concat(oc.ocu.map(mkM)).map((m) => [m.id, m]));
   // logos de liga de ESPN a 128 px (se pintan a 40 y en pantallas de doble densidad se veian borrosos a 64)
   L = {}; for (const r of rows.concat(oc.ocu)) if (!L[r.league]) L[r.league] = [r.league_name, (r.league_logo || '').replace(/([?&])w=64&h=64/, '$1w=128&h=128') || (r.sport === 'c' || r.sport === 'v' ? lgSigla(r.league_name, r.sport) : SP[r.sport][1]), r.sport];
+  // retos contra la banca (db/066): cada entrada de un reto nuevo (v2) es una apuesta de verdad en bets. Mientras el reto se ensena como
+  // reto (pendiente, aceptado, acabado o anulado) su apuesta NO va en ALL: la tarjeta del reto ya la cuenta (con la cuota y el bote de
+  // los rivales) y saldria dos veces. Si nadie aceptó (expired) o el amigo dijo que no (declined), el reto desaparece y la apuesta queda
+  // en ALL como una apuesta normal en todo. Un reto retirado (canceled) desaparece entero, apuesta incluida.
+  const RM0 = ex?.retos || {}, CHST = new Map((ex?.challenges || []).map((c) => [String(c.id), c.status])), BRETO = new Set();
+  for (const [id, r] of Object.entries(RM0)) { if (!r || !r.v || !Array.isArray(r.e)) continue; const s = CHST.get(id); if (s === 'expired' || s === 'declined') continue;
+    for (const x of r.e) if (x[3] != null) BRETO.add(Number(x[3])) }
   // cash out (db/024): una apuesta retirada cuenta como resuelta; con beneficio es 'won' (cobra pay), con perdida es 'lost' (pierde stake - pay). cash = true
-  ALL = st.bets.map((b) => { const c = b.status === 'cashout', w = c && b.payout > b.stake; return { id: b.id, k: key.get(b.player), m: b.match, p: b.pick, stake: b.stake, o: w ? b.payout / b.stake : Number(b.odds), st: c ? (w ? 'won' : 'lost') : b.status, pay: b.payout, at: b.created, set: b.settled, cash: c } });
+  ALL = st.bets.filter((b) => !BRETO.has(Number(b.id))).map((b) => { const c = b.status === 'cashout', w = c && b.payout > b.stake; return { id: b.id, k: key.get(b.player), m: b.match, p: b.pick, stake: b.stake, o: w ? b.payout / b.stake : Number(b.odds), st: c ? (w ? 'won' : 'lost') : b.status, pay: b.payout, at: b.created, set: b.settled, cash: c } });
   LEDGER = st.ledger.map((l) => ({ t: when(l.at), at: Date.parse(l.at), kind: l.kind, c: KIND[l.kind] || l.kind, d: l.note, a: l.amount }));
   chat = chat.filter((c) => c.player || !/^(Batalla (1v1|2v2) lista|.+ abre una batalla (1v1|2v2))/.test(c.body || ''));
   CHAT = chat.map((c) => ({ id: c.id, poll: c.poll_id || null, bet: c.bet_id || null, k: c.player ? key.get(c.player) : null, at: Date.parse(c.created_at), t: HM(Date.parse(c.created_at)), txt: c.body, img: c.image_url, aud: c.audio_url || null, secs: c.audio_secs || 0 }));
@@ -150,13 +157,16 @@ function build(st, rows, chat, ex) {
   const uk = new Map(st.players.map((p) => [p.id, p.color]));
   // retos con mas gente (db/053): pl = quien esta dentro y con que lado, en el orden de la base (quien reta, quien acepta, los demas); win = lado ganador
   const RM = ex?.retos || {};
+  // db/066: en los retos nuevos (v2) cada entrada lleva ademas su cuota (o), su apuesta (bid), el extra del bote cobrado (x), el estado
+  // de su apuesta (bst) y lo que le pago la banca (pay). Fuera los retirados y los v2 que se quedaron sin rival (ya son apuestas normales)
   CH = (ex?.challenges || []).map((c) => {
     const o = { id: c.id, m: c.match, from: uk.get(c.from), to: uk.get(c.to), ab: c.to == null, fp: c.from_pick, tp: c.to_pick, stake: c.stake, st: c.status, at: c.created, set: c.settled };
     const r = RM[c.id];
-    o.pl = r && Array.isArray(r.e) ? r.e.map(([u, p]) => ({ k: uk.get(u), p })).filter((x) => x.k) : [{ k: o.from, p: o.fp }].concat(o.to && o.tp ? [{ k: o.to, p: o.tp }] : []);
+    o.v2 = !!(r && r.v);
+    o.pl = r && Array.isArray(r.e) ? r.e.map(([u, p, od, bid, x, bst, pay]) => (o.v2 ? { k: uk.get(u), p, o: od == null ? null : Number(od), bid, x: x || 0, bst, pay: pay || 0 } : { k: uk.get(u), p })).filter((x) => x.k) : [{ k: o.from, p: o.fp }].concat(o.to && o.tp ? [{ k: o.to, p: o.tp }] : []);
     o.win = r ? r.w || null : c.status === 'won_from' ? c.from_pick : c.status === 'won_to' ? c.to_pick : null;
     return o;
-  });
+  }).filter((c) => c.st !== 'canceled' && !(c.v2 && (c.st === 'expired' || c.st === 'declined')));
   DAILY = ex?.daily || []; DAILY_ON = !!ex?.daily_on; DAILY_BONUS = Number(ex?.daily_bonus) || 1.25;
   // primera tanda de ideas (db/009): premio diario, rescate, bote, reacciones, encuestas
   CLAIM = ex?.claim || null; BOTE = ex?.bote || null;
@@ -688,8 +698,9 @@ const chName = (st) => ({ pending: 'Esperando respuesta', accepted: 'En juego', 
 function retoRow(c) {
   const m = byId(c.m); if (!m) return '';
   const R = window.GM_RETOS;
-  // retos.js (01-11): un reto abierto (c.ab) no tiene destinatario: lo coge el primero que entra. Los retos no se cancelan:
-  // ya no hay boton Retirar (si nadie entra antes de empezar, la base devuelve lo puesto)
+  // retos.js (01-11): un reto abierto (c.ab) no tiene destinatario: lo coge el primero que entra. Desde db/066 (PM 02-11) quien reta lo
+  // puede cancelar mientras no haya entrado nadie y no haya empezado (boton Cancelar reto con doble toque); con alguien dentro, no.
+  // Un reto nuevo (c.v2) que se queda sin rival al empezar pasa a ser una apuesta normal (ya no se devuelve)
   const forMe = R ? R.paraMi(c) : (c.to === MEK || (c.ab && c.from !== MEK)) && c.st === 'pending' && isOpen(m);
   const ls = R ? R.lados(c) : [{ p: c.fp, ks: [c.from] }].concat(c.tp ? [{ p: c.tp, ks: [c.to] }] : []);
   const ws = R ? R.ganan(c) : [];
@@ -697,15 +708,18 @@ function retoRow(c) {
   const caras = (l) => l.ks.slice(0, 3).map((k) => av(k, 'sm')).join('') + (l.ks.length > 3 ? `<span class="rt-n">+${l.ks.length - 3}</span>` : '');
   let act = '';
   if (forMe) act = `<span class="rt-act">${R ? R.accion(c) : ''}</span>`;   // retos.js: "Aceptar · pones X, ganas Y" en un toque (el lado es el contrario) y No
+  else if (R && R.puedeRetirar(c)) act = `<span class="rt-act">${R.retirarBtn(c)}</span>`;
   const anyAv = '<span class="av sm rt-any" title="Cualquiera"><svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 6.2a3 3 0 0 1 0 5.6M17.5 14a5 5 0 0 1 3 5"/></svg></span>';
   const rival = ls[1] ? caras(ls[1]) : c.ab ? anyAv : av(c.to, 'sm');
   const vs = ls[1] ? ` <i>contra</i> ${grupo(ls[1])} · ${esc(pn(m, ls[1].p))}` : c.ab ? ` <i>reta a</i> cualquiera` : ` <i>reta a</i> ${esc(fr(c.to).n)}`;
   const gana = ws.length ? (ws.length === 1 ? 'Gana ' + esc(fr(ws[0]).n) : 'Ganan ' + esc(fr(ws[0]).n) + ' +' + (ws.length - 1)) : '';
-  const nv = R ? R.nvm(c) : '1v1', bote = R ? R.bote(c) : c.stake * 2;
+  const nv = R ? R.nvm(c) : '1v1', yoDentro = !!(R && c.v2 && R.dentro(c)), vivo = c.st === 'pending' || c.st === 'accepted';
+  // db/066: en un reto contra la banca en el que estas, la cifra es lo que te llevas (tu cuota de la banca + lo de los rivales)
+  const bote = yoDentro ? R.pagoDe(c, MEK) : R ? R.bote(c) : c.stake * 2;
   return `<div class="rt ${c.st} ${c.ab ? 'ab' : ''}"><div class="rt-who">${caras(ls[0])}<i>vs</i>${rival}</div>
     <div style="min-width:0"><strong>${grupo(ls[0])} · ${esc(pn(m, ls[0].p))}${vs}</strong>
     <span class="m"><b class="rt-nvm">${nv}</b> · ${esc(m.a)} vs ${esc(m.b)} · ${m.live ? 'en juego' : c.st === 'pending' || c.st === 'accepted' ? WD(m.at).toLowerCase() + ' ' + HM(m.at) + ' · ' + CD(m.at) : when(c.set || c.at)}</span></div>
-    <div class="v"><b>${N(bote)}${coin()}</b><span class="st">${gana || (c.ab && c.st === 'pending' ? 'Abierto a todos' : chName(c.st))}</span></div>${act}</div>`;
+    <div class="v"><b>${N(bote)}${coin()}</b><span class="st">${gana || (yoDentro && vivo ? 'Te llevas si aciertas' : c.ab && c.st === 'pending' ? 'Abierto a todos' : chName(c.st))}</span></div>${act}</div>`;
 }
 const retosHtml = (list, empty) => (list.length ? `<div class="rts">${list.map(retoRow).join('')}</div>` : `<p class="hint">${empty}</p>`);
 function retoForm(m) { return window.GM_RETOS ? GM_RETOS.btn(m, 'grande') : '' }   // retos.js: un boton Retar que abre un panel con todo a la vista
@@ -745,7 +759,7 @@ function avisos() {
     }
     for (const c of CH) {
       const was = SNAP.ch.get(c.id), m = byId(c.m); if (!m) continue;
-      if (!was && c.to === MEK && c.st === 'pending') avisa(`${fr(c.from).n} te reta`, `${m.a} vs ${m.b} · pones ${N(c.stake)}, ganas ${N(c.stake * 2)}`);
+      if (!was && c.to === MEK && c.st === 'pending') avisa(`${fr(c.from).n} te reta`, `${m.a} vs ${m.b} · pones ${N(c.stake)}, ganas ${N((window.GM_RETOS && GM_RETOS.pagoSiEntra(c, GM_RETOS.ladoRival(m, c.fp))) || c.stake * 2)}`);
       if (was && was !== c.st && /^won_/.test(c.st)) { const gana = window.GM_RETOS ? GM_RETOS.ganan(c).includes(MEK) : (c.st === 'won_from' ? c.from : c.to) === MEK; if (gana) confeti(); if (window.GM_RETOS ? GM_RETOS.dentro(c) : (c.from === MEK || c.to === MEK)) avisa(gana ? '¡Reto ganado!' : 'Reto perdido', `${m.a} ${m.score || ''} ${m.b}`) }
       if (was === 'pending' && c.st === 'accepted' && c.from === MEK && !(window.GM_RETOS && GM_RETOS.fueAbierto(c.id))) avisa(`${fr(c.to).n} acepta tu reto`, `${m.a} vs ${m.b} · ${N(c.stake * 2)} en juego`);
     }
@@ -2123,7 +2137,14 @@ document.addEventListener('click', async (e) => {
   if (d.retar) return window.GM_RETOS && GM_RETOS.abre(d.retar);   // retos.js: panel para enviar un reto
   if (d.accept) { e.stopPropagation(); const [id, p] = d.accept.split('|'); return window.GM_RETOS && GM_RETOS.entra(+id, p) }   // retos.js: doble confirmacion y challenge_answer / challenge_join
   if (d.decline) { e.stopPropagation(); const { error } = await db.rpc('challenge_answer', { p_id: +d.decline, p_accept: false }); if (error) return toast(errMsg(error)); toast('Reto rechazado'); return refresh() }
-  if (d.retirar) { e.stopPropagation(); return toast('Un reto no se puede cancelar') }   // PM, 01-11: los retos no se cancelan
+  // PM 02-11: "que tu puedas cancelar una bet desde my bets": un reto en el que aun no ha entrado nadie se retira antes de empezar
+  // (challenge_cancel, db/066; devuelve todo). Segundo toque para confirmar, como Cancelar apuesta. Con alguien dentro ya no se puede
+  if (d.retirar) {
+    e.stopPropagation();
+    if (S.sure !== 'r' + d.retirar) { S.sure = 'r' + d.retirar; render(); if (window.GM_RETOS) GM_RETOS.pinta(); setTimeout(() => { if (S.sure === 'r' + d.retirar) { S.sure = null; render() } }, 3500); return }
+    S.sure = null; const c = CH.find((x) => x.id === +d.retirar), { error } = await db.rpc('challenge_cancel', { p_id: +d.retirar }); if (error) { toast(errMsg(error)); return refresh() }
+    toast(`Reto cancelado: te devuelvo <b>${N(c ? c.stake : 0)}</b>`); return refresh();
+  }
   if (d.daily) { const { error } = await db.rpc('admin_set', { p_key: 'daily_on', p_value: d.daily === 'true' }); if (error) return toast(errMsg(error)); return refresh() }
   if (d.act === 'notif') { try { const r = await Notification.requestPermission(); toast(r === 'granted' ? 'Avisos activados' : 'El navegador no ha dado permiso') } catch {} return render() }
   if (d.scr) { S.scr = d.scr; S.sheet = false; S.nvp = false; S.eqp = null; document.getElementById('view').scrollTop = 0 }

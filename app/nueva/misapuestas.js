@@ -80,8 +80,8 @@
       <div class="mt-rv"><span class="mt-rf">${av(MEK, 'xl')}<b>Tú</b></span><span class="qn-seal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/></svg><span>Reto</span> ${g(() => GM_RETOS.nvm(c), '1v1')}</span><span class="mt-rf">${rivAv}<b>${nom(riv)}</b></span></div>
       ${estado ? `<p class="mt-rs">${estado}</p>` : ''}
       <div class="mt-m">${eq('a')}${eq('b')}</div>${empate}
-      <div class="mt-n">${cuadro('Pones', N(c.stake) + coin())}${cuadro('En juego', N(c.stake * 2) + coin())}${cuadro('Te llevas', N(c.stake * 2) + coin(), 'hi')}</div>
-      <p class="mt-rt-no"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>Sin cancelar · se paga al final</span></p>
+      <div class="mt-n">${cuadro('Pones', N(c.stake) + coin())}${cuadro('En juego', N(g(() => GM_RETOS.bote(c), c.stake * 2)) + coin())}${cuadro('Te llevas', N(g(() => GM_RETOS.pagoDe(c, MEK), c.stake * 2)) + coin(), 'hi')}</div>
+      ${g(() => GM_RETOS.puedeRetirar(c), false) ? `<div class="mt-act">${GM_RETOS.retirarBtn(c)}</div>` : `<p class="mt-rt-no"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>Sin cancelar · se paga al final</span></p>`}
     </article>`;
   }
   function suelta(b, i) {

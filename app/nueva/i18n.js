@@ -534,6 +534,19 @@
     'Blackjack: apuesta retirada': 'Blackjack: bet taken back', 'Blackjack: mano devuelta al abrir la mesa': 'Blackjack: hand refunded when the table opened',
     // Quien esta dentro, retos y patas (quien.js, 01-11)
     'Quién está dentro': 'Who is in', 'Reto': 'Challenge', 'Reto 1 contra 1': '1 vs 1 challenge', 'cada uno': 'each', 'en juego': 'at stake', 'Apuesta oculta': 'Hidden bet', 'Esperando a que entre alguien': 'Waiting for someone to join',
+    // retos contra la banca e importe a mano (02-11, db/066)
+    'Cancelar reto': 'Cancel challenge', '¿Seguro? Te devuelvo': 'Sure? You get back', 'Escribe cuánto': 'Type an amount', 'El reto máximo es 100.000': 'The maximum challenge is 100,000',
+    '· si empatan y nadie va con el empate, perdéis los dos': '· if they draw and nobody backs the draw, you both lose', 'elige tu lado para ver lo que cobras': 'pick your side to see what you get',
+    'Si aciertas cobras': 'If you are right you get', 'de la banca (cuota': 'from the bank (odds', 'de cada uno que entre en contra': 'from each one who joins against you',
+    'de tu rival si acepta': 'from your opponent if they accept', 'Si nadie entra en contra, se queda como una apuesta normal a esa cuota': 'If nobody joins against you, it stays as a normal bet at those odds',
+    'Puedes cancelarlo mientras no entre nadie y no empiece el partido': 'You can cancel it while nobody has joined and the match has not started',
+    'en juego entre vosotros · el que acierta cobra además su cuota de la banca': 'at stake between you · the winner also gets their odds from the bank',
+    'si acierta': 'if right', 'Te llevas si aciertas': 'You get if right', 'La mitad de tu saldo': 'Half your balance', 'Todo tu saldo (máximo 100.000)': 'All your balance (max 100,000)',
+    'Ese lado no tiene cuota ahora mismo: no se puede retar': 'That side has no odds right now: you cannot challenge',
+    'Ya ha entrado alguien: el reto ya no se puede cancelar': 'Someone already joined: the challenge can no longer be cancelled',
+    'El partido ya ha empezado: no se puede cancelar': 'The match has already started: it cannot be cancelled', 'Ese reto ya está cerrado': 'That challenge is already closed',
+    'Es la apuesta de un reto: un reto no se puede cancelar': 'This bet belongs to a challenge: use Cancel challenge',
+    'Es la apuesta de un reto con rivales: no se puede vender': 'This bet belongs to a challenge with opponents: it cannot be cashed out',
     'Sin cancelar · se paga al final': 'No cancelling · paid at the end', 'en juego · se lo lleva quien acierte': 'at stake · winner takes all', 'Va ganando': 'Winning', 'Nadie ha apostado a este partido.': 'Nobody has bet on this match.',
     // ruleta global de la semana, tu ruleta cada 3 dias y saldos en negativo (db/047, ruleta-global.js)
     'Ruleta global de la semana': 'Weekly global wheel', 'Ruleta global de la semana pasada': 'Last week\u2019s global wheel', 'Ruleta global': 'Global wheel',
@@ -602,6 +615,15 @@
   const ORD = (n) => (/^1[123]$|[04-9]$/.test(n) ? 'th' : /1$/.test(n) ? 'st' : /2$/.test(n) ? 'nd' : 'rd');
   const MES_N = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const R = [
+    // retos contra la banca (02-11, db/066): chat y monedero; van primero para que las reglas viejas de retos no las trocen
+    [/^Reto ganado a (.+): lo que puso el rival$/, 'Challenge won against $1: what your opponent put in'],
+    [/^Reto ganado: (.+?) contra (.+?) · (.+)$/, (m, a, b, r) => `Challenge won: ${a} against ${b.replace(/ y /g, ' and ')} · ${r}`],
+    [/^Reto ganado: (.+?) · (.+)$/, 'Challenge won: $1 · $2'],
+    [/^Nadie acierta en el reto entre (.+?) · (.+)$/, (m, a, r) => `Nobody got it right in the challenge between ${a.replace(/ y /g, ' and ')} · ${r}`],
+    [/^Reto sin resultado entre (.+?) · (.+) · se devuelve todo$/, (m, a, r) => `Challenge without a result between ${a.replace(/ y /g, ' and ')} · ${r} · everything is refunded`],
+    [/^(.+) no acepta el reto de (.+?) \((.+)\): su apuesta sigue en pie$/, '$1 declines the challenge from $2 ($3): their bet stays on'],
+    [/^(.+) retira su reto: (.+ vs .+)$/, '$1 cancels their challenge: $2'],
+    [/^Reto cancelado: te devuelvo$/, 'Challenge cancelled: you get back'], [/^Reto cancelado: (.+)$/, 'Challenge cancelled: $1'],
     [/^Tienes (\d+) aparatos con avisos\.$/, 'You have $1 devices with alerts.'],
     // Retos con mas gente (01-11, db/053): lo que escribe la base en el chat y en el monedero; van primero para que las reglas de mas abajo no las trocen
     [/^(.+) entra en el reto de (.+?): (.+), ([\d.,]+) en juego$/, '$1 joins the challenge from $2: $3, $4 at stake'],
