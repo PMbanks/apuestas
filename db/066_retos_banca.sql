@@ -312,7 +312,8 @@ begin
   select * into c from challenges where id = new.challenge_id;
   if not found then return new; end if;
   select * into m from matches where id = new.match_id;
-  if new.status = 'void' and m.status = 'scheduled' and c.status <> 'canceled' then raise exception 'Es la apuesta de un reto: un reto no se puede cancelar'; end if;
+  -- antes de empezar solo se anula por challenge_cancel (reto ya 'canceled'); si el amigo dijo que no (declined) ya es una apuesta normal
+  if new.status = 'void' and m.status = 'scheduled' and c.status in ('pending', 'accepted') then raise exception 'Es la apuesta de un reto: un reto no se puede cancelar'; end if;
   if new.status = 'cashout' and c.status = 'accepted' then raise exception 'Es la apuesta de un reto con rivales: no se puede vender'; end if;
   return new;
 end $$;

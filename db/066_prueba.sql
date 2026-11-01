@@ -6,7 +6,7 @@
 --  3) 2v1 (el segundo del lado 1 entra con la cuota ya en 1,80), 3v1 con bote que no divide exacto (34, 33, 33) y 2v1 que gana el solo.
 --  4) empate: el de la X cobra 340 + 200. Gana la X sin nadie en la X: todos pierden, sin bote. Sin empate en el partido no se elige X.
 --  5) reto que nadie acepta: al empezar se cierra SIN devolver y la apuesta sigue; luego se paga como normal (gana 165 con el cierre
---     del sync, leyendo su clave de settings) o se pierde. Reto a un amigo que dice que no: la apuesta sigue en pie.
+--     del sync, leyendo su clave de settings) o se pierde. Reto a un amigo que dice que no: la apuesta sigue en pie (y ya se puede cancelar como una normal).
 --     No se cancela por cancel_bet ni se vende con rivales; sin rival si se puede vender.
 --  6) partido anulado: se devuelve todo a cada uno.
 --  7) retos viejos (v2 = false) se pagan como antes: bote a partes iguales, sin rival se devuelve, aceptado por un amigo el doble.
@@ -191,6 +191,7 @@ begin
   perform pg_temp.yo(c); perform pg_temp.falla(format('select challenge_join(%s, %L)', cid, '2'), 'otro amigo');
   perform pg_temp.yo(b); perform challenge_answer(cid, false);
   if (select status from challenges where id = cid) <> 'declined' or pg_temp.saldo(a) <> sa - 100 or (pg_temp.apuesta(cid, a)).status <> 'open' then raise exception 'FALLO: rechazado deberia dejar la apuesta en pie'; end if;
+  perform pg_temp.yo(a); perform pg_temp.pasa(format('select cancel_bet(%s)', (pg_temp.apuesta(cid, a)).id));   -- ya es normal: se puede cancelar
   perform pg_temp.parte('p66j', 'final', '1');
   perform settle_match('p66j');
   if pg_temp.saldo(a) <> sa + 65 then raise exception 'FALLO: rechazado y acierta: A % (esperado +65)', pg_temp.saldo(a) - sa; end if;
