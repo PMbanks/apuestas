@@ -77,7 +77,7 @@
     if (c.st === 'pending') {
       if (paraMi) { tit = `<span>${c.ab ? 'Reta a cualquiera con' : 'Te reta con'}</span> <span class="nm" data-notr>${esc(de)}</span>`; act = true;
         acc = `<span class="td-btns">${window.GM_RETOS ? GM_RETOS.accion(c, 'en-td') : ''}</span>` }
-      else if (mio) { tit = c.ab ? `<span>Retas a cualquiera</span><em data-notr>${esc(de)}</em>` : `<span>Retas a</span> <span class="nm" data-notr>${esc(fr(c.to).n)}</span><em data-notr>${esc(de)}</em>`; acc = '<span class="td-tag q">esperando</span>' }   // los retos no se cancelan
+      else if (mio) { tit = c.ab ? `<span>Retas a cualquiera</span><em data-notr>${esc(de)}</em>` : `<span>Retas a</span> <span class="nm" data-notr>${esc(fr(c.to).n)}</span><em data-notr>${esc(de)}</em>`; acc = g(() => R.retirarBtn(c, 'en-td'), '') || '<span class="td-tag q">esperando</span>' }   // sin nadie dentro aun se puede cancelar (db/066)
       else if (e && c.from !== fid) { tit = `<span>Reto de</span> <span class="nm" ${sinTr(c.from)}>${esc(nombre(c.from))}</span><em data-notr>${esc(pn(m, e.p))}</em>`; acc = '<span class="td-tag q">esperando</span>' }
       else { tit = c.ab ? `<span>Reta a cualquiera</span><em data-notr>${esc(de)}</em>` : `<span>Reta a</span> <span class="nm" ${sinTr(c.to)}>${esc(nombre(c.to))}</span><em data-notr>${esc(de)}</em>`; acc = '<span class="td-tag q">esperando</span>' }
     } else {
@@ -87,7 +87,7 @@
     }
     return `<div class="td-tk reto ${act ? 'act' : ''}" data-goto="${esc(m.id)}"><span class="td-ic vs">${R ? R.nvm(c) : '1v1'}</span>
       <div class="t"><b>${tit}</b><small><span data-notr>${esc(m.a)} vs ${esc(m.b)}</span><span> · </span><span>${N(c.stake)} cada uno</span></small></div>
-      <div class="m"><b>${N(R ? R.bote(c) : c.stake * 2)}</b>${coin()}<small>bote</small></div><div class="bx">${acc}</div></div>`;
+      ${R && c.v2 && e ? `<div class="m"><span>${N(c.stake)}</span> → <b>${N(R.pagoDe(c, fid))}</b>${coin()}<small>cobraría</small></div>` : `<div class="m"><b>${N(R ? R.bote(c) : c.stake * 2)}</b>${coin()}<small>bote</small></div>`}<div class="bx">${acc}</div></div>`;
   }
 
   /* ---------- lo ultimo resuelto de cada uno, con el estilo de resultado (franja de color) ---------- */
