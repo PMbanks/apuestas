@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "filas-centro-0211",
+   "fecha": "2026-11-02",
+   "hora": "02:45",
+   "titulo": "Filas de Partidos renovadas",
+   "texto": "En Partidos, la hora va a la derecha de los equipos y el marcador queda centrado y alineado. En el centro de la fila salen el reto 1v1 (o 2v1, 2v2) y las caras de quien ha apostado. Pasa el ratón o toca una cara para ver su apuesta, y vuelve a tocar para abrir su perfil.",
+   "titulo_en": "Matches rows redesigned",
+   "texto_en": "In Matches, the time now sits to the right of the teams and the score is centered and aligned. In the middle of the row you see the 1v1 challenge (or 2v1, 2v2) and the faces of who has bet. Hover or tap a face to see their bet, and tap again to open their profile.",
+   "img": "novedades/filas-centro.webp",
+   "ir": "partidos"
+  },
+  {
    "id": "moneda-gambling-0111",
    "fecha": "2026-11-02",
    "hora": "02:10",
