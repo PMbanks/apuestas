@@ -20,11 +20,13 @@ begin
   -- 2) cambiar y quitar
   perform set_ring('#4fd6e8');
   if (select ring from players where id = jug[1]) is distinct from '#4fd6e8' then raise exception 'FALLO: no cambia el aro'; end if;
-  if set_ring(null) is not null or (select ring from players where id = jug[1]) is not null then raise exception 'FALLO: set_ring(null) no quita el aro'; end if;
+  r := set_ring(null);
+  if r is not null or (select ring from players where id = jug[1]) is not null then raise exception 'FALLO: set_ring(null) no quita el aro'; end if;
   perform set_ring('#123abc'); perform set_ring('');
   if (select ring from players where id = jug[1]) is not null then raise exception 'FALLO: set_ring vacio no quita el aro'; end if;
   perform set_avatar('a40-rana-meltdown');
-  if set_avatar(null) is not null or (select avatar from players where id = jug[1]) is not null then raise exception 'FALLO: set_avatar(null) no vuelve a la de siempre'; end if;
+  r := set_avatar(null);
+  if r is not null or (select avatar from players where id = jug[1]) is not null then raise exception 'FALLO: set_avatar(null) no vuelve a la de siempre'; end if;
   -- 3) basura fuera
   foreach r in array array['red', '#fff', '#ggg000', '#12345', '#1234567', 'ff7ab8', '#ff7ab8; drop table players', 'url(x)'] loop
     ok := false; begin perform set_ring(r); exception when others then ok := sqlerrm like '%no vale%'; end;
