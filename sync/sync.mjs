@@ -6,6 +6,7 @@
 // Con SOLO_DISCORD=1 hace nada mas que los avisos de Discord (para probarlos).
 import { avisos } from './discord.mjs';
 import { equiposExtra } from './equipos-extra.mjs';
+import { nba, liveNba } from './nba.mjs';                                               // NBA (db/039_nba.sql)
 
 const SB = process.env.SUPABASE_URL, ANON = process.env.SUPABASE_ANON_KEY, SECRET = process.env.SYNC_SECRET, PS = process.env.PANDASCORE_KEY;
 const DRY = !!process.env.DRY;
@@ -541,7 +542,7 @@ async function resolverPredicciones() {
   if (out.length) await rpc('sync_ex_pred_resolve', { p_secret: SECRET, p_rows: out });
   return [pend.length, out.length];
 }
-async function extras(vrows, frows = [], crows = []) {
+async function extras(vrows, frows = [], crows = [], brows = []) {
   try {
     const r = await rpc('sync_ex', { p_secret: SECRET });
     console.log(`extras: partido mejorado ${r.boost || 'ninguno'} · trofeos nuevos ${r.trofeos} · predicciones caducadas ${r.caducadas}`);
@@ -550,8 +551,8 @@ async function extras(vrows, frows = [], crows = []) {
   for (;;) {
     vlrLista = null; espnCache.clear();
     const o = await obsValorant(vrows), [abiertas, cerradas] = await resolverPredicciones();
-    const lf = await liveFutbol(frows).catch(() => 0), lc = await liveCs2(crows).catch(() => 0);
-    console.log(`predicciones: ${o} mapas en directo apuntados · ${abiertas} abiertas · ${cerradas} resueltas · cash out: ${lf} partidos de futbol y ${lc} de CS2 al día`);
+    const lf = await liveFutbol(frows).catch(() => 0), lc = await liveCs2(crows).catch(() => 0), lb = await liveNba(brows, { getJson, ponLive }).catch(() => 0);
+    console.log(`predicciones: ${o} mapas en directo apuntados · ${abiertas} abiertas · ${cerradas} resueltas · cash out: ${lf} partidos de futbol, ${lc} de CS2 y ${lb} de NBA al día`);
     if (!watch || Date.now() - t0 + 25e3 > watch * 1000) break;
     await sleep(25e3);
   }
@@ -574,12 +575,13 @@ function sube(o) { return o == null ? o : Math.round(o * SUBE * 100) / 100 }
 async function main() {
   const t0 = Date.now();
   if (process.env.SOLO_DISCORD) { if (process.env.DISCORD_WEBHOOK && SB && ANON && SECRET) await avisos({ rpc, secret: SECRET, hook: process.env.DISCORD_WEBHOOK }); return; }
-  const [f, u, v, c] = await Promise.all([soccer(), ufc(), esports('valorant'), esports('csgo')]);
+  const ctxNba = { getJson, sube, american, fromProbs, tvEspn, rpc, secret: SB && ANON ? SECRET : null, dry: DRY, now: NOW };
+  const [f, u, v, c, b] = await Promise.all([soccer(), ufc(), esports('valorant'), esports('csgo'), nba(ctxNba).catch((e) => { console.log('nba:', e.message || e); return [] })]);
   await fichasEsports([...v, ...c]);
   await bracketsEsports([...v, ...c]);
-  const rows = [...f, ...u, ...v, ...c];
+  const rows = [...f, ...u, ...v, ...c, ...b];
   await carasUfc(rows);
-  console.log(`futbol ${f.length} · ufc ${u.length} · valorant ${v.length} · cs2 ${c.length} · con cuotas reales ${rows.filter((r) => r.odds_src === 'draftkings').length}`);
+  console.log(`futbol ${f.length} · ufc ${u.length} · valorant ${v.length} · cs2 ${c.length} · nba ${b.length} · con cuotas reales ${rows.filter((r) => r.odds_src === 'draftkings').length}`);
   if (DRY) {
     if (process.env.DRY_OUT) (await import('node:fs')).writeFileSync(process.env.DRY_OUT, JSON.stringify(rows));
     const show = rows.filter((r) => r.status === 'scheduled').sort((a, b) => a.starts_at.localeCompare(b.starts_at)).slice(0, 8);
@@ -590,6 +592,12 @@ async function main() {
     for (const s of ['f', 'v', 'c']) for (const r of conMk.filter((x) => x.sport === s).slice(0, 3))
       console.log(` ${r.home} vs ${r.away} (${r.odds_1} ${r.odds_x ?? '·'} ${r.odds_2}${r.bo ? ' BO' + r.bo : ''}):`, Object.entries(r.odds_mk).map(([k, v]) => `${k} ${v}`).join(' · '));
     for (const r of rows.filter((x) => x.sport === 'f' && x.status === 'final' && x.details.r90 !== `${x.score}`).slice(0, 8)) console.log(` 90 min: ${r.home} ${r.score} ${r.away} -> ${r.details.r90}`);
+    // db/039: NBA (handicap, total y jugadores; la hoja final con la que se pagan)
+    for (const r of b.filter((x) => x.status === 'scheduled').slice(0, 4)) {
+      const ks = Object.keys(r.odds_mk || {}), jug = ks.filter((k) => k[0] === 'J');
+      console.log(` NBA ${r.home} vs ${r.away} (${r.odds_1} ${r.odds_2} ${r.odds_src}): ${ks.filter((k) => k[0] !== 'J').map((k) => `${k} ${r.odds_mk[k]}`).join(' · ')} · ${jug.length / 2} lineas de jugadores${r.details.pjm ? ' (modelo)' : ''}${jug[0] ? ` p. ej. ${r.details.pj?.[jug[0].split(':')[1]]} ${jug[0]} ${r.odds_mk[jug[0]]}` : ''}`);
+    }
+    for (const r of b.filter((x) => x.status === 'final').slice(0, 3)) console.log(` NBA final ${r.home} ${r.score} ${r.away}: hoja ${r.details.bxok ? 'entera' : 'sin hoja'} · ${Object.keys(r.details.bx || {}).length} jugadores`);
     return;
   }
   if (!SB || !ANON || !SECRET) throw new Error('Faltan SUPABASE_URL, SUPABASE_ANON_KEY y SYNC_SECRET');
@@ -599,7 +607,7 @@ async function main() {
   do { res = await rpc('sync_close', { p_secret: SECRET }); for (const k in total) total[k] += res[k] || 0 } while (res.pagadas >= 60);
   console.log(`guardados ${saved} · reveladas ${total.revelados} · apuestas pagadas ${total.pagadas} · pagas ${total.pagas} · ${((Date.now() - t0) / 1000).toFixed(1)} s`);
   equiposExtra({ rows, rpc, secret: SECRET, dry: DRY, ps: PS }).catch((e) => console.log('equipos extra:', e.message || e));   // fichas ampliadas (db/025): corre a la vez que extras() y no la espera
-  await extras(v, f, c).catch((e) => console.log('extras:', e.message || e));        // cuota mejorada, predicciones rapidas y trofeos (db/022)
+  await extras(v, f, c, b).catch((e) => console.log('extras:', e.message || e));        // cuota mejorada, predicciones rapidas y trofeos (db/022)
   // avisos en Discord: nunca hacen fallar la sincronizacion
   if (process.env.DISCORD_WEBHOOK) { try { await avisos({ rpc, secret: SECRET, hook: process.env.DISCORD_WEBHOOK }) } catch (e) { console.log(`discord: ${e.message || e}`) } }
 }
