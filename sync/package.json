@@ -1,0 +1,9 @@
+{
+  "name": "apuestas-sync",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sincronizador de Gambling Addicts. Solo push.mjs usa una libreria (web-push, para los avisos al movil); sync.mjs no necesita nada.",
+  "dependencies": {
+    "web-push": "3.6.7"
+  }
+}
