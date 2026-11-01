@@ -5,13 +5,13 @@
 // Necesita Python con rembg y Pillow (pip install "rembg[cpu]", con PYTHONPATH y U2NET_HOME apuntando fuera de C: si hace falta).
 //   ORIG=carpeta  donde dejar las fotos originales (por defecto sync/.orig, se puede borrar al acabar)
 //   OUT=carpeta   donde guardar los webp (por defecto app/img/lujo)
-//   FORZAR=1      vuelve a bajar y recortar todas; SOLO=id,id  solo esas
+//   FORZAR=1      vuelve a bajar y recortar todas; SOLO=id,id  solo esas; SIN_CAJAS=1  no redibuja las cajas viejas
 // Al final llama a sync/lujo-cajas.py, que dibuja la imagen de cada caja en <OUT>/cajas/ (necesita numpy; baja la Horizon Case de la CDN de Steam).
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { OBJETOS, LUJO } from './lujo-datos.mjs';
+import { OBJETOS, LUJO, LUJO_TODAS } from './lujo-datos.mjs';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const OUT = process.env.OUT || path.join(AQUI, '..', 'app', 'img', 'lujo');
@@ -20,10 +20,15 @@ const UA = 'apuestas-colegas/1.0 (https://github.com/PMbanks; imagenes de cajas)
 fs.mkdirSync(OUT, { recursive: true }); fs.mkdirSync(ORIG, { recursive: true });
 const limpia = (h) => String(h || '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/\s+/g, ' ').trim();
 const cajasDe = new Map();
-for (const c of LUJO) for (const [id] of c.items) cajasDe.set(id, [...(cajasDe.get(id) || []), c.nombre]);
+for (const c of LUJO_TODAS) for (const [id] of c.items) {
+  // un objeto que usa la foto de otro (img) cuenta tambien para las cajas de esa foto
+  const dueno = OBJETOS[id][3]?.img ? 'lujo-' + OBJETOS[id][3].img : id;
+  if (!(cajasDe.get(dueno) || []).includes(c.nombre)) cajasDe.set(dueno, [...(cajasDe.get(dueno) || []), c.nombre]);
+}
 const solo = process.env.SOLO ? new Set(process.env.SOLO.split(',')) : null;
 const filas = [], nuevos = [];
 for (const [id, [nombre, , foto, opc = {}]] of Object.entries(OBJETOS)) {
+  if (!foto) continue;   // sin foto libre (usa la imagen de su caja) o con la foto de otro objeto (img): no hay nada que bajar
   const slug = id.replace(/^lujo-/, '');
   const orig = path.join(ORIG, slug + '.src'), dest = path.join(OUT, slug + '.webp');
   const u = 'https://commons.wikimedia.org/w/api.php?' + new URLSearchParams({ action: 'query', format: 'json', titles: 'File:' + foto, prop: 'imageinfo',
@@ -45,7 +50,7 @@ for (const [id, [nombre, , foto, opc = {}]] of Object.entries(OBJETOS)) {
       if (!ok) { console.error('No he podido bajar', foto); process.exitCode = 1; continue }
       await new Promise((res) => setTimeout(res, 400));
     }
-    nuevos.push(slug + (opc.espejo ? '!espejo' : '') + (opc.mitad ? '!mitad-' + opc.mitad : ''));
+    nuevos.push(slug + (opc.espejo ? '!espejo' : '') + (opc.mitad ? '!mitad-' + opc.mitad : '') + (opc.tal ? '!tal' : ''));
   }
   filas.push({ id, nombre, foto, caja: (cajasDe.get(id) || ['(sin caja)']).join(', '), file: slug + '.webp', pagina: i.descriptionurl,
     autor: limpia(i.extmetadata?.Artist?.value || i.extmetadata?.Credit?.value) || 'desconocido', lic, licUrl: i.extmetadata?.LicenseUrl?.value || '' });
@@ -56,12 +61,13 @@ const L = ['# Fuentes de las fotos de las cajas de lujo', '',
   'se les quito el fondo con rembg (modelo isnet-general-use), se encuadraron sin bordes vacios y se guardaron aqui como webp con transparencia de 512 px como mucho.',
   'La foto recortada es una obra derivada: mantiene la licencia de la original. Las CC BY y CC BY-SA piden citar al autor: esta tabla es esa cita.', '',
   'Las imagenes de las cajas (`cajas/*.webp`, 460x480 transparentes) las dibuja `sync/lujo-cajas.py`: la caja es el arte de la Horizon Case de CS2 (de Valve, la misma CDN de Steam que ya usa la app para las cajas) recolorada, con aura de luz, destellos y el objeto estrella (foto recortada de esta tabla) saliendo por la tapa.', '',
+  'Las 16 cajas nuevas (Gaming, Zapatillas, Relojes, Tecnologia 2026, Motor, Joyas, Perfumes, Bolsos, Viajes, Patinetes, Camaras, Streetwear, Oro, Cripto, Gafas y Cartas) tienen la imagen que dibujo Gemini para PM (modelos/cajas-gemini/sueltas/), sin la franja del nombre y sin fondo (`sync/cajas-gemini.py`). Los objetos de esas cajas que no tienen foto libre (cartas de Pokemon, perfumes, joyas de marca, ropa de marca...) usan la imagen de su caja: no se ha dibujado ni generado ningun personaje ni producto. Los logos de cripto (BTC, ETH, BNB, LTC) y los lingotes y monedas de oro comparten foto entre varios objetos.', '',
   '| Foto | Objeto | Cajas | Pagina en Commons | Autor | Licencia |', '|---|---|---|---|---|---|'];
 for (const f of filas) L.push(`| ${f.file} | ${f.nombre} | ${f.caja} | [${f.foto.replace(/\|/g, '/')}](${f.pagina}) | ${f.autor.replace(/\|/g, '/').slice(0, 120)} | ${f.licUrl ? `[${f.lic}](${f.licUrl})` : f.lic} |`);
 fs.writeFileSync(path.join(OUT, 'FUENTES.md'), L.join('\n') + '\n');
 // la imagen de cada caja: una caja de CS2 recolorada con tres de sus objetos en la cara de delante
 const sl = (id) => id.replace(/^lujo-/, '');
 const specs = LUJO.map((c) => `${sl(c.id)}:${c.color}:${[c.centro, ...c.lados].map(sl).join('+')}`);
-execFileSync('python', [path.join(AQUI, 'lujo-cajas.py'), OUT, ...specs], { stdio: 'inherit', env: process.env });
+if (!process.env.SIN_CAJAS) execFileSync('python', [path.join(AQUI, 'lujo-cajas.py'), OUT, ...specs], { stdio: 'inherit', env: process.env });   // SIN_CAJAS=1: no redibuja las cajas viejas (las nuevas son de Gemini: sync/cajas-gemini.py)
 const kb = fs.readdirSync(OUT).filter((f) => f.endsWith('.webp')).reduce((a, f) => a + fs.statSync(path.join(OUT, f)).size, 0) / 1024;
 console.log(`${filas.length}/${Object.keys(OBJETOS).length} fotos en ${OUT} (${kb.toFixed(0)} KB en total)`);

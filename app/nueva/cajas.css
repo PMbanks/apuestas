@@ -798,3 +798,13 @@ button.cj-it:hover .cj-it-img,.cj-it.on .cj-it-img{box-shadow:0 0 0 1px color-mi
   .ca-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .ca-c{padding:12px 8px 13px;border-radius:18px}
 }
+
+/* categorias de la lista de cajas (01-11): CS2, Tecnologia, Relojes y joyas, Moda, Motor y viajes, Inversion. Cada pestana lleva cuantas cajas tiene */
+.cj-seg.cj-cat button{display:inline-flex;align-items:center;gap:7px}
+.cj-seg.cj-cat button em{font:500 11px var(--mono);font-style:normal;color:var(--mute);opacity:.85}
+.cj-seg.cj-cat button.on em{color:var(--soft)}
+@media (max-width:860px){
+  /* en el movil las seis pestanas se parten en dos filas de tres (sin desplazamiento lateral, asi no saltan al cambiar de categoria) */
+  .cj-seg.cj-cat{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;border-radius:22px;margin-bottom:26px}
+  .cj-seg.cj-cat button{justify-content:center;gap:5px;padding:0 4px;height:40px;font-size:12px;border-radius:18px}
+}

@@ -25,12 +25,21 @@
   const INV_PASO = 60;        // skins del inventario que se pintan de cada vez
   const ESP_VER = 6;          // cuchillos y guantes que se ven de primeras en lo que trae una caja
   const CATS = [['skins', 'Skins de CS2'], ['lujo', 'Lujo']];  // Cosmeticos ocultos: el Mercado esta en mantenimiento (PM 30-10)
+  // categorias de la lista de cajas (PM 01-11: "separa por categorias: cajas de csgo, cajas de X"). La base solo sabe skins / lujo: el grupo de cada caja de lujo
+  // se decide aqui por su id (una caja de lujo que no este en la lista cae en la ultima categoria).
+  const GRUPOS = [['cs2', 'CS2'], ['tec', 'Tecnología'], ['relojes', 'Relojes y joyas'], ['moda', 'Moda'], ['motor', 'Motor y viajes'], ['inv', 'Inversión']];
+  const GRUPO_DE = {
+    'lujo-tecnologia-basica': 'tec', 'lujo-tecnologia': 'tec', 'lujo-tecnologia-2026': 'tec', 'lujo-gaming': 'tec', 'lujo-camaras': 'tec', 'lujo-patinetes': 'tec',
+    'lujo-relojes-calle': 'relojes', 'lujo-relojes': 'relojes', 'lujo-relojes-2026': 'relojes', 'lujo-joyas': 'relojes', 'lujo-moda-joyas': 'relojes',
+    'lujo-zapatillas-basicas': 'moda', 'lujo-zapatillas': 'moda', 'lujo-zapatillas-2026': 'moda', 'lujo-moda-calle': 'moda', 'lujo-bolsos': 'moda', 'lujo-gafas': 'moda', 'lujo-streetwear': 'moda', 'lujo-perfumes': 'moda',
+    'lujo-motos': 'motor', 'lujo-coches': 'motor', 'lujo-motor': 'motor', 'lujo-viajes': 'motor',
+    'lujo-oro': 'inv', 'lujo-cripto': 'inv', 'lujo-cartas': 'inv' };
   const ORDENES = [['valor', 'Más valiosas'], ['nuevas', 'Más nuevas'], ['rareza', 'Por rareza']];
   const SEL_BAT = 'id,mode,cases,cost,status,created_by,winner,totals,created_at,done_at,cs_battle_seats(seat,player)';
 
   /* ---------- estado ---------- */
   let ctx = null, root = null;
-  const S = { tab: 'abrir', cat: lee('cj-cat') === 'lujo' ? 'lujo' : 'skins', caja: null, n: 1, rapido: lee('cj-rapido') === '1', vel: ['0', '1', '2'].includes(lee('cj-vel')) ? lee('cj-vel') : lee('cj-rapido') === '1' ? '1' : '0', auto: false, tiras: null, tirasK: '', tirasC: null, fase: 'idle', prueba: false, quien: null, sel: new Set(), bat: null, nueva: null, res: null, sure: null, rep: null, espTodo: null,
+  const S = { tab: 'abrir', cat: GRUPOS.some((g) => g[0] === lee('cj-cat')) ? lee('cj-cat') : 'cs2', caja: null, n: 1, rapido: lee('cj-rapido') === '1', vel: ['0', '1', '2'].includes(lee('cj-vel')) ? lee('cj-vel') : lee('cj-rapido') === '1' ? '1' : '0', auto: false, tiras: null, tirasK: '', tirasC: null, fase: 'idle', prueba: false, quien: null, sel: new Set(), bat: null, nueva: null, res: null, sure: null, rep: null, espTodo: null,
     orden: ['valor', 'nuevas', 'rareza'].includes(lee('cj-orden')) ? lee('cj-orden') : 'valor', fR: null, fC: null, invN: INV_PASO, pag: 0 };
   const D = { cases: null, caja: new Map(), items: new Map(), st: null, bats: new Map(), err: null, hechas: null, cajasDe: new Map() };
   let anim = null, pendiente = false, cargando = null, otraVez = false, ultima = 0, ocupado = false;
@@ -63,10 +72,17 @@
   const nombre = (it) => { const p = partes(it); return p.length > 1 ? { top: p[0], main: p[1] } : { top: '', main: p[0] } };
   // el brillo de cada caja de lujo (el color de su categoria, el mismo de su imagen); las de skins, dorado
   const GLOW = { 'lujo-relojes-calle': '#ffc43a', 'lujo-relojes': '#ffc43a', 'lujo-zapatillas-basicas': '#3ee270', 'lujo-zapatillas': '#3ee270', 'lujo-tecnologia-basica': '#48a0ff', 'lujo-tecnologia': '#48a0ff',
-    'lujo-moda-calle': '#c060ff', 'lujo-moda-joyas': '#c060ff', 'lujo-motos': '#ff4848', 'lujo-coches': '#ff4848' };
+    'lujo-moda-calle': '#c060ff', 'lujo-moda-joyas': '#c060ff', 'lujo-motos': '#ff4848', 'lujo-coches': '#ff4848',
+    // las 16 de Gemini (db/046): el color de su caja
+    'lujo-gaming': '#a855f7', 'lujo-zapatillas-2026': '#ff8a2a', 'lujo-relojes-2026': '#ffc43a', 'lujo-tecnologia-2026': '#ff4fb0', 'lujo-motor': '#ff4848', 'lujo-joyas': '#34d6d6', 'lujo-perfumes': '#ff9eb5',
+    'lujo-bolsos': '#e0c9a0', 'lujo-viajes': '#48a0ff', 'lujo-patinetes': '#a6e22e', 'lujo-camaras': '#c8ccd2', 'lujo-streetwear': '#e6e6e6', 'lujo-oro': '#ffb020', 'lujo-cripto': '#ff9a1f', 'lujo-gafas': '#ffd23a', 'lujo-cartas': '#a855f7' };
   const brillo = (c) => GLOW[c && c.id] || '#f2c14e';
   const esLujo = (id) => /^(lujo|cos)-/.test(String(id || ''));
   const catDe = (c) => { const k = c && (c.cat || c.category || c.categoria); return k ? (/lujo/i.test(k) ? 'lujo' : /cosm/i.test(k) ? 'cosmeticos' : 'skins') : /^cos-/.test(String((c && c.id) || '')) ? 'cosmeticos' : esLujo(c && c.id) ? 'lujo' : 'skins' };
+  const grupoDe = (c) => (catDe(c) === 'skins' ? 'cs2' : GRUPO_DE[c && c.id] || GRUPOS[GRUPOS.length - 1][0]);
+  // las categorias que tienen alguna caja ahora mismo (con Lujo en mantenimiento solo sale CS2 y no hay pestanas) y la que esta abierta
+  const gruposVivos = () => GRUPOS.filter((g) => (D.cases || []).some((c) => grupoDe(c) === g[0]));
+  const grupoAbierto = (vivos) => (vivos.some((g) => g[0] === S.cat) ? S.cat : vivos.length ? vivos[0][0] : 'cs2');
   const caja = (id) => (D.cases && D.cases.find((c) => c.id === id)) || D.caja.get(id) || {};
   // cajas sin abrir (las regala la ruleta de la semana): las tuyas, de una caja o todas
   const mias = (cid) => (D.cajasDe.get(ctx && ctx.me) || []).filter((o) => !cid || o.case_id === cid);
@@ -279,7 +295,7 @@
   function vAbrir() {
     const c = S.caja && (D.cases.find((x) => x.id === S.caja) || D.caja.get(S.caja));
     if (!c) return vCajas();
-    const info = D.caja.get(c.id), cat = (CATS.find((k) => k[0] === catDe(c)) || CATS[0])[1];
+    const info = D.caja.get(c.id), cat = (GRUPOS.find((k) => k[0] === grupoDe(c)) || GRUPOS[0])[1];
     const cab = `<header class="ca-h"><button class="cj-back" data-cj="cajas">Atrás</button>
       <div class="ca-id"><span class="ca-img">${pic(c.image, 256, '', true)}</span><div class="ca-nm"><h2 data-notr>${esc(c.name)}</h2><span class="lab">${cat}</span></div></div>
       <p class="ca-price"><b class="num">${N(c.price)}</b>${coin()}<em>por caja</em></p></header>`;
@@ -315,9 +331,10 @@
       ${vivas.length ? `<button class="go ghost ca-sell" data-cj="venderRes">${S.sure === 'res' ? '<span>¿Seguro? Toca otra vez</span>' : `<span>${uno ? 'Vender por' : 'Vender todo por'}</span><b>${N(suma)}</b>${coin()}`}</button>` : ''}</div>`;
   }
   function vCajas() {
-    const hay = new Set(D.cases.map(catDe)), dos = hay.size > 1;
-    const lista = dos ? D.cases.filter((x) => catDe(x) === S.cat) : D.cases;
-    return `${dos ? seg('cat', CATS, S.cat, 'cj-cat') : ''}
+    const vivos = gruposVivos(), dos = vivos.length > 1, abierto = grupoAbierto(vivos);
+    const lista = dos ? D.cases.filter((x) => grupoDe(x) === abierto) : D.cases;
+    // las pestanas llevan cuantas cajas tiene cada categoria
+    return `${dos ? seg('cat', vivos.map(([k, t]) => [k, `${t}<em>${D.cases.filter((x) => grupoDe(x) === k).length}</em>`]), abierto, 'cj-cat') : ''}
       <section class="cj-cases">${lista.map((x) => `<button class="cj-case ${catDe(x)}" data-cj="caja" data-v="${esc(x.id)}" style="--g:${brillo(x)}">
         <span class="cj-case-img">${pic(x.image, 256)}${mias(x.id).length ? `<i class="cj-case-own" title="Tuyas sin abrir">${mias(x.id).length}</i>` : ''}</span>
         <span class="cj-case-n" data-notr>${esc(x.name)}</span>
@@ -484,10 +501,10 @@
   function vNueva() {
     const nv = S.nueva, tam = nv.mode === '1v1' ? 2 : 4, n = nv.cases.length;
     const cuesta = nv.cases.reduce((a, id) => a + (caja(id).price || 0), 0), falta = cuesta > ctx.saldo;
-    const hay = new Set(D.cases.map(catDe)), dos = hay.size > 1;
+    const dos = gruposVivos().length > 1;
     const pk = (c) => { const k = nv.cases.filter((x) => x === c.id).length; return `<button class="cj-pk ${k ? 'on' : ''}" data-cj="add" data-v="${esc(c.id)}" ${n >= 10 ? 'disabled' : ''} title="${esc(c.name)}">
       <span class="cj-pk-img">${pic(c.image, 128)}${k ? `<i>${k}</i>` : ''}</span><span class="cj-pk-n" data-notr>${esc(c.name)}</span><span class="cj-pk-p">${N(c.price)}${coin()}</span></button>` };
-    const elegir = dos ? CATS.map(([k, t]) => { const l = D.cases.filter((c) => catDe(c) === k); return l.length ? `<h4 class="cj-pk-h">${t}</h4><div class="cj-pick">${l.map(pk).join('')}</div>` : '' }).join('') : `<div class="cj-pick">${D.cases.map(pk).join('')}</div>`;
+    const elegir = dos ? GRUPOS.map(([k, t]) => { const l = D.cases.filter((c) => grupoDe(c) === k); return l.length ? `<h4 class="cj-pk-h">${t}</h4><div class="cj-pick">${l.map(pk).join('')}</div>` : '' }).join('') : `<div class="cj-pick">${D.cases.map(pk).join('')}</div>`;
     const puntos = (m) => { const k = m === '1v1' ? 1 : 2, d = '<i></i>'.repeat(k); return `<span class="cj-mode-d">${d}<em>vs</em>${d}</span>` };
     return `<button class="cj-back" data-cj="nueva-x">Batallas</button>
     <section class="cj-new">
@@ -737,7 +754,7 @@
         pinta(); arriba();
         if (v === 'batallas' && !S.bat) { await cargaHechas(); pinta() }
         return;
-      case 'cat': S.cat = ['lujo', 'cosmeticos'].includes(v) ? v : 'skins'; guarda('cj-cat', S.cat); return pinta();
+      case 'cat': S.cat = GRUPOS.some((g) => g[0] === v) ? v : 'cs2'; guarda('cj-cat', S.cat); return pinta();
       case 'caja': S.caja = v; S.res = null; S.fase = 'idle'; S.prueba = false; pinta(); arriba(); try { await cargaCaja(v) } catch (err) { avisa(esc(msgErr(err))) } return pinta();
       case 'cajas': S.caja = null; S.res = null; S.fase = 'idle'; S.prueba = false; pinta(); return arriba();
       case 'n': S.n = +v; S.res = null; S.fase = 'idle'; S.prueba = false; return pinta();

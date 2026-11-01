@@ -276,6 +276,8 @@
     'Paga de': 'Payday of', 'Te faltan': 'You need', '· se acumula': '· it adds up', 'Paga del lunes: +': 'Monday payday: +', 'para cada uno': 'for each of you', 'acertó con': 'won with', 'falló con': 'lost with',
     'Cuota media de cada uno': 'Average odds of each one', 'Vender todo el inventario': 'Sell the whole inventory', 'Los que más han ganado en batallas': 'Top battle winners',
     'Zapatillas': 'Sneakers', 'Tecnología': 'Tech', 'Moda y joyas': 'Fashion and jewellery', 'Relojes': 'Watches', 'Coches': 'Cars',
+    // categorias de la lista de cajas (01-11)
+    'Relojes y joyas': 'Watches & jewels', 'Moda': 'Fashion', 'Motor y viajes': 'Motor and travel', 'Inversión': 'Investments',
     'Devolución de las cajas de prueba': 'Refund of the test boxes', 'Tu apodo': 'Your nickname', 'Tu frase': 'Your line', 'Blackjack paga 3 a 2': 'Blackjack pays 3 to 2',
     'Marcador en directo': 'Live score', 'en propia': 'own goal', 'Aún no ha pasado nada.': 'Nothing has happened yet.', 'Paradas': 'Saves', 'Posesión': 'Possession', 'Tiros': 'Shots', 'A puerta': 'On target', 'Córners': 'Corners',
     'EMPEZANDO': 'STARTING', 'acabado': 'finished', 'Ronda': 'Round', 'Otros idiomas': 'Other languages', 'Buscarlo': 'Search for it',
