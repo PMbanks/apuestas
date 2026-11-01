@@ -322,7 +322,7 @@
     const head = `<div class="ini-colh"><div class="ini-stack">${orden.map((f, i) => av(f.id, i >= 4 ? 'ini-mas4' : '')).join('')}${orden.length > 4 ? `<span class="ini-stack-n">+${orden.length - 4}</span>` : ''}</div>
       <div class="ini-who"><h2>Amigos</h2><span class="lab">lo último de cada uno</span></div><div class="r"><span class="lab" data-notr>${en() ? 'in play' : 'en juego'}</span><b class="ini-big">${enJuego}</b></div></div>`;
     // PM 01-11: los retos activos y quien esta dentro, arriba, antes de "Por orden de movimiento" (activos.js)
-    const act = window.GM_ACTIVOS ? g(() => GM_ACTIVOS.html(), '') : '';
+    const act = (window.GM_ACTIVIDAD ? g(() => GM_ACTIVIDAD.html(), '') : '') + (window.GM_ACTIVOS ? g(() => GM_ACTIVOS.html(), '') : '');   // "Ahora mismo" (actividad.js: quien juega o abre cajas) y los retos
     if (!conAlgo.length) return head + act + vacio(IC_GENTE, 'Tus amigos aún no se han movido', 'Cuando apuesten, sale aquí. Se apuesta en Partidos: toca una cuota y dale a Apostar.', true);
     const persona = (x) => {
       const f = x.f, ab = x.ab.slice(0, 3);

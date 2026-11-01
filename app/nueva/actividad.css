@@ -1,0 +1,77 @@
+/* Actividad en directo (actividad.js, PM 02-11): la tira "Ahora mismo" de Inicio, los puntos del menu, el aviso con Ir y el
+   interruptor de Ajustes. Sin cajas con borde: fondo del tono de las tarjetas de Inicio, como Retos activos. */
+
+/* la tira: el hueco no ocupa nada hasta que hay gente; al llegar crece sin saltar de golpe */
+.avt-w{display:grid;grid-template-rows:0fr;transition:grid-template-rows .28s var(--ease)}
+.avt-w.hay{grid-template-rows:1fr}
+.avt-i{min-height:0;overflow:hidden}
+.avt{margin:22px 0 0;padding-bottom:1px}
+.avt .ini-sub{margin-top:0}
+.avt .ini-sub h3{display:inline-flex;align-items:center;gap:9px}
+.avt-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--win);box-shadow:0 0 0 3px rgba(43,212,125,.2);animation:latir 1.6s ease-in-out infinite}
+.avt-l{display:grid;border-radius:18px;background:var(--ic,#252a33);overflow:hidden}
+.avt-r{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:12px;width:100%;min-height:52px;padding:8px 14px 8px 12px;text-align:left;color:var(--ink);transition:background .15s}
+.avt-r+.avt-r{box-shadow:inset 0 1px 0 var(--hair)}
+.avt-r:hover{background:var(--ic2,#2b313b)}
+.avt-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 14px/1.3 var(--sans);color:var(--soft)}
+.avt-t b{font-weight:700;color:var(--ink)}
+.avt-r em{font:500 11.5px var(--mono);font-style:normal;color:var(--dim);white-space:nowrap}
+.avt-r svg{width:16px;height:16px;fill:none;stroke:var(--dim);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.avt-mas{margin:8px 4px 0;font:500 12px var(--mono);color:var(--dim)}
+html.sin-anim .avt-w{transition:none}
+html.sin-anim .avt-dot,html.sin-anim .jg-tab::before,html.sin-anim .cj-tab::before{animation:none}
+
+/* puntos: los pone data-gente de <html> (lo escribe actividad.js), asi no se pierden cuando app.js repinta el menu.
+   Juegos / Cajas en la barra lateral y en la hoja Mas; Mas en movil; la pestana del juego y la de batallas */
+html[data-gente~="g-juegos"] .nv[data-scr="juegos"]::after,
+html[data-gente~="g-cajas"] .nv[data-scr="cajas"]::after,
+html[data-gente~="g-juegos"] #mas-h .mas-t[data-scr="juegos"]::after,
+html[data-gente~="g-cajas"] #mas-h .mas-t[data-scr="cajas"]::after,
+html[data-gente~="g-juegos"] .nv-mas::after,
+html[data-gente~="g-cajas"] .nv-mas::after,
+html[data-gente~="moneda"] .jg-tab[data-v="moneda"]::before,
+html[data-gente~="crash"] .jg-tab[data-v="crash"]::before,
+html[data-gente~="blackjack"] .jg-tab[data-v="blackjack"]::before,
+html[data-gente~="batalla"] .cj-tab[data-v="batallas"]::before,
+html[data-gente~="cajas"] .cj-tab[data-v="abrir"]::before{content:"";position:absolute;width:7px;height:7px;border-radius:50%;background:var(--win);box-shadow:0 0 8px rgba(43,212,125,.75);pointer-events:none}
+html[data-gente~="g-juegos"] .nv[data-scr="juegos"]::after,
+html[data-gente~="g-cajas"] .nv[data-scr="cajas"]::after{left:30px;top:12px}
+html[data-gente~="g-juegos"] #mas-h .mas-t[data-scr="juegos"]::after,
+html[data-gente~="g-cajas"] #mas-h .mas-t[data-scr="cajas"]::after{right:10px;top:10px}
+html[data-gente~="g-juegos"] .nv-mas::after,
+html[data-gente~="g-cajas"] .nv-mas::after{left:calc(50% + 8px);top:9px}
+html[data-gente~="moneda"] .jg-tab[data-v="moneda"]::before,
+html[data-gente~="crash"] .jg-tab[data-v="crash"]::before,
+html[data-gente~="blackjack"] .jg-tab[data-v="blackjack"]::before{right:-17px;top:-6px;animation:latir 1.6s ease-in-out infinite}   /* como un exponente, encima del punto verde de "resultado sin ver" (juegos.css: right -15px, top 3px) */
+.jg-tab[data-v="moneda"]:has(b:not(.off))::before{display:none}   /* si ya lleva la burbuja de tiradas gratis, no se pisa */
+html[data-gente~="batalla"] .cj-tab[data-v="batallas"]::before,
+html[data-gente~="cajas"] .cj-tab[data-v="abrir"]::before{right:-20px;top:-2px;animation:latir 1.6s ease-in-out infinite}   /* a la derecha del punto amarillo de batallas pendientes (cajas.css: right -10px, top -2px) */
+/* en movil la barra de abajo: el punto de Juegos / Cajas no existe ahi (van en Mas), y si el boton Mas ya lleva el suyo (.nv-pt) no se duplica */
+@media (max-width:860px){
+  html[data-gente~="moneda"] .jg-tab[data-v="moneda"]::before,
+  html[data-gente~="crash"] .jg-tab[data-v="crash"]::before,
+  html[data-gente~="blackjack"] .jg-tab[data-v="blackjack"]::before{right:-12px;top:-7px}
+  html[data-gente~="g-juegos"] .nv[data-scr="juegos"]::after,
+  html[data-gente~="g-cajas"] .nv[data-scr="cajas"]::after{left:calc(50% + 8px);top:9px}
+  html[data-gente~="g-juegos"] .nv-mas:has(.nv-pt)::after,
+  html[data-gente~="g-cajas"] .nv-mas:has(.nv-pt)::after{display:none}
+}
+
+/* el aviso: arriba a la derecha, debajo de la cabecera; en movil a lo ancho */
+#avt-av{position:fixed;z-index:150;top:calc(74px + env(safe-area-inset-top,0px));right:14px;display:grid;gap:10px;width:min(380px,calc(100vw - 28px))}
+.avt-a{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:12px 10px 12px 14px;border-radius:20px;background:var(--bg2);box-shadow:0 18px 50px rgba(0,0,0,.55);animation:avt-in .22s var(--ease)}
+.avt-tx{min-width:0;font:400 14px/1.35 var(--sans);color:var(--soft)}
+.avt-tx b{font-weight:700;color:var(--ink)}
+.avt-ir{padding:6px 12px;border-radius:999px;background:rgba(242,193,78,.16);font:700 13px var(--sans);color:var(--acc)}
+.avt-ir:hover{background:rgba(242,193,78,.26)}
+.avt-x{display:grid;place-items:center;width:28px;height:28px;color:var(--dim)}
+.avt-x:hover{color:var(--ink)}
+.avt-x svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+@keyframes avt-in{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}
+html.sin-anim .avt-a{animation:none}
+@media (max-width:860px){#avt-av{right:12px;left:12px;width:auto}}
+
+/* Ajustes > Avisos de actividad: los dos de dentro van sangrados y se apagan con el principal */
+.avs-f.avs-sub{padding-left:18px}
+.avs-f.avs-off{opacity:.45}
+@media (max-width:860px){.avt{margin-top:18px}.avt-r{gap:10px;padding:8px 12px 8px 10px}}
