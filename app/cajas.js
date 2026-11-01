@@ -33,7 +33,9 @@
     'lujo-relojes-calle': 'relojes', 'lujo-relojes': 'relojes', 'lujo-relojes-2026': 'relojes', 'lujo-joyas': 'relojes', 'lujo-moda-joyas': 'relojes',
     'lujo-zapatillas-basicas': 'moda', 'lujo-zapatillas': 'moda', 'lujo-zapatillas-2026': 'moda', 'lujo-moda-calle': 'moda', 'lujo-bolsos': 'moda', 'lujo-gafas': 'moda', 'lujo-streetwear': 'moda', 'lujo-perfumes': 'moda',
     'lujo-motos': 'motor', 'lujo-coches': 'motor', 'lujo-motor': 'motor', 'lujo-viajes': 'motor',
-    'lujo-oro': 'inv', 'lujo-cripto': 'inv', 'lujo-cartas': 'inv' };
+    'lujo-oro': 'inv', 'lujo-cripto': 'inv', 'lujo-cartas': 'inv',
+    // las cajas nuevas de EmpireDrop (db/055)
+    'lujo-ed-xbox-vs-playstation': 'tec', 'lujo-ed-5-console-legends': 'tec', 'lujo-ed-10-gaming': 'tec', 'lujo-ed-full-send-gaming': 'tec', 'lujo-ed-pro-setup': 'tec', 'lujo-ed-streamer-setup': 'tec', 'lujo-ed-only-mac': 'tec', 'lujo-ed-cinematic-view': 'tec', 'lujo-ed-1-patek': 'relojes', 'lujo-ed-master-of-time': 'relojes', 'lujo-ed-rado-vs-tudor': 'relojes', 'lujo-ed-cartier-treasure': 'relojes', 'lujo-ed-pandora': 'relojes', 'lujo-ed-1-versace': 'moda', 'lujo-ed-1-louis-vuitton': 'moda', 'lujo-ed-chanel-prestige': 'moda', 'lujo-ed-birkin-addict': 'moda', 'lujo-ed-100-bags': 'moda', 'lujo-ed-nike': 'moda', 'lujo-ed-jordan': 'moda', 'lujo-ed-street-soles': 'moda', 'lujo-ed-1-cars': 'motor', 'lujo-ed-1-mercedes': 'motor', 'lujo-ed-german-engine': 'motor', 'lujo-ed-heritage-motors': 'motor', 'lujo-ed-tesla': 'motor', 'lujo-ed-american-driver': 'motor', 'lujo-ed-yacht-club': 'motor', 'lujo-ed-luxury-garage': 'motor', 'lujo-ed-gold-digger': 'inv', 'lujo-ed-fortune-box': 'inv', 'lujo-ed-poke-starter': 'inv', 'lujo-ed-5-pokemon': 'inv', 'lujo-ed-legendary-pulls': 'inv', 'lujo-ed-panini': 'inv' };
   const ORDENES = [['valor', 'Más valiosas'], ['nuevas', 'Más nuevas'], ['rareza', 'Por rareza']];
   const SEL_BAT = 'id,mode,cases,cost,status,created_by,winner,totals,created_at,done_at,cs_battle_seats(seat,player)';
 
@@ -76,7 +78,8 @@
     // las 16 de Gemini (db/046): el color de su caja
     'lujo-gaming': '#a855f7', 'lujo-zapatillas-2026': '#ff8a2a', 'lujo-relojes-2026': '#ffc43a', 'lujo-tecnologia-2026': '#ff4fb0', 'lujo-motor': '#ff4848', 'lujo-joyas': '#34d6d6', 'lujo-perfumes': '#ff9eb5',
     'lujo-bolsos': '#e0c9a0', 'lujo-viajes': '#48a0ff', 'lujo-patinetes': '#a6e22e', 'lujo-camaras': '#c8ccd2', 'lujo-streetwear': '#e6e6e6', 'lujo-oro': '#ffb020', 'lujo-cripto': '#ff9a1f', 'lujo-gafas': '#ffd23a', 'lujo-cartas': '#a855f7' };
-  const brillo = (c) => GLOW[c && c.id] || '#f2c14e';
+  const GLOW_G = { tec: '#48a0ff', relojes: '#ffc43a', moda: '#c060ff', motor: '#ff4848', inv: '#ffb020' };   // las de EmpireDrop (db/055) sin color propio: el de su categoria
+  const brillo = (c) => GLOW[c && c.id] || (c && GRUPO_DE[c.id] && GLOW_G[GRUPO_DE[c.id]]) || '#f2c14e';
   const esLujo = (id) => /^(lujo|cos)-/.test(String(id || ''));
   const catDe = (c) => { const k = c && (c.cat || c.category || c.categoria); return k ? (/lujo/i.test(k) ? 'lujo' : /cosm/i.test(k) ? 'cosmeticos' : 'skins') : /^cos-/.test(String((c && c.id) || '')) ? 'cosmeticos' : esLujo(c && c.id) ? 'lujo' : 'skins' };
   const grupoDe = (c) => (catDe(c) === 'skins' ? 'cs2' : GRUPO_DE[c && c.id] || GRUPOS[GRUPOS.length - 1][0]);
@@ -138,6 +141,8 @@
 
   // probabilidad de cada rareza (fraccion) y de cada objeto dentro de ella, para "lo que trae"
   function probN(info) { const PESO = D.cases && D.cases.some((c) => c.cat != null) ? PESO_012 : PESO_007, hay = info ? ORDEN.filter((r) => info.por[r]) : ORDEN, tot = hay.reduce((a, r) => a + PESO[r], 0), o = {}; for (const r of hay) o[r] = PESO[r] / tot; return o }
+  // una caja con tickets (las de EmpireDrop) tira por objeto; sin ellos (CS2, Patinetes, Gafas) tira por rareza
+  const conTickets = (info) => !!(info && info.items && info.items.some((it) => it.tickets != null));
   const pctTxt = (f) => { const v = f * 100, t = (v >= 10 ? v.toFixed(1) : v >= 0.1 ? v.toFixed(2) : v.toFixed(3)).replace('.', ','); return t.replace(/(,\d*?)0+$/, '$1').replace(/,$/, '') + ' %' };
 
   /* ---------- datos ---------- */
@@ -343,8 +348,10 @@
   }
   // el contenido de la caja: una sola rejilla, de más a menos valor, con la franja de su rareza y el % arriba a la derecha
   function vContenido(info) {
-    const pn = probN(info), filas = [];
-    for (const r of ORDEN) {
+    const pn = probN(info), filas = [], tk = conTickets(info);
+    // cajas de EmpireDrop (db/055): cada objeto lleva su propia probabilidad (sus tickets entre el total)
+    if (tk) { const tot = info.items.reduce((a, it) => a + (it.tickets || 0), 0) || 1; for (const it of info.items) filas.push({ it, v: tipico(it), pct: (it.tickets || 0) / tot }) }
+    else for (const r of ORDEN) {
       const list = info.por[r]; if (!list) continue;
       const wsum = list.reduce((a, it) => a + (it.weight || 100), 0) || 1;
       if (r === 'esp') {
@@ -527,9 +534,12 @@
   const KH = 92, GAP = 8, WIN = 212, KN = 34;
   let REP = null, repRaf = 0;
   const RD = () => (S.rapido ? 1700 : 4600), SPIN = () => (quieto() ? 1 : S.rapido ? 1150 : 3500);
+  // un objeto de la caja segun sus tickets (x entre 0 y 1)
+  function porTickets(info, x) { const l = info.items, tot = l.reduce((a, it) => a + (it.tickets || 0), 0) || 1; let t = x * tot; for (const it of l) { t -= it.tickets || 0; if (t < 0) return it } return l[l.length - 1] }
   const sem = (x) => () => { x = (x + 0x6D2B79F5) | 0; let t = Math.imul(x ^ (x >>> 15), 1 | x); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 };
   function rellenoS(info, rnd) {
     if (!info) return null;
+    if (conTickets(info)) return porTickets(info, rnd());
     const hay = ORDEN.filter((r) => info.por[r]), tot = hay.reduce((a, r) => a + RELLENO[r], 0);
     let x = rnd() * tot, r = hay[hay.length - 1];
     for (const k of hay) { if (x < RELLENO[k]) { r = k; break } x -= RELLENO[k] }
@@ -586,6 +596,7 @@
 
   /* ---------- la ruleta ---------- */
   function relleno(info) {
+    if (conTickets(info)) return porTickets(info, Math.random());
     const hay = ORDEN.filter((r) => info.por[r]), tot = hay.reduce((a, r) => a + RELLENO[r], 0);
     let x = Math.random() * tot, r = hay[hay.length - 1];
     for (const k of hay) { if (x < RELLENO[k]) { r = k; break } x -= RELLENO[k] }
