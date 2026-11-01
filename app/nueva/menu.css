@@ -126,3 +126,61 @@ body.chb-on #view:not([data-vista=partidos])::after{content:"";display:block;hei
   .top .aj-btn{margin-left:-2px}
   .top h1{font-size:20px}
 }
+
+/* ===== Ya jugados B (PM, 01-11; modelos/m1101/jugados/b.html): sale de la fila de deportes y va en el titulo
+   "Próximos ▾" de Partidos, que despliega Próximos, En directo y Ya jugados. Lo pinta jugMenu() de app.js ===== */
+.pm-hd{position:relative;z-index:20;display:flex;align-items:center;gap:14px;margin:26px 0 4px}
+.pm-tt{display:flex;align-items:center;gap:10px;height:56px;padding:0 6px 0 2px;font:800 38px/1 var(--disp);letter-spacing:-.04em;color:var(--ink);white-space:nowrap}
+.pm-tt svg{flex:none;width:30px;height:30px;fill:none;stroke:var(--acc);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .25s var(--ease)}
+.pm-tt:hover svg{transform:translateY(2px)}
+.pm-hd.abre .pm-tt svg{transform:rotate(180deg)}
+.pm-res{flex:none;padding:6px 11px;border-radius:999px;background:rgba(242,193,78,.12);font:500 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--acc);white-space:nowrap}
+.pm-n{margin-left:auto;font:12px var(--mono);color:var(--dim);white-space:nowrap}
+.pm-menu{display:none;position:absolute;top:62px;left:0;width:390px;max-width:100%;padding:8px;border-radius:20px;background:#2d333e;box-shadow:0 26px 70px rgba(0,0,0,.6)}
+.pm-hd.abre .pm-menu{display:block}
+.pm-hd.anima .pm-menu{animation:pmEntra .2s var(--ease);transform-origin:top left}
+@keyframes pmEntra{from{opacity:0;transform:translateY(-8px) scale(.98)}}
+html.sin-anim .pm-hd.anima .pm-menu,html.sin-anim .pm-tt svg{animation:none;transition:none}
+.pm-it{display:flex;align-items:center;gap:14px;width:100%;min-height:62px;padding:8px 14px;border-radius:14px;text-align:left;transition:background .15s}
+@media (hover:hover){.pm-it:hover{background:rgba(255,255,255,.05)}}
+.pm-it:disabled{opacity:.45}
+.pm-ic{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:12px;background:rgba(255,255,255,.06);color:var(--mute)}
+.pm-ic svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.pm-tx{flex:1 1 auto;min-width:0}
+.pm-tx b{display:block;font:700 16px var(--sans);color:var(--ink)}
+.pm-tx small{display:block;margin-top:3px;font:12.5px/1.3 var(--sans);color:var(--mute)}
+.pm-it em{flex:none;font:500 13px var(--mono);font-style:normal;color:var(--dim)}
+.pm-it.vivo .pm-ic{background:rgba(239,91,91,.16);color:#ef5b5b}.pm-it.vivo em{color:#ef5b5b}
+.pm-it.on{background:rgba(242,193,78,.1)}.pm-it.on .pm-ic{background:rgba(242,193,78,.18);color:var(--acc)}.pm-it.on b{color:var(--acc)}
+.pm-it.on em{display:none}
+.pm-ck{display:none;flex:none;width:20px;height:20px;fill:none;stroke:var(--acc);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.pm-it.on .pm-ck{display:block}
+@media (max-width:860px){
+  .pm-hd{margin:18px 0 0;gap:12px}
+  .pm-tt{height:48px;font-size:32px}
+  .pm-tt svg{width:26px;height:26px}
+  .pm-n{display:none}
+  .pm-menu{top:54px;width:100%}
+  /* deportes y ligas: cada fila en una sola linea que se desliza, de borde a borde */
+  .p-board .fil{flex-wrap:nowrap;gap:22px;margin:0 -16px;padding:0 16px;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent)}
+  .p-board .fil::-webkit-scrollbar{display:none}
+  .p-board .fil .f{flex:none}
+  .p-board .lgw{margin:0 -16px}
+  .p-board .lgw .lgs2{padding-left:16px;padding-right:16px}
+  .p-board .lga{display:none!important}
+}
+/* en Ya jugados el titulo ya lo dice: fuera la cabecera repetida de la lista */
+.p-board.solo-jug .jug{margin-top:12px}
+.p-board.solo-jug .jug>.day{display:none}
+@media (max-width:860px){.jug>.day b{font-size:26px;white-space:nowrap}.jug>.day span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}}
+/* con el menu del titulo abierto, la burbuja no lo tapa */
+body:has(.pm-hd.abre) #chatb{opacity:0;pointer-events:none}
+body:has(.pm-hd.abre) #chatb>*{pointer-events:none}
+.nv.nv-mant.on{color:var(--ink)}
+/* movil estrecho: "Already played" y su etiqueta caben en una linea */
+.pm-tt{min-width:0;flex:0 1 auto}.pm-tt span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:440px){.pm-tt{font-size:28px;gap:8px}.pm-tt svg{width:24px;height:24px}.pm-res{padding:5px 9px;font-size:10.5px;letter-spacing:.1em}}
+/* movil tactil: un boton tocado se queda "encima" (hover pegado) y parecia el elegido; solo cuenta el elegido */
+@media (hover:none){#nav .nv:not(.on):hover{color:var(--mute)}}
+/* Monedero (se abre ahora con el icono de arriba): en movil las cuatro cifras se pisaban (estilo en linea de 4 columnas) */
+@media (max-width:560px){#view .stats[style*="repeat(4"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}}

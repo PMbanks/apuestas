@@ -19,6 +19,9 @@
   const D = {
     // menu A (01-11): Más en la barra de abajo de movil, burbuja del chat y Monedero arriba
     'Más': 'More', 'Más secciones': 'More sections', 'mantenimiento': 'maintenance', 'Abrir el chat': 'Open chat', 'Foto': 'Photo', 'Nuevos': 'New',
+    // Ya jugados B (01-11): el menu del titulo de Partidos
+    'Lo que se juega a partir de ahora': 'What is coming up next', 'Partidos que se están jugando': 'Matches being played right now',
+    'Resultados de los últimos dos días': 'Results from the last two days', 'No hay partidos jugados con este filtro.': 'No finished matches with this filter.',
     // Inicio (01-11) y "amigos" en vez de "colegas" (PM: "no pongas colegas, pon amigos")
     'Inicio': 'Home', 'Amigos': 'Friends', 'Amigo': 'Friend', 'lo último de cada uno': 'the latest from each one', 'esta semana': 'this week',
     'desde ayer': 'since yesterday', 'desde el lunes': 'since Monday', 'desde el martes': 'since Tuesday', 'desde el miércoles': 'since Wednesday',
@@ -340,6 +343,7 @@
   const MESES = { ene: 'jan', feb: 'feb', mar: 'mar', abr: 'apr', may: 'may', jun: 'jun', jul: 'jul', ago: 'aug', sep: 'sep', sept: 'sep', oct: 'oct', nov: 'nov', dic: 'dec' };
   const R = [
     [/^(\d+) en directo$/, '$1 live'],   // menu A (01-11): la tira de directo de movil
+    [/^(\d+) resultados?$/, (m, n) => `${n} result${n === '1' ? '' : 's'}`],   // Ya jugados B (01-11)
     // Inicio (01-11): van primero porque son frases enteras de un nodo
     [/^desde las ([\d:]+)$/, 'since $1'], [/^desde el (\d+) ([a-z]+)$/, (m, d, mo) => `since ${d} ${MESES[mo] || mo}`],
     [/^mañana ([\d:]+)$/, 'tomorrow $1'], [/^hace (\d+) min$/, '$1 min ago'], [/^hace (\d+) h$/, '$1 h ago'], [/^en vivo\b/, 'live'],

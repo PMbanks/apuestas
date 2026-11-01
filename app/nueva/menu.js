@@ -133,7 +133,22 @@
     if (t.closest('[data-mas-x]')) { e.stopPropagation(); return abre(false) }
     if (!t.closest('.mas-s') || t.closest('[data-scr],[data-act]')) abre(false);
   }, true);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && ABIERTA) abre(false) });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (ABIERTA) abre(false);
+    if (g(() => S.pmenu, false)) { S.pmenu = false; render() }   // el menu del titulo de Partidos (Ya jugados B)
+  });
+  // Ya jugados B: al abrir el menu del titulo de Partidos, que entre con su animacion y se vea entero (en movil el titulo
+  // suele quedar abajo, debajo del directo y los destacados): se sube lo justo
+  function pmVer() {
+    const hd = document.querySelector('.pm-hd'), mn = hd && hd.querySelector('.pm-menu'); if (!mn) return;
+    hd.classList.add('anima');
+    const r = mn.getBoundingClientRect(), rail = document.querySelector('#app .rail');
+    const fondo = movil() && rail ? rail.getBoundingClientRect().top : innerHeight, falta = r.bottom + 14 - fondo;
+    if (falta <= 0) return;
+    const pb = hd.closest('[data-keep=pb]'), sc = pb && pb.scrollHeight > pb.clientHeight + 1 ? pb : document.getElementById('view');
+    sc.scrollBy({ top: Math.min(falta, hd.getBoundingClientRect().top - (sc.getBoundingClientRect().top + 8)), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
   vigila();
-  window.GM_MENU = { abre, pinta };
+  window.GM_MENU = { abre, pinta, pmVer };
 })();
