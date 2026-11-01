@@ -257,3 +257,5 @@ html.sin-anim .ini-pw.open .ini-pm{animation:none}
 .ini-pl-t .rd{color:#ff6b78}
 .ini-pl-o{font:600 14px var(--mono);color:var(--acc)}
 .ini-pl.ko .ini-pl-t b{color:var(--mute);text-decoration:line-through}
+.ini-pl-t small img,.ini-pl-t small .noimg{display:inline-block;width:15px;height:15px;margin:0 5px 0 0;vertical-align:-3px;object-fit:contain;border-radius:0;background:none;padding:0}
+.ini-pl-t small img.face{border-radius:50%;object-fit:cover}

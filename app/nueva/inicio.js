@@ -183,7 +183,8 @@
   // cada pata en su fila con lo elegido, quien juega (o el marcador en directo), la hora o el minuto y su cuota
   function filaPata(l) {
     const k = pata(l), md = l.matches || {}, m = byId(l.match_id), sc = m && m.live ? marcador(m) : null;
-    const quien = sc ? `${esc(md.home || m.a)} <b>${sc[0]}:${sc[1]}</b> ${esc(md.away || m.b)}` : `${esc(md.home || '')} <i>vs</i> ${esc(md.away || '')}`;
+    const la = m ? logo(m, 'a') : '', lb = m ? logo(m, 'b') : '';         // PM 01-11: "faltan los logos de los equipos en los vs del parlay"
+    const quien = sc ? `${la}${esc(md.home || m.a)} <b>${sc[0]}:${sc[1]}</b> ${lb}${esc(md.away || m.b)}` : `${la}${esc(md.home || '')} <i>vs</i> ${lb}${esc(md.away || '')}`;
     const cuando = k === 'vivo' ? `<span class="rd">${esc(['En vivo', m ? linea(m) : ''].filter(Boolean).join(' · '))}</span>`
       : k === 'pend' ? esc(empieza(t2(md.starts_at))) : { ok: 'Acertada', ko: 'Fallada', nul: 'Anulada' }[k];
     return `<div class="ini-pl ${k}" ${l.match_id ? `data-goto="${esc(l.match_id)}"` : ''}><i class="ini-pl-i">${{ ok: '✓', ko: '✗', nul: '·', vivo: '●', pend: '○' }[k]}</i>
