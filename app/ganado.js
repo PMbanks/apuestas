@@ -206,7 +206,7 @@
     for (const x of xs) EST.vistos[x.key] = x.t;
     guarda();
     const ganas = xs.filter((x) => x.res === 'won'), malas = xs.filter((x) => x.res !== 'won');
-    if (ganas.length || TARJ) tarjeta(ganas, malas, lejos);
+    if (ganas.length || TARJ || malas.some((x) => x.res === 'lost')) tarjeta(ganas, malas, lejos);   // PM 01-11: tambien al perder, no solo al ganar
     else lineas(malas);
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { revisa(); programa() } });
@@ -258,7 +258,7 @@
   let TARJ = null;
   function tarjeta(ganas, malas, lejos) {
     if (TARJ) { ganas = [...TARJ.ganas, ...ganas]; malas = [...TARJ.malas, ...malas]; lejos = lejos || TARJ.lejos; quitaTarjeta(true) }
-    if (!ganas.length) { lineas(malas); return }
+    if (!ganas.length) { tarjetaPerdida(malas, lejos); return }
     const ov = document.createElement('div');
     ov.className = 'gnd-ov'; ov.id = 'gnd';
     ov.innerHTML = ganas.length === 1 && !malas.length ? htmlUna(ganas[0]) : ganas.length === 1 && !lejos ? htmlUna(ganas[0]) : htmlVarias(ganas, malas, lejos);
@@ -291,7 +291,7 @@
   }
   function cierraTarjeta() {
     if (!TARJ) return;
-    const n = TARJ.el.querySelector('.gnd-amt .cn');
+    const n = TARJ.perdida ? null : TARJ.el.querySelector('.gnd-amt .cn');
     if (n && !sinAnim()) [0, 90, 180].forEach((d) => setTimeout(() => g(() => vuela(n)), d));   // las monedas vuelan al saldo
     quitaTarjeta(false);
   }
@@ -299,6 +299,49 @@
     const t = TARJ; if (!t) return; TARJ = null; clearTimeout(t.t);
     if (ya || sinAnim()) { t.el.remove(); return }
     t.el.classList.add('sale'); setTimeout(() => t.el.remove(), 320);
+  }
+
+  /* ---------- la tarjeta de perdida (PM 01-11: "cuando pierdas tambien que salga you lost como you won; me acaba de pasar con el
+     challenge a Darkam y no le ha llegado nada en la pantalla"): sin confeti ni monedas, en rojo apagado y con un sonido grave ---------- */
+  const ETIQP = { apuesta: 'Apuesta perdida', pred: 'Predicción fallada', cash: 'Cash out con pérdida', reto: 'Reto perdido' };
+  function htmlPerdidaUna(x) {
+    const m = x.m, liga = ligaDe(m), sub = x.tipo === 'reto' ? `<p class="gnd-st"><span>Reto contra</span> <b>${esc(nombre(x.rival))}</b> · <span>Apostaste</span> <b>${N(x.stake)}</b></p>`
+      : x.stake ? `<p class="gnd-st"><span>Apostaste</span> <b>${N(x.stake)}</b></p>` : '';
+    return `<div class="gnd-c uno perdida" role="dialog" aria-modal="true" aria-label="${esc(ETIQP[x.tipo] || 'Perdida')}">
+      <span class="gnd-lab"><i></i><span>${ETIQP[x.tipo] || 'Perdida'}</span></span>
+      ${liga ? `<span class="gnd-liga">${esc(liga)}</span>` : ''}
+      ${m ? `<div class="gnd-vs ${x.side ? 'el-' + x.side : ''}"><span class="gnd-sd a">${escudo(m, 'a')}</span><span class="gnd-sc">${esc(marcador(m) || 'vs')}</span><span class="gnd-sd b">${escudo(m, 'b')}</span></div>
+        <p class="gnd-eq"><span>${esc(m.a)}</span> <i>vs</i> <span>${esc(m.b)}</span></p>` : ''}
+      <span class="gnd-has">Has perdido</span>
+      <b class="gnd-amt"><span>−${N(perdido(x))}</span>${coin}</b>
+      ${m && x.pick ? `<p class="gnd-pk"><span class="gnd-tu">Tu elección</span> <b>${esc(x.pick)}</b>${x.o ? ` <em>${O(x.o)}</em>` : ''}</p>` : ''}
+      ${sub}
+      ${pieTarjeta()}
+    </div>`;
+  }
+  function htmlPerdidaVarias(pm, lejos) {
+    const tot = pm.reduce((a, x) => a + perdido(x), 0), max = 5, ver = pm.slice(0, max), resto = pm.length - ver.length;
+    return `<div class="gnd-c varias perdida" role="dialog" aria-modal="true" aria-label="Resultados">
+      <span class="gnd-lab"><i></i><span>${lejos ? 'Desde la última vez' : 'Resultados nuevos'}</span></span>
+      <span class="gnd-has">Has perdido</span>
+      <b class="gnd-amt"><span>−${N(tot)}</span>${coin}</b>
+      <div class="gnd-l">${ver.map((x) => `<div class="gnd-r"><span class="gnd-ri">${icono(x)}</span><span class="gnd-rt"><b>${esc(x.tipo === 'reto' ? 'Reto con ' + nombre(x.rival) : x.pick)}</b>${x.o ? ` <em>${O(x.o)}</em>` : ''}<small>${x.m ? partidoLinea(x.m) : ''}</small></span><b class="gnd-rv gnd-ko">−${N(perdido(x))}${coin}</b></div>`).join('')}
+        ${resto > 0 ? `<p class="gnd-mas"><b>+${resto}</b> <span>más en Resultados</span></p>` : ''}</div>
+      ${pieTarjeta()}
+    </div>`;
+  }
+  function tarjetaPerdida(malas, lejos) {
+    const pm = malas.filter((x) => x.res === 'lost'), dv = malas.filter((x) => x.res !== 'lost');
+    if (!pm.length) { lineas(malas); return }
+    const ov = document.createElement('div');
+    ov.className = 'gnd-ov perd'; ov.id = 'gnd';
+    ov.innerHTML = pm.length === 1 ? htmlPerdidaUna(pm[0]) : htmlPerdidaVarias(pm, lejos);
+    traduce(ov);
+    document.body.appendChild(ov);
+    TARJ = { el: ov, ganas: [], malas, lejos, xs: [...malas], t: 0, perdida: true };
+    if (dv.length) setTimeout(() => lineas(dv), 300);
+    suena('pierde');
+    if (document.hasFocus()) arrancaReloj(); else ov.classList.add('quieta');
   }
 
   /* ---------- perdidas y devueltas: una linea discreta ---------- */
@@ -477,6 +520,14 @@
 .gnd-st{margin-top:8px;font:12px var(--mono);color:var(--dim)}
 .gnd-st b{font-weight:500;color:var(--soft)}
 .gnd-up{color:var(--win)!important}
+.gnd-c.perdida{background:radial-gradient(120% 52% at 50% 0%,rgba(224,100,111,.2),transparent 64%),radial-gradient(90% 34% at 50% 100%,rgba(224,100,111,.07),transparent 70%),#181b22}
+.gnd-c.perdida::before{background:repeating-conic-gradient(rgba(224,100,111,.05) 0 7deg,transparent 7deg 18deg);animation-duration:60s}
+.gnd-c.perdida .gnd-lab{color:#ff8f98}
+.gnd-c.perdida .gnd-lab i{background:#ff8f98;box-shadow:0 0 12px #ff8f98}
+.gnd-c.perdida .gnd-amt{background:linear-gradient(180deg,#ffd9dc,#ff8f98 45%,#e0646f 100%);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 6px 24px rgba(224,100,111,.22))}
+.gnd-c.perdida .gnd-bar::after{background:linear-gradient(90deg,#e0646f,#ff8f98)}
+.gnd-c.perdida .gnd-vs.el-a .gnd-sd.a .gnd-e,.gnd-c.perdida .gnd-vs.el-b .gnd-sd.b .gnd-e{filter:grayscale(.55) drop-shadow(0 10px 26px rgba(224,100,111,.22))}
+.gnd-ko{color:#ff8f98}
 .gnd-tap{margin-top:24px;font:10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
 .gnd-bar{position:absolute;left:30px;right:30px;bottom:16px;height:2px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden}
 .gnd-bar::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,var(--acc),var(--win));transform-origin:left;animation:gndBarra ${DURA}ms linear forwards}

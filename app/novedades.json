@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "tarjeta-perdida-0111",
+   "fecha": "2026-11-01",
+   "hora": "20:45",
+   "titulo": "También avisa al perder",
+   "texto": "Cuando pierdes una apuesta, una predicción o un reto sale una tarjeta Has perdido, como la de Has ganado pero en rojo y sin confeti. Antes solo salía una línea pequeña, y el que perdía un reto no veía nada. Además el blackjack vuelve a dejar jugar.",
+   "titulo_en": "It tells you when you lose too",
+   "texto_en": "When you lose a bet, a prediction or a challenge, a You lost card shows up, like You won but in red and without confetti. Before, only a small line showed, and whoever lost a challenge saw nothing. Blackjack also lets you play again.",
+   "img": "novedades/perdida.webp",
+   "ir": "apuestas"
+  },
+  {
    "id": "jugadores-0111",
    "fecha": "2026-11-01",
    "hora": "20:05",
