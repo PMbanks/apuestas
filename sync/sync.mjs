@@ -608,7 +608,10 @@ async function main() {
   }
   if (!SB || !ANON || !SECRET) throw new Error('Faltan SUPABASE_URL, SUPABASE_ANON_KEY y SYNC_SECRET');
   let saved = 0;
-  for (let i = 0; i < rows.length; i += 100) saved += await rpc('sync_push', { p_secret: SECRET, p_rows: rows.slice(i, i + 100) });
+  const sinF1 = rows.filter((r) => r.sport !== 'r');
+  for (let i = 0; i < sinF1.length; i += 100) saved += await rpc('sync_push', { p_secret: SECRET, p_rows: sinF1.slice(i, i + 100) });
+  // la F1 va aparte: si db/052 aun no esta cargada la base rechaza el deporte r, y eso no debe tirar el resto de la pasada
+  for (let i = 0; i < rf1.rows.length; i += 100) saved += await rpc('sync_push', { p_secret: SECRET, p_rows: rf1.rows.slice(i, i + 100) }).catch((e) => { if (!i) console.log('f1: no se ha podido guardar (falta cargar db/052_f1.sql?):', String(e.message || e).slice(0, 160)); return 0 });
   await anulaF1({ rpc, secret: SECRET }, rf1).then((n) => n && console.log(`f1: ${n} sesiones anuladas (el Gran Premio ya no esta en el calendario)`)).catch((e) => console.log('f1 anular:', e.message || e));
   let res = { pagadas: 0 }, total = { revelados: 0, pagadas: 0, pagas: 0 };
   do { res = await rpc('sync_close', { p_secret: SECRET }); for (const k in total) total[k] += res[k] || 0 } while (res.pagadas >= 60);

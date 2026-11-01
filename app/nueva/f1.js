@@ -158,7 +158,8 @@
     const p = ESPN.pil.slice(0, 3), c = ESPN.con.slice(0, 3);
     const yr = g(() => (ESPN.j?.children?.[0]?.standings?.season) || new Date().getFullYear(), new Date().getFullYear());
     const fila = (x, i, k) => `<button type="button" class="f1-cr" ${k === 'p' ? `data-f1n="${esc(x.n)}"` : `data-f1e="${esc(norm(x.n))}" data-f1en="${esc(x.n)}"`}><span class="f1-pos">${x.pos || i + 1}</span>${k === 'p' ? `<img class="f1-mini" src="${FOTO(x.id)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<i class="f1-dot" style="--c:${esc(ESPN.col.get(norm(x.n)) || '#888')}"></i>`}<b data-notr>${esc(x.n)}</b><span class="f1-pts">${x.pts}</span></button>`;
-    return `<div class="f1-cab-h"><span class="lab">Campeonato ${esc(yr)}</span><button type="button" class="f1-link" data-f1c="d">Ver clasificaciones completas</button></div>
+    const vacio = !g(() => M.some((x) => x.s === 'r'), false) ? '<p class="hint f1-vacio">Los Grandes Premios con cuotas aparecen aquí unos días antes de cada fin de semana.</p>' : '';
+    return `${vacio}<div class="f1-cab-h"><span class="lab">Campeonato ${esc(yr)}</span><button type="button" class="f1-link" data-f1c="d">Ver clasificaciones completas</button></div>
       <div class="f1-cab-g"><div class="f1-cs"><span class="lab f1-sub">Pilotos</span>${p.length ? p.map((x, i) => fila(x, i, 'p')).join('') : '<p class="hint">·</p>'}</div>
       <div class="f1-cs"><span class="lab f1-sub">Constructores</span>${c.length ? c.map((x, i) => fila(x, i, 'c')).join('') : '<p class="hint">·</p>'}</div></div>`;
   }
@@ -200,7 +201,7 @@
       const ms = mine(x), win = mm?.winner;
       const bt = (id, p, o) => ok ? `<button type="button" class="mq-o f1-o ${ms.includes(p) ? 'mine' : ''}" data-pick="${esc(x.id)}|${p}"><b>${O(o)}</b></button>` : `<span class="f1-oo ${win === p ? 'w' : ''}">${win === p ? '✓' : ''}</span>`;
       return `<div class="f1-du"><div class="f1-dl">${caraP(x.d, A, 'sm')}<span class="f1-n"><b class="f1-lk" data-f1d="${esc(A)}" data-notr>${esc(nomP(x.d, A))}</b></span>${bt(A, '1', oa)}</div>
-        <div class="f1-dv"><i>vs</i>${ok && window.GM_RETOS && mm ? GM_RETOS.btn(mm, 'fila') : ''}</div>
+        <div class="f1-dv"><i>vs</i>${ok && window.GM_RETOS && mm ? GM_RETOS.btn(mm, 'f1') : ''}</div>
         <div class="f1-dl r">${bt(B, '2', ob)}<span class="f1-n"><b class="f1-lk" data-f1d="${esc(B)}" data-notr>${esc(nomP(x.d, B))}</b></span>${caraP(x.d, B, 'sm')}</div></div>`;
     }).join('');
   }
@@ -258,7 +259,7 @@
     if (!e) return cab(`<div class="d-meta"><span class="d-sp"><img src="${SP.r[1]}" alt="">Fórmula 1</span></div><h2 class="f1-t" data-notr>${esc(m.a)}</h2><p class="hint f1-load">Cargando el Gran Premio…</p>`);
     const d = e.d, esC = kind === 'wdc' || kind === 'wcc', lbl = SESION[kind]?.[0] || '';
     const cc = g(() => (m.la || '').match(/\/w\d+\/([a-z]{2})\.png/)?.[1], '') || '';
-    let h = `<div class="d-meta"><span class="d-sp"><img src="${SP.r[1]}" alt="">Fórmula 1</span>${m.stage ? `<span data-notr>· ${esc(m.stage)}</span>` : ''}</div>
+    let h = `<div class="d-meta"><span class="d-sp"><img src="${SP.r[1]}" alt="">Fórmula 1</span>${m.stage ? `<span class="f1-stg">${esc(m.stage)}</span>` : ''}</div>
       <div class="f1-gp">${bandera(cc, 'big')}<div><h2 class="f1-t" data-notr>${esc(m.a)}</h2>${esC ? '' : `<span class="f1-s">${lbl}</span>`}</div></div>`;
     h += `<div class="d-cd">${m.status === 'final' ? (kind === 'race' ? 'Carrera acabada' : kind === 'quali' ? 'Clasificación acabada' : kind === 'sprint' ? 'Sprint acabado' : 'Campeonato decidido') : m.status === 'canceled' ? 'Anulada: se devuelve todo' : open ? `${hoy(m.at)} · empieza en ${CD(m.at)}` : 'En juego: a la espera del resultado oficial'}${m.venue && !esC ? '' : ''}</div>`;
     if (!esC) h += sesiones(m, d);

@@ -19,18 +19,21 @@
   const MEM = new Map(), VUELO = new Map(), JOBS = [];
   let ULT = 0, corre = false;
   const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
+  let caida = 0;   // cuando fallo la red por ultima vez: durante 20 s las demas peticiones fallan al instante (la ficha ensena el error y "Reintentar" en vez de esperar una por una)
   async function pide(path) {
+    if (Date.now() - caida < 20e3) return null;
     for (let i = 0; i < 4; i++) {
       const w = 300 - (Date.now() - ULT); if (w > 0) await dormir(w);
       ULT = Date.now();
       try {
-        const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 25000);
+        const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 12000);
         const r = await fetch(BASE + path, { signal: ctl.signal }); clearTimeout(to);
+        caida = 0;
         if (r.ok) return await r.json();
         if (r.status === 429) { const ra = Number(r.headers.get('retry-after')); await dormir(Math.min(20000, ra ? ra * 1000 : 3000 * 2 ** i)); continue }
         if (r.status < 500) return null;
-      } catch {}
-      await dormir(1200 * (i + 1));
+      } catch { if (i >= 1) { caida = Date.now(); return null } }
+      await dormir(900 * (i + 1));
     }
     return null;
   }
@@ -76,7 +79,8 @@
   const pais = (cc) => g(() => new Intl.DisplayNames([en() ? 'en' : 'es'], { type: 'region' }).of(cc.toUpperCase()), '') || cc;
   const colorEq = (id) => F.colorE(id);
   function ficha(x) { return x }
-  const kpi = (v, l, id) => `<div class="f1k"><b ${id ? `data-k="${id}"` : ''}>${v == null ? '<i class="f1-sk"></i>' : esc(v)}</b><span>${l}</span></div>`;
+  // undefined = todavia cargando (esqueleto); null = no se pudo (un punto)
+  const kpi = (v, l) => `<div class="f1k"><b>${v === undefined ? '<i class="f1-sk"></i>' : v === null ? '·' : esc(v)}</b><span>${l}</span></div>`;
   const cargando = '<p class="hint f1-load">Cargando…</p>';
   const fallo = (k) => `<p class="hint">No se ha podido cargar este dato: Jolpica no responde ahora. <button type="button" class="f1-link" data-f1x="re">Reintentar</button></p>`;
   const pagin = (n, por, pag, k) => { const tp = Math.ceil(n / por); if (tp <= 1) return ''; const b = (i, t, on) => `<button type="button" class="f1-pg ${on ? 'on' : ''}" data-f1pg="${k}|${i}" ${i < 0 || i >= tp ? 'disabled' : ''}>${t}</button>`;
@@ -96,11 +100,11 @@
       <div class="f1-pi"><span class="lab">Piloto de Fórmula 1</span><h2 data-notr>${esc(nom)}</h2><div class="f1-ps">${numero ? `<b class="f1-num">${esc(numero)}</b>` : ''}${cc ? F.bandera(cc) : ''}<span data-notr>${esc(cc ? pais(cc) : info?.nationality || '')}</span>${info?.dateOfBirth ? `<span class="f1-d" data-notr>${esc(fecha(info.dateOfBirth))}</span><span>${edad(info.dateOfBirth)} años</span>` : ''}</div>
       ${eq ? `<button type="button" class="f1-eqb" data-f1e="${esc(eq.id)}" style="--c:${colorEq(eq.id)}"><i></i><b data-notr>${esc(eq.n)}</b><small>${ult.y === YA || ult.y === YA - 1 ? 'Escudería actual' : 'Su última escudería'}</small></button>` : ''}</div></header>`;
     // numeros de siempre
-    const k = D.k || {}, titulos = seas ? seas.filter((s) => s.pos === 1 && s.fin).length : null, pts = seas ? seas.reduce((a, s) => a + s.pts, 0) : null;
-    const podios = k.p1 != null && k.p2 != null && k.p3 != null ? k.p1 + k.p2 + k.p3 : null;
-    const kvl = (l, v) => `<div><span>${l}</span><b ${v != null ? 'data-notr' : ''}>${v == null ? '<i class="f1-sk"></i>' : esc(v)}</b></div>`;
+    const k = D.k || {}, falla = !!(D.err && D.err.seas), titulos = seas ? seas.filter((s) => s.pos === 1 && s.fin).length : falla ? null : undefined, pts = seas ? seas.reduce((a, s) => a + s.pts, 0) : falla ? null : undefined;
+    const podios = k.p1 === undefined || k.p2 === undefined || k.p3 === undefined ? undefined : k.p1 == null || k.p2 == null || k.p3 == null ? null : k.p1 + k.p2 + k.p3;
+    const kvl = (l, v) => `<div><span>${l}</span><b ${v ? 'data-notr' : ''}>${v === undefined ? '<i class="f1-sk"></i>' : v === null ? '·' : esc(v)}</b></div>`;
     h += `<div class="f1ks">${kpi(titulos, 'Títulos')}${kpi(k.p1, 'Victorias')}${kpi(podios, 'Podios')}${kpi(k.pole, 'Poles')}${kpi(k.fl, 'Vueltas rápidas')}${kpi(k.n, 'Carreras')}</div>
-      <div class="f1kv">${kvl('Puntos', pts == null ? null : nf(pts))}${kvl('Primera carrera', k.first)}${kvl('Última carrera', k.last)}</div>`;
+      <div class="f1kv">${kvl('Puntos', pts == null ? pts : nf(pts))}${kvl('Primera carrera', k.first)}${kvl('Última carrera', k.last)}</div>`;
     if (seas && seas[0] && seas[0].y < 2004) h += `<p class="hint f1-nota">Las vueltas rápidas solo constan desde 2004.</p>`;
     // temporada por temporada
     h += `<section class="f1-sc"><div class="f1-sh"><h3>Temporada por temporada</h3>${seas ? `<span class="f1-or">${[['y', 'Año'], ['p', 'Puesto'], ['s', 'Puntos']].map(([o, t]) => `<button type="button" class="${(p.ord || 'y') === o ? 'on' : ''}" data-f1o="${o}">${t}</button>`).join('')}</span>` : ''}</div>`;
@@ -132,7 +136,7 @@
     tot('p1', `/drivers/${id}/results/1.json?limit=1`); tot('p2', `/drivers/${id}/results/2.json?limit=1`); tot('p3', `/drivers/${id}/results/3.json?limit=1`);
     tot('pole', `/drivers/${id}/grid/1/results.json?limit=1`); tot('fl', `/drivers/${id}/fastest/1/results.json?limit=1`);
     tot('n', `/drivers/${id}/results.json?limit=1`).then(async (j) => {
-      const n = j ? total(j) : 0; if (!n) return;
+      const n = j ? total(j) : 0; if (!n) { k.first = null; k.last = null; return re() }
       const a = races(j)[0]; if (a) k.first = `${a.season} · ${gpNombre(a.raceName)}`;
       const l = await jl(`/drivers/${id}/results.json?limit=1&offset=${n - 1}`, 12 * 3600e3, p.seq); const b = races(l)[0]; if (b) k.last = `${b.season} · ${gpNombre(b.raceName)}`; re();
     });
@@ -151,9 +155,10 @@
     const D = p.d || (p.d = {}), info = D.info, seas = D.seas, k = D.k || {};
     const col = colorEq(p.id), nom = info?.name || F.nomE(null, p.id), cc = F.iso(info?.nationality);
     let h = `<header class="f1-pf" style="--c:${col}"><span class="f1-big f1-bigeq" style="--c:${col}"><i>${esc(F.ini(nom))}</i></span><div class="f1-pi"><span class="lab">Escudería de Fórmula 1</span><h2 data-notr>${esc(nom)}</h2>
-      <div class="f1-ps">${cc ? F.bandera(cc) : ''}<span data-notr>${esc(cc ? pais(cc) : info?.nationality || '')}</span>${seas && seas.length ? `<span class="f1-d">${seas[0].y} a ${seas[seas.length - 1].y}</span>` : ''}</div></div></header>`;
-    const titulos = seas ? seas.filter((s) => s.pos === 1 && s.fin) : null, podios = k.p1 != null && k.p2 != null && k.p3 != null ? k.p1 + k.p2 + k.p3 : null, pts = seas ? seas.reduce((a, s) => a + s.pts, 0) : null;
-    h += `<div class="f1ks">${kpi(titulos ? titulos.length : seas ? 0 : null, 'Títulos de constructores')}${kpi(k.p1, 'Victorias')}${kpi(podios, 'Podios')}${kpi(k.pole, 'Poles')}${kpi(seas ? seas.length : null, 'Temporadas')}${kpi(pts == null ? null : nf(pts), 'Puntos')}</div>`;
+      <div class="f1-ps">${cc ? F.bandera(cc) : ''}<span data-notr>${esc(cc ? pais(cc) : info?.nationality || '')}</span>${seas && seas.length ? `<span class="f1-d" data-notr>${seas[0].y} ${en() ? 'to' : 'a'} ${seas[seas.length - 1].y}</span>` : ''}</div></div></header>`;
+    const falla = !!(D.err && D.err.seas), titulos = seas ? seas.filter((s) => s.pos === 1 && s.fin) : null, pts = seas ? seas.reduce((a, s) => a + s.pts, 0) : falla ? null : undefined;
+    const podios = k.p1 === undefined || k.p2 === undefined || k.p3 === undefined ? undefined : k.p1 == null || k.p2 == null || k.p3 == null ? null : k.p1 + k.p2 + k.p3;
+    h += `<div class="f1ks">${kpi(titulos ? titulos.length : falla ? null : undefined, 'Títulos de constructores')}${kpi(k.p1, 'Victorias')}${kpi(podios, 'Podios')}${kpi(k.pole, 'Poles')}${kpi(seas ? seas.length : falla ? null : undefined, 'Temporadas')}${kpi(pts == null ? pts : nf(pts), 'Puntos')}</div>`;
     if (titulos && titulos.length) h += `<section class="f1-sc"><div class="f1-sh"><h3>Títulos de constructores</h3></div><p class="f1-ye" data-notr>${titulos.map((s) => s.y).join(' · ')}</p></section>`;
     // pilotos
     h += `<section class="f1-sc"><div class="f1-sh"><h3>Pilotos de esta temporada</h3><span class="lab" data-notr>${D.yr || YA}</span></div>`;

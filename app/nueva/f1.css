@@ -44,7 +44,9 @@
 .f1-sp i.ok{color:var(--win)}.f1-sp i.vv{color:var(--acc)}
 .f1-top{margin-top:30px;padding-bottom:2px}
 .f1-top .lab{color:var(--soft)}
-.f1-tabs{margin:6px 0 2px}
+.f1-tabs{flex-wrap:wrap;overflow:visible;margin:6px 0 2px}
+.f1-tabs .nb-tab{padding:9px 11px 10px}
+.f1-stg::before{content:"·";margin:0 9px 0 2px;opacity:.6}
 .f1-ay{margin:6px 0 10px}
 .f1-lista{border-top:1px solid var(--hair)}
 .f1-r{display:grid;grid-template-columns:38px 46px minmax(0,1fr) 92px;align-items:center;column-gap:12px;min-height:60px;border-bottom:1px solid var(--hair)}
@@ -70,15 +72,22 @@ button.f1-lk{font:inherit}
 .f1-src{margin-top:26px}
 /* duelos */
 .f1-duelos{border-top:1px solid var(--hair);margin-top:10px}
-.f1-du{display:grid;grid-template-columns:minmax(0,1fr) 54px minmax(0,1fr);align-items:center;column-gap:8px;min-height:72px;border-bottom:1px solid var(--hair)}
-.f1-dl{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:10px;min-width:0}
-.f1-dl.r{grid-template-columns:auto minmax(0,1fr) 36px}
+.f1-du{display:grid;grid-template-columns:minmax(0,1fr) 50px minmax(0,1fr);align-items:center;column-gap:6px;min-height:92px;border-bottom:1px solid var(--hair)}
+.f1-dl{display:grid;grid-template-columns:34px minmax(0,1fr);grid-template-areas:"p n" "o o";align-items:center;gap:4px 10px;min-width:0;padding:10px 0}
+.f1-dl .f1-ph{grid-area:p;width:34px;height:34px}.f1-dl .f1-ph i{font-size:10px}
+.f1-dl .f1-n{grid-area:n}
+.f1-dl .f1-n b{white-space:normal;line-height:1.2;font-size:14px}
+.f1-dl .mq-o,.f1-dl .f1-oo{grid-area:o;min-height:36px;padding:2px 0;justify-content:flex-start}
+.f1-dl .mq-o b{font-size:21px}
+.f1-dl.r{grid-template-columns:minmax(0,1fr) 34px;grid-template-areas:"n p" "o o"}
 .f1-dl.r .f1-n{text-align:right}
 .f1-dl.r .f1-n b{text-align:right}
-.f1-dl .mq-o{min-height:44px;padding:6px 4px}
-.f1-dl .mq-o b{font-size:18px}
+.f1-dl.r .mq-o,.f1-dl.r .f1-oo{justify-content:flex-end;text-align:right}
 .f1-dv{display:grid;justify-items:center;gap:6px}
 .f1-dv i{font:500 11px var(--mono);font-style:normal;color:var(--dim)}
+.f1-dv .rt-btn.f1{flex-direction:column;gap:2px;width:44px;height:46px;border-radius:13px;background:rgba(242,193,78,.12)}
+.f1-dv .rt-btn.f1 span{font:700 10px var(--sans)}
+.f1-dv .rt-btn.f1:hover{background:rgba(242,193,78,.22)}
 .f1-oo{min-width:36px;text-align:center;font:600 16px var(--mono);color:var(--dim)}
 .f1-oo.w{color:var(--win)}
 /* parrilla y resultado */
@@ -113,12 +122,7 @@ button.f1-lk{font:inherit}
   .f1-ph{width:40px;height:40px}.f1-eq{width:40px}
   .f1-n b{font-size:14px}
   .f1-r .mq-o b{font-size:17px}
-  .f1-du{grid-template-columns:minmax(0,1fr) 40px minmax(0,1fr);column-gap:4px;min-height:84px}
-  .f1-dl,.f1-dl.r{grid-template-columns:minmax(0,1fr);justify-items:start;gap:4px;padding:8px 0}
-  .f1-dl.r{justify-items:end}
-  .f1-dl .f1-ph{display:none}
-  .f1-dl .f1-n b{font-size:13px;white-space:normal;line-height:1.25}
-  .f1-dl .mq-o{justify-content:flex-start;padding:4px 0}.f1-dl.r .mq-o{justify-content:flex-end}
+  .f1-du{grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr);column-gap:4px}
   .f1-rr{grid-template-columns:28px 36px minmax(0,1fr) auto;column-gap:10px}
   .f1-rr:has(.f1-yr){grid-template-columns:46px minmax(0,1fr)}
   .f1-pg{grid-template-columns:1fr}
