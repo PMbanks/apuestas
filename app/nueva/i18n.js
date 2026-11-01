@@ -17,6 +17,8 @@
 })();
 (function () {
   const D = {
+    // menu A (01-11): Más en la barra de abajo de movil, burbuja del chat y Monedero arriba
+    'Más': 'More', 'Más secciones': 'More sections', 'mantenimiento': 'maintenance', 'Abrir el chat': 'Open chat', 'Foto': 'Photo', 'Nuevos': 'New',
     // Inicio (01-11) y "amigos" en vez de "colegas" (PM: "no pongas colegas, pon amigos")
     'Inicio': 'Home', 'Amigos': 'Friends', 'Amigo': 'Friend', 'lo último de cada uno': 'the latest from each one', 'esta semana': 'this week',
     'desde ayer': 'since yesterday', 'desde el lunes': 'since Monday', 'desde el martes': 'since Tuesday', 'desde el miércoles': 'since Wednesday',
@@ -337,6 +339,7 @@
   const DIAS = { LUN: 'MON', 'MIÉ': 'WED', JUE: 'THU', VIE: 'FRI', 'SÁB': 'SAT', DOM: 'SUN', HOY: 'TODAY', ENE: 'JAN', ABR: 'APR', AGO: 'AUG', DIC: 'DEC' };
   const MESES = { ene: 'jan', feb: 'feb', mar: 'mar', abr: 'apr', may: 'may', jun: 'jun', jul: 'jul', ago: 'aug', sep: 'sep', sept: 'sep', oct: 'oct', nov: 'nov', dic: 'dec' };
   const R = [
+    [/^(\d+) en directo$/, '$1 live'],   // menu A (01-11): la tira de directo de movil
     // Inicio (01-11): van primero porque son frases enteras de un nodo
     [/^desde las ([\d:]+)$/, 'since $1'], [/^desde el (\d+) ([a-z]+)$/, (m, d, mo) => `since ${d} ${MESES[mo] || mo}`],
     [/^mañana ([\d:]+)$/, 'tomorrow $1'], [/^hace (\d+) min$/, '$1 min ago'], [/^hace (\d+) h$/, '$1 h ago'], [/^en vivo\b/, 'live'],
