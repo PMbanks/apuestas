@@ -2301,3 +2301,11 @@ html[data-moneda="robux"] .cn{background-image:url(../img/monedas/robux.svg)}
 /* PM 31-10: "el logo de las monedas mas grande en todos lados menos donde ya esta grande": el tamano por defecto sube (los que llevan --s propio no cambian) */
 .cn{width:var(--s,1.12em);height:var(--s,1.12em);vertical-align:-.24em}
 .net .cn,.cmt-v em .cn,.dn-n .cn{--s:1.2em}
+/* anadir amigo (alta.js, solo el admin) y colores para los siguientes amigos */
+.aj-alta .alta-err{margin-top:10px;color:var(--rojo,#e0646f);font-size:13px}
+.alta-ok{margin-top:14px;padding:14px 16px;border-radius:14px;background:var(--bg2);font-size:14px}
+.alta-ok dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:10px 0 12px;font:600 15px var(--mono)}
+.alta-ok dt{color:var(--mute);font-weight:500}
+.alta-ok dd{margin:0;user-select:all;overflow-wrap:anywhere}
+:root{--f-c9:#7bd389;--f-c10:#f28cc0;--f-c11:#8fa3ff;--f-c12:#d9a066}
+.av.c9{background:var(--f-c9);color:#06170b}.av.c10{background:var(--f-c10);color:#22081a}.av.c11{background:var(--f-c11);color:#0a0f2b}.av.c12{background:var(--f-c12);color:#1f1205}
