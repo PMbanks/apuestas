@@ -273,7 +273,7 @@
     // chat
     'Escribe a tus colegas': 'Message your friends', 'Sus apuestas': 'Their bets', 'Fotos': 'Photos', 'Aún no hay fotos.': 'No photos yet.', 'Escribe el primero.': 'Be the first to write.',
     // monedero
-    'Tu saldo': 'Your balance', 'Paga del lunes': 'Monday payday', 'pagas de los lunes': 'Monday paydays', 'Premios': 'Winnings',
+    'Tu saldo': 'Your balance', 'Paga del lunes': 'Monday payday', 'pagas de los lunes': 'Monday paydays', 'Premios': 'Winnings', 'Todavía no te ha dado nada.': 'It has not given you anything yet.', 'Jackpot': 'Jackpot',
     'lo que te han pagado': 'what you have been paid', 'Si aciertas todo': 'If everything wins', 'saldo posible': 'possible balance', 'Movimientos': 'Transactions',
     'los últimos': 'the latest', 'Cuándo': 'When', 'Qué': 'What', 'Importe': 'Amount', 'Reglas': 'Rules', 'Apuesta': 'Bet', 'Premio': 'Win', 'Devolución': 'Refund',
     'Ajuste': 'Adjustment', 'Sin movimientos todavía.': 'No transactions yet.', 'Reglas fijas. Solo PM puede cambiarlas.': 'Fixed rules. Only PM can change them.',

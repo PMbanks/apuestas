@@ -386,6 +386,24 @@
 
   /* ---------- la campanita y el panel de resultados ---------- */
   let BOTON = null, PANEL = false, TAB = 'mios', ANTES = 0;
+  /* ---------- pestana Premios: lo que la app te da (paga del lunes, premio diario, tiempo en la app, rescate, bote, premios de la semana, ruletas, jackpot, regalos) ---------- */
+  const PREMIOS = { paga: 'Paga del lunes', diario: 'Premio diario', tiempo: 'Tiempo en la app', rescate: 'Rescate', bote_gana: 'Bote ganado', premio_semana: 'Premio de la semana', ruleta_semana: 'Ruleta de premios', ruleta_global: 'Ruleta global', jackpot: 'Jackpot', regalo: 'Regalo', ajuste: 'Ajuste' };
+  let PRE = null, PRE_T = 0, PRE_VA = false;
+  async function cargaPre() {
+    const c = cliente(); if (!c || PRE_VA) return;
+    PRE_VA = true;
+    try {
+      const { data, error } = await c.from('ledger').select('created_at,amount,kind,note').in('kind', Object.keys(PREMIOS)).gt('amount', 0).order('created_at', { ascending: false }).limit(60);
+      if (error) throw error;
+      PRE = (data || []).map((l) => ({ t: Date.parse(l.created_at), a: l.amount, kind: l.kind, note: String(l.note || '') })).filter((l) => isFinite(l.t));
+    } catch { PRE = PRE || [] }
+    PRE_T = Date.now(); PRE_VA = false;
+    if (PANEL && TAB === 'premios') pintaPanel();
+  }
+  function filaPremio(l) {
+    const nom = PREMIOS[l.kind] || l.kind, nota = l.note.startsWith(nom) ? l.note.slice(nom.length).replace(/^[:s·]+/, '') : l.note, extra = nota && !/^Paga del lunes/.test(nota) ? `<span>${esc(nota)}</span>` : '';
+    return `<div class="gnd-pr won"><span class="gnd-pi"><span class="cn gnd-cn"></span></span><span class="gnd-pt2"><span class="gnd-pn"><b>${esc(nom)}</b></span><small>${[extra, `<span>${esc(cuando(l.t))}</span>`].filter(Boolean).join(' · ')}</small></span><span class="gnd-pv"><b>+${N(l.a)}</b></span></div>`;
+  }
   function cuelgaBoton() {
     const top = document.getElementById('top'); if (!top || !top.childElementCount) return;
     if (!BOTON) { BOTON = document.createElement('button'); BOTON.type = 'button'; BOTON.className = 'gnd-b'; BOTON.dataset.gnd = 'panel'; pintaBoton() }
@@ -430,7 +448,12 @@
     if (!el) { el = document.createElement('div'); el.id = 'gnd-p'; document.body.appendChild(el); nuevo = true }
     const scroll = el.querySelector('.gnd-p')?.scrollTop || 0;
     let cuerpo;
-    if (TAB === 'mios') {
+    if (TAB === 'premios') {
+      if (PRE == null || Date.now() - PRE_T > 60e3) setTimeout(cargaPre, 0);
+      const xs = PRE || [], sem = xs.filter((l) => l.t > Date.now() - 7 * DIA), v = sem.reduce((a, l) => a + l.a, 0);
+      cuerpo = `${sem.length ? `<div class="gnd-sum"><span class="lab">Últimos 7 días</span><b class="up"><i>▲</i>${N(v)}${coin}</b></div>` : ''}
+        <div class="gnd-pl">${xs.map(filaPremio).join('') || `<p class="hint">${PRE == null ? 'Cargando…' : 'Todavía no te ha dado nada.'}</p>`}</div>`;
+    } else if (TAB === 'mios') {
       const xs = RES.slice(0, 40), sem = RES.filter((x) => x.t > Date.now() - 7 * DIA), v = sem.reduce((a, x) => a + neto(x), 0);
       const gn = sem.filter((x) => x.res === 'won').length, pr = sem.filter((x) => x.res === 'lost').length;
       cuerpo = `${sem.length ? `<div class="gnd-sum"><span class="lab">Últimos 7 días</span><b class="${v > 0 ? 'up' : v < 0 ? 'dn' : ''}">${v ? `<i>${v > 0 ? '▲' : '▼'}</i>` : ''}${N(Math.abs(v))}${coin}</b><small><b>${gn}</b> <span>${gn === 1 ? 'ganada' : 'ganadas'}</span> · <b>${pr}</b> <span>${pr === 1 ? 'perdida' : 'perdidas'}</span></small></div>` : ''}
@@ -443,7 +466,7 @@
     }
     el.innerHTML = `<div class="rw-fondo gnd-fondo" data-gnd="cerrar-p"></div><aside class="rw2 gnd-p ${nuevo ? 'abre' : ''}" role="dialog" aria-label="Resultados">
       <header><span class="rw-gi gnd-gi">${IC_BELL}</span><h2>Resultados</h2><button class="rw-x" data-gnd="cerrar-p" aria-label="Cerrar">${IC_X}</button></header>
-      <nav class="gnd-tabs"><button class="${TAB === 'mios' ? 'on' : ''}" data-gnd-tab="mios">Tuyos</button><button class="${TAB === 'todos' ? 'on' : ''}" data-gnd-tab="todos">De todos</button></nav>
+      <nav class="gnd-tabs"><button class="${TAB === 'mios' ? 'on' : ''}" data-gnd-tab="mios">Tuyos</button><button class="${TAB === 'todos' ? 'on' : ''}" data-gnd-tab="todos">De todos</button><button class="${TAB === 'premios' ? 'on' : ''}" data-gnd-tab="premios">Recompensas</button></nav>
       ${cuerpo}</aside>`;
     traduce(el);
     if (!nuevo) { const p = el.querySelector('.gnd-p'); if (p) p.scrollTop = scroll }
