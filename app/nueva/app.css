@@ -368,7 +368,8 @@ div.tl svg{display:block;width:100%;height:auto}
 
 /* ===== Perfil ===== */
 .av[data-prof]{cursor:pointer}
-.av.ph{background-size:cover;background-position:center;color:transparent}
+/* foto de perfil: va con :not(.zz) para ganar a .av.c4 a .av.c12 (mas abajo), cuyo background: resetea tamano y posicion y dejaba la foto a tamano natural pegada arriba a la izquierda, con las iniciales encima */
+.av.ph:not(.zz){background-size:cover;background-position:center;background-repeat:no-repeat;color:transparent}
 .av.huge{width:168px;height:168px;font-size:50px;box-shadow:0 0 0 4px var(--bg),0 0 0 6px var(--ring,var(--hair2))}
 .pf{max-width:1120px;margin:0 auto;padding:30px 32px 90px}
 .pf-back{font:600 13px var(--sans);color:var(--mute)}
