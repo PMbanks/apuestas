@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "inicio-en-juego-0111",
+   "fecha": "2026-11-01",
+   "hora": "17:40",
+   "titulo": "Inicio más corto",
+   "texto": "En Inicio sale primero lo que tienes en juego y luego tus últimos resultados, con páginas para no bajar tanto. Toca esta semana para verlo de los últimos 30 días o de siempre.",
+   "titulo_en": "Shorter Home",
+   "texto_en": "Home now shows what you have in play first and then your latest results, with pages so you scroll less. Tap this week to see the last 30 days or all time.",
+   "img": "novedades/inicio-en-juego.webp",
+   "ir": "inicio"
+  },
+  {
    "id": "blackjack-mesa-0111",
    "fecha": "2026-11-01",
    "hora": "17:30",

@@ -30,7 +30,7 @@
     'Lo que se juega a partir de ahora': 'What is coming up next', 'Partidos que se están jugando': 'Matches being played right now',
     'Resultados de los últimos dos días': 'Results from the last two days', 'No hay partidos jugados con este filtro.': 'No finished matches with this filter.',
     // Inicio (01-11) y "amigos" en vez de "colegas" (PM: "no pongas colegas, pon amigos")
-    'Inicio': 'Home', 'Amigos': 'Friends', 'Amigo': 'Friend', 'lo último de cada uno': 'the latest from each one', 'esta semana': 'this week',
+    'Inicio': 'Home', 'Amigos': 'Friends', 'Amigo': 'Friend', 'lo último de cada uno': 'the latest from each one', 'esta semana': 'this week', 'últimos 30 días': 'last 30 days', 'de siempre': 'all time', 'Nada en este periodo': 'Nothing in this period',
     'desde ayer': 'since yesterday', 'desde el lunes': 'since Monday', 'desde el martes': 'since Tuesday', 'desde el miércoles': 'since Wednesday',
     'desde el jueves': 'since Thursday', 'desde el viernes': 'since Friday', 'desde el sábado': 'since Saturday', 'desde el domingo': 'since Sunday',
     'Acaba de pasar': 'Just happened', 'Tus últimos resultados': 'Your latest results', 'nada nuevo desde tu última visita': 'nothing new since your last visit',

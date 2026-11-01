@@ -225,3 +225,22 @@ html.sin-anim .ini-rc:hover,html.sin-anim .ini-tk:hover{transform:none}
   .ini-eq{gap:7px}.ini-eq img,.ini-eq .noimg{width:26px;height:26px}
   .ini-sc{font-size:24px}
 }
+
+/* periodo y paginas de Tu (PM 01-11): "En juego" primero, "Tus ultimos resultados" debajo, ‹ 1 / 4 › y el periodo se cambia tocandolo */
+.ini-colh .r.ini-pw{position:relative}
+.ini-per{display:flex;width:max-content;align-items:center;gap:6px;margin:-5px -8px 2px auto;padding:5px 8px;border-radius:999px;font:400 12px/1.2 var(--mono);letter-spacing:.02em;color:var(--mute);white-space:nowrap;transition:background .15s,color .15s}
+.ini-per svg{width:10px;height:10px;flex:none;transition:transform .18s var(--ease)}
+.ini-per:hover,.ini-pw.open .ini-per{background:rgba(255,255,255,.07);color:var(--ink)}
+.ini-pw.open .ini-per svg{transform:rotate(180deg)}
+.ini-pm{display:none;position:absolute;z-index:30;right:-8px;top:26px;min-width:168px;padding:6px;border-radius:16px;background:var(--ic3);box-shadow:0 16px 38px rgba(0,0,0,.5);text-align:left}
+.ini-pw.open .ini-pm{display:grid;gap:2px;animation:iniPm .16s var(--ease) both}
+.ini-pm button{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;padding:10px 12px;border-radius:11px;font:600 13px var(--sans);color:var(--soft);text-align:left;white-space:nowrap;transition:background .12s,color .12s}
+.ini-pm button:hover{background:rgba(255,255,255,.07);color:var(--ink)}
+.ini-pm button.on{color:var(--acc)}
+.ini-pm button.on::after{content:'';width:6px;height:6px;border-radius:50%;background:var(--acc)}
+@keyframes iniPm{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+html.sin-anim .ini-pw.open .ini-pm{animation:none}
+.ini-blk{display:flow-root}
+.ini-blk>.ini-sub:first-child{margin-top:26px}
+.ini-pags{margin-top:16px}
+.ini-nada{margin:14px 4px 0;font:400 14px/1.5 var(--sans);color:var(--dim)}
