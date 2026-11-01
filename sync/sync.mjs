@@ -44,10 +44,88 @@ const american = (s) => {
 };
 const fromProbs = (ps) => ps.map((p) => (p == null ? null : clampOdds(1 / (Math.max(0.02, p) * MARGIN))));
 // dos rivales con su porcentaje de victorias (log5)
+const log5 = (a, b) => (a - a * b) / Math.max(1e-6, a + b - 2 * a * b);
 const twoWay = (a, b) => {
-  const p = (a - a * b) / Math.max(1e-6, a + b - 2 * a * b);
+  const p = log5(a, b);
   return fromProbs([p, null, 1 - p]);
 };
+
+// ---------- mercados nuevos (db/036_mercados.sql): mas/menos goles, ambos marcan y mapas ----------
+// Todo sale del mismo 1X2 del partido, para que las cuotas sean coherentes entre si, con el margen de siempre (fromProbs) y
+// el +5 % (sube). La linea de goles que traiga DraftKings (ESPN) va con su cuota de verdad.
+const fact = (n) => (n <= 1 ? 1 : n * fact(n - 1));
+const pois = (l, k) => Math.exp(-l) * l ** k / fact(k);
+const pMas = (L, linea) => { let t = 0; for (let k = 0; k <= Math.floor(linea); k++) t += pois(L, k); return 1 - t };   // P(goles > linea)
+const p1x2 = (lh, la) => { const r = [0, 0, 0]; for (let i = 0; i <= 10; i++) for (let j = 0; j <= 10; j++) r[i > j ? 0 : i === j ? 1 : 2] += pois(lh, i) * pois(la, j); return r };
+// parte de los goles del local para que P(gana el local) / P(gana alguno) cuadre con el 1X2
+const reparto = (L, q) => { let lo = 0.03, hi = 0.97; for (let i = 0; i < 30; i++) { const s = (lo + hi) / 2, [a, , c] = p1x2(L * s, L * (1 - s)); if (a / (a + c) < q) lo = s; else hi = s } return (lo + hi) / 2 };
+const mkPar = (out, si, no, p, minimo = 0.06) => { if (p < minimo || p > 1 - minimo) return; const [a, , b] = fromProbs([p, null, 1 - p]); out[si] = sube(a); out[no] = sube(b) };
+const lin = (x) => String(x);                                                              // 2.5 -> "2.5" (los codigos de la base)
+// futbol. o: cuotas 1, X, 2 sin el +5 % (DraftKings o modelo). tot: {linea, over, under} de DraftKings o null. real: el 1X2 es de
+// DraftKings (si es del modelo de la forma, su empate es una estimacion y los goles esperados van fijos a 2,6)
+function mercadosFutbol(o, tot, real) {
+  if (!o || !o.every((x) => x > 1)) return {};
+  const inv = o.map((x) => 1 / x), s = inv[0] + inv[1] + inv[2], [p1, px, p2] = inv.map((x) => x / s), q = p1 / (p1 + p2);
+  let L;
+  if (tot) {                                                                               // goles esperados: los que dice la linea de DraftKings
+    const po = (1 / tot.over) / (1 / tot.over + 1 / tot.under); let lo = 0.3, hi = 7;
+    for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (pMas(m, tot.linea) < po) lo = m; else hi = m }
+    L = (lo + hi) / 2;
+  } else if (!real) L = 2.6;
+  else {                                                                                   // sin linea: los que hacen que el empate cuadre con el del 1X2
+    let lo = 1.6, hi = 4.2;
+    for (let i = 0; i < 25; i++) { const m = (lo + hi) / 2, sh = reparto(m, q), x = p1x2(m * sh, m * (1 - sh))[1]; if (x > px) lo = m; else hi = m }
+    L = Math.min(3.4, Math.max(2.0, (lo + hi) / 2));
+  }
+  const sh = reparto(L, q), lh = L * sh, la = L * (1 - sh), out = {};
+  for (const l of [1.5, 2.5, 3.5]) {
+    if (tot && tot.linea === l) { out['O' + lin(l)] = sube(tot.over); out['U' + lin(l)] = sube(tot.under); continue }
+    mkPar(out, 'O' + lin(l), 'U' + lin(l), pMas(L, l));
+  }
+  mkPar(out, 'GG', 'NG', (1 - Math.exp(-lh)) * (1 - Math.exp(-la)));
+  return out;
+}
+// la linea de goles de DraftKings (ESPN): solo lineas N,5 con cuota a los dos lados
+function totalDk(c) {
+  const t = c.odds?.[0]?.total; if (!t) return null;
+  const lado = (x) => ({ l: parseFloat(String(x?.close?.line ?? x?.open?.line ?? '').replace(/^[ou]/i, '')), o: american(x?.close?.odds ?? x?.open?.odds) });
+  const ov = lado(t.over), un = lado(t.under);
+  if (!(ov.l > 0) || ov.l !== un.l || ov.l % 1 !== 0.5 || ov.l > 6.5 || !ov.o || !un.o) return null;
+  return { linea: ov.l, over: ov.o, under: un.o };
+}
+// el resultado de los 90 minutos (db/036: goles y ambos marcan se pagan con el, sin prorroga ni penaltis). Sin prorroga es el
+// marcador. Con prorroga sale del minuto de cada gol (ESPN pone el descuento de la segunda parte en 90:00 = 5400 s y la prorroga
+// despues); si los goles no cuadran con el marcador o alguno no trae minuto, null (la base devuelve esas apuestas)
+function r90(c, h, a, sh, sa) {
+  if (!isFinite(sh) || !isFinite(sa)) return null;
+  const st = c.status || {}, prorroga = (Number(st.period) || 0) > 2 || /AET|PEN|EXTRA|SHOOTOUT/i.test(st.type?.name || '');
+  if (!prorroga) return `${sh}:${sa}`;
+  const g = (c.details || []).filter((d) => d.scoringPlay && !d.shootout);
+  if (g.some((d) => !isFinite(Number(d.clock?.value)))) return null;
+  const de = (id) => g.filter((d) => String(d.team?.id) === String(id));
+  if (de(h.team.id).length !== sh || de(a.team.id).length !== sa) return null;
+  const en90 = (d) => Number(d.clock.value) <= 5400;
+  return `${de(h.team.id).filter(en90).length}:${de(a.team.id).filter(en90).length}`;
+}
+// series al mejor de bo (3 o 5). p: probabilidad de que gane la serie el local. Mapas independientes con la probabilidad por
+// mapa que da esa p (como el cash out de la base): resultado exacto, +1,5 mapas de cada uno y si se juega el ultimo mapa
+const comb = (n, k) => fact(n) / (fact(k) * fact(n - k));
+function mercadosSerie(p, bo) {
+  if (!(p > 0 && p < 1) || (bo !== 3 && bo !== 5)) return {};
+  const need = (bo + 1) / 2, serie = (pm) => { let t = 0; for (let k = 0; k < need; k++) t += comb(need - 1 + k, k) * pm ** need * (1 - pm) ** k; return t };
+  let lo = 0.01, hi = 0.99;
+  for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (serie(m) < p) lo = m; else hi = m }
+  const pm = (lo + hi) / 2, ex = {}, out = {};
+  for (let k = 0; k < need; k++) {
+    ex[`S${need}-${k}`] = comb(need - 1 + k, k) * pm ** need * (1 - pm) ** k;
+    ex[`S${k}-${need}`] = comb(need - 1 + k, k) * (1 - pm) ** need * pm ** k;
+  }
+  for (const [c, q] of Object.entries(ex)) if (q >= 0.02) out[c] = sube(fromProbs([q])[0]);
+  const suma = (f) => Object.entries(ex).filter(([c]) => f(+c[1], +c[3])).reduce((t, [, q]) => t + q, 0);
+  for (const lado of [1, 2]) { const q = 1 - suma((x, y) => (lado === 1 ? x - y : y - x) <= -2); if (q >= 0.04 && q <= 0.96) out[`H${lado}+1.5`] = sube(fromProbs([q])[0]) }
+  mkPar(out, `MO${lin(bo - 0.5)}`, `MU${lin(bo - 0.5)}`, suma((x, y) => x + y === bo));
+  return out;
+}
 // futbol: puntos por partido de cada uno + ventaja de jugar en casa
 const soccerModel = (ppgH, ppgA) => {
   const d = ppgH - ppgA + 0.3;
@@ -119,7 +197,9 @@ async function soccer() {
             o = soccerModel(ppg(rh), ppg(ra)); row.odds_src = 'modelo';
           }
           [row.odds_1, row.odds_x, row.odds_2] = o.map(sube);
+          row.odds_mk = mercadosFutbol(o, totalDk(c), row.odds_src === 'draftkings');                                  // db/036: goles y ambos marcan
         }
+        if (status === 'final') row.details.r90 = r90(c, h, a, sh, sa);                   // db/036: con esto se pagan
         out.push(row);
       }
     }
@@ -238,6 +318,7 @@ async function esports(game) {
         tv: (m.streams_list || []).filter((x) => x.raw_url).sort((x, y) => (/^(en|es)$/.test(y.language) - /^(en|es)$/.test(x.language)) || (y.main - x.main)).slice(0, 8)
           .map((x) => ({ n: /twitch/.test(x.raw_url) ? 'Twitch' : /youtube/.test(x.raw_url) ? 'YouTube' : /kick\.com/.test(x.raw_url) ? 'Kick' : 'Stream', l: x.language, u: x.raw_url, e: x.embed_url || null, main: !!x.main })),
         games: (m.games || []).map((g) => ({ n: g.position, st: g.status, w: g.winner?.id ?? null })),
+        mt: m.match_type || null, ff: !!m.forfeit,                                          // db/036: los mapas solo se pagan al mejor de y sin abandono
         tape: [[m.number_of_games ? 'BO' + m.number_of_games : '', 'Formato', m.number_of_games ? 'BO' + m.number_of_games : '']].filter((r) => r[0] || r[2]) },
     });
   }
@@ -318,6 +399,7 @@ async function fichasEsports(rows) {
       const pct = (f) => (f?.g ? (f.w + 1) / (f.g + 2) : 0.5);
       [r.odds_1, r.odds_x, r.odds_2] = twoWay(pct(fa), pct(fb)).map(sube);
       r.odds_src = 'modelo';
+      r.odds_mk = r.details.mt === 'best_of' ? mercadosSerie(log5(pct(fa), pct(fb)), r.bo) : {};   // db/036: mapas
     }
   }
   console.log(`fichas de equipos: ${Object.keys(cache).length} guardadas · ${Object.keys(nuevas).length} refrescadas`);
@@ -500,6 +582,12 @@ async function main() {
     if (process.env.DRY_OUT) (await import('node:fs')).writeFileSync(process.env.DRY_OUT, JSON.stringify(rows));
     const show = rows.filter((r) => r.status === 'scheduled').sort((a, b) => a.starts_at.localeCompare(b.starts_at)).slice(0, 8);
     for (const r of show) console.log(r.starts_at.slice(5, 16), r.league_name.padEnd(18), `${r.home} vs ${r.away}`.padEnd(42), r.odds_1, r.odds_x ?? '·', r.odds_2, r.odds_src);
+    // db/036: las cuotas de los mercados nuevos que mandaria (unas de cada deporte) y el resultado de los 90 de lo acabado con prorroga
+    const conMk = rows.filter((r) => r.status === 'scheduled' && r.odds_mk && Object.keys(r.odds_mk).length);
+    console.log(`mercados nuevos: ${conMk.length} partidos con cuotas · ${rows.filter((r) => r.status === 'scheduled' && r.odds_mk && !Object.keys(r.odds_mk).length).length} sin ninguna`);
+    for (const s of ['f', 'v', 'c']) for (const r of conMk.filter((x) => x.sport === s).slice(0, 3))
+      console.log(` ${r.home} vs ${r.away} (${r.odds_1} ${r.odds_x ?? '·'} ${r.odds_2}${r.bo ? ' BO' + r.bo : ''}):`, Object.entries(r.odds_mk).map(([k, v]) => `${k} ${v}`).join(' · '));
+    for (const r of rows.filter((x) => x.sport === 'f' && x.status === 'final' && x.details.r90 !== `${x.score}`).slice(0, 8)) console.log(` 90 min: ${r.home} ${r.score} ${r.away} -> ${r.details.r90}`);
     return;
   }
   if (!SB || !ANON || !SECRET) throw new Error('Faltan SUPABASE_URL, SUPABASE_ANON_KEY y SYNC_SECRET');
