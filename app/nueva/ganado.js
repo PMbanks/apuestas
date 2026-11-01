@@ -99,6 +99,14 @@
     return { key: 'r' + c.id, k, t: Date.parse(c.set), tipo: 'reto', res: c.st === 'void' ? 'void' : ws.includes(k) ? 'won' : 'lost', m, side: lado(p), pick: eleccion(m, p), rival: rivales[0], mas: Math.max(0, rivales.length - 1), nv: R.nvm(c), o: null, stake: c.stake, pay: R.pagoDe(c, k) };
   });
   const rv = (x) => nombre(x.rival) + (x.mas ? ` +${x.mas}` : '');
+  // PM 02-11: "en results no salen los challenges": en De todos tambien salen los retos resueltos de los colegas (una fila por reto, la del primero que gana)
+  const retosTodos = () => g(() => CH, []).filter((c) => /^won_/.test(c.st) && c.set).map((c) => {
+    const R = window.GM_RETOS; if (!R) return null;
+    const ws = R.ganan(c); if (!ws.length) return null;
+    const k = ws[0], e = R.pl(c).find((x) => x.k === k), p = e ? e.p : c.fp, m = partido(c.m);
+    const otros = R.pl(c).filter((x) => x.p !== p).map((x) => x.k);
+    return { key: 'rt' + c.id, k, t: Date.parse(c.set), tipo: 'reto', res: 'won', m, side: lado(p), pick: eleccion(m, p), rival: otros[0], mas: Math.max(0, otros.length - 1), nv: R.nvm(c), o: null, stake: c.stake, pay: R.pagoDe(c, k) };
+  }).filter((x) => x && isFinite(x.t));
   const mios = () => [...apuestasDe(yo()), ...predicciones(), ...premios(), ...retosDe(yo())].filter((x) => isFinite(x.t)).sort((a, b) => b.t - a.t);
 
   /* ---------- lo ya enseñado ---------- */
@@ -412,7 +420,7 @@
   function filaTodos(x) {
     const verbo = x.res === 'won' ? (x.tipo === 'cash' ? 'retiró' : 'ganó') : x.res === 'lost' ? (x.tipo === 'cash' ? 'retiró' : 'perdió') : 'recupera';
     const cant = x.res === 'won' || x.tipo === 'cash' ? x.pay : x.stake;
-    return `<div class="gnd-pr ${x.res}"><span class="gnd-pi">${avatar(x.k)}</span><span class="gnd-pt2"><span class="gnd-fr"><b>${esc(nombre(x.k))}</b> <span class="gnd-vb">${verbo}</span> <b class="gnd-q">${N(cant)}</b>${coin} <span>con</span> <em>${esc(x.pick)}</em>${x.o ? ` <i>${O(x.o)}</i>` : ''}</span><small>${x.m ? partidoLinea(x.m) + ' · ' : ''}<span>${esc(cuando(x.t))}</span></small></span><span class="gnd-pi gnd-pe">${x.m && (x.side === 'a' || x.side === 'b') ? escudo(x.m, x.side) : ''}</span></div>`;
+    return `<div class="gnd-pr ${x.res}"><span class="gnd-pi">${avatar(x.k)}</span><span class="gnd-pt2"><span class="gnd-fr"><b>${esc(nombre(x.k))}</b> <span class="gnd-vb">${verbo}</span> <b class="gnd-q">${N(cant)}</b>${coin} <span>con</span> <em>${esc(x.pick)}</em>${x.o ? ` <i>${O(x.o)}</i>` : ''}</span><small>${x.tipo === 'reto' && x.rival ? `<span>Reto</span> <span>${x.nv}</span> <span>contra</span> <span data-notr>${esc(rv(x))}</span> · ` : ''}${x.m ? partidoLinea(x.m) + ' · ' : ''}<span>${esc(cuando(x.t))}</span></small></span><span class="gnd-pi gnd-pe">${x.m && (x.side === 'a' || x.side === 'b') ? escudo(x.m, x.side) : ''}</span></div>`;
   }
   function pintaPanel(nuevo) {
     let el = document.getElementById('gnd-p');
@@ -427,7 +435,7 @@
         <div class="gnd-pl">${xs.map((x) => filaMia(x, x.t > ANTES)).join('') || '<p class="hint">Todavía no hay resultados.</p>'}</div>
         <button class="gnd-ir" data-scr="apuestas">Ver mis apuestas <span>›</span></button>`;
     } else {
-      const xs = apuestasDe(null).sort((a, b) => b.t - a.t).slice(0, 40);
+      const xs = [...apuestasDe(null), ...retosTodos()].sort((a, b) => b.t - a.t).slice(0, 40);
       cuerpo = `<div class="gnd-pl todos">${xs.map(filaTodos).join('') || '<p class="hint">Todavía no hay resultados.</p>'}</div>
         <button class="gnd-ir" data-gnd="feed">Ver el Feed <span>›</span></button>`;
     }
