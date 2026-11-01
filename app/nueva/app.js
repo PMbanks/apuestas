@@ -1706,7 +1706,7 @@ function perfil() {
   return `<div class="pf" style="--fc:var(--f-${f.id});--ring:var(--f-${f.id})">
     <button class="pf-back" data-act="back">← Volver</button>
     <header class="pf-hero mk-bg-${f.id}">
-      <div>${av(f.id, 'huge')}${mine ? `<div class="pf-act"><button data-act="photo">${f.photo ? 'Cambiar foto' : 'Poner foto'}</button>${f.photo ? '<button class="q" data-act="nophoto">Quitar</button>' : ''}</div><input type="file" id="foto" accept="image/*" data-foto hidden>` : ''}</div>
+      <div>${av(f.id, 'huge')}${window.GM_RATIO ? GM_RATIO.slot(f.id) : ''}${mine ? `<div class="pf-act"><button data-act="photo">${f.photo ? 'Cambiar foto' : 'Poner foto'}</button>${f.photo ? '<button class="q" data-act="nophoto">Quitar</button>' : ''}</div><input type="file" id="foto" accept="image/*" data-foto hidden>` : ''}</div>
       <div style="min-width:0"><h2>${esc(f.n)}</h2>
         ${mine ? `<div class="pf-ap"><input id="apodo" data-pedit="apodo" value="${esc(f.apodo)}" maxlength="24" placeholder="Tu apodo" aria-label="Tu apodo"></div><div class="pf-fr"><input id="frase" data-pedit="frase" value="${esc(f.frase)}" maxlength="80" placeholder="Tu frase" aria-label="Tu frase"></div>`
           : `${f.apodo ? `<p class="pf-ap">${esc(f.apodo)}</p>` : ''}${f.frase ? `<p class="pf-fr">${esc(f.frase)}</p>` : ''}`}
