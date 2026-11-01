@@ -1,0 +1,53 @@
+/* Ratio global (ratio.js): pastilla bajo la foto del perfil, con su desplegable, y el puesto pequeno en Liga > Saldo */
+.rt-slot{position:relative;width:168px;height:42px;margin-top:16px;z-index:2}
+.rt-slot.abre{z-index:40}
+.rt-pill{display:flex;align-items:center;gap:7px;width:100%;height:42px;padding:0 10px 0 11px;border-radius:21px;background:rgba(255,255,255,.07);color:var(--ink);font:600 11.5px/1.2 var(--sans);text-align:left;transition:background var(--t,.18s)}
+.rt-pill:hover,.rt-slot.abre .rt-pill{background:rgba(255,255,255,.12)}
+.rt-pill:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.rt-tx{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px;overflow:hidden}
+.rt-tx span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rt-tx em{font:500 14px/1.1 var(--mono);font-style:normal;letter-spacing:-.02em;color:var(--ink)}
+.rt-ch{flex:none;width:13px;height:13px;fill:none;stroke:var(--mute);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .18s}
+.rt-slot.abre .rt-ch{transform:rotate(180deg)}
+.rt-med{flex:none;width:12px;height:12px;border-radius:50%;background:var(--hair2,rgba(255,255,255,.14))}
+.rt-pill.sin .rt-med{display:none}.rt-pill.sin{padding-left:14px}
+.rt-pill.sin .rt-tx{color:var(--soft)}
+.rt-pill.m1 .rt-med,.rt-r.m1 .rt-p::before{background:radial-gradient(circle at 35% 30%,#ffe9a8,#f2c14e 55%,#b88c2c)}
+.rt-pill.m2 .rt-med,.rt-r.m2 .rt-p::before{background:radial-gradient(circle at 35% 30%,#f4f6f9,#c4cad3 55%,#8c939e)}
+.rt-pill.m3 .rt-med,.rt-r.m3 .rt-p::before{background:radial-gradient(circle at 35% 30%,#f1c39b,#cd8a52 55%,#8f5a2e)}
+.rt-pill.m1{box-shadow:inset 0 0 0 1px rgba(242,193,78,.45)}
+.rt-pill.m2{box-shadow:inset 0 0 0 1px rgba(196,202,211,.4)}
+.rt-pill.m3{box-shadow:inset 0 0 0 1px rgba(205,138,82,.4)}
+/* el desplegable: flota sobre el resto, no empuja nada */
+.rt-pop{position:absolute;top:calc(100% + 8px);left:0;width:312px;max-height:min(520px,calc(100vh - 420px));overflow:auto;padding:14px 14px 12px;border-radius:14px;background:var(--bg2);box-shadow:0 18px 44px rgba(0,0,0,.55),0 0 0 1px var(--hair);text-align:left}
+.rt-h,.rt-sep{display:block;font:600 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.rt-sep{margin:12px 0 4px}
+.rt-h{margin-bottom:6px}
+.rt-r{display:grid;grid-template-columns:30px 26px minmax(0,1fr) auto;align-items:center;gap:9px;padding:6px 0;border-bottom:1px solid var(--hair);cursor:pointer}
+.rt-r:last-of-type{border-bottom:0}
+.rt-r.yo .rt-n{color:var(--acc)}
+.rt-r .av{pointer-events:none}
+.rt-p{display:flex;align-items:center;gap:5px;font:500 12px var(--mono);color:var(--mute)}
+.rt-r.m1 .rt-p,.rt-r.m2 .rt-p,.rt-r.m3 .rt-p{color:var(--ink)}
+.rt-r.m1 .rt-p::before,.rt-r.m2 .rt-p::before,.rt-r.m3 .rt-p::before{content:"";flex:none;width:8px;height:8px;border-radius:50%}
+.rt-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 13px var(--sans)}
+.rt-v{display:flex;flex-direction:column;align-items:flex-end;line-height:1.25}
+.rt-v b{font:500 13px var(--mono);color:var(--ink)}
+.rt-v em{font:500 12px var(--mono);font-style:normal;color:var(--mute)}
+.rt-v small{font:11px var(--sans);color:var(--dim)}
+.rt-r.fuera .rt-n{color:var(--soft)}
+.rt-nota{margin-top:10px;font:11.5px/1.45 var(--sans);color:var(--dim)}
+/* Liga > Saldo: el puesto pequeno, debajo del nombre */
+.lq-rt{display:block;margin-top:2px;font:500 11px/1.2 var(--mono);letter-spacing:.02em;color:var(--mute);white-space:nowrap}
+.lq-rt.sin{color:var(--dim)}
+.lq-rt.m1{color:#f2c14e}.lq-rt.m2{color:#c4cad3}.lq-rt.m3{color:#cd8a52}
+.lq-hn>.lq-rt{margin-top:7px;font-size:12px}
+@media (max-width:700px){
+  .rt-slot{width:200px;margin-top:14px}
+  .rt-pop{left:50%;transform:translateX(-50%);width:min(312px,calc(100vw - 32px))}
+  .lq-r .lq-n{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:3px 10px}
+  .lq-r .lq-n>.lq-nn{grid-column:1/-1}
+  .lq-r .lq-n>.lq-rt{margin-top:0}
+  .lq-r .lq-n>.lq-rt.sin{display:none}
+  .rt-pop{max-height:min(60vh,380px)}
+}
