@@ -39,7 +39,7 @@
 -- Combinadas: una sola pata por Gran Premio (la clasificacion, el sprint, la carrera y los duelos de un mismo fin de semana estan
 -- relacionados) y una sola de campeonato.
 -- Cambia: el check de matches.sport, mk_valido y las restricciones de bets y combo_legs, mk_encaja, pick_name, mk_resultado,
--- ex_cash_value (sin cash out en directo), settle_match (el texto del chat), ex_live_odds y place_combo.
+-- ex_cash_value (sin cash out en directo), settle_match y reveal_match (el texto del chat), ex_live_odds y place_combo.
 -- Nuevas: sync_f1_pendientes (el sincronizador pregunta que Grandes Premios siguen abiertos) y sync_f1_anula (anula los que Jolpica
 -- ya no trae en el calendario: se devuelve todo).
 -- Se puede ejecutar varias veces. Despues: 052_prueba.sql.
@@ -418,6 +418,30 @@ begin
   end if;
   return coalesce((select jsonb_agg(jsonb_build_object('id', id, 'status', status, 'at', starts_at, 'settled', settled) order by starts_at)
                      from matches where sport = 'r' and not settled), '[]'::jsonb);
+end $$;
+
+-- ---------- el aviso del chat cuando empieza (001): un Gran Premio no es "A vs B", y con muchas apuestas no cabe en 500 letras ----------
+create or replace function reveal_match(p_match text) returns void
+language plpgsql security definer set search_path = public as $$
+declare m matches; txt text; vs text;
+begin
+  select * into m from matches where id = p_match for update;
+  if not found or m.revealed then return; end if;
+  vs := case when m.sport = 'r' and coalesce(m.details ->> 'kind', '') <> 'duel' then m.home || ' · ' || m.away else m.home || ' vs ' || m.away end;
+  select string_agg(p.name || ' · ' || pick_name(m, b.pick) || ' ' || fmt_int(b.stake), ' · ' order by b.created_at)
+    into txt from bets b join players p on p.id = b.player where b.match_id = p_match;
+  if txt is not null then
+    -- el chat admite 500 letras: con muchas apuestas (la F1 tiene muchos mercados por carrera) se cuenta en vez de listarlas
+    if char_length('Empieza ' || vs || '. Apuestas: ' || txt) > 480 then
+      select 'Empieza ' || vs || '. ' || count(*)::text || ' apuestas de ' || count(distinct b.player)::text || case when count(distinct b.player) = 1 then ' amigo' else ' amigos' end
+        into txt from bets b where b.match_id = p_match;
+      insert into chat(body) values (left(txt, 500));
+    else
+      insert into chat(body) values (left('Empieza ' || vs || '. Apuestas: ' || txt, 500));
+    end if;
+  end if;
+  update matches set revealed = true where id = p_match;
+  perform bump();
 end $$;
 
 -- Anula (status canceled: settle_match devuelve todo lo apostado) los Grandes Premios que Jolpica ya no trae en el calendario.

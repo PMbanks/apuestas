@@ -767,7 +767,7 @@ function cuentaSaldo() {
 
 /* ---------- Partidos ---------- */
 function featured() {
-  const soon = board().filter((m) => !m.live && Date.parse(m.at) < NOW + 4 * DAY && (TOP.has(m.lg) || m.s !== 'f'));
+  const soon = board().filter((m) => !m.live && m.s !== 'r' && Date.parse(m.at) < NOW + 4 * DAY && (TOP.has(m.lg) || m.s !== 'f'));
   const score = (m) => whoOn(m.id).length * 10 - (m.o[0] && m.o[2] ? Math.abs(m.o[0] - m.o[2]) : 9) + (TOP.has(m.lg) ? 2 : 0);
   return soon.sort((a, b) => score(b) - score(a)).slice(0, 3);
 }

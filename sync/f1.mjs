@@ -93,7 +93,7 @@ async function pideJson(url, { reintentos = 3, headers = {} } = {}) {
     const espera = 300 - (Date.now() - ULTIMA); if (espera > 0) await sleep(espera);
     ULTIMA = Date.now();
     try {
-      const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 25000);
+      const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 15000);
       const r = await fetch(url, { headers: { 'user-agent': 'apuestas-colegas/1.0', ...headers }, signal: ctl.signal }); clearTimeout(to);
       if (r.ok) return await r.json();
       if (r.status === 429) { const ra = num(r.headers.get('retry-after')); await sleep(Math.min(30000, ra ? ra * 1000 : 4000 * 2 ** i)); continue }
@@ -457,7 +457,7 @@ export async function f1(ctx = {}) {
 export function aAnular(pendientes, rondasEnCalendario, year) {
   const out = [];
   for (const p of arr(pendientes)) {
-    const m = /^f1-(d{4})-(d+)-/.exec(p.id || ''); if (!m || +m[1] !== year) continue;
+    const m = /^f1-(\d{4})-(\d+)-/.exec(p.id || ''); if (!m || +m[1] !== year) continue;
     if (!rondasEnCalendario.has(+m[2]) && p.status !== 'final') out.push(p.id);
   }
   return out;

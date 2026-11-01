@@ -58,7 +58,10 @@
       C.t = Date.now();
     } catch (e) { C.off = Date.now() + 3 * 60e3; C.t = Date.now() }
     C.vivo = false;
-    if (g(() => S.scr, '') === 'partidos' && g(() => byId(S.foc)?.s, '') === 'r' && !document.activeElement?.matches?.('input,textarea')) g(() => render());
+    // si lo que hay ha cambiado (primera carga, cuotas nuevas, un resultado), se repinta la pantalla de la F1 una vez
+    const sig = [...D.values()].map((x) => `${x.id}${x.s}${Object.keys(x.mk).length}${x.d.res ? 1 : 0}${x.d.grid ? 1 : 0}`).join('|');
+    const cambio = sig !== C.sig; C.sig = sig;
+    if (cambio && ['partidos', 'apuestas', 'inicio', 'colegas'].includes(g(() => S.scr, '')) && !document.activeElement?.matches?.('input,textarea')) g(() => render());
     try { window.dispatchEvent(new CustomEvent('gm:f1')) } catch {}
   }
   const dat = (id) => D.get(id) || null;
@@ -309,7 +312,8 @@
     const e = dat(m.id), ids = Object.keys(e?.d?.dr || {}); const id = ids[b.dataset.side === 'a' ? 0 : 1]; if (!id || !window.GM_F1?.abre) return;
     ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation(); GM_F1.abre({ t: 'p', id });
   }, true);
-  setInterval(() => { if (!document.hidden && g(() => loaded, false) && g(() => M.some((m) => m.s === 'r'), false)) carga() }, 90e3);
+  // la primera carga en cuanto la app tiene partidos de F1 (cada 3 s hasta tenerla), y despues cada 90 s
+  setInterval(() => { if (!document.hidden && g(() => loaded, false) && g(() => M.some((m) => m.s === 'r'), false) && (!C.t || Date.now() - C.t > 90e3)) carga() }, 3e3);
   window.addEventListener('gm:f1', () => { try { pintaCab() } catch {} });
 
   window.GM_F1 = { es: esGP, kind: (m) => m?.fk || '', cuotasFila, ficha, cabeza, carga: () => carga(true), dat, datos: () => D, nomP, nomE, colorE, fotoP, caraP, bandera, flagUrl, iso, ini, norm, bonito, apellido, espn, espnData: ESPN, idPorNombre, idEqPorNombre, fotoDeNombre,

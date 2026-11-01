@@ -254,7 +254,7 @@
     ST.el.classList.add('on'); document.documentElement.classList.add('f1p-abierto');
     const mismo = ST.pila.find((x) => x.t === p.t && x.id === p.id && (p.t !== 'c')); if (mismo) ST.pila.splice(ST.pila.indexOf(mismo), 1);
     const ya = p.t === 'c' ? ST.pila.find((x) => x.t === 'c') : null; if (ya) ST.pila.splice(ST.pila.indexOf(ya), 1);
-    const nuevo = { t: p.t, id: p.id, seq: ++ST.tick, pag: 0, pagh: 0, ord: 'y', ...(p.tab ? { tab: p.tab } : {}) }; ST.pila.push(nuevo); ST.sig = '';
+    const nuevo = { t: p.t, id: p.id, seq: ++ST.tick, pag: 0, pagh: 0, ord: 'y', ...(p.t === 'c' ? { tab: p.tab || 'p', y: p.y || YA } : {}) }; ST.pila.push(nuevo); ST.sig = '';
     carga(nuevo); pinta(); ST.el.querySelector('.f1p-body').scrollTop = 0;
   }
   const carga = (p) => (p.t === 'p' ? cargaPiloto(p) : p.t === 'e' ? cargaEquipo(p) : cargaClasif(p));

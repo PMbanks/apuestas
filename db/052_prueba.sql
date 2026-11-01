@@ -128,6 +128,11 @@ begin
   if (select odds from bets where id = b1) <> 3.00 then raise exception 'FALLO: la cuota no se ha congelado'; end if;
   resumen := resumen || 'Cobra y congela la cuota (ganador, podio, top 10, vuelta rapida, abandona). ';
 
+  -- el aviso de que empieza: sin "vs" en un Gran Premio, con "vs" en un duelo
+  perform reveal_match('zz:f1r');
+  if not exists (select 1 from chat where body like 'Empieza Gran Premio de Prueba · Carrera. 12 apuestas de 1 amigo') then raise exception 'FALLO: el aviso de que empieza la carrera con muchas apuestas: %', (select body from chat order by id desc limit 1); end if;
+  resumen := resumen || 'Avisos del chat sin vs en un Gran Premio. ';
+
   -- cash out antes de empezar: con la cuota de ahora del mismo mercado (3,00 / 1,50 * 0,95 = 190)
   q := ex_cash_value((select b from bets b where b.id = b1), (select m from matches m where m.id = 'zz:f1r'));
   if not coalesce((q->>'ok')::boolean, false) or q->>'mode' <> 'pre' or (q->>'value')::int <> 190 then raise exception 'FALLO: cash out antes de empezar: %', q; end if;
@@ -177,6 +182,8 @@ begin
   if (select status from bets where id = b2) <> 'won' then raise exception 'FALLO: el ganador con la vuelta rapida sin dato cobra'; end if;
   b1 := (place_bet('zz:f1x', 'FW:lando_norris', 100)->>'bet')::bigint;
   b2 := (place_bet('zz:f1x', 'FP:lando_norris', 100)->>'bet')::bigint;
+  perform reveal_match('zz:f1x');
+  if not exists (select 1 from chat where body like 'Empieza Gran Premio Cancelado · Carrera. Apuestas: %') then raise exception 'FALLO: el aviso de que empieza una carrera con pocas apuestas'; end if;
   execute saldo into s0 using jug[1];
   update matches set status = 'canceled', starts_at = now() - interval '2 hours' where id = 'zz:f1x';
   perform settle_match('zz:f1x');

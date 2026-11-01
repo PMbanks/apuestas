@@ -578,10 +578,11 @@ async function main() {
   const t0 = Date.now();
   if (process.env.SOLO_DISCORD) { if (process.env.DISCORD_WEBHOOK && SB && ANON && SECRET) await avisos({ rpc, secret: SECRET, hook: process.env.DISCORD_WEBHOOK }); return; }
   const ctxNba = { getJson, sube, american, fromProbs, tvEspn, rpc, secret: SB && ANON ? SECRET : null, dry: DRY, now: NOW };
-  const [f, u, v, c, b] = await Promise.all([soccer(), ufc(), esports('valorant'), esports('csgo'), nba(ctxNba).catch((e) => { console.log('nba:', e.message || e); return [] })]);
+  // F1 (Jolpica) a la vez que lo demas y con un tope de 90 s: si Jolpica no responde, esta pasada sigue sin la F1 y no se toca nada de ella
+  const f1Seguro = () => { let t; return Promise.race([f1({ now: NOW, sube }), new Promise((res) => { t = setTimeout(() => { console.log('f1: Jolpica tarda demasiado, sigo sin la F1'); res({ rows: [] }) }, 90e3) })]).catch((e) => { console.log('f1:', e.message || e); return { rows: [] } }).finally(() => clearTimeout(t)) };
+  const [f, u, v, c, b, rf1] = await Promise.all([soccer(), ufc(), esports('valorant'), esports('csgo'), nba(ctxNba).catch((e) => { console.log('nba:', e.message || e); return [] }), f1Seguro()]);
   await fichasEsports([...v, ...c]);
   await bracketsEsports([...v, ...c]);
-  const rf1 = await f1({ now: NOW, sube }).catch((e) => { console.log('f1:', e.message || e); return { rows: [] } });    // Jolpica; si falla, no se toca nada de la F1
   const rows = [...f, ...u, ...v, ...c, ...b, ...rf1.rows];
   await carasUfc(rows);
   console.log(`futbol ${f.length} · ufc ${u.length} · valorant ${v.length} · cs2 ${c.length} · nba ${b.length} · f1 ${rf1.rows.length} · con cuotas reales ${rows.filter((r) => r.odds_src === 'draftkings').length}`);
