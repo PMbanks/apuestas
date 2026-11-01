@@ -174,6 +174,11 @@
       out.push({ t: t2(b.set || b.at), st: b.st, v: neto(b), stake: b.stake, o: b.o, txt: pn(m, b.p), mk: !!(window.GM_MK && GM_MK.es(b.p)), sub: `${m.a} vs ${m.b}` }) }
     for (const c of misCombos() || []) { const s = stC(c); if (s !== 'won' && s !== 'lost') continue;
       out.push({ t: t2(c.settled_at || c.created_at), st: s, v: netoC(c), stake: c.stake, o: Number(c.odds), txt: `Combinada de ${legsDe(c).length}`, c: 1 }) }
+    // PM 01-11: "en my bets los challenges tambien cuentan como apuestas, lo digo por las stats": un reto resuelto es una apuesta a cuota 2,00
+    // (el que acierta se lleva lo de los dos); los devueltos o sin rival no cuentan
+    for (const c of CH) { if (c.from !== MEK && c.to !== MEK) continue; if (c.st !== 'won_from' && c.st !== 'won_to') continue; if (!c.set) continue;
+      const gano = (c.st === 'won_from') === (c.from === MEK), riv = c.from === MEK ? c.to : c.from, m = byId(c.m);
+      out.push({ t: t2(c.set), st: gano ? 'won' : 'lost', v: gano ? c.stake : -c.stake, stake: c.stake, o: 2, txt: `Reto contra ${g(() => fr(riv).n, '')}`, mk: false, r: 1, sub: m ? `${m.a} vs ${m.b}` : '' }) }
     return out.sort((a, b) => a.t - b.t);
   }
   let CHART = null;   // la curva pintada: puntos y escala, para el recuadro que sale al pasar el dedo o el raton
