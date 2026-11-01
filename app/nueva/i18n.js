@@ -541,7 +541,7 @@
     'de tu rival si acepta': 'from your opponent if they accept', 'Si nadie entra en contra, se queda como una apuesta normal a esa cuota': 'If nobody joins against you, it stays as a normal bet at those odds',
     'Puedes cancelarlo mientras no entre nadie y no empiece el partido': 'You can cancel it while nobody has joined and the match has not started',
     'en juego entre vosotros · el que acierta cobra además su cuota de la banca': 'at stake between you · the winner also gets their odds from the bank',
-    'si acierta': 'if right', 'Te llevas si aciertas': 'You get if right', 'La mitad de tu saldo': 'Half your balance', 'Todo tu saldo (máximo 100.000)': 'All your balance (max 100,000)',
+    'tu apuesta · si alguien entra en contra, te llevas también lo suyo': 'your bet · if someone joins against you, you also take theirs', 'si acierta': 'if right', 'Te llevas si aciertas': 'You get if right', 'La mitad de tu saldo': 'Half your balance', 'Todo tu saldo (máximo 100.000)': 'All your balance (max 100,000)',
     'Ese lado no tiene cuota ahora mismo: no se puede retar': 'That side has no odds right now: you cannot challenge',
     'Ya ha entrado alguien: el reto ya no se puede cancelar': 'Someone already joined: the challenge can no longer be cancelled',
     'El partido ya ha empezado: no se puede cancelar': 'The match has already started: it cannot be cancelled', 'Ese reto ya está cerrado': 'That challenge is already closed',

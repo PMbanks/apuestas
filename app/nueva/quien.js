@@ -223,7 +223,7 @@
     // db/066: en un reto contra la banca, lo que te llevas si aciertas es tu cuota de la banca + lo de los rivales (siempre se ensena)
     const miParte = dentroYo && (varios || c.v2) ? g(() => R.pagoDe(c, yo), 0) : 0;
     const quienes = g(() => R.pl(c).length, 1), cierre = g(() => R.retirarBtn(c, 'en-rc'), '') || (quienes > 1 || c.st === 'accepted' ? `<span class="rc-no">${LOCK}<span>Sin cancelar · se paga al final</span></span>` : '');
-    const boteTxt = c.v2 ? 'en juego entre vosotros · el que acierta cobra además su cuota de la banca' : varios ? 'en juego · se reparte entre los que acierten' : 'en juego · se lo lleva quien acierte';
+    const boteTxt = c.v2 && quienes < 2 && !g(() => R.esperaAmigo(c), false) ? 'tu apuesta · si alguien entra en contra, te llevas también lo suyo' : c.v2 ? 'en juego entre vosotros · el que acierta cobra además su cuota de la banca' : varios ? 'en juego · se reparte entre los que acierten' : 'en juego · se lo lleva quien acierte';
     // quien mas hay: un tercer lado (por ejemplo el empate en un reto de dos equipos)
     const extra = mas.length ? `<p class="rc-ex">${mas.map((l) => `<span class="rc-ex1">${l.ks.slice(0, 2).map((k) => cara(k, 'sm')).join('')}<b data-notr>${nomsG(l.ks)}</b><i>con</i><span ${l.p === 'X' ? '' : 'data-notr'}>${esc(l.p === 'X' ? 'el empate' : pn(m, l.p))}</span></span>`).join('')}</p>` : '';
     // unirte: un boton por lado si el reto esta abierto y no estas dentro; si es un reto para ti, el de aceptar de siempre
