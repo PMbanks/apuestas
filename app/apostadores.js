@@ -1,5 +1,5 @@
 // Apostadores (PM, 01-11): pestana nueva de la Liga, el modelo B de modelos/m1101/apostadores "pero hay que ponerle lo del
-// bote". Arriba el bote de la semana (db/035: cada lunes la base quita 100 a cada uno que los tenga y los mete en el bote):
+// bote". Arriba el bote de la semana (db/035 y 047: cada lunes la base quita 100 a cada uno, aunque se quede en negativo, y los mete en el bote):
 // cuanto hay, quien va ganandolo y por cuanto, cuanto falta para que se reparta y los premios de la semana. Debajo, una tabla
 // con Semana / Mes / De siempre y Dinero / Mejor cuota / Aciertos. Solo cuenta apostar en partidos: sueltas y combinadas
 // ganadas, perdidas o retiradas con cash out (nada de cajas, Crash, Cara o cruz, Blackjack ni mercado), igual que bote_neto.
@@ -135,10 +135,10 @@
       b2 = `<div class="apo-b2"><span class="lab">Va ganándolo</span>${lid}${reparte}</div>`;
     } else if (antes) {
       b1 = `<p class="apo-pot apo-pot-t" data-notr>${manana ? T('Empieza mañana', 'Starts tomorrow') : en() ? `Starts on Monday ${dia(ini)}` : `Empieza el lunes ${dia(ini)}`}</p>
-        <p class="apo-bsub" data-notr>${en() ? `Every Monday the app takes ${N(amt)} from everyone who has it and puts it in the pot. Whoever wins the most betting on matches that week takes it all.` : `Cada lunes la app quita ${N(amt)} a cada uno que los tenga y los mete en el bote. Se lo lleva entero el que más gane apostando en partidos esa semana.`}</p>
+        <p class="apo-bsub" data-notr>${en() ? `Every Monday the app takes ${N(amt)} from everyone, even if it leaves them below zero, and puts it in the pot. Whoever wins the most betting on matches that week takes it all.` : `Cada lunes la app quita ${N(amt)} a cada uno, aunque se quede en negativo, y los mete en el bote. Se lo lleva entero el que más gane apostando en partidos esa semana.`}</p>
         <div class="apo-caras">${F.map((f) => av(f.id)).join('')}</div>`;
     } else if (lunes) {
-      b1 = `<p class="apo-pot apo-pot-t" data-notr>${T('Se está llenando', 'Filling up')}</p><p class="apo-bsub" data-notr>${en() ? `In a few minutes the app takes ${N(amt)} from everyone who has it and puts it in the pot.` : `En unos minutos la app quita ${N(amt)} a cada uno que los tenga y los mete en el bote.`}</p>
+      b1 = `<p class="apo-pot apo-pot-t" data-notr>${T('Se está llenando', 'Filling up')}</p><p class="apo-bsub" data-notr>${en() ? `In a few minutes the app takes ${N(amt)} from everyone and puts it in the pot.` : `En unos minutos la app quita ${N(amt)} a cada uno y los mete en el bote.`}</p>
         <div class="apo-caras">${F.map((f) => av(f.id)).join('')}</div>`;
     } else {
       b1 = `<p class="apo-pot apo-pot-t" data-notr>${T('Este lunes no hay bote', 'No pot this Monday')}</p><p class="apo-bsub" data-notr>${en() ? `Nobody had ${N(amt)} to put in. Next Monday it fills up again by itself.` : `Nadie tenía ${N(amt)} para ponerlos. El lunes que viene se vuelve a llenar solo.`}</p>`;
@@ -306,7 +306,7 @@
     const k = `gm-bote-visto:${yo}:${B.week}`;
     if (VISTO.has(k) || lee(k)) return;
     const app = document.getElementById('app');
-    if (document.hidden || !app || app.hidden || document.getElementById('gnd') || OV) { if (intentos++ < 60) espera = setTimeout(intenta, 1500); return }
+    if (document.hidden || !app || app.hidden || document.getElementById('gnd') || document.getElementById('rg-ov') || OV) { if (intentos++ < 60) espera = setTimeout(intenta, 1500); return }
     if (anima(B)) { VISTO.add(k); guarda(k, '1') }
   }
   function mira() {

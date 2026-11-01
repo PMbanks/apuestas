@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "ruleta-global-0111",
+   "fecha": "2026-11-01",
+   "hora": "19:05",
+   "titulo": "Ruleta global",
+   "texto": "Cada lunes la app sortea 1.000 entre los 9 y te enseña en grande a quién le ha tocado. Tu ruleta ahora se gira cada 3 días, estar 3 horas en la app da 300 y el bote de la semana es de todos, aunque te deje en negativo (en negativo no se puede apostar).",
+   "titulo_en": "Global wheel",
+   "texto_en": "Every Monday the app draws 1,000 among the 9 of you and shows big who won it. Your wheel now spins every 3 days, 3 hours in the app pays 300 and everyone is in the weekly pot, even if it leaves you below zero (you cannot bet below zero).",
+   "img": "novedades/ruleta-global.webp",
+   "ir": "recompensas"
+  },
+  {
    "id": "quien-dentro-0111",
    "fecha": "2026-11-01",
    "hora": "18:55",
