@@ -17,6 +17,10 @@
 })();
 (function () {
   const D = {
+    // Mis apuestas (01-11, misapuestas.js)
+    'Empieza en': 'Starts in', 'Tienes en juego': 'You have in play', 'Lo próximo': 'Up next', 'Tus números': 'Your numbers', 'Total': 'Total',
+    'sin aciertos aún': 'no wins yet', 'sin resultados aún': 'no results yet', 'la última, ganada': 'last one won', 'la última, perdida': 'last one lost',
+    'ganadas seguidas': 'wins in a row', 'perdidas seguidas': 'losses in a row', 'Retos acabados': 'Finished challenges',
     // menu A (01-11): Más en la barra de abajo de movil, burbuja del chat y Monedero arriba
     'Más': 'More', 'Más secciones': 'More sections', 'mantenimiento': 'maintenance', 'Abrir el chat': 'Open chat', 'Foto': 'Photo', 'Nuevos': 'New',
     // Ya jugados B (01-11): el menu del titulo de Partidos
@@ -372,6 +376,7 @@
   const DIAS = { LUN: 'MON', 'MIÉ': 'WED', JUE: 'THU', VIE: 'FRI', 'SÁB': 'SAT', DOM: 'SUN', HOY: 'TODAY', ENE: 'JAN', ABR: 'APR', AGO: 'AUG', DIC: 'DEC' };
   const MESES = { ene: 'jan', feb: 'feb', mar: 'mar', abr: 'apr', may: 'may', jun: 'jun', jul: 'jul', ago: 'aug', sep: 'sep', sept: 'sep', oct: 'oct', nov: 'nov', dic: 'dec' };
   const R = [
+    [/^(\d+) resueltas?$/, (m, n) => `${n} settled`], [/^(\d+) en vivo$/, '$1 live'],   // Mis apuestas (01-11)
     [/^(\d+) en directo$/, '$1 live'],   // menu A (01-11): la tira de directo de movil
     [/^(\d+) resultados?$/, (m, n) => `${n} result${n === '1' ? '' : 's'}`],   // Ya jugados B (01-11)
     // Apuestas de todos (01-11, todos.js)
