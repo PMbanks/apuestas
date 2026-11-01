@@ -47,7 +47,7 @@ begin
     raise exception 'FALLO: el bote no deja en negativo (40 -> %, 0 -> %, -30 -> %)', pg_temp.sal(pobre), pg_temp.sal(cero), pg_temp.sal(neg);
   end if;
   perform bote_semanal();
-  perform sync_close('secreto-de-prueba');
+  perform sync_close((select value #>> '{}' from settings where key = 'sync_secret'));
   select count(*) into c2 from ledger where kind = 'bote' and week = wk;
   if c2 <> c then raise exception 'FALLO: el bote cobra dos veces (% y %)', c, c2; end if;
   if (select count(*) from chat where id > chat0 and body like 'Bote de la semana:%') <> 1 then raise exception 'FALLO: el bote no lo dice una vez en el chat'; end if;
@@ -89,7 +89,7 @@ begin
   -- antes de la fecha de inicio no sortea
   delete from ledger where kind = 'ruleta_global' and week = wk; delete from ruleta_global where week = wk;
   update settings set value = to_jsonb((wk + 7)::text) where key = 'ruleta_global_desde';
-  perform sync_close('secreto-de-prueba');
+  perform sync_close((select value #>> '{}' from settings where key = 'sync_secret'));
   if exists (select 1 from ruleta_global where week = wk) then raise exception 'FALLO: la ruleta global sortea antes de empezar'; end if;
   update settings set value = to_jsonb(wk::text) where key = 'ruleta_global_desde';
 
