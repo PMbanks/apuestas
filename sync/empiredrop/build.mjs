@@ -37,7 +37,7 @@ const GRUPO_DE = {
 const GRUPO_N = { tec: 1, relojes: 2, moda: 3, motor: 4, inv: 5 };
 const RAR = { COMMON: 'mil', UNCOMMON: 'mil', RARE: 'res', EPIC: 'cla', LEGENDARY: 'cov', GOLDEN: 'esp' };
 
-const limpia = (s) => String(s).replace(/[\u2013\u2014]/g, ' ').replace(/\s-\s/g, ' ').replace(/\s+/g, ' ').trim();
+const limpia = (s) => String(s).replace(/[\u2013\u2014]/g, '-').replace(/(\s+-+)+\s+/g, ' ').replace(/\s+/g, ' ').trim();
 const sq = (s) => (s == null ? 'null' : `'${String(s).replace(/'/g, "''")}'`);
 const imgId = (p) => p.split('/').pop().replace(/\.\w+$/, '');
 
