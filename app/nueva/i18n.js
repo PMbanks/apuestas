@@ -36,6 +36,10 @@
     'Amigos en este partido': 'Friends in this match', 'Retar a un amigo en este partido': 'Challenge a friend on this match', 'Elige amigo y resultado.': 'Pick a friend and a result.',
     'Escribe a tus amigos': 'Message your friends', 'Pides a tu amigo': 'You ask your friend for', 'Elige a un amigo': 'Pick a friend', 'Los amigos': 'The friends',
     'Aún no hay tratos. Elige a un amigo y propón el primero.': 'No trades yet. Pick a friend and make the first offer.', 'Trato entre amigos': 'Trade between friends',
+    // ganada o perdida en las tarjetas (01-11, resultado.js e Inicio)
+    'Retirada': 'Cashed out', 'Cobraría': 'Payout', 'Devuelto': 'Refunded', '★ Empate': '★ Draw', '★ Empate ·': '★ Draw ·',
+    'Combinada cobrada': 'Parlay won', 'Combinada perdida': 'Parlay lost', 'Combinada devuelta': 'Parlay refunded', 'Combinada cancelada': 'Parlay cashed out',
+    'Ninguna en juego. En Partidos, mete 2 o más cuotas en el boleto y elige Combinada.': 'None in play. In Matches, put 2 or more odds in the slip and pick Parlay.',
     // apostar en directo (31-10): frases enteras, antes de que las reglas sueltas cambien palabras sueltas
     'la cuota se mueve con el marcador': 'odds move with the score', 'Combinada de la semana': 'Parlay of the week', 'CANCELADA': 'CANCELLED', 'Combinada cancelada: cobras': 'Parlay cancelled: you get',
     // perfil con pestanas (31-10)

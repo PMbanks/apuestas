@@ -128,7 +128,7 @@
     firma = f;
     slot.innerHTML = !C.list.length ? '' : `<div class="sec-h mb-h"><h2>Combinadas</h2><i>${abiertas.length}</i></div>
       ${abiertas.length ? `<div class="cmb-cs">${abiertas.map(tarjeta).join('')}</div>` : '<p class="hint">Ninguna en juego. En Partidos, mete 2 o más cuotas en el boleto y elige Combinada.</p>'}
-      ${cerradas.length ? `<div class="cmb-cs cerr">${cerradas.map(tarjeta).join('')}</div>` : ''}${C.err ? `<p class="hint">${esc(C.err)}</p>` : ''}`;
+      ${cerradas.length ? (window.GM_RES ? `<div class="rsl-g">${cerradas.map((c, i) => GM_RES.combinada(c, { i }) || tarjeta(c)).join('')}</div>` : `<div class="cmb-cs cerr">${cerradas.map(tarjeta).join('')}</div>`) : ''}${C.err ? `<p class="hint">${esc(C.err)}</p>` : ''}`;
     traduce(slot);
   }
 

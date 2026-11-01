@@ -893,6 +893,7 @@ function mbCard(b, i) {
   </article>`;
 }
 function mbFila(b, i) {
+  if (window.GM_RES) { const h = GM_RES.apuesta(b, { i }); if (h) return h }   // PM 01-11: franja de color, escudo de fondo y cuadrados (resultado.js)
   const m = byId(b.m); if (!m) return '';
   const t = Date.parse(b.set || b.at), v = neto(b);
   const cr = (s, p) => `<span class="bor-cr ${b.p === p ? 'on' : ''}">${logo(m, s)}</span>`;
@@ -1041,7 +1042,8 @@ async function cargaAbp() {
   ABP = error ? { key, srv: false } : { key, srv: true, total: data?.total || 0, rows: (data?.rows || []).map(abMap).filter((b) => b.k) };
   if (S.scr === 'colegas') render();
 }
-function abTicket(b) {
+function abTicket(b, i) {
+  if (window.GM_RES) { const h = GM_RES.apuesta(b, { i, quien: true }); if (h) return h }   // como en Mis apuestas (resultado.js)
   const m = byId(b.m); if (!m) return '';
   const est = abEst(b), t = Date.parse(b.set || b.at), v = b.st === 'won' ? b.pay - b.stake : 0;
   const cr = (sd, p) => `<span class="bor-cr ${b.p === p ? 'on' : ''}">${logo(m, sd)}</span>`;
