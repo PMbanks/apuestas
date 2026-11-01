@@ -191,27 +191,76 @@
   const IC_GENTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.2 19.5a5.8 5.8 0 0 1 11.6 0"/><circle cx="16.8" cy="9.6" r="2.6"/><path d="M15.4 14.4a4.6 4.6 0 0 1 5.6 4.5"/></svg>';
   const vacio = (ic, t, p, btn) => `<div class="ini-vacio"><span class="ini-vacio-i">${ic}</span><b>${t}</b><p>${p}</p>${btn ? `<button class="ini-ir" data-scr="partidos">Ir a Partidos</button>` : ''}</div>`;
 
+  /* PM 01-11: "En juego" primero y "Últimos resultados" debajo, con páginas (‹ 1 / 4 ›), y el periodo de lo de arriba
+     (esta semana, este mes o de siempre) se cambia tocándolo. Todo se repinta por trozos (data-blk) sin tocar el resto de la
+     pantalla, y cada trozo guarda el alto de su página más alta para que nada de debajo ni el botón de páginas salte. */
+  const POR_AJ = 4, POR_RS = 6;
+  let PER = null;                         // 'visita' | 'sem' | 'mes' | 'todo'; null = lo normal (visita si hay algo nuevo, si no la semana)
+  const PG = { aj: 0, rs: 0 };            // página de cada lista (empieza en 0)
+  const MH = { w: 0, aj: 0, rs: 0, n: { aj: -1, rs: -1 } };   // alto reservado por trozo y cuantas fichas tenía
+  const iniMes = () => Date.now() - 30 * DIA;   // "mes" = los ultimos 30 dias (el 1 de cada mes, el mes natural estaria casi vacio)
+  const IC_DESP = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const pagina = (b, n, por) => { const t = Math.max(1, Math.ceil(n / por)); PG[b] = Math.min(PG[b], t - 1); return [PG[b], t] };
+  const pager = (b, pg, t) => t > 1 ? `<nav class="pags ini-pags"><button type="button" data-ini-pg="${b}:${pg - 1}" ${pg ? '' : 'disabled'} aria-label="Anterior">‹</button><span class="pags-n" data-notr>${pg + 1} / ${t}</span><button type="button" data-ini-pg="${b}:${pg + 1}" ${pg < t - 1 ? '' : 'disabled'} aria-label="Siguiente">›</button></nav>` : '';
+  // si cambia cuantas fichas hay, el alto guardado ya no vale; si cambia el ancho de la pantalla, tampoco
+  const reserva = (b, n) => { let cambio = false;
+    if (MH.w !== innerWidth) { MH.w = innerWidth; MH.aj = MH.rs = 0; MH.n.aj = MH.n.rs = -1; cambio = true }
+    if (MH.n[b] !== n) { MH.n[b] = n; MH[b] = 0; cambio = true }
+    return cambio };
+
+  function datosTu(v) {
+    const res = resueltas(MEK, ME, null), nuevos = v.prev ? res.filter((x) => x.t > v.prev) : [], hay = nuevos.length > 0;
+    let p = PER; if (p === 'visita' && !hay) p = null;
+    p = p || (hay ? 'visita' : 'sem');
+    const lista = p === 'visita' ? nuevos : res.filter((x) => x.t >= (p === 'sem' ? WEEK0 : p === 'mes' ? iniMes() : 0));
+    return { res, nuevos, hay, p, lista, neto: lista.reduce((a, x) => a + x.v, 0), ab: abiertas(MEK, ME) };
+  }
+  const etiqueta = (d, v, p) => (p === 'visita' ? desde(v.prev) : { sem: 'esta semana', mes: 'últimos 30 días', todo: 'de siempre' }[p]);
+  const pastilla = (neto) => `Tú${neto ? ` <i class="${neto > 0 ? 'up' : 'dn'}">${neto > 0 ? '▲' : '▼'} ${N(Math.abs(neto))}</i>` : ''}`;
+  function cabTu(d, v) {
+    const yo = F.find((f) => f.me) || F[0], neto = d.neto;
+    const ops = [...(d.hay ? ['visita'] : []), 'sem', 'mes', 'todo'];
+    return `${av(MEK, 'ini-yo')}<div class="ini-who"><h2>Tú</h2><span class="lab">${N(yo.s)}${coin()} · ${[...F].sort((a, b) => b.s - a.s).indexOf(yo) + 1}º de ${F.length}</span></div>
+      <div class="r ini-pw"><button type="button" class="ini-per" data-ini-pt aria-haspopup="true" aria-expanded="false"><span>${etiqueta(d, v, d.p)}</span>${IC_DESP}</button>
+        <div class="ini-pm" role="menu">${ops.map((o) => `<button type="button" role="menuitem" data-ini-per="${o}" class="${o === d.p ? 'on' : ''}">${etiqueta(d, v, o)}</button>`).join('')}</div>
+        <b class="ini-net ${neto > 0 ? 'up' : neto < 0 ? 'dn' : ''}">${neto ? `<small>${neto > 0 ? '▲' : '▼'}</small>` : ''}${N(Math.abs(neto))}${coin()}</b></div>`;
+  }
+  function blkAj(d) {
+    const ab = d.ab, [pg, t] = pagina('aj', ab.length, POR_AJ), cobrable = ab.reduce((a, x) => a + cobraria(x), 0);
+    return `<div class="ini-sub"><h3>En juego<i>${ab.length}</i></h3>${ab.length ? `<span><span>si aciertas todo</span> <b>${N(cobrable)}</b>${coin()}</span>` : ''}</div>`
+      + (ab.length ? ab.slice(pg * POR_AJ, (pg + 1) * POR_AJ).map(ticket).join('') + pager('aj', pg, t)
+        : vacio(IC_TICKET, 'Nada en juego', 'Se apuesta en Partidos: toca una cuota y dale a Apostar.', true));
+  }
+  function blkRs(d, v) {
+    const { lista, p } = d, [pg, t] = pagina('rs', lista.length, POR_RS);
+    const cuenta = (xs) => { const c = { won: 0, lost: 0, void: 0 }; for (const x of xs) c[x.r]++;
+      return [[c.won, c.won === 1 ? 'ganada' : 'ganadas'], [c.lost, c.lost === 1 ? 'perdida' : 'perdidas'], [c.void, c.void === 1 ? 'devuelta' : 'devueltas']].filter(([n]) => n).map(([n, x]) => `${n} ${x}`).join(' · ') };
+    return `<div class="ini-sub"><h3>${p === 'visita' ? 'Acaba de pasar' : 'Tus últimos resultados'}<i>${lista.length}</i></h3><span>${cuenta(lista)}</span></div>`
+      + (lista.length ? `<div class="ini-res">${lista.slice(pg * POR_RS, (pg + 1) * POR_RS).map(ficha).join('')}</div>${pager('rs', pg, t)}` : '<p class="ini-nada">Nada en este periodo</p>');
+  }
   function colTu(v, juegos) {
     const yo = F.find((f) => f.me) || F[0]; if (!yo) return '';
-    const res = resueltas(MEK, ME, null), abiertasYo = abiertas(MEK, ME);
-    const nuevos = v.prev ? res.filter((x) => x.t > v.prev) : [], hay = nuevos.length > 0;
-    const neto = (hay ? nuevos : res.filter((x) => x.t >= WEEK0)).reduce((a, x) => a + x.v, 0);
-    const lista = hay ? nuevos : res.slice(0, 4), POR = 6;
-    const cuenta = (xs) => { const c = { won: 0, lost: 0, void: 0 }; for (const x of xs) c[x.r]++;
-      return [[c.won, c.won === 1 ? 'ganada' : 'ganadas'], [c.lost, c.lost === 1 ? 'perdida' : 'perdidas'], [c.void, c.void === 1 ? 'devuelta' : 'devueltas']].filter(([n]) => n).map(([n, t]) => `${n} ${t}`).join(' · ') };
-    const cobrable = abiertasYo.reduce((a, x) => a + cobraria(x), 0);
-    const head = `<div class="ini-colh yo">${av(MEK, 'ini-yo')}<div class="ini-who"><h2>Tú</h2><span class="lab">${N(yo.s)}${coin()} · ${[...F].sort((a, b) => b.s - a.s).indexOf(yo) + 1}º de ${F.length}</span></div>
-      <div class="r"><span class="lab">${hay ? desde(v.prev) : 'esta semana'}</span><b class="ini-net ${neto > 0 ? 'up' : neto < 0 ? 'dn' : ''}">${neto ? `<small>${neto > 0 ? '▲' : '▼'}</small>` : ''}${N(Math.abs(neto))}${coin()}</b></div></div>`;
-    if (!res.length && !abiertasYo.length) return head + vacio(IC_TICKET, 'Todavía no has apostado', 'Se apuesta en Partidos: toca una cuota y dale a Apostar.', true);
-    let h = head;
-    if (lista.length) {
-      h += `<div class="ini-sub"><h3>${hay ? 'Acaba de pasar' : 'Tus últimos resultados'}<i>${lista.length}</i></h3><span>${hay ? cuenta(nuevos) : v.prev ? 'nada nuevo desde tu última visita' : ''}</span></div>
-        <div class="ini-res">${lista.slice(0, POR).map(ficha).join('')}</div>${lista.length > POR ? '<button class="ini-mas" data-scr="apuestas">Ver todas en Mis apuestas</button>' : ''}`;
+    const d = datosTu(v);
+    const head = (inner) => `<div class="ini-colh yo" data-blk="hd">${inner}</div>`;
+    if (!d.res.length && !d.ab.length) return head(cabTu(d, v)) + vacio(IC_TICKET, 'Todavía no has apostado', 'Se apuesta en Partidos: toca una cuota y dale a Apostar.', true);
+    const blk = (b, inner, n) => { reserva(b, n); return `<div class="ini-blk" data-blk="${b}" ${MH[b] ? `style="min-height:${MH[b]}px"` : ''}>${inner}</div>` };
+    return head(cabTu(d, v)) + blk('aj', blkAj(d), d.ab.length) + (d.res.length ? blk('rs', blkRs(d, v), d.lista.length) : '');
+  }
+  // repinta un solo trozo en su sitio; el alto no baja nunca (salvo si cambia cuantas fichas hay), asi que nada se mueve
+  function pinta(b) {
+    const el = document.querySelector(`.ini-tu [data-blk=${b}]`); if (!el) return;
+    const v = visita(), d = datosTu(v);
+    if (b === 'hd') el.innerHTML = cabTu(d, v);
+    else {
+      const h0 = el.offsetHeight, n = b === 'aj' ? d.ab.length : d.lista.length;
+      if (!reserva(b, n)) MH[b] = Math.max(MH[b], h0);
+      el.style.minHeight = (MH[b] || h0) + 'px';   // se aguanta el alto mientras se cambia lo de dentro
+      el.innerHTML = b === 'aj' ? blkAj(d) : blkRs(d, v);
+      g(() => window.GM_LANG && GM_LANG.traduce(el));   // traducido antes de medir: en ingles los textos cambian de ancho
+      el.style.minHeight = '0'; MH[b] = Math.max(MH[b], el.offsetHeight); el.style.minHeight = MH[b] + 'px';
     }
-    h += `<div class="ini-sub"><h3>En juego<i>${abiertasYo.length}</i></h3>${abiertasYo.length ? `<span><span>si aciertas todo</span> <b>${N(cobrable)}</b>${coin()}</span>` : ''}</div>`;
-    h += abiertasYo.length ? abiertasYo.slice(0, POR).map(ticket).join('') + (abiertasYo.length > POR ? '<button class="ini-mas" data-scr="apuestas">Ver todas en Mis apuestas</button>' : '')
-      : vacio(IC_TICKET, 'Nada en juego', 'Se apuesta en Partidos: toca una cuota y dale a Apostar.', true);
-    return h;
+    g(() => window.GM_LANG && GM_LANG.traduce(el));
+    return d;
   }
 
   /* ---------- Amigos ---------- */
@@ -274,11 +323,10 @@
     if (window.GM_CMB) setTimeout(() => g(() => GM_CMB.carga()), 0);   // la primera vez y luego cada 30 s como mucho (lo frena combinadas.js)
     const tu = colTu(v, juegos), am = colAmigos(v, juegos);
     // el conmutador: lo neto tuyo y cuantos amigos tienen algo en juego
-    const res = resueltas(MEK, ME, null), nuevos = v.prev ? res.filter((x) => x.t > v.prev) : [];
-    const neto = (nuevos.length ? nuevos : res.filter((x) => x.t >= WEEK0)).reduce((a, x) => a + x.v, 0);
+    const neto = datosTu(v).neto;
     const enJuego = F.filter((f) => !f.me && abiertas(f.id, f.uid).length).length;
     return `<div class="ini" data-tab="${TAB}">
-      <div class="ini-segw"><nav class="ini-seg"><button type="button" data-ini="tu" class="${TAB === 'tu' ? 'on' : ''}">Tú${neto ? ` <i class="${neto > 0 ? 'up' : 'dn'}">${neto > 0 ? '▲' : '▼'} ${N(Math.abs(neto))}</i>` : ''}</button><button type="button" data-ini="am" class="${TAB === 'am' ? 'on' : ''}">Amigos <i>${enJuego} en juego</i></button></nav></div>
+      <div class="ini-segw"><nav class="ini-seg"><button type="button" data-ini="tu" class="${TAB === 'tu' ? 'on' : ''}">${pastilla(neto)}</button><button type="button" data-ini="am" class="${TAB === 'am' ? 'on' : ''}">Amigos <i>${enJuego} en juego</i></button></nav></div>
       <div class="ini-cols"><section class="ini-col ini-tu">${tu}</section><section class="ini-col ini-am">${am}</section></div>
     </div>`;
   }
@@ -290,6 +338,28 @@
     const vw = document.getElementById('view'); if (vw) vw.scrollTop = 0;
     if (window.GM_SONIDOS) g(() => GM_SONIDOS.suena('clic'));
   });
+  // el periodo (esta semana / este mes / de siempre) y las páginas: se repinta solo ese trozo, sin render() de toda la pantalla
+  const suena = () => { if (window.GM_SONIDOS) g(() => GM_SONIDOS.suena('clic')) };
+  const cierraPer = () => { const w = document.querySelector('.ini-pw.open'); if (!w) return false; w.classList.remove('open'); const b = w.querySelector('.ini-per'); if (b) b.setAttribute('aria-expanded', 'false'); return true };
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-ini-pt],[data-ini-per],[data-ini-pg]');
+    if (!t) { cierraPer(); return }
+    if (t.matches('[data-ini-pt]')) {
+      const w = t.closest('.ini-pw'), abre = !w.classList.contains('open'); cierraPer();
+      if (abre) { w.classList.add('open'); t.setAttribute('aria-expanded', 'true') }
+      suena(); return;
+    }
+    if (t.matches('[data-ini-per]')) {
+      const p = t.dataset.iniPer; if (!['visita', 'sem', 'mes', 'todo'].includes(p)) return;
+      PER = p; PG.rs = 0; pinta('hd'); pinta('rs');
+      const s = document.querySelector('.ini-seg [data-ini=tu]'); if (s) s.innerHTML = pastilla(datosTu(visita()).neto);
+      g(() => window.GM_LANG && GM_LANG.traduce(document.querySelector('.ini-seg')));
+      suena(); return;
+    }
+    const [b, n] = String(t.dataset.iniPg).split(':');
+    if ((b === 'aj' || b === 'rs') && Number.isFinite(+n) && +n >= 0) { PG[b] = +n; pinta(b); suena() }
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cierraPer() });
   // las combinadas llegan despues de pintar: se repinta Inicio una vez cuando cambian
   addEventListener('gm:cmb-datos', () => { if (g(() => S.scr) === 'inicio' && !document.activeElement?.matches('input,textarea')) g(() => render()) });
   window.GM_INICIO = { html, visita: () => (V ? V.prev : 0) };
