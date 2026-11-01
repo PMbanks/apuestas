@@ -1,3 +1,5 @@
+-- NOTA (02-11): desde db/065 los asientos extra duran una sola ronda (al acabar vuelves al primero), asi que la parte de esta prueba que da por hecho que
+-- los asientos 1, 2 y 6 siguen sentados entre rondas (y las 300 rondas al azar) ya no vale tal cual: la regla nueva la comprueba db/065_prueba.sql.
 -- Prueba de db/048_blackjack_manos.sql (varias manos por jugador en la mesa de blackjack), para el editor SQL de Supabase.
 -- Va despues de 040 y 048. Con los jugadores de verdad (hacen falta al menos cinco). Mazos fijos para probar cada regla y el
 -- tiempo adelantado tocando la ronda (corre como administrador). Prueba:
