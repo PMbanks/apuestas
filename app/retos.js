@@ -81,7 +81,7 @@
   }
 
   /* ---------- boton "Retar" (en las filas, la ficha y la ventana) ---------- */
-  const btn = (m, cls) => (g(() => isOpen(m), false) ? `<button type="button" class="rt-btn ${cls || ''}" data-retar="${esc(m.id)}" aria-label="Retar">${SWORDS}<span>Retar</span></button>` : '');
+  const btn = (m, cls) => (g(() => isOpen(m) && !(m.s === 'r' && m.fk !== 'duel'), false) ? `<button type="button" class="rt-btn ${cls || ''}" data-retar="${esc(m.id)}" aria-label="Retar">${SWORDS}<span>Retar</span></button>` : '');
 
   /* ---------- boton "Aceptar · pones 250, ganas 500" (banner, listas y tarjetas) ---------- */
   function aceptar(c, cls) {

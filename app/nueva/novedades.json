@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "f1-0211",
+   "fecha": "2026-11-02",
+   "hora": "04:10",
+   "titulo": "Fórmula 1 en Partidos",
+   "texto": "Ya puedes apostar a la Fórmula 1: ganador de la carrera, podio, top 10, pole, vuelta rápida, quién abandona, duelos entre compañeros y el campeonato. Abre la ficha de cada piloto y escudería con su historia desde 1950. Las cuotas las calculamos con los resultados de la temporada.",
+   "titulo_en": "Formula 1 in Matches",
+   "texto_en": "You can now bet on Formula 1: race winner, podium, top 10, pole, fastest lap, who retires, teammate duels and the championship. Open any driver or team profile with their history since 1950. Odds are calculated from this season's results.",
+   "img": "novedades/f1.webp",
+   "ir": "partidos"
+  },
+  {
    "id": "tu-foto-0211",
    "fecha": "2026-11-02",
    "hora": "03:30",
