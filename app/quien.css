@@ -47,8 +47,8 @@
 .lvc-w .lvc-avs .qn-n{box-shadow:0 0 0 2px #24252d}
 
 /* filas de Partidos */
-.row.qn-hay{background:linear-gradient(90deg,rgba(255,255,255,.045),transparent 60%)}
-.row.qn-hay.qn-reto{background:linear-gradient(90deg,rgba(var(--rt-b),.13),transparent 60%)}
+.row.qn-hay{background:linear-gradient(90deg,rgba(76,141,255,.17),rgba(76,141,255,.07) 60%,rgba(76,141,255,.03));color:var(--ink)}
+.row.qn-hay:hover{background:linear-gradient(90deg,rgba(76,141,255,.24),rgba(76,141,255,.1) 60%,rgba(76,141,255,.04))}
 .row.qn-hay .who{flex-direction:column;align-items:center;justify-content:center;gap:4px}
 .row.qn-hay .who .qn-tag{padding:2px 5px;font-size:9px!important;letter-spacing:.06em}
 .qn-mv{display:none}

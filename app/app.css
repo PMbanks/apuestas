@@ -2319,7 +2319,6 @@ html[data-moneda="robux"] .cn{background-image:url(img/monedas/robux.svg)}
 @media (min-width:861px){.d-favs{grid-template-columns:minmax(0,1fr) 104px minmax(0,1fr)}.d-favs>:nth-child(2){white-space:nowrap}}
 /* PM, 01-11: "lo que este live, pon toda la linea del partido en amarillo para diferenciarlo" */
 .row.envivo{background:linear-gradient(90deg,rgba(242,193,78,.15),rgba(242,193,78,.06) 60%,rgba(242,193,78,.03));color:var(--ink)}
-.row.envivo::after{content:"";position:absolute;left:-14px;top:10px;bottom:10px;width:3px;border-radius:3px;background:var(--acc)}
 .row.envivo:hover{background:linear-gradient(90deg,rgba(242,193,78,.2),rgba(242,193,78,.08) 60%,rgba(242,193,78,.04))}
 /* contrasenas de los amigos (alta.js, db/044, solo el admin) */
 .pw-l{display:grid;gap:8px;margin-top:12px}
@@ -2338,3 +2337,18 @@ html[data-moneda="robux"] .cn{background-image:url(img/monedas/robux.svg)}
 .vy-c{flex-wrap:wrap;row-gap:5px;white-space:normal}
 .vy-c>span:first-child{white-space:nowrap}
 .vy-c .vy-e{flex:none;white-space:nowrap}
+
+/* PM 01-11: sin la linea suelta al lado de LIVE; LIVE y la hora con aire a la izquierda (siguen a la izquierda); en movil los 2 equipos con mas sitio */
+@media (min-width:861px){.row{grid-template-columns:76px 52px minmax(0,1fr) 44px 72px 72px 72px}}
+@media (max-width:860px){.row{grid-template-columns:62px minmax(0,1fr) repeat(3,50px);column-gap:6px}.row.cv .tm{font-size:13.5px;gap:6px}.row.cv .o.na{display:none}.row.cv{grid-template-columns:62px minmax(0,1fr) repeat(2,56px)}}
+.row .t{padding-left:14px}
+.row .t small{white-space:nowrap}
+
+.jug-r.mi-gana{background:linear-gradient(90deg,rgba(43,212,125,.2),rgba(43,212,125,.08) 60%,rgba(43,212,125,.03))}
+.jug-r.mi-pierde{background:linear-gradient(90deg,rgba(224,100,111,.2),rgba(224,100,111,.08) 60%,rgba(224,100,111,.03))}
+.jug-r.mi-gana:hover{background:linear-gradient(90deg,rgba(43,212,125,.28),rgba(43,212,125,.11) 60%,rgba(43,212,125,.04))}
+.jug-r.mi-pierde:hover{background:linear-gradient(90deg,rgba(224,100,111,.28),rgba(224,100,111,.11) 60%,rgba(224,100,111,.04))}
+/* el marcador de las filas de Valorant y CS2 siempre pegado al borde derecho de los nombres, igual en todas (PM: "el score esta como movido") */
+.row.cv .tm{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center}
+.row.cv .tm .vn{margin-left:0;justify-self:end;padding-left:8px}
+.row.cv .tm>.fav-i,.row.cv .tm>.dly{grid-column:auto}

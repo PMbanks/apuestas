@@ -828,11 +828,13 @@ function jugX(m) {
     .map(([f, bs]) => { const v = bs.reduce((a, b) => a + neto(b), 0); return `<span class="jug-tg ${v > 0 ? 'win' : v < 0 ? 'lose' : ''}">${av(f.id, 'sm')}<b>${jugSig(v) + N(Math.abs(v))}${coin()}</b></span>` });
   const t = [...cs, ...fs]; return t.length ? `<span class="jug-x">${t.join('')}</span>` : '';
 }
+// PM 01-11: "si ha ganado el partido que salga toda la linea de color rojo o verde": la fila entera en verde si ganaste lo apostado y en rojo si perdiste
+function jugTono(m) { const bs = jugResueltas(MEK, m.id).filter((b) => b.st !== 'void'); if (!bs.length) return ''; const v = bs.reduce((a, b) => a + neto(b), 0); return v > 0 ? 'mi-gana' : v < 0 ? 'mi-pierde' : ''; }
 function jugadosHtml() {
   const l = jugados(); if (!l.length) return '';
   if (window.GM_CMB) setTimeout(() => { try { GM_CMB.carga() } catch {} }, 0);   // tus combinadas con cada partido (lo frena combinadas.js: cada 30 s)
   const n = S.soloJug ? l.length : Math.min(l.length, S.jugN || 8), gan = (m, k) => { const [x, y] = String(m.score || '').split(' ')[0].split(':').map(Number); if (!(x >= 0 && y >= 0) || x === y) return ''; return (x > y) === (k === 'home') ? 'w' : 'l' };
-  return `<section class="jug"><div class="day"><b>Ya jugados</b><span>últimos dos días</span><i>${l.length}</i></div>${l.slice(0, n).map((m) => `<button class="jug-r" data-goto="${m.id}">
+  return `<section class="jug"><div class="day"><b>Ya jugados</b><span>últimos dos días</span><i>${l.length}</i></div>${l.slice(0, n).map((m) => `<button class="jug-r ${jugTono(m)}" data-goto="${m.id}">
     <span class="jug-t">${WD(m.at)} ${HM(m.at)}<small>${esc(L[m.lg]?.[0] || '')}</small></span>
     <span class="jug-e ${gan(m, 'home')}">${logo(m, 'a')}<b>${esc(m.a)}</b></span><span class="jug-s">${esc(String(m.score || '').split(' ')[0] || 'final')}</span><span class="jug-e b ${gan(m, 'away')}"><b>${esc(m.b)}</b>${logo(m, 'b')}</span>
     ${jugMio(m)}${jugX(m)}</button>`).join('')}
