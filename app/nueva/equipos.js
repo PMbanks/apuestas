@@ -242,7 +242,7 @@
 
   /* ---------- tocar un logo abre el equipo ---------- */
   // acciones que mueven dinero o escogen una apuesta: ahi el logo no se atiende, para no estorbar
-  const NO = '[data-pick],[data-stake],[data-cancel],[data-retirar],[data-accept],[data-decline],[data-sumo],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-share],[data-xc],[data-cmb-co],[data-bsp]';
+  const NO = '[data-pick],[data-stake],[data-cancel],[data-retirar],[data-accept],[data-decline],[data-sumo],[data-retar],[data-pn],[data-rto],[data-rpick],[data-rstake],[data-share],[data-xc],[data-cmb-co],[data-bsp]';
   // de que equipo es un logo: se busca su direccion en los partidos de la app (y en los rivales de las fichas ya abiertas)
   function deLogo(im) {
     const src = im.getAttribute('src'); if (!src || /^data:/.test(src)) return null;
