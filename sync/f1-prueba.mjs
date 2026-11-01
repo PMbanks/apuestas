@@ -45,5 +45,8 @@ ok(sq.win.a > s.win.a, 'la clasificacion es mas previsible que la carrera');
 const camp = m.simulaCampeonato(lineup, st, pd, [{ sprint: false }, { sprint: true }, { sprint: false }], { a: 100, b: 95, c: 60, d: 10, e: 0, f: 0 }, { e0: 195, e1: 70, e2: 0 }, 9);
 ok(Math.abs(Object.values(camp.pilotos).reduce((x, y) => x + y, 0) - 1) < 1e-9 && Math.abs(Object.values(camp.escuderias).reduce((x, y) => x + y, 0) - 1) < 1e-9, 'campeonato: probabilidades suman 1');
 console.log('P(win) =', JSON.stringify(Object.fromEntries(Object.entries(s.win).map(([k, v]) => [k, +v.toFixed(3)]))));
+// la pareja de un duelo no cambia de orden aunque cambien los puntos
+const eqx = [{ id: 'z_driver' }, { id: 'a_driver' }, { id: 'm_driver' }];
+ok(m.parejaDe(eqx, { z_driver: 50, a_driver: 40, m_driver: 10 }).join() === 'a_driver,z_driver' && m.parejaDe(eqx, { z_driver: 40, a_driver: 50, m_driver: 10 }).join() === 'a_driver,z_driver', 'duelo: misma pareja y mismo orden aunque cambien los puntos');
 // anular
 ok(JSON.stringify(m.aAnular([{ id: 'f1-2026-20-R', status: 'scheduled' }, { id: 'f1-2026-21-Q', status: 'scheduled' }, { id: 'f1-2026-WDC', status: 'scheduled' }, { id: 'f1-2025-3-R', status: 'live' }, { id: 'f1-2026-22-R', status: 'final' }], new Set([20, 22]), 2026)) === '["f1-2026-21-Q"]', 'aAnular: solo lo del ano que ya no esta en el calendario y no acabado');

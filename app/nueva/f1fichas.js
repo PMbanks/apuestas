@@ -69,11 +69,11 @@
     'Abu Dhabi': 'Abu Dabi', 'French': 'Francia', 'German': 'Alemania', 'Portuguese': 'Portugal', 'Turkish': 'Turquía', 'Russian': 'Rusia', 'Malaysian': 'Malasia', 'Argentine': 'Argentina', 'Swiss': 'Suiza', 'Swedish': 'Suecia',
     'South African': 'Sudáfrica', 'Moroccan': 'Marruecos', 'Pacific': 'del Pacífico', 'European': 'Europa', 'Indian': 'India', 'Korean': 'Corea', 'Styrian': 'Estiria', 'Eifel': 'Eifel', 'Tuscan': 'la Toscana', 'Sakhir': 'Sakhir',
     '70th Anniversary': 'del 70 Aniversario', 'Luxembourg': 'Luxemburgo', 'San Marino': 'San Marino', 'Caesars Palace': 'Caesars Palace', 'Indianapolis 500': 'Indianápolis 500', 'Madrid': 'Madrid', 'Detroit': 'Detroit', 'Dallas': 'Dallas', 'Pescara': 'Pescara' };
-  const gpNombre = (n) => { const s = String(n || ''); const m = /^(.+) Grand Prix$/.exec(s); if (!m) return s; return en() ? s : `Gran Premio de ${GPES[m[1]] || m[1]}`.replace('de del', 'del') };
+  const gpNombre = (n) => { const s = String(n || ''); const m = /^(.+) Grand Prix$/.exec(s); if (!m) return s; return sg(en() ? s : `Gran Premio de ${GPES[m[1]] || m[1]}`.replace('de del', 'del')) };
 
   /* ---------- pagina ---------- */
   const ST = { pila: [], el: null, tick: 0 };
-  const quien = (j) => `${j?.givenName || ''} ${j?.familyName || ''}`.trim();
+  const sg = F.sg, quien = (j) => sg(`${j?.givenName || ''} ${j?.familyName || ''}`);
   const edad = (dob) => { const t = Date.parse(dob); if (!t) return ''; const d = new Date(t), n = new Date(); let a = n.getFullYear() - d.getFullYear(); if (n < new Date(n.getFullYear(), d.getMonth(), d.getDate())) a--; return a };
   const fecha = (dob) => { const t = Date.parse(dob + 'T12:00:00Z'); return t ? new Intl.DateTimeFormat(en() ? 'en-GB' : 'es-ES', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(t) : '' };
   const pais = (cc) => g(() => new Intl.DisplayNames([en() ? 'en' : 'es'], { type: 'region' }).of(cc.toUpperCase()), '') || cc;
@@ -128,7 +128,7 @@
     jl(`/drivers/${id}/driverStandings.json?limit=100`, 12 * 3600e3, p.seq).then((j) => {
       if (!j) { D.err = { ...D.err, seas: 1 }; return re() }
       const fin = (y) => y < YA || (y === YA && new Date().getUTCMonth() === 11 && new Date().getUTCDate() > 15);
-      D.seas = lists(j).map((l) => { const s = l.DriverStandings?.[0] || {}; return { y: +l.season, pos: +s.position || 0, pts: +s.points || 0, w: +s.wins || 0, eq: (s.Constructors || []).map((c) => ({ id: c.constructorId, n: c.name })), fin: fin(+l.season) } }).sort((a, b) => a.y - b.y);
+      D.seas = lists(j).map((l) => { const s = l.DriverStandings?.[0] || {}; return { y: +l.season, pos: +s.position || 0, pts: +s.points || 0, w: +s.wins || 0, eq: (s.Constructors || []).map((c) => ({ id: c.constructorId, n: sg(c.name) })), fin: fin(+l.season) } }).sort((a, b) => a.y - b.y);
       re();
     });
     const k = D.k = D.k || {};
@@ -153,7 +153,7 @@
   /* ----- ficha de escuderia ----- */
   function pEquipo(p) {
     const D = p.d || (p.d = {}), info = D.info, seas = D.seas, k = D.k || {};
-    const col = colorEq(p.id), nom = info?.name || F.nomE(null, p.id), cc = F.iso(info?.nationality);
+    const col = colorEq(p.id), nom = sg(info?.name) || F.nomE(null, p.id), cc = F.iso(info?.nationality);
     let h = `<header class="f1-pf" style="--c:${col}"><span class="f1-big f1-bigeq" style="--c:${col}"><i>${esc(F.ini(nom))}</i></span><div class="f1-pi"><span class="lab">Escudería de Fórmula 1</span><h2 data-notr>${esc(nom)}</h2>
       <div class="f1-ps">${cc ? F.bandera(cc) : ''}<span data-notr>${esc(cc ? pais(cc) : info?.nationality || '')}</span>${seas && seas.length ? `<span class="f1-d" data-notr>${seas[0].y} ${en() ? 'to' : 'a'} ${seas[seas.length - 1].y}</span>` : ''}</div></div></header>`;
     const falla = !!(D.err && D.err.seas), titulos = seas ? seas.filter((s) => s.pos === 1 && s.fin) : null, pts = seas ? seas.reduce((a, s) => a + s.pts, 0) : falla ? null : undefined;
@@ -224,8 +224,8 @@
       if (!j) { D[key] = 'err'; return pintaSi(p) }
       const l = lists(j)[0]; if (!l) { D[key] = { rows: [], round: 0 }; return pintaSi(p) }
       D[key] = { round: +l.round || 0, rows: (tab === 'p' ? l.DriverStandings : l.ConstructorStandings || []).map((r) => tab === 'p'
-        ? { pos: +r.position || 0, id: r.Driver.driverId, n: quien(r.Driver), nat: r.Driver.nationality, w: +r.wins || 0, pts: +r.points || 0, eq: (r.Constructors || []).map((c) => c.name).join(' · ') }
-        : { pos: +r.position || 0, id: r.Constructor.constructorId, n: r.Constructor.name, nat: r.Constructor.nationality, w: +r.wins || 0, pts: +r.points || 0 }) };
+        ? { pos: +r.position || 0, id: r.Driver.driverId, n: quien(r.Driver), nat: r.Driver.nationality, w: +r.wins || 0, pts: +r.points || 0, eq: (r.Constructors || []).map((c) => sg(c.name)).join(' · ') }
+        : { pos: +r.position || 0, id: r.Constructor.constructorId, n: sg(r.Constructor.name), nat: r.Constructor.nationality, w: +r.wins || 0, pts: +r.points || 0 }) };
       pintaSi(p);
     });
   }

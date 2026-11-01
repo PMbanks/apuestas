@@ -39,6 +39,8 @@
   const FOTO = (espnId) => `https://a.espncdn.com/i/headshots/rpm/players/full/${espnId}.png`;
   const ini = (n) => String(n || '?').split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
   const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  // sin guiones en lo que se ve: "Jean-Eric Vergne" sale "Jean Eric Vergne" (mismo criterio que equipos.js)
+  const sg = (t) => String(t ?? '').replace(/\s[-–—]\s/g, ' · ').replace(/[–—]/g, '/').replace(/(?<=\p{L})-(?=\p{L})/gu, ' ').replace(/-/g, ' ').replace(/\s{2,}/g, ' ').trim();
   const bonito = (id) => String(id || '').split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   // el apellido de un nombre completo: "Andrea Kimi Antonelli" da Antonelli, "Nyck de Vries" da de Vries
   const apellido = (n) => { const w = String(n || '').trim().split(/\s+/); if (w.length < 3) return w.length > 1 ? w[1] : w[0] || ''; return /^(de|da|di|del|van|von|der|le|la|el|dos|du|ten)$/i.test(w[1]) ? w.slice(1).join(' ') : w.slice(2).join(' ') };
@@ -65,8 +67,8 @@
     try { window.dispatchEvent(new CustomEvent('gm:f1')) } catch {}
   }
   const dat = (id) => D.get(id) || null;
-  const nomP = (d, id) => d?.dr?.[id] || bonito(id);
-  const nomE = (d, id) => d?.eq?.[id] || (id === 'rb' ? 'Racing Bulls' : bonito(id));
+  const nomP = (d, id) => sg(d?.dr?.[id] || bonito(id));
+  const nomE = (d, id) => sg(d?.eq?.[id] || (id === 'rb' ? 'Racing Bulls' : bonito(id)));
   const colorE = (id) => (id && COLOR[id]) || ESPN.col.get(id) || '#8a8f98';
   const fotoP = (d, id) => (d?.ph?.[id] ? FOTO(d.ph[id]) : fotoDeNombre(nomP(d, id)));
   const caraP = (d, id, cls = '') => { const f = fotoP(d, id), c = colorE(d?.tm?.[id]); return `<span class="f1-ph ${cls}" style="--c:${c}">${f ? `<img src="${esc(f)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}<i>${esc(ini(nomP(d, id)))}</i></span>` };
@@ -160,7 +162,7 @@
   function cabHtml() {
     const p = ESPN.pil.slice(0, 3), c = ESPN.con.slice(0, 3);
     const yr = g(() => (ESPN.j?.children?.[0]?.standings?.season) || new Date().getFullYear(), new Date().getFullYear());
-    const fila = (x, i, k) => `<button type="button" class="f1-cr" ${k === 'p' ? `data-f1n="${esc(x.n)}"` : `data-f1e="${esc(norm(x.n))}" data-f1en="${esc(x.n)}"`}><span class="f1-pos">${x.pos || i + 1}</span>${k === 'p' ? `<img class="f1-mini" src="${FOTO(x.id)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<i class="f1-dot" style="--c:${esc(ESPN.col.get(norm(x.n)) || '#888')}"></i>`}<b data-notr>${esc(x.n)}</b><span class="f1-pts">${x.pts}</span></button>`;
+    const fila = (x, i, k) => `<button type="button" class="f1-cr" ${k === 'p' ? `data-f1n="${esc(x.n)}"` : `data-f1e="${esc(norm(x.n))}" data-f1en="${esc(x.n)}"`}><span class="f1-pos">${x.pos || i + 1}</span>${k === 'p' ? `<img class="f1-mini" src="${FOTO(x.id)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<i class="f1-dot" style="--c:${esc(ESPN.col.get(norm(x.n)) || '#888')}"></i>`}<b data-notr>${esc(sg(x.n))}</b><span class="f1-pts">${x.pts}</span></button>`;
     const vacio = !g(() => M.some((x) => x.s === 'r'), false) ? '<p class="hint f1-vacio">Los Grandes Premios con cuotas aparecen aquí unos días antes de cada fin de semana.</p>' : '';
     return `${vacio}<div class="f1-cab-h"><span class="lab">Campeonato ${esc(yr)}</span><button type="button" class="f1-link" data-f1c="d">Ver clasificaciones completas</button></div>
       <div class="f1-cab-g"><div class="f1-cs"><span class="lab f1-sub">Pilotos</span>${p.length ? p.map((x, i) => fila(x, i, 'p')).join('') : '<p class="hint">·</p>'}</div>
@@ -232,7 +234,7 @@
   function circuito(m, d) {
     const c = d.circ || {}, e = V.circ[c.id];
     const cc = g(() => (m.la || '').match(/\/w\d+\/([a-z]{2})\.png/)?.[1], '') || '';
-    let h = `<div class="f1-circ" data-c="${esc(c.id)}"><span class="lab">Circuito</span><div class="f1-cn">${bandera(cc)}<b data-notr>${esc(c.name || '')}</b><small data-notr>${esc([c.loc, cc ? paisDe(cc) : c.country].filter(Boolean).join(', '))}</small></div>`;
+    let h = `<div class="f1-circ" data-c="${esc(c.id)}"><span class="lab">Circuito</span><div class="f1-cn">${bandera(cc)}<b data-notr>${esc(sg(c.name || ''))}</b><small data-notr>${esc(sg([c.loc, cc ? paisDe(cc) : c.country].filter(Boolean).join(', ')))}</small></div>`;
     const km = LONG[c.id] || LONG[String(c.id).replace(/^.*?_/, '')];
     const laps = e?.laps;
     h += `<div class="f1-kv">${laps ? `<div><b>${laps}</b><span>Vueltas</span></div>` : ''}${km ? `<div><b>${dec(km.toFixed(3))} km</b><span>Longitud</span></div>` : ''}${km && laps ? `<div><b>${dec((km * laps).toFixed(1))} km</b><span>Distancia</span></div>` : ''}</div>`;
@@ -251,7 +253,7 @@
     const races = j?.MRData?.RaceTable?.Races;
     if (!Array.isArray(races)) { V.circ[id] = { err: true, w: [] } } else {
       const o = races.slice().sort((a, b) => b.season - a.season), last = o[0];
-      V.circ[id] = { w: o.slice(0, 10).map((r) => { const x = r.Results?.[0] || {}; return { y: r.season, id: x.Driver?.driverId, n: `${x.Driver?.givenName || ''} ${x.Driver?.familyName || ''}`.trim(), e: x.Constructor?.name || '' } }), laps: Number(last?.Results?.[0]?.laps) || null };
+      V.circ[id] = { w: o.slice(0, 10).map((r) => { const x = r.Results?.[0] || {}; return { y: r.season, id: x.Driver?.driverId, n: sg(`${x.Driver?.givenName || ''} ${x.Driver?.familyName || ''}`), e: sg(x.Constructor?.name) } }), laps: Number(last?.Results?.[0]?.laps) || null };
     }
     const el = document.querySelector(`.f1-circ[data-c="${id}"]`); if (el) { const m = g(() => byId(S.foc), null), e = m && dat(m.id); if (m && e) { el.outerHTML = circuito(m, e.d); const nu = document.querySelector(`.f1-circ[data-c="${id}"]`); if (nu && window.GM_LANG) GM_LANG.traduce(nu) } }
   }
@@ -259,11 +261,11 @@
     carga();
     const e = dat(m.id), open = abierto(m), kind = m.fk;
     const cab = (inner) => `<section class="det f1-det ${S.sheet ? 'open' : ''}" data-keep="dt"><button class="det-x" data-act="close">← Partidos</button>${inner}</section>`;
-    if (!e) return cab(`<div class="d-meta"><span class="d-sp"><img src="${SP.r[1]}" alt="">Fórmula 1</span></div><h2 class="f1-t" data-notr>${esc(m.a)}</h2><p class="hint f1-load">Cargando el Gran Premio…</p>`);
+    if (!e) return cab(`<div class="d-meta"><span class="d-sp"><img src="${SP.r[1]}" alt="">Fórmula 1</span></div><h2 class="f1-t">${esc(m.a)}</h2><p class="hint f1-load">Cargando el Gran Premio…</p>`);
     const d = e.d, esC = kind === 'wdc' || kind === 'wcc', lbl = SESION[kind]?.[0] || '';
     const cc = g(() => (m.la || '').match(/\/w\d+\/([a-z]{2})\.png/)?.[1], '') || '';
     let h = `<div class="d-meta"><span class="d-sp"><img src="${SP.r[1]}" alt="">Fórmula 1</span>${m.stage ? `<span class="f1-stg">${esc(m.stage)}</span>` : ''}</div>
-      <div class="f1-gp">${bandera(cc, 'big')}<div><h2 class="f1-t" data-notr>${esc(m.a)}</h2>${esC ? '' : `<span class="f1-s">${lbl}</span>`}</div></div>`;
+      <div class="f1-gp">${bandera(cc, 'big')}<div><h2 class="f1-t">${esc(m.a)}</h2>${esC ? '' : `<span class="f1-s">${lbl}</span>`}</div></div>`;
     h += `<div class="d-cd">${m.status === 'final' ? (kind === 'race' ? 'Carrera acabada' : kind === 'quali' ? 'Clasificación acabada' : kind === 'sprint' ? 'Sprint acabado' : 'Campeonato decidido') : m.status === 'canceled' ? 'Anulada: se devuelve todo' : open ? `${hoy(m.at)} · empieza en ${CD(m.at)}` : 'En juego: a la espera del resultado oficial'}${m.venue && !esC ? '' : ''}</div>`;
     if (!esC) h += sesiones(m, d);
     // mercados
@@ -316,6 +318,6 @@
   setInterval(() => { if (!document.hidden && g(() => loaded, false) && g(() => M.some((m) => m.s === 'r'), false) && (!C.t || Date.now() - C.t > 90e3)) carga() }, 3e3);
   window.addEventListener('gm:f1', () => { try { pintaCab() } catch {} });
 
-  window.GM_F1 = { es: esGP, kind: (m) => m?.fk || '', cuotasFila, ficha, cabeza, carga: () => carga(true), dat, datos: () => D, nomP, nomE, colorE, fotoP, caraP, bandera, flagUrl, iso, ini, norm, bonito, apellido, espn, espnData: ESPN, idPorNombre, idEqPorNombre, fotoDeNombre,
+  window.GM_F1 = { es: esGP, kind: (m) => m?.fk || '', cuotasFila, ficha, cabeza, carga: () => carga(true), dat, datos: () => D, nomP, nomE, colorE, fotoP, caraP, bandera, flagUrl, iso, ini, norm, bonito, apellido, espn, espnData: ESPN, idPorNombre, idEqPorNombre, fotoDeNombre, sg,
     cuota: (m, p) => dat(m.id)?.mk?.[p] ?? null, LONG, NAC, COLOR };
 })();

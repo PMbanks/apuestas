@@ -117,6 +117,9 @@ button.f1-lk{font:inherit}
 .f1-circ .f1-sub{padding-top:14px}
 @media (max-width:860px){
   .f1-t{font-size:23px}
+  .f1-ses{gap:14px}
+  .f1-sp{flex:1 1 auto}
+  .f1-sp small{font-size:9.5px;letter-spacing:-.02em}
   .f1-r{grid-template-columns:30px 40px minmax(0,1fr) 78px;column-gap:10px;min-height:58px}
   .f1-lista.sg .f1-r{grid-template-columns:40px minmax(0,1fr) 78px}
   .f1-ph{width:40px;height:40px}.f1-eq{width:40px}

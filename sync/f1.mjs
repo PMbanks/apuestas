@@ -68,6 +68,8 @@ const num = (x) => { const n = Number(x); return Number.isFinite(n) ? n : null }
 const arr = (x) => (Array.isArray(x) ? x : []);
 const r2 = (x) => Math.round(x * 100) / 100;
 const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+// sin guiones en lo que se ve: "Jean-Eric Vergne" sale "Jean Eric Vergne", "Mercedes-AMG" sale "Mercedes AMG"
+export const sg = (t) => String(t ?? '').replace(/\s[-–—]\s/g, ' · ').replace(/[–—]/g, '/').replace(/(?<=\p{L})-(?=\p{L})/gu, ' ').replace(/-/g, ' ').replace(/\s{2,}/g, ' ').trim();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const instante = (fecha, hora) => {
   if (!/^\d{4}-\d\d-\d\d$/.test(String(fecha || ''))) return null;
@@ -123,7 +125,7 @@ function carrera(r) {   // una carrera del calendario de Jolpica, con sus sesion
   const sq = r.SprintQualifying || r.SprintShootout;
   const q = r.Qualifying && instante(r.Qualifying.date, r.Qualifying.time);
   const s = r.Sprint && instante(r.Sprint.date, r.Sprint.time);
-  return { temporada, ronda, nombre: r.raceName, circuito: c.circuitId, circuitoNombre: c.circuitName, lugar: loc.locality || '', pais: loc.country || '', lat: num(loc.lat), lon: num(loc.long),
+  return { temporada, ronda, nombre: r.raceName, circuito: c.circuitId, circuitoNombre: sg(c.circuitName), lugar: sg(loc.locality), pais: sg(loc.country), lat: num(loc.lat), lon: num(loc.long),
     carrera: t, quali: q || null, sprint: s || null, sprintQuali: sq ? instante(sq.date, sq.time) : null };
 }
 const calendario = (cal) => arr(cal?.MRData?.RaceTable?.Races).map(carrera).filter(Boolean).sort((a, b) => a.ronda - b.ronda);
@@ -244,10 +246,14 @@ export function resultadoDuelo(a, b, fila) {
   return { winner: x.pos < y.pos ? '1' : '2', score: `${x.pos}:${y.pos}` };
 }
 
+// la pareja de companeros de una escuderia: los dos que mas puntos llevan, y SIEMPRE en orden alfabetico de id (el id del duelo y quien
+// es el 1 no cambian aunque cambie la clasificacion entre dos pasadas; si cambiaran, saldrian dos duelos distintos del mismo)
+export const parejaDe = (a, pts) => a.slice().sort((x, y) => (pts[y.id] || 0) - (pts[x.id] || 0) || x.id.localeCompare(y.id)).slice(0, 2).map((p) => p.id).sort();
+
 // ---------- construccion de las filas ----------
 const SESION = { R: ['Carrera', 'carrera.svg'], Q: ['Clasificación', 'quali.svg'], S: ['Sprint', 'sprint.svg'] };
 const apellido = (d) => d.familyName || String(d.nombre || '').split(' ').pop();
-export const nombrePiloto = (d) => `${d.givenName || ''} ${d.familyName || ''}`.trim();
+export const nombrePiloto = (d) => sg(`${d.givenName || ''} ${d.familyName || ''}`);
 
 function filaBase(c, ses, n, extra) {
   const lugar = [c.circuitoNombre, [c.lugar, c.pais].filter(Boolean).join(', ')].filter(Boolean).join(', ');
@@ -374,8 +380,8 @@ export async function f1(ctx = {}) {
     }
     const crudos = fuenteLinea ? (resR?.n >= 10 ? arr(jR.MRData.RaceTable.Races[0].Results) : arr(jQ.MRData.RaceTable.Races[0].QualifyingResults)) : ultimaRonda || [];
     for (const r of crudos) { const d = r.Driver, e = r.Constructor; if (!d?.driverId) continue;
-      lineup.push({ id: d.driverId, nombre: nombrePiloto(d), eq: e?.constructorId || 'x', eqNombre: e?.name || '', num: d.permanentNumber, d }); }
-    if (!lineup.length) for (const f of filasD.slice(0, 22)) { const e = arr(f.Constructors).slice(-1)[0] || {}; lineup.push({ id: f.Driver.driverId, nombre: nombrePiloto(f.Driver), eq: e.constructorId || 'x', eqNombre: e.name || '', d: f.Driver }) }
+      lineup.push({ id: d.driverId, nombre: nombrePiloto(d), eq: e?.constructorId || 'x', eqNombre: sg(e?.name), num: d.permanentNumber, d }); }
+    if (!lineup.length) for (const f of filasD.slice(0, 22)) { const e = arr(f.Constructors).slice(-1)[0] || {}; lineup.push({ id: f.Driver.driverId, nombre: nombrePiloto(f.Driver), eq: e.constructorId || 'x', eqNombre: sg(e.name), d: f.Driver }) }
     if (!lineup.length) { console.log(`f1: sin pilotos para la ronda ${c.ronda}`); continue }
     for (const p of lineup) { const e = idEspn(p.d || {}); if (e) fotoDe[p.id] = `https://a.espncdn.com/i/headshots/rpm/players/full/${e}.png` }
     // datos del modelo (solo si alguna sesion sigue abierta)
@@ -407,7 +413,7 @@ export async function f1(ctx = {}) {
       const sem = hash(`f1-${c.temporada}-${c.ronda}-${Object.entries(grid).map(([k, v]) => k + v).join('')}`);
       // duelos entre companeros (con la mayor cantidad de puntos primero)
       const porEq = new Map(); for (const p of lineup) { const a = porEq.get(p.eq) || []; a.push(p); porEq.set(p.eq, a) }
-      const pares = [...porEq.values()].filter((a) => a.length >= 2).map((a) => a.sort((x, y) => (ptsP[y.id] || 0) - (ptsP[x.id] || 0)).slice(0, 2).map((p) => p.id));
+      const pares = [...porEq.values()].filter((a) => a.length >= 2).map((a) => parejaDe(a, ptsP));
       if (c.carrera > ahora || !resR) {
         D.pCarrera = simula(lineup, st, pdnf, { tipo: 'carrera', semilla: sem, duelos: pares });
         D.duelos = D.pCarrera.duelos.map((d) => ({ a: d.a, b: d.b, p: d.p }));
@@ -417,7 +423,7 @@ export async function f1(ctx = {}) {
       if (!D.duelos) D.duelos = pares.map(([a, b]) => ({ a, b, p: null }));
     } else {
       const porEq = new Map(); for (const p of lineup) { const a = porEq.get(p.eq) || []; a.push(p); porEq.set(p.eq, a) }
-      D.duelos = [...porEq.values()].filter((a) => a.length >= 2).map((a) => a.sort((x, y) => (ptsP[y.id] || 0) - (ptsP[x.id] || 0)).slice(0, 2).map((p) => p.id)).map(([a, b]) => ({ a, b, p: null }));
+      D.duelos = [...porEq.values()].filter((a) => a.length >= 2).map((a) => parejaDe(a, ptsP)).map(([a, b]) => ({ a, b, p: null }));
     }
     // duelos solo para la carrera que viene (o recien jugada), no para un Gran Premio lejano
     if (c.carrera > ahora + 8 * DAY) D.duelos = null;
@@ -428,14 +434,14 @@ export async function f1(ctx = {}) {
   const primera = carreras[0];
   if (ahora > primera.carrera - 30 * DAY && ahora < ult.carrera + 6 * DAY) {
     const lineup = [];
-    for (const f of filasD) { const e = arr(f.Constructors).slice(-1)[0] || {}; lineup.push({ id: f.Driver.driverId, nombre: nombrePiloto(f.Driver), eq: e.constructorId || 'x', eqNombre: e.name || '' }) }
-    for (const f of filasC) if (!lineup.some((p) => p.eq === f.Constructor.constructorId)) lineup.push({ id: 'x_' + f.Constructor.constructorId, nombre: '', eq: f.Constructor.constructorId, eqNombre: f.Constructor.name });
+    for (const f of filasD) { const e = arr(f.Constructors).slice(-1)[0] || {}; lineup.push({ id: f.Driver.driverId, nombre: nombrePiloto(f.Driver), eq: e.constructorId || 'x', eqNombre: sg(e.name) }) }
+    for (const f of filasC) if (!lineup.some((p) => p.eq === f.Constructor.constructorId)) lineup.push({ id: 'x_' + f.Constructor.constructorId, nombre: '', eq: f.Constructor.constructorId, eqNombre: sg(f.Constructor.name) });
     const D = { ahora, lineup: lineup.filter((p) => !p.id.startsWith('x_')), sube };
     // final: la clasificacion tras la ultima carrera
     const hecho = rondasHechas >= ult.ronda && listaD && num(listaD.round) === ult.ronda;
     if (hecho) {
       D.resWDC = { o: filasD.map((f) => f.Driver.driverId), nombre: apellido(filasD[0].Driver) };
-      D.resWCC = { o: filasC.map((f) => f.Constructor.constructorId), nombre: filasC[0]?.Constructor?.name || '' };
+      D.resWCC = { o: filasC.map((f) => f.Constructor.constructorId), nombre: sg(filasC[0]?.Constructor?.name) };
     } else if (filasD.length) {
       const restantes = carreras.filter((c) => c.carrera > ahora - 3 * HORA).map((c) => ({ sprint: !!c.sprint }));
       const rdl = carreras.find((c) => c.carrera > ahora - 3 * HORA);
