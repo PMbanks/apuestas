@@ -10,7 +10,7 @@ declare
   jug uuid[] := array(select id from players order by created_at, id);
   sec text := (select value #>> '{}' from settings where key = 'sync_secret');
   saldo constant text := 'select coalesce(sum(amount), 0)::int from ledger where player = $1';
-  r jsonb; q jsonb; x jsonb; s0 int; s1 int; ok boolean; err text; resumen text := ''; n int := 0; nok int := 0; nko int := 0;
+  r jsonb; q jsonb; s0 int; s1 int; ok boolean; err text; resumen text := ''; n int := 0; nok int := 0; nko int := 0;
   c1 bigint; c2 bigint; c3 bigint; c4 bigint; c5 bigint; c6 bigint; c7 bigint; o numeric; o1 numeric; o2 numeric; v numeric;
   casos jsonb := '[
     {"m":"zz:pf","p":"1","q":"X","ok":false,"y":"mismo mercado"},   {"m":"zz:pf","p":"1","q":"2","ok":false,"y":"mismo mercado"},
@@ -45,7 +45,7 @@ declare
     {"m":"zz:pr","p":"FW:lando_norris","q":"FP:max_verstappen","ok":false,"y":"Gran Premio"},
     {"m":"zz:pu","p":"1","q":"2","ok":false,"y":"mismo mercado"}
   ]';
-  c jsonb;
+  cs jsonb;
 begin
   if cardinality(jug) < 5 then raise exception 'FALLO: hacen falta 5 jugadores de verdad y hay %', cardinality(jug); end if;
   if sec is null then raise exception 'FALLO: no esta el secreto del sincronizador en settings'; end if;
@@ -76,31 +76,32 @@ begin
     ('zz:sx', 'v', 'zz', 'Prueba', 'X A', 'X B', now() + interval '3 hours', 'scheduled', 1.40, null, 2.80, 3, '{"mt":"best_of","ids":{"a":61,"b":62}}',
      '{"W1-1":1.40,"W2-1":1.50,"W3-1":1.60}');
   perform set_config('request.jwt.claims', format('{"sub":"%s","role":"authenticated"}', jug[1]), true);
+  perform pay_week();                                        -- la paga de la semana, si toca, antes de contar el saldo
 
   -- ---------- la tabla de compatibilidad, entera ----------
   execute saldo into s0 using jug[1];
-  for c in select * from jsonb_array_elements(casos) loop
+  for cs in select * from jsonb_array_elements(casos) loop
     n := n + 1; ok := true; err := '';
     begin
-      r := place_combo(jsonb_build_array(jsonb_build_object('match', c->>'m', 'pick', c->>'p'), jsonb_build_object('match', c->>'m', 'pick', c->>'q')), 10);
+      r := place_combo(jsonb_build_array(jsonb_build_object('match', cs->>'m', 'pick', cs->>'p'), jsonb_build_object('match', cs->>'m', 'pick', cs->>'q')), 10);
     exception when others then ok := false; err := sqlerrm;
     end;
-    if ok <> (c->>'ok')::boolean then
-      raise exception 'FALLO: % + % en % deberia % y %', c->>'p', c->>'q', c->>'m', case when (c->>'ok')::boolean then 'entrar' else 'rechazarse' end,
+    if ok <> (cs->>'ok')::boolean then
+      raise exception 'FALLO: % + % en % deberia % y %', cs->>'p', cs->>'q', cs->>'m', case when (cs->>'ok')::boolean then 'entrar' else 'rechazarse' end,
         case when ok then 'ha entrado' else 'dice: ' || err end;
     end if;
     if ok then
       nok := nok + 1;
-      select mk_cuota(m, c->>'p'), mk_cuota(m, c->>'q') into o1, o2 from matches m where m.id = c->>'m';
+      select mk_cuota(m, cs->>'p'), mk_cuota(m, cs->>'q') into o1, o2 from matches m where m.id = cs->>'m';
       o := round(o1 * o2 * 0.85, 2);
       if (r->>'odds')::numeric <> o or (select odds from combos where id = (r->>'combo')::bigint) <> o then
-        raise exception 'FALLO: % + % deberia ir a % (% x % x 0,85) y va a %', c->>'p', c->>'q', o, o1, o2, r->>'odds'; end if;
-      if (select count(*) from combo_legs where combo_id = (r->>'combo')::bigint and match_id = c->>'m') <> 2 then raise exception 'FALLO: no se guardan las dos patas del mismo partido'; end if;
+        raise exception 'FALLO: % + % deberia ir a % (% x % x 0,85) y va a %', cs->>'p', cs->>'q', o, o1, o2, r->>'odds'; end if;
+      if (select count(*) from combo_legs where combo_id = (r->>'combo')::bigint and match_id = cs->>'m') <> 2 then raise exception 'FALLO: no se guardan las dos patas del mismo partido'; end if;
       perform cancel_combo((r->>'combo')::bigint);
     else
       nko := nko + 1;
-      if err not like '%' || (c->>'y') || '%' or (c->>'y' <> 'Gran Premio' and err not like 'No se pueden combinar %') then
-        raise exception 'FALLO: % + % se rechaza con un mensaje que no toca: %', c->>'p', c->>'q', err; end if;
+      if err not like '%' || (cs->>'y') || '%' or (cs->>'y' <> 'Gran Premio' and err not like 'No se pueden combinar %') then
+        raise exception 'FALLO: % + % se rechaza con un mensaje que no toca: %', cs->>'p', cs->>'q', err; end if;
     end if;
   end loop;
   execute saldo into s1 using jug[1];
