@@ -284,7 +284,7 @@
   }
   function vTira(t, modo, c) {
     const fin = modo === 'fin', col = t.premio ? color(item(t.premio.item).rarity) : color('mil');
-    return `<div class="cj-strip ${fin ? 'fin' : ''}" style="--i:${fin ? G : INI};--j:${fin ? t.j.toFixed(3) : 0};--c:${col}"><div class="cj-track">${t.cs.map((k, i) => kcard(k, fin && i === G)).join('')}</div><i class="cj-mark"></i>${modo === 'idle' ? `<span class="cj-box">${pic(c.image, 256, '', true)}</span>` : ''}</div>`;
+    return `<div class="cj-strip ${fin ? 'fin' : ''}" style="--i:${fin ? G : INI};--j:${fin ? t.j.toFixed(3) : 0};--c:${col}"><div class="cj-track">${t.cs.map((k, i) => kcard(k, fin && i === G)).join('')}</div><i class="cj-mark"></i></div>`;
   }
   // las tiras: paradas con la caja en medio, girando (cj-spin: sonidos.js la oye) o ya paradas en el premio
   function vEscena(c, info) {
