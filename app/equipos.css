@@ -94,15 +94,6 @@ img.eqx-lg:hover{transform:scale(1.1);filter:brightness(1.18) drop-shadow(0 0 .6
 .eqx-tr button:hover{color:var(--ink)}
 .eqx-tr button.on{background:rgba(242,193,78,.16);color:var(--acc)}
 .eqx-tr i{font:500 10.5px var(--mono);font-style:normal;opacity:.7}
-.eqx-w{display:grid;grid-template-columns:86px minmax(0,1fr) 26px 96px;align-items:center;gap:12px;min-height:46px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)}
-.eqx-w time{font:11.5px var(--mono);color:var(--dim)}
-.eqx-wn{display:grid;min-width:0}
-.eqx-wn b{font:600 13.5px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.eqx-wn small{font:11px var(--mono);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.eqx-w.s .eqx-wn b{color:var(--acc)}
-.eqx-wk{justify-self:center;display:grid;place-items:center;width:22px;height:22px;border-radius:7px;background:rgba(255,255,255,.07);font:700 10.5px var(--mono);color:var(--soft)}
-.eqx-w.s .eqx-wk{background:rgba(242,193,78,.18);color:var(--acc)}
-.eqx-wp{justify-self:end;font:600 12px var(--mono);color:var(--win)}
 /* futbol: titulos del club */
 .eqx-fs{display:grid}
 .eqx-f{display:grid;grid-template-columns:minmax(0,1fr) auto auto minmax(0,.9fr);align-items:baseline;gap:10px;min-height:42px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)}
@@ -138,12 +129,6 @@ img.eqx-lg:hover{transform:scale(1.1);filter:brightness(1.18) drop-shadow(0 0 .6
   .eqx-tt .eqx-big{grid-column:1/-1}
   .eqx-tt .eqx-big b{font-size:46px}
   .eqx-tt b{font-size:17px}
-  .eqx-w{grid-template-columns:minmax(0,1fr) 24px 80px;gap:4px 10px}
-  .eqx-w time{grid-column:1/4;grid-row:1;font-size:11px}
-  .eqx-wn{grid-column:1;grid-row:2}
-  .eqx-wk{grid-column:2;grid-row:2}
-  .eqx-wp{grid-column:3;grid-row:2}
-  .eqx-w{padding:8px 0}
   .eqx-c{grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:8px 0}
   .eqx-c time{grid-column:1;grid-row:1}
   .eqx-ck{grid-column:2;grid-row:1;justify-self:end}
@@ -152,4 +137,51 @@ img.eqx-lg:hover{transform:scale(1.1);filter:brightness(1.18) drop-shadow(0 0 .6
   .eqx-cn:empty{display:none}
   .eqx-f{grid-template-columns:minmax(0,1fr) auto auto}
   .eqx-f small{grid-column:1/4;text-align:left}
+}
+
+/* filas de torneo (palmares, ganancias, ficha de jugador): icono, nombre con su fecha, nivel y premio */
+.eqx-w{display:grid;grid-template-columns:38px minmax(0,1fr) 26px minmax(70px,auto);align-items:center;gap:0 12px;min-height:52px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.eqx-w.g{grid-template-columns:30px minmax(0,1fr) 26px minmax(70px,auto)}
+.eqx-w time{font:11.5px var(--mono);color:var(--mute)}
+.eqx-wn{display:grid;min-width:0}
+.eqx-wn b{font:600 13.5px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eqx-wn small{font:11px var(--mono);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eqx-wn small span{opacity:.8}
+.eqx-w.n1 .eqx-wn b{color:var(--acc)}
+.eqx-wk{justify-self:center;display:grid;place-items:center;width:22px;height:22px;border-radius:7px;background:rgba(255,255,255,.07);font:700 10.5px var(--mono);color:var(--soft)}
+.eqx-w.n1 .eqx-wk{background:rgba(242,193,78,.18);color:var(--acc)}
+.eqx-wp{justify-self:end;font:600 12px var(--mono);color:var(--win);white-space:nowrap}
+.eqx-wp.cero{color:var(--dim);font-weight:400}
+/* icono del titulo: logo del torneo con una copa pequena, o solo la copa; las copas son dibujos propios */
+.eqx-ic{position:relative;display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.06)}
+.eqx-w.g .eqx-ic{width:26px;height:26px;border-radius:8px;background:none}
+.eqx-ic img{width:26px;height:26px;object-fit:contain;filter:drop-shadow(0 0 .6px rgba(255,255,255,.6))}
+.eqx-ic .eqx-copa{position:absolute;right:-6px;bottom:-6px;width:20px;height:20px;filter:drop-shadow(0 0 3px var(--bg))}
+.eqx-ic.sin .eqx-copa{position:static;width:22px;height:22px;filter:none}
+.eqx-w.g .eqx-ic.sin .eqx-copa{width:20px;height:20px}
+.eqx-copa{--c:#f2c14e;flex:none}
+.eqx-copa.c2{--c:#c9d0da}
+.eqx-copa.c3{--c:#d58b54}
+.eqx-copa .cu{fill:var(--c);stroke:rgba(0,0,0,.25);stroke-width:.6}
+.eqx-copa .as{fill:none;stroke:var(--c);stroke-width:1.6;stroke-linecap:round}
+.eqx-copa .pi{fill:var(--c);stroke:none;opacity:.85}
+.eqx-pt{display:block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2)}
+.eqx-tr button .eqx-copa{width:15px;height:15px}
+.eqx-tr button.on .eqx-copa{filter:drop-shadow(0 0 2px rgba(0,0,0,.4))}
+@media (max-width:860px){
+  .eqx-w{grid-template-columns:34px minmax(0,1fr) 24px auto;gap:0 10px}
+  .eqx-w.g{grid-template-columns:26px minmax(0,1fr) 24px auto}
+  .eqx-tt{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .eqx-tt>div:last-child:not(.eqx-big){display:none}
+}
+
+.eq-cu .eq-k{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+
+/* filas sin chip de nivel: la columna del chip desaparece */
+.eqx-wk:empty{display:none}
+.eqx-w:has(.eqx-wk:empty){grid-template-columns:38px minmax(0,1fr) auto}
+.eqx-w.g:has(.eqx-wk:empty){grid-template-columns:30px minmax(0,1fr) auto}
+@media (max-width:860px){
+  .eqx-w:has(.eqx-wk:empty){grid-template-columns:34px minmax(0,1fr) auto}
+  .eqx-w.g:has(.eqx-wk:empty){grid-template-columns:26px minmax(0,1fr) auto}
 }
