@@ -7,10 +7,11 @@
 //  3) da GM_MK a app.js y a los demas modulos: nombre de cada eleccion (en español o en inglés), su cuota, su equipo y como va
 //     en directo. Si un partido no tiene cuota de un mercado, ese mercado no sale.
 // Codigos (los mismos que la base): O2.5 U2.5 (goles), GG NG (ambos marcan), S2-1 (serie, mapas del local primero),
-// H1+1.5 H2+1.5 (handicap), MO2.5 MU2.5 (mapas jugados).
+// H1+1.5 H2+1.5 (handicap), MO2.5 MU2.5 (mapas jugados), W1-1 W1-2 ... W5-2 (db/037: quien gana cada mapa; Wk-1 el local).
+// Gana todos los mapas es el resultado exacto sin perder mapa (S2-0 / S0-2, S3-0 / S0-3): sale arriba, en su propia fila.
 'use strict';
 (function () {
-  const RE = /^(1|X|2|[OU][0-9]\.5|GG|NG|S[0-4]-[0-4]|H[12]\+[0-9]\.5|M[OU][0-9]\.5)$/;
+  const RE = /^(1|X|2|[OU][0-9]\.5|GG|NG|S[0-4]-[0-4]|H[12]\+[0-9]\.5|M[OU][0-9]\.5|W[1-5]-[12])$/;
   const g = (f, d) => { try { const v = f(); return v === undefined ? d : v } catch { return d } };
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const en = () => document.documentElement.lang === 'en';
@@ -22,9 +23,9 @@
   const valido = (p) => typeof p === 'string' && RE.test(p);
   const es = (p) => valido(p) && p !== '1' && p !== 'X' && p !== '2';
   // dentro de un grupo se elige una cosa, como 1, X o 2 (en el boleto, tocar otra del mismo grupo la cambia)
-  const grupo = (p) => (!es(p) ? '1X2' : /^[OU]/.test(p) ? 'G' + p.slice(1) : p === 'GG' || p === 'NG' ? 'AM' : p[0] === 'S' ? 'S' : p[0] === 'H' ? 'H' + p.slice(2) : 'M' + p.slice(2));
+  const grupo = (p) => (!es(p) ? '1X2' : /^[OU]/.test(p) ? 'G' + p.slice(1) : p === 'GG' || p === 'NG' ? 'AM' : p[0] === 'S' ? 'S' : p[0] === 'H' ? 'H' + p.slice(2) : p[0] === 'W' ? 'W' + p[1] : 'M' + p.slice(2));
   // de que equipo es: '1', '2' o null (los goles, ambos marcan y los mapas jugados son de los dos)
-  const lado = (p) => (p === '1' || p === '2' ? p : /^H[12]\+/.test(p) ? p[1] : /^S\d-\d$/.test(p) && p[1] !== p[3] ? (p[1] > p[3] ? '1' : '2') : null);
+  const lado = (p) => (p === '1' || p === '2' ? p : /^H[12]\+/.test(p) ? p[1] : /^W[1-5]-[12]$/.test(p) ? p[3] : /^S\d-\d$/.test(p) && p[1] !== p[3] ? (p[1] > p[3] ? '1' : '2') : null);
   const equipos = (m) => [m.a ?? m.home ?? '', m.b ?? m.away ?? ''];
   function nombre(m, p) {
     const [A, B] = equipos(m || {}), E = en();
@@ -36,6 +37,7 @@
     if ((x = /^S(\d)-(\d)$/.exec(p))) return +x[1] > +x[2] ? `${A} ${x[1]}:${x[2]}` : `${B} ${x[2]}:${x[1]}`;
     if ((x = /^H([12])\+(\d\.5)$/.exec(p))) return `${x[1] === '1' ? A : B} +${dec(x[2])} ${T('mapas', 'maps')}`;
     if ((x = /^M([OU])(\d\.5)$/.exec(p))) return E ? `${x[1] === 'O' ? 'Over' : 'Under'} ${x[2]} maps` : `${x[1] === 'O' ? 'Más' : 'Menos'} de ${dec(x[2])} mapas`;
+    if ((x = /^W(\d)-([12])$/.exec(p))) return `${T('Mapa', 'Map')} ${x[1]}: ${x[2] === '1' ? A : B}`;
     return String(p ?? '?');
   }
   // como va en directo con el marcador [local, visitante] (goles o mapas): 'gana', 'pierde' o '' si no se sabe todavia
@@ -48,6 +50,11 @@
     if ((x = /^H([12])\+(\d\.5)$/.exec(p))) return (x[1] === '1' ? h - a : a - h) + +x[2] > 0 ? 'gana' : 'pierde';
     if ((x = /^S(\d)-(\d)$/.exec(p))) return h > +x[1] || a > +x[2] ? 'pierde' : '';
     if ((x = /^M([OU])(\d\.5)$/.exec(p))) return h + a > +x[2] ? (x[1] === 'O' ? 'gana' : 'pierde') : '';
+    if ((x = /^W(\d)-([12])$/.exec(p))) {   // un mapa (db/037): con quien lo gano en los datos de la serie, si ya se jugo
+      const gm = (m.games || []).filter((y) => String(y.n) === x[1]), id = gm.length === 1 && gm[0].st === 'finished' ? String(gm[0].w) : '';
+      const lado = id && m.tid ? (id === String(m.tid.a) ? '1' : id === String(m.tid.b) ? '2' : '') : '';
+      return lado ? (lado === x[2] ? 'gana' : 'pierde') : '';
+    }
     return '';
   }
 
@@ -84,12 +91,12 @@
       : `<button type="button" class="mq-o ${mine.has(p) ? 'mine' : ''}" data-pick="${esc(m.id)}|${esc(p)}" title="${esc(nombre(m, p))}">${txt ? `<span class="mq-k" data-notr>${esc(txt)}</span>` : ''}<b>${O(o)}</b></button>`;
   }
   // tabla: cabecera con el titulo y las columnas, y una fila por linea (goles) o por equipo (resultado exacto)
-  function tabla(m, titulo, cols, filas, mine) {
+  function tabla(m, titulo, cols, filas, mine, cl) {
     const vivas = filas.filter((f) => f.picks.some((p) => cuota(m, p) != null));
     if (!vivas.length) return '';
-    return `<section class="mq-g mq-tb" style="--c:${cols.length}">
-      <div class="mq-hd"><span class="lab">${esc(titulo)}</span>${cols.map((c) => `<span class="lab mq-ch" data-notr>${esc(c)}</span>`).join('')}</div>
-      ${vivas.map((f) => `<div class="mq-r"><span class="mq-l" data-notr>${esc(f.l)}</span>${f.picks.map((p) => boton(m, p, '', mine)).join('')}</div>`).join('')}
+    return `<section class="mq-g mq-tb${cl ? ' ' + cl : ''}" style="--c:${cols.length}">
+      <div class="mq-hd"><span class="lab">${esc(titulo)}</span>${cols.map((c) => `<span class="lab mq-ch" data-notr title="${esc(c)}">${esc(c)}</span>`).join('')}</div>
+      ${vivas.map((f) => `<div class="mq-r${f.c ? ' ' + f.c : ''}"><span class="mq-l" data-notr>${esc(f.l)}</span>${f.picks.map((p) => boton(m, p, '', mine)).join('')}</div>`).join('')}
     </section>`;
   }
   // par: titulo y dos (o mas) elecciones con su nombre
@@ -110,6 +117,11 @@
     } else if (m.s === 'v' || m.s === 'c') {
       const need = m.bo === 5 ? 3 : m.bo === 3 ? 2 : 0;
       if (need) {
+        // Mapas (db/037): gana todos los mapas (el resultado exacto sin perder mapa) y quien gana cada mapa, una columna por equipo
+        h += tabla(m, T('Mapas', 'Maps'), [A, B], [
+          { l: T('Gana todos los mapas', 'Wins every map'), picks: [`S${need}-0`, `S0-${need}`], c: 'mq-todos' },
+          ...Array.from({ length: m.bo }, (_, k) => ({ l: `${T('Mapa', 'Map')} ${k + 1}`, picks: [`W${k + 1}-1`, `W${k + 1}-2`] })),
+        ], mine, 'mq-mapas');
         const cols = Array.from({ length: need }, (_, k) => `${need}:${k}`);
         h += tabla(m, T('Resultado', 'Score'), cols, [
           { l: A, picks: cols.map((_, k) => `S${need}-${k}`) },

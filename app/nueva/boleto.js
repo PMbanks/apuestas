@@ -32,7 +32,7 @@
   const nombre = (it, m) => (it.p === '1' ? (m ? m.a : it.a) : it.p === '2' ? (m ? m.b : it.b) : it.p === 'X' ? 'Empate' : (() => { try { return pn(m || { a: it.a, b: it.b }, it.p) } catch { return it.p } })());
   // mercados nuevos (db/036, mercados.js): una eleccion por mercado y partido (tocar otra del mismo mercado la cambia, como
   // 1, X o 2); en una combinada, un solo pronostico por partido
-  const PICK_OK = /^(1|X|2|[OU][0-9]\.5|GG|NG|S[0-4]-[0-4]|H[12]\+[0-9]\.5|M[OU][0-9]\.5)$/;
+  const PICK_OK = /^(1|X|2|[OU][0-9]\.5|GG|NG|S[0-4]-[0-4]|H[12]\+[0-9]\.5|M[OU][0-9]\.5|W[1-5]-[12])$/;   // W: mapas sueltos (db/037)
   const grupo = (p) => { try { return window.GM_MK ? GM_MK.grupo(p) : '1X2' } catch { return '1X2' } };
   const clave = (it) => it.m + '|' + grupo(it.p);
   const lado = (p) => { try { return p === 'X' ? 'x' : window.GM_MK && GM_MK.es(p) ? (GM_MK.lado(p) ? 'p' + GM_MK.lado(p) : 'mq') : 'p' + p } catch { return 'mq' } };
