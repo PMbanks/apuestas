@@ -1235,6 +1235,7 @@ function sabeHtml() {
 }
 function liga() {
   if (window.GM_APOST && GM_APOST.tab() === 'apost') return GM_APOST.html();   // pestana Apostadores con el bote (apostadores.js, 01-11)
+  if (window.GM_LIGA) return GM_LIGA.html();   // pestana Saldo rehecha (liga.js, 01-11): ranking, Quien sabe mas, saldo y ganancia por semana
   const rank = [...F].sort((a, b) => b.s - a.s), mx = Math.max(1, rank[0]?.s || 1), meI = rank.findIndex((f) => f.me);
   const open = ALL.filter((b) => b.st === 'open').reduce((a, b) => a + b.stake, 0), set = ALL.filter((b) => b.st === 'won' || b.st === 'lost'), won = set.filter((b) => b.st === 'won').length;
   const gapUp = meI > 0 ? rank[meI - 1].s - me().s : 0, gapDn = meI >= 0 && meI < rank.length - 1 ? me().s - rank[meI + 1].s : 0;

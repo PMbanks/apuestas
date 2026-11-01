@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "liga-nueva-0111",
+   "fecha": "2026-11-01",
+   "hora": "19:15",
+   "titulo": "Liga nueva",
+   "texto": "El ranking destaca al líder y enseña cuánto sube o baja cada uno esta semana. Quién sabe más tiene un experto por deporte y un mapa de aciertos. Saldo semana a semana y Ganancia por semana son gráficos nuevos que nunca se salen: toca un nombre para resaltarlo y pasa el dedo para ver cada semana.",
+   "titulo_en": "New League",
+   "texto_en": "The ranking highlights the leader and shows how much everyone is up or down this week. Who knows best has an expert per sport and a hit map. Balance week by week and Profit by week are new charts that never spill out: tap a name to highlight it and touch to see each week.",
+   "img": "novedades/liga-nueva.webp",
+   "ir": "liga"
+  },
+  {
    "id": "ruleta-global-0111",
    "fecha": "2026-11-01",
    "hora": "19:05",
