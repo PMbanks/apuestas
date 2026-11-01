@@ -132,7 +132,11 @@
 
   /* ---------- datos ---------- */
   async function carga() {
-    if (!ctx || !visible()) return;
+    if (!ctx) return;
+    // PM 02-11: "la primera vez que entro le cuesta cargar": si la mesa se pide mientras la pantalla aun se esta montando, antes se perdia la peticion
+    // y no volvia hasta el siguiente repintado de la app; ahora se reintenta unos instantes (como mucho 3 s)
+    if (!visible()) { if (S.on && el && !document.hidden && (S.reint = (S.reint || 0) + 1) <= 15) { clearTimeout(S.tReint); S.tReint = setTimeout(carga, 200) } return }
+    S.reint = 0;
     if (S.anim > 0 && Date.now() - (S.animT || 0) > 15000) { S.anim = 0; S.fx = null; S.refrescar = false; S.pend = null; if (D) pinta(D, true) }
     if (S.cargando) { S.otra = true; return }
     S.cargando = true; S.ultima = Date.now();
@@ -633,7 +637,7 @@
       if (!el) crea();
       if (hueco && hueco !== el) hueco.replaceWith(el);
       if (!S.refrescar && S.anim === 0 && c.saldo != null && S.saldo !== c.saldo && !S.ocupa) { S.saldo = c.saldo; pintaCtl() }
-      if (!S.on) { S.on = true; escucha(); carga(); return }
+      if (!S.on) { S.on = true; escucha(); if (!D) { const t = el.querySelector('[data-t]'); if (t && !t.textContent) setTxt(t, 'Preparando la mesa…') } carga(); return }
       if (Date.now() - S.ultima > 1500) carga(); else { programa(); tic() }
     },
     para,
