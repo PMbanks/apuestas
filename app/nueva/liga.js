@@ -26,26 +26,61 @@
   }
 
   /* ---------- 1. ranking de saldos ---------- */
-  function spark(f, w, h) {
-    const v = f.h.length > 1 ? f.h : [f.h[0], f.h[0]], mn = Math.min(...v), mx = Math.max(...v), pd = 3.5;
-    const X = (i) => pd + ((w - 2 * pd) * i) / (v.length - 1), Y = (x) => (mx === mn ? h / 2 : h - pd - ((h - 2 * pd) * (x - mn)) / (mx - mn));
-    const pts = v.map((x, i) => `${X(i).toFixed(1)},${Y(x).toFixed(1)}`);
-    return `<svg class="lq-spk" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polygon points="${X(0).toFixed(1)},${h} ${pts.join(' ')} ${X(v.length - 1).toFixed(1)},${h}" fill="${col(f.id)}" opacity=".13"/><polyline points="${pts.join(' ')}" fill="none" stroke="${col(f.id)}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${X(v.length - 1).toFixed(1)}" cy="${Y(v[v.length - 1]).toFixed(1)}" r="3.2" fill="${col(f.id)}" stroke="var(--bg)" stroke-width="1.6"/></svg>`;
+  // beneficio por periodo, de las apuestas resueltas (sueltas y combinadas, cash out incluido), igual que Inicio y Apostadores:
+  // Esta semana = desde el lunes (WEEK0), Ultimos 30 dias (el mes natural el dia 1 estaria casi vacio) y De siempre
+  const lee = (k) => { try { return localStorage.getItem(k) } catch { return null } };
+  const guarda = (k, v) => { try { localStorage.setItem(k, v) } catch {} };
+  let PER = ['sem', 'mes', 'todo'].includes(lee('gm-liga-per')) ? lee('gm-liga-per') : 'todo';
+  const PNOM = { sem: ['Esta semana', 'This week'], mes: ['Últimos 30 días', 'Last 30 days'], todo: ['De siempre', 'All time'] };
+  const pNom = (p) => T(PNOM[p][0], PNOM[p][1]);
+  const desdeP = (p) => (p === 'sem' ? WEEK0 : p === 'mes' ? Date.now() - 30 * 864e5 : 0);
+  function resueltas() {
+    const out = [];
+    for (const b of ALL) { if (b.st !== 'won' && b.st !== 'lost') continue; const t = Date.parse(b.set || ''); if (!(t > 0)) continue;
+      const cobro = b.cash || b.st === 'won' ? +b.pay || 0 : 0; out.push({ k: b.k, t, neto: cobro - b.stake, ok: b.st === 'won' }) }
+    const uk = new Map(F.map((f) => [f.uid, f.id]));
+    for (const c of g(() => GM_CMB.todas(), null) || []) { if (c.status !== 'won' && c.status !== 'lost' && c.status !== 'cashout') continue;
+      const t = Date.parse(c.settled_at || ''), k = uk.get(c.player); if (!(t > 0) || !k) continue; const ap = +c.stake || 0, cobro = c.status === 'lost' ? 0 : +c.payout || 0;
+      out.push({ k, t, neto: cobro - ap, ok: c.status === 'won' || (c.status === 'cashout' && cobro > ap) }) }
+    return out;
   }
-  const semDe = (f) => (f.wk.length ? f.wk[f.wk.length - 1] : 0);   // lo ganado o perdido esta semana (sin contar la paga)
-  const dlt = (f) => { const d = R0(semDe(f)); return `<span class="lq-d ${d > 0 ? 'up' : d < 0 ? 'dn' : ''}">${d > 0 ? '▲' : d < 0 ? '▼' : '·'} ${N(Math.abs(d))}${coin()}</span>` };
+  function profits() {
+    const xs = resueltas(), r = { sem: {}, mes: {}, todo: {} }, n = { sem: 0, mes: 0, todo: 0 }, h = { sem: 0, mes: 0, todo: 0 };
+    for (const f of F) for (const p in r) r[p][f.id] = 0;
+    for (const x of xs) for (const p in r) if (x.t >= desdeP(p)) { r[p][x.k] = (r[p][x.k] || 0) + x.neto; n[p]++; if (x.ok) h[p]++ }
+    for (const f of F) r.todo[f.id] = f.s - f.recibido;   // de siempre: lo que tiene menos lo que le han dado de paga (como la columna Neto)
+    return { r, n, h };
+  }
+  let ORD = [];   // el orden que se ve ahora en el ranking (lo usa la tarjeta de cada jugador)
+  const dlt = (v) => { const d = R0(v); return `<span class="lq-d ${d > 0 ? 'up' : d < 0 ? 'dn' : ''}">${d > 0 ? '▲' : d < 0 ? '▼' : '·'} ${N(Math.abs(d))}${coin()}</span>` };
   const sal = (f) => `<b class="num ${f.s < 0 ? 'neg' : ''}">${Nn(f.s)}</b>${coin()}`;
-  function rankHtml(rank) {
-    const mx = Math.max(1, rank[0] ? rank[0].s : 1), pos = (i) => i + 1, a = rank[0], b = rank[1];
+  const segHtml = () => `<div class="lq-seg" role="group" aria-label="${T('Periodo', 'Period')}">${['sem', 'mes', 'todo'].map((k) => `<button type="button" data-lq-per="${k}" class="${PER === k ? 'on' : ''}" aria-pressed="${PER === k}">${pNom(k)}</button>`).join('')}</div>`;
+  function rankHtml() {
+    const P = profits().r[PER], v = (f) => P[f.id] || 0, todo = PER === 'todo';
+    const rank = [...F].sort((a, b) => (todo ? b.s - a.s : v(b) - v(a) || b.s - a.s)); ORD = rank.map((f) => f.id);
+    const m = (f) => (todo ? f.s : v(f)), mx = Math.max(1, ...rank.map(m)), a = rank[0], b = rank[1], pos = (i) => i + 1;
+    const dif = a && b ? R0(m(a) - m(b)) : 0;
+    const heroV = a ? (todo ? `<span class="lab">${T('Saldo', 'Balance')}</span><span class="lq-hv">${sal(a)}</span>`
+      : `<span class="lab">${pNom(PER)}</span><span class="lq-hv ${v(a) > 0 ? 'up' : v(a) < 0 ? 'dn' : ''}">${v(a) ? `<small>${v(a) > 0 ? '▲' : '▼'}</small>` : ''}<b class="num">${N(Math.abs(R0(v(a))))}</b>${coin()}</span>`) : '';
     const hero = a ? `<article class="lq-hero ${a.me ? 'me' : ''}" data-prof="${a.id}" style="--c:${col(a.id)}">
       <div class="lq-hl"><span class="lq-crown" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.5 18.5l-1.2-9 5 3.8L12 5.5l4.7 7.8 5-3.8-1.2 9z"/><path d="M4 21.2h16"/></svg></span>${av(a.id, 'lq-big')}
-        <div class="lq-hn"><span class="lab">${T('Líder de la liga', 'League leader')}</span><b>${esc(a.n)}${a.me ? `<i>${T('tú', 'you')}</i>` : ''}</b>${b ? `<span class="lq-lead">${R0(a.s - b.s) > 0 ? T(`Le saca <b>${N(a.s - b.s)}</b> a ${esc(b.n)}`, `Leads ${esc(b.n)} by <b>${N(a.s - b.s)}</b>`) : T(`Empatado con ${esc(b.n)}`, `Level with ${esc(b.n)}`)}</span>` : ''}${window.GM_RATIO ? GM_RATIO.mini(a.id) : ''}</div></div>
-      <div class="lq-hs"><span class="lab">${T('Saldo', 'Balance')}</span><span class="lq-hv">${sal(a)}</span></div>
-      <div class="lq-hr"><span class="lab">${T('Esta semana', 'This week')}</span>${dlt(a)}<span class="lq-hsp">${spark(a, 220, 46)}</span></div></article>` : '';
-    const rows = rank.slice(1).map((f, j) => `<button type="button" class="lq-r ${f.me ? 'me' : ''}" data-prof="${f.id}" style="--c:${col(f.id)};--w:${f.s > 0 ? Math.max(2, Math.round((f.s / mx) * 100)) : 0}%">
-      <span class="lq-p">${pos(j + 1)}</span>${av(f.id, 'lq-av')}<span class="lq-n"><span class="lq-nn"><b>${esc(f.n)}</b>${f.me ? `<i>${T('tú', 'you')}</i>` : ''}</span><span class="lq-dm">${dlt(f)}</span>${window.GM_RATIO ? GM_RATIO.mini(f.id) : ''}</span>
-      <span class="lq-sp">${spark(f, 96, 30)}</span><span class="lq-dl">${dlt(f)}</span><span class="lq-v">${sal(f)}</span></button>`).join('');
-    return `<section class="lq-rank" data-lq-sec="rank" data-notr><div class="lq-rh"><span class="lab">${T('Clasificación por saldo', 'Ranking by balance')}</span><span class="lab lq-rh2">${T('Evolución · esta semana', 'Trend · this week')}</span></div>${hero}<div class="lq-rows">${rows}</div></section>`;
+        <div class="lq-hn"><span class="lab">${todo ? T('Líder de la liga', 'League leader') : T('Líder', 'Leader') + ' · ' + pNom(PER)}</span><b>${esc(a.n)}${a.me ? `<i>${T('tú', 'you')}</i>` : ''}</b>${b ? `<span class="lq-lead">${dif > 0 ? T(`Le saca <b>${N(dif)}</b> a ${esc(b.n)}`, `Leads ${esc(b.n)} by <b>${N(dif)}</b>`) : T(`Empatado con ${esc(b.n)}`, `Level with ${esc(b.n)}`)}</span>` : ''}${window.GM_RATIO ? GM_RATIO.mini(a.id) : ''}</div></div>
+      <div class="lq-hs">${heroV}</div>
+      <div class="lq-hr">${todo ? `<span class="lab">${T('Beneficio', 'Profit')}</span>${dlt(v(a))}` : `<span class="lab">${T('Saldo', 'Balance')}</span><span class="lq-hb">${sal(a)}</span>`}</div></article>` : '';
+    const rows = rank.slice(1).map((f, j) => `<button type="button" class="lq-r ${f.me ? 'me' : ''}" data-prof="${f.id}" style="--c:${col(f.id)};--w:${m(f) > 0 ? Math.max(2, Math.round((m(f) / mx) * 100)) : 0}%">
+      <span class="lq-p">${pos(j + 1)}</span>${av(f.id, 'lq-av')}<span class="lq-n"><span class="lq-nn"><b>${esc(f.n)}</b>${f.me ? `<i>${T('tú', 'you')}</i>` : ''}</span><span class="lq-dm">${dlt(v(f))}</span>${window.GM_RATIO ? GM_RATIO.mini(f.id) : ''}</span>
+      <span class="lq-dl">${dlt(v(f))}</span><span class="lq-v">${sal(f)}</span></button>`).join('');
+    return `<section class="lq-rank" data-lq-sec="rank" data-notr><div class="lq-rh"><span class="lab">${T('Clasificación', 'Ranking')}</span>${segHtml()}</div>${hero}<div class="lq-rows">${rows}</div></section>`;
+  }
+  function kpisHtml() {
+    const P = profits(), open = ALL.filter((b) => b.st === 'open').reduce((a, b) => a + b.stake, 0), todo = PER === 'todo', set = ALL.filter((b) => b.st === 'won' || b.st === 'lost'), won = set.filter((b) => b.st === 'won').length;
+    const nWeeks = Math.max(1, me().h.length - 1), n = todo ? set.length : P.n[PER], h = todo ? won : P.h[PER], per = todo ? T('esta temporada', 'this season') : pNom(PER).toLowerCase();
+    return `<div class="kpis" data-lq-sec="kpis" data-notr>
+      <div class="kpi"><span class="lab">${T('En juego ahora', 'In play now')}</span><b>${N(open)}${coin()}</b><span>${T('entre todos', 'between all of you')}</span></div>
+      <div class="kpi"><span class="lab">${T('Repartido', 'Handed out')}</span><b>${N(F.reduce((a, f) => a + f.recibido, 0))}${coin()}</b><span>${nWeeks} ${T('lunes', 'Mondays')} · ${F.length} ${T('jugadores', 'players')}</span></div>
+      <div class="kpi"><span class="lab">${todo ? T('Apuestas', 'Bets') : T('Apuestas resueltas', 'Settled bets')}</span><b>${todo ? ALL.length : n}</b><span>${per}</span></div>
+      <div class="kpi"><span class="lab">${T('Aciertos del grupo', 'Group hit rate')}</span><b>${n ? Math.round((h / n) * 100) + '%' : '·'}</b><span>${T(`${h} de ${n} resueltas`, `${h} of ${n} settled`)}</span></div>
+    </div>`;
   }
 
   /* ---------- 2. quien sabe mas ---------- */
@@ -161,22 +196,16 @@
   const DATA = new WeakMap();
   function html() {
     const rank = [...F].sort((a, b) => b.s - a.s), meI = rank.findIndex((f) => f.me);
-    const open = ALL.filter((b) => b.st === 'open').reduce((a, b) => a + b.stake, 0), set = ALL.filter((b) => b.st === 'won' || b.st === 'lost'), won = set.filter((b) => b.st === 'won').length;
     const gapUp = meI > 0 ? rank[meI - 1].s - me().s : 0, gapDn = meI >= 0 && meI < rank.length - 1 ? me().s - rank[meI + 1].s : 0, nWeeks = Math.max(1, me().h.length - 1);
     const mr = rank[meI - 1], md = rank[meI + 1];
     return `<div class="lc lq">${window.GM_APOST ? GM_APOST.tabs() : ''}
     <header class="lc-h"><span class="lab">${T('Temporada · desde el', 'Season · since')} ${esc(SEASON ? fmt(SEASON + 'T12:00:00Z', { day: 'numeric', month: 'short' }) : '')} · ${F.length} ${T('jugadores', 'players')}</span><h2 class="wk"><small>${T('SEMANA', 'WEEK')}</small>${String(nWeeks).padStart(2, '0')}</h2>
       <p class="l-pay" data-notr>${T('Paga de', 'Payday of')} <b>+${N(WEEKLY)}</b> ${T('a cada uno en', 'each, in')} ${CD(PAY)}</p>${CAMPEON ? `<p class="l-rey" data-notr>${av(CAMPEON.k, 'sm')}${en() ? `<b>${esc(fr(CAMPEON.k).n)}</b> is the champion of ${esc(CAMPEON.mes)} (▲ ${N(CAMPEON.v)}) and wears the crown all month` : `<b>${esc(fr(CAMPEON.k).n)}</b> es el campeón de ${esc(CAMPEON.mes)} (▲ ${N(CAMPEON.v)}) y lleva la corona todo el mes`}</p>` : ''}</header>
-    ${rankHtml(rank)}
+    ${rankHtml()}
     <p class="gap" data-notr>${en() ? `${gapUp > 0 ? `You need <b>${N(gapUp)}</b> to catch ${esc(mr.n)}` : meI > 0 ? `Level with ${esc(mr.n)}` : 'You are first'}${gapDn > 0 ? ` · you lead ${esc(md.n)} by <b>${N(gapDn)}</b>` : ''}`
       : `${gapUp > 0 ? `Te faltan <b>${N(gapUp)}</b> para alcanzar a ${esc(mr.n)}` : meI > 0 ? `Empatado con ${esc(mr.n)}` : 'Vas primero'}${gapDn > 0 ? ` · le sacas <b>${N(gapDn)}</b> a ${esc(md.n)}` : ''}`}</p>
     ${sabeHtml()}
-    <div class="kpis">
-      <div class="kpi"><span class="lab">En juego ahora</span><b>${N(open)}${coin()}</b><span>entre todos</span></div>
-      <div class="kpi"><span class="lab">Repartido</span><b>${N(F.reduce((a, f) => a + f.recibido, 0))}${coin()}</b><span>${nWeeks} lunes · ${F.length} jugadores</span></div>
-      <div class="kpi"><span class="lab">Apuestas</span><b>${ALL.length}</b><span>esta temporada</span></div>
-      <div class="kpi"><span class="lab">Aciertos del grupo</span><b>${set.length ? Math.round((won / set.length) * 100) + '%' : '·'}</b><span>${won} de ${set.length} resueltas</span></div>
-    </div>
+    ${kpisHtml()}
     ${SBAL()}${SPF()}
     <div class="cgrid">
       <section class="cs"><div class="cs-h"><div><h3>Dónde apuesta cada uno</h3><p>Qué parte de lo apostado va a cada deporte.</p></div></div>${heat()}</section>
@@ -215,7 +244,7 @@
   const quita = (host) => { const tt = host.querySelector('.lq-tt'), hv = host.querySelector('[data-hv]'); if (tt) tt.hidden = true; if (hv) hv.innerHTML = '' };
   function redibuja(nombre) {   // cambia solo esa seccion, sin mover la pagina ni el scroll del grafico
     const cur = document.querySelector(`[data-lq-sec="${nombre}"]`); if (!cur) return;
-    const sc = cur.querySelector('.lq-sc'), x = sc ? sc.scrollLeft : 0, t = document.createElement('div'); t.innerHTML = nombre === 'bal' ? SBAL() : SPF();
+    const sc = cur.querySelector('.lq-sc'), x = sc ? sc.scrollLeft : 0, t = document.createElement('div'); t.innerHTML = nombre === 'bal' ? SBAL() : nombre === 'rank' ? rankHtml() : nombre === 'kpis' ? kpisHtml() : SPF();
     const nu = t.firstElementChild; cur.replaceWith(nu); const s2 = nu.querySelector('.lq-sc'); if (s2) { s2.dataset.ini = '1'; s2.scrollLeft = x }
   }
   function encaja() {   // tras pintar: si el ancho no es el que se dibujo, se redibuja; y el grafico empieza por lo mas reciente
@@ -232,10 +261,38 @@
   document.addEventListener('pointerdown', (e) => { const h = e.target.closest && e.target.closest('[data-lq]'); if (h && e.target.closest('[data-hit]')) ponTip(h, e); else document.querySelectorAll('[data-lq]').forEach(quita) });
   document.addEventListener('pointerout', (e) => { const h = e.target.closest && e.target.closest('[data-hit]'); if (h && e.pointerType === 'mouse' && !(e.relatedTarget && h.contains(e.relatedTarget))) quita(h.closest('[data-lq]')) });
   document.addEventListener('click', (e) => {
+    const pe = e.target.closest && e.target.closest('[data-lq-per]');
+    if (pe) { PER = pe.dataset.lqPer; guarda('gm-liga-per', PER); redibuja('rank'); redibuja('kpis'); return }
     const a = e.target.closest && e.target.closest('[data-lq-sel],[data-lq-pf]'); if (!a) return;
     if (a.dataset.lqSel) { ST.bal = ST.bal === a.dataset.lqSel ? null : a.dataset.lqSel; redibuja('bal') }
     else { ST.pf = a.dataset.lqPf; redibuja('pf') }
   });
+
+
+  /* ---------- tarjeta al pasar el raton por un jugador del ranking (solo con raton; texto, sin graficos) ---------- */
+  let tarjeta = null;
+  function ficha(id) {
+    const f = F.find((x) => x.id === id); if (!f) return '';
+    const pos = ORD.indexOf(id) + 1, P = profits().r, wk = f.wk.map((x, i) => [R0(x), i]), best = wk.length ? wk.reduce((a, b) => (b[0] > a[0] ? b : a)) : null, worst = wk.length ? wk.reduce((a, b) => (b[0] < a[0] ? b : a)) : null;
+    const wl = (x) => (x ? T('S', 'W') + (x[1] + 1) : '');
+    return `<div class="lq-fh" style="--c:${col(f.id)}">${av(f.id, 'lq-fa')}<div class="lq-fn"><b>${esc(f.n)}${f.me ? `<i>${T('tú', 'you')}</i>` : ''}</b><span>${T(`Puesto ${pos} de ${F.length}`, `Rank ${pos} of ${F.length}`)}</span></div></div>
+      <div class="lq-fs"><span class="lab">${T('Saldo', 'Balance')}</span><b class="num ${f.s < 0 ? 'neg' : ''}">${Nn(f.s)}${coin()}</b></div>
+      ${['sem', 'mes', 'todo'].map((p) => `<div class="lq-ft"><span>${pNom(p)}</span>${dlt(P[p][id])}</div>`).join('')}
+      <div class="lq-ft"><span>${T('Mejor semana', 'Best week')}</span><b class="${best && best[0] > 0 ? 'up' : ''}">${best && best[0] > 0 ? Ns(best[0]) + ' <em>' + wl(best) + '</em>' : '·'}</b></div>
+      <div class="lq-ft"><span>${T('Peor semana', 'Worst week')}</span><b class="${worst && worst[0] < 0 ? 'dn' : ''}">${worst && worst[0] < 0 ? Ns(worst[0]) + ' <em>' + wl(worst) + '</em>' : '·'}</b></div>`;
+  }
+  const quitaFicha = () => { if (tarjeta) { tarjeta.remove(); tarjeta = null } };
+  function ponFicha(el, e) {
+    const id = el.dataset.prof; if (!tarjeta || tarjeta.dataset.p !== id) { quitaFicha(); tarjeta = document.createElement('div'); tarjeta.className = 'lq-ficha'; tarjeta.dataset.p = id; tarjeta.setAttribute('data-notr', ''); tarjeta.innerHTML = ficha(id); document.body.appendChild(tarjeta) }
+    const w = tarjeta.offsetWidth, h = tarjeta.offsetHeight; let x = e.clientX + 20, y = e.clientY - h / 2;
+    if (x + w > innerWidth - 8) x = e.clientX - w - 20; x = Math.max(8, x); y = Math.max(72, Math.min(y, innerHeight - h - 8));
+    tarjeta.style.left = x + 'px'; tarjeta.style.top = y + 'px';
+  }
+  document.addEventListener('pointermove', (e) => { if (e.pointerType !== 'mouse') return; const r = e.target.closest && e.target.closest('.lq-r,.lq-hero'); if (r) ponFicha(r, e); else quitaFicha() });
+  document.addEventListener('pointerleave', quitaFicha, true);
+  document.addEventListener('scroll', quitaFicha, true);
+
+  addEventListener('gm:cmb-datos', () => { if (g(() => S.scr) === 'liga' && g(() => GM_APOST.tab()) !== 'apost' && document.querySelector('[data-lq-sec=rank]') && !document.querySelector('.lq-ficha')) { redibuja('rank'); redibuja('kpis') } });
 
   window.GM_LIGA = { html };
 })();
