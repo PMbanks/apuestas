@@ -1,0 +1,53 @@
+/* Alarmas (alarmas.js, 02-11): la campana de la ficha y de los boletos, el menu de cuando avisar, el aviso dentro de la app y Mis alarmas en Ajustes. */
+.al-w{margin-top:12px}
+.al-b{display:inline-flex;align-items:center;gap:8px;padding:9px 16px 9px 12px;border-radius:999px;background:rgba(255,255,255,.07);color:var(--ink);font:600 13px var(--sans);transition:background .15s,color .15s}
+.al-b:hover{background:rgba(255,255,255,.12)}
+.al-b svg,.al-t svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.al-b.on{background:rgba(242,193,78,.16);color:var(--acc)}
+.al-b i{font:500 11px var(--mono);font-style:normal;color:var(--acc)}
+.al-t{flex:none;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;margin:-4px -6px -4px 4px;border-radius:50%;color:var(--mute);transition:color .15s,background .15s}
+.al-t:hover{color:var(--ink);background:rgba(255,255,255,.08)}
+.al-t.on{color:var(--acc)}
+.al-t.on svg{fill:currentColor}
+
+/* menu de cuando avisar: hoja desde abajo en el movil, flotante en el escritorio */
+#al-m{position:fixed;inset:0;z-index:150;opacity:0;transition:opacity .14s}
+#al-m.on{opacity:1}
+.al-mf{position:absolute;inset:0;background:rgba(5,7,10,.5)}
+.al-mc{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:grid;gap:2px;padding:20px 22px 16px;border-radius:24px;background:var(--bg2);box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.al-mc b{margin:4px 0 2px;font:700 20px/1.2 var(--disp)}
+.al-mc small{font:500 12px var(--mono);color:var(--acc)}
+.al-ops{display:grid;margin:10px 0 4px}
+.al-op{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;font:600 15px var(--sans);color:var(--ink);text-align:left}
+.al-op+.al-op{border-top:1px solid var(--hair)}
+.al-op em{font:500 10px var(--mono);font-style:normal;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.al-op.on{color:var(--acc)}
+.al-op.on em{color:var(--win)}
+.al-op:disabled{opacity:.45}
+.al-mc p{margin-top:6px;font:400 12px/1.4 var(--sans);color:var(--dim)}
+.al-mc .q{padding:12px 0 2px;font:600 15px var(--sans);color:var(--mute);text-align:left}
+@media (min-width:861px){.al-mc{position:fixed;left:0;bottom:auto;right:auto;width:320px}}
+
+/* aviso dentro de la app (cuando el navegador no deja notificar) */
+#al-av{position:fixed;z-index:160;top:calc(14px + env(safe-area-inset-top,0px));right:14px;display:grid;gap:10px;width:min(380px,calc(100vw - 28px))}
+.al-a{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:12px;padding:14px 12px 14px 16px;border-radius:20px;background:var(--bg2);box-shadow:0 18px 50px rgba(0,0,0,.55);animation:al-in .22s var(--ease)}
+.al-ic{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:rgba(242,193,78,.16);color:var(--acc)}
+.al-ic svg,.al-ok svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.al-tx{display:grid;gap:2px;min-width:0}
+.al-tx b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 15px var(--disp)}
+.al-tx span{font:400 13px var(--sans);color:var(--mute)}
+.al-ver{padding:6px 4px;font:600 13px var(--sans);color:var(--acc)}
+.al-ok{display:grid;place-items:center;width:30px;height:30px;color:var(--dim)}
+.al-ok:hover{color:var(--ink)}
+@keyframes al-in{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}
+@media (max-width:860px){#al-av{right:12px;left:12px;width:auto}}
+
+/* Ajustes > Mis alarmas */
+.al-r{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:6px 18px;padding:10px 0}
+.al-r+.al-r{border-top:1px solid var(--hair)}
+.al-n{display:grid;gap:2px;min-width:0}
+.al-n b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 14px var(--sans)}
+.al-n small{font:500 12px var(--mono);color:var(--mute)}
+.al-r em{font:500 11px var(--mono);font-style:normal;letter-spacing:.08em;color:var(--acc);text-align:right}
+.al-np{margin:12px 0 0;font-size:12px;color:var(--dim)}
+@media (max-width:560px){.al-r{grid-template-columns:1fr auto}.al-r em{grid-column:1;text-align:left}.al-r .aj-a{grid-row:1 / span 2;grid-column:2}}

@@ -490,6 +490,15 @@
     'Solo te lo devolvemos si tu amigo lo rechaza o no contesta antes de que empiece el partido. Si acepta, gana el que acierte y se lleva lo de los dos.': 'You only get it back if your friend turns it down or does not answer before the match starts. If they accept, whoever gets it right takes both stakes.',
     'Entrar al reto': 'Join the challenge', 'Enviar reto': 'Send challenge', 'Reto abierto: puede entrar cualquiera': 'Open challenge: anyone can join', 'Has entrado en el reto': 'You joined the challenge',
     'Pon al menos 1': 'Put in at least 1', 'entra en tu reto': 'joins your challenge', 'Reto enviado a': 'Challenge sent to',
+    // Alarmas (alarmas.js, 02-11): la campana de la ficha y de los boletos, el menu de cuando avisar y Mis alarmas en Ajustes
+    'Avisarme': 'Remind me', 'Avisarme antes de que empiece': 'Remind me before it starts', 'Alarma puesta': 'Alarm set', 'Alarmas puestas': 'Alarms set',
+    '5 min antes': '5 min before', '15 min antes': '15 min before', '30 min antes': '30 min before', '1 hora antes': '1 hour before',
+    'Cuando empiece': 'When it starts', 'Cuando empiece mi apuesta': 'When my bet starts', 'Puesta': 'Set', 'Ya pasó': 'Too late', 'Cerrar': 'Close',
+    'Te avisa con una notificación mientras la app esté abierta.': 'It alerts you with a notification while the app is open.',
+    'Al poner la primera alarma el navegador te pedirá permiso para avisar.': 'When you set your first alarm the browser will ask your permission to alert you.',
+    'El navegador no deja avisar con notificaciones: verás el aviso dentro de la app.': 'The browser does not allow notifications: you will see the alert inside the app.',
+    'Mis alarmas': 'My alarms', 'Suenan mientras la app esté abierta. Se ponen con la campana de la ficha de un partido o de tu apuesta.': 'They ring while the app is open. Set them with the bell on a game page or on your bet.',
+    'No tienes alarmas puestas.': 'You have no alarms set.', 'Borrar': 'Delete', 'Ver partido': 'View game', 'Empieza ahora': 'Starting now', 'Empieza el partido de tu apuesta': 'The game of your bet is starting',
     'Qué ves': 'What you see', 'Se ve': 'Visible', 'Oculto': 'Hidden', 'Elegir ligas': 'Choose leagues', 'Ocultar la lista de ligas': 'Hide the list of leagues', 'Ocultar esta liga': 'Hide this league',
     'Se vuelve a mostrar desde Ajustes.': 'You can show it again in Settings.',
     'Lo que ocultes no sale en Partidos, Inicio ni Directo. Tus apuestas de ahí siguen en Mis apuestas. También puedes mantener pulsado el escudo de una liga en Partidos.': 'Whatever you hide does not show in Matches, Home or Live. Your bets there stay in My bets. You can also press and hold a league badge in Matches.',
@@ -855,7 +864,7 @@
     [/ no cuenta: el piloto no tomó la salida o falta el dato oficial$/, ' does not count: the driver did not start or the official data is missing'],
     [/^Una combinada no puede llevar dos apuestas del mismo Gran Premio$/, 'A parlay cannot have two bets on the same Grand Prix'],
     [/^La Fórmula 1 no tiene cash out en directo$/, 'Formula 1 has no live cash out'],
-    // decimales con punto en ingles (x1,25 a x1.25): esta va la ultima de la lista
+    [/^Empieza en (\d+) min$/, 'Starts in $1 min'], [/^Tu apuesta empieza en (\d+) min$/, 'Your bet starts in $1 min'],    // decimales con punto en ingles (x1,25 a x1.25): esta va la ultima de la lista
     [/×(\d+),(\d\d)/g, '×$1.$2'],
     [/(\d),(\d\d)(?!\d)/g, '$1.$2'], [/(\d),(\d)k\b/g, '$1.$2k'], [/×(\d+),(\d)(?!\d)/g, '×$1.$2'], [/(\d+),(\d{1,3}) ?%/g, '$1.$2%'], [/(\d) %/g, '$1%'], [/\bEmpate\b/g, 'Draw'], [/\bempate\b/g, 'draw'],   // cuotas y numeros con coma que escribe la base: 2,10 -> 2.10
     [/(?<![\d.,×])\d{1,3}(?:\.\d{3})+(?!\d|\.\d|%)/g, (m) => m.replace(/\./g, ',')],   // miles con coma: 1.000 -> 1,000
