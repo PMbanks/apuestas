@@ -137,3 +137,22 @@ body.rt-pn-on{overflow:hidden}
 }
 @media (prefers-reduced-motion:reduce){.rtb-c{animation:none}}
 .sin-anim .rtb-c{animation:none}
+
+/* ---------- retos con mas gente (db/053): botones "Unirme con X, pones N", marcador NvM y panel ---------- */
+.rt-j{display:grid;gap:2px;height:auto;padding:9px 14px;line-height:1.2;white-space:normal}
+.rt-j .rt-j1{font:700 14px/1.2 var(--sans)}
+.rt-j .rt-j2{font:600 12px/1.2 var(--mono);opacity:.78}
+.rt-j .rt-j2 b{font-size:12px}
+.rt-j .rt-eq{font:800 14px/1.2 var(--sans)}
+.rt-j.off{line-height:1.2}
+.rc-acc.rc-un{flex-wrap:nowrap;gap:8px;padding:6px 14px 14px}
+.rc-acc.rc-un .rt-ok{flex:1 1 0;min-width:0;overflow:hidden}
+.rc-acc.rc-un .rt-eq{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rt-nvm{font:700 11px var(--mono);letter-spacing:.06em;color:var(--rt-t,#d3c6ff)}
+.rt-n{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:-5px;border-radius:50%;background:rgba(255,255,255,.14);font:700 8px/1 var(--mono);color:var(--ink)}
+.rp-mas{color:var(--acc)}
+@media (max-width:560px){.rc-acc.rc-un{flex-wrap:wrap}.rc-acc.rc-un .rt-ok{flex:1 1 100%}}
+/* filas de reto con varias caras por lado: la columna de caras se ajusta y las caras de un mismo lado se solapan un poco */
+.rt{grid-template-columns:minmax(70px,auto) minmax(0,1fr) auto}
+.rt-who{gap:5px}
+.rt-who .av+.av,.rt-who .rt-n{margin-left:-6px}
