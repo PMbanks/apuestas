@@ -57,7 +57,7 @@
   const estadoPata = (l) => { const m = l.matches || {};
     if (l.result === 'won') return 'ok'; if (l.result === 'lost') return 'ko'; if (l.result === 'void') return 'nul';
     return m.status === 'live' || (m.status === 'scheduled' && Date.parse(m.starts_at) <= Date.now()) ? 'vivo' : 'pend' };
-  const PATA = { ok: '<path d="M2.5 6.3l2.3 2.3L9.5 3.8"/>', ko: '<path d="M3.5 3.5l5 5M8.5 3.5l-5 5"/>', nul: '<path d="M3.5 6h5"/>' };
+  const PATA = { ok: '<path d="M2.5 6.3l2.3 2.3L9.5 3.8"/>', ko: '<path d="M3.5 3.5l5 5M8.5 3.5l-5 5"/>', nul: '<path d="M3.5 6h5"/>', pend: '<circle cx="6" cy="6" r="3.6"/>' };
   function caraPata(l) {
     const m = byId(l.match_id), s = (l.matches || {}).sport || 'f';
     const lp = ladoPata(l.pick);
