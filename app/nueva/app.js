@@ -1368,7 +1368,8 @@ function chat() {
 // PM, 30-10: movimientos con paginas y separados (apuestas, cajas y skins, pagas y premios), con la foto de la caja
 // o contra quien fue la batalla; sin las reglas. Y la ruleta de la semana
 let WHEEL = null, CASOS = null, BATS = new Map();
-const movTipo = (k) => (['apuesta', 'premio', 'devolucion', 'pred_apuesta', 'pred_premio', 'pred_devol', 'cashout'].includes(k) ? 'apuestas' : ['caja', 'venta', 'batalla', 'trato', 'mercado', 'jackpot'].includes(k) ? 'cajas' : ['moneda', 'crash', 'ruleta', 'blackjack', 'plinko'].includes(k) ? 'juegos' : 'pagas');
+// PM, 01-11: "las bets rapidas que se vean como categoria distinta y que no cuenten como apuestas reales": las predicciones en directo van aparte
+const movTipo = (k) => (['apuesta', 'premio', 'devolucion', 'cashout'].includes(k) ? 'apuestas' : ['pred_apuesta', 'pred_premio', 'pred_devol'].includes(k) ? 'rapidas' :['caja', 'venta', 'batalla', 'trato', 'mercado', 'jackpot'].includes(k) ? 'cajas' : ['moneda', 'crash', 'ruleta', 'blackjack', 'plinko'].includes(k) ? 'juegos' : 'pagas');
 const RUEDA = [['50', 0], ['Caja', 1], ['100', 0], ['250', 0], ['Caja ★', 2], ['500', 0], ['150', 0], ['1.000', 3]];
 async function cargaMov() {
   let cambia = false;
@@ -1541,7 +1542,7 @@ function monedero() {
       <div class="stt ac"><span class="lab">Si aciertas todo</span><b>${N(me().s + open.reduce((a, b) => a + b.stake * b.o, 0))}${coin()}</b><span>saldo posible</span></div>
     </div>
     <section class="movs"><div class="sec-h"><h2>Movimientos</h2><i>${lista.length} ${lista.length === 1 ? 'movimiento' : 'movimientos'}</i></div>
-      <nav class="mv-tabs">${[['todo', 'Todo'], ['apuestas', 'Apuestas'], ['cajas', 'Cajas y skins'], ['juegos', 'Juegos'], ['pagas', 'Pagas y premios']].filter(([k]) => k === 'todo' || cnt(k)).map(([k, n]) => `<button class="chip ${tab === k ? 'on' : ''}" data-mt="${k}">${n} <i>${cnt(k)}</i></button>`).join('')}</nav>
+      <nav class="mv-tabs">${[['todo', 'Todo'], ['apuestas', 'Apuestas'], ['rapidas', 'Apuestas rápidas'], ['cajas', 'Cajas y skins'], ['juegos', 'Juegos'], ['pagas', 'Pagas y premios']].filter(([k]) => k === 'todo' || cnt(k)).map(([k, n]) => `<button class="chip ${tab === k ? 'on' : ''}" data-mt="${k}">${n} <i>${cnt(k)}</i></button>`).join('')}</nav>
       ${filas || '<p class="hint">Nada por aquí todavía.</p>'}
       ${pags > 1 ? `<nav class="pags"><button data-mp="${pg - 1}" ${pg ? '' : 'disabled'} aria-label="Anterior">‹</button>${Array.from({ length: pags }, (_, i) => `<button data-mp="${i}" class="${i === pg ? 'on' : ''}">${i + 1}</button>`).join('')}<button data-mp="${pg + 1}" ${pg < pags - 1 ? '' : 'disabled'} aria-label="Siguiente">›</button></nav>` : ''}
     </section></div>`;
@@ -1640,7 +1641,7 @@ function ajustes() {
 // PM, 31-10: "que se vea cuanto has ganado en boxes, cuanto en bets, en que bets". El monedero (ledger) solo lo ve su dueno;
 // las apuestas sueltas las ven todos (beneficio por tipo: antes del partido, canceladas en directo).
 function dinero(f) {
-  const grupos = [['apuestas', 'Apuestas', 'Sueltas, combinadas, predicciones y cancelaciones'], ['cajas', 'Cajas y skins', 'Cajas abiertas, skins vendidas y batallas'], ['juegos', 'Juegos', 'Blackjack, crash y los demás'], ['pagas', 'Pagas y premios', 'Paga del lunes, recompensas, bote y premios']];
+  const grupos = [['apuestas', 'Apuestas', 'Sueltas, combinadas y cancelaciones'], ['rapidas', 'Apuestas rápidas', 'Predicciones en directo: gol o siguiente ronda'], ['cajas', 'Cajas y skins', 'Cajas abiertas, skins vendidas y batallas'], ['juegos', 'Juegos', 'Blackjack, crash y los demás'], ['pagas', 'Pagas y premios', 'Paga del lunes, recompensas, bote y premios']];
   let h = '';
   if (f.me) {
     const v = Object.fromEntries(grupos.map(([k]) => [k, 0])); for (const m of LEDGER) v[movTipo(m.kind)] = (v[movTipo(m.kind)] || 0) + m.a;

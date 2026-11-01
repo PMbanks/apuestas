@@ -68,7 +68,7 @@
     // perfil con pestanas (31-10)
     'Resumen': 'Summary', 'Dinero': 'Money', 'Duelos y premios': 'Duels and prizes', 'Dónde ganas y pierdes': 'Where you win and lose',
     'Lo que te ha dado o quitado cada cosa desde el principio.': 'What each thing has given or taken from you since the start.',
-    'Sueltas, combinadas, predicciones y cancelaciones': 'Singles, parlays, predictions and cancellations', 'Cajas y skins': 'Cases and skins',
+    'Sueltas, combinadas, predicciones y cancelaciones': 'Singles, parlays, predictions and cancellations', 'Sueltas, combinadas y cancelaciones': 'Singles, parlays and cancellations', 'Apuestas rápidas': 'Quick bets', 'Predicciones en directo: gol o siguiente ronda': 'Live predictions: next goal or next round', 'Cajas y skins': 'Cases and skins',
     'Cajas abiertas, skins vendidas y batallas': 'Cases opened, skins sold and battles', 'Blackjack, crash y los demás': 'Blackjack, crash and the rest',
     'Pagas y premios': 'Pay and prizes', 'Paga del lunes, recompensas, bote y premios': 'Monday pay, rewards, pot and prizes',
     'Tus apuestas sueltas': 'Your single bets', 'Sus apuestas sueltas': 'Their single bets', 'Beneficio de las resueltas, por tipo.': 'Profit of settled bets, by type.',
