@@ -816,3 +816,38 @@ button.cj-it:hover .cj-it-img,.cj-it.on .cj-it-img{box-shadow:0 0 0 1px color-mi
 @keyframes cjBoxIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
 @media (max-width:860px){.cj-box{width:calc(var(--kh) * 1.05)}}
 html.sin-anim .cj-box img{animation:none}
+
+/* ----- seleccionar varias del inventario (PM 02-11): atajos, pintar con el raton o el dedo, barra de abajo ----- */
+.cj-inv,.cj-inv .cj-it{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.cj-inv .cj-it-img img{pointer-events:none;-webkit-user-drag:none}
+.cj-inv button.cj-it{cursor:pointer}
+.cj-inv .cj-it.bloq{opacity:.4}
+html.cj-pintando,html.cj-pintando *{-webkit-user-select:none;user-select:none;cursor:crosshair}
+.cj-hint .mv{display:none}
+@media (hover:none),(pointer:coarse){.cj-hint .pc{display:none}.cj-hint .mv{display:inline}}
+.cj-at{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 6px;margin-top:26px}
+.cj-at button{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;border-radius:999px;background:rgba(255,255,255,.055);font:500 12px var(--mono);color:var(--soft);white-space:nowrap;transition:color .15s,background .15s}
+.cj-at button i{font-style:normal;color:var(--dim)}
+.cj-at button:hover{background:rgba(255,255,255,.1);color:var(--ink)}
+.cj-at button:active{background:rgba(242,193,78,.2)}
+.cj-at-g{display:inline-flex;align-items:center;gap:6px}
+.cj-at-g em{margin:0 4px 0 10px;font:11px var(--mono);font-style:normal;color:var(--dim);white-space:nowrap}
+.cj-at-g button i{width:8px;height:8px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
+.cj-at-g button{padding:0 12px}
+.cj-bar[hidden]{display:none}
+.cj-bar-l small{font:11px var(--mono);color:var(--dim);white-space:nowrap}
+.cj-bar-l .chip{white-space:nowrap}
+@media (max-width:860px){
+  .cj-at{gap:5px 4px;margin-top:20px}
+  .cj-at button{height:30px;padding:0 11px;font-size:11px}
+  .cj-at-g{flex-wrap:wrap;justify-content:center;gap:5px}
+  .cj-at-g em{margin:0 2px 0 6px}
+  .cj-bar-l small{font-size:10px}
+  .cj-bar-l .chip{white-space:nowrap}
+  .cj-bar-b{flex:1 1 auto;min-width:0;justify-content:flex-end}
+  .cj-bar .go{max-width:100%}
+  /* el boton redondo del chat va fijo en la esquina y taparia "Vender por": mientras hay seleccion se esconde (igual que con la hoja de Mas abierta) */
+  body:has(.cj-bar:not([hidden])) #chatb{opacity:0;pointer-events:none}
+  body:has(.cj-bar:not([hidden])) #chatb>*{pointer-events:none}
+  .cj-bar .go.armado{white-space:normal;line-height:1.2;font-size:11px;letter-spacing:.04em;height:auto;min-height:48px;padding:8px 14px;text-align:center}
+}
