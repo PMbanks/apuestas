@@ -81,6 +81,7 @@
   /* ---------- combinadas (las carga combinadas.js) ---------- */
   const combos = () => g(() => (window.GM_CMB && GM_CMB.todas()) || [], []);
   const legsDe = (c) => (c.combo_legs || []).slice().sort((a, b) => t2(a.matches && a.matches.starts_at) - t2(b.matches && b.matches.starts_at));
+  const mpN = (ls) => { const k = {}; for (const l of ls || []) k[l.match_id] = (k[l.match_id] || 0) + 1; return Object.values(k).filter((v) => v > 1).reduce((t, v) => t + v, 0) };   // db/067: cuantas van del mismo partido que otra
   const netoC = (c) => (c.status === 'won' || c.status === 'cashout' ? (c.payout || 0) - c.stake : c.status === 'lost' ? -c.stake : 0);
   const pata = (l) => { const m = l.matches || {};
     if (l.result === 'won') return 'ok'; if (l.result === 'lost') return 'ko'; if (l.result === 'void') return 'nul';
@@ -152,7 +153,7 @@
       go = `data-goto="${esc(m.id)}"`;
     } else {
       const c = x.c, ls = legsDe(c), l0 = ls[0], m0 = l0 && byId(l0.match_id);
-      cab = `${carasC(c)}<b>Combinada de ${ls.length}</b>`;
+      cab = `${carasC(c)}<b>Combinada de ${ls.length}${mpN(ls) ? `<span class="mp-tag"> · ${mpN(ls)} del mismo partido</span>` : ''}</b>`;
       cash = c.status === 'cashout'; cuota = Number(c.odds); stake = c.stake; pay = c.payout || 0;
       sm = `<span>${ls.filter((l) => l.result === 'won').length} de ${ls.length} acertados</span>`;
       if (m0) wm = l0.pick === '1' ? m0.la : l0.pick === '2' ? m0.lb : L[m0.lg] && L[m0.lg][1];
@@ -199,7 +200,7 @@
   function ticketC(c) {
     const ls = legsDe(c), hechas = ls.filter((l) => l.result === 'won').length, vivo = ls.some((l) => pata(l) === 'vivo');
     return `<article class="ini-tk ini-tkc ${vivo ? 'live' : ''}" data-scr="apuestas">
-      <div class="ini-tk-h">${vivo ? '<i class="dot"></i>' : `<span class="ini-cmb-ic">${IC_CMB}</span>`}<span class="lab ell">Combinada de ${ls.length}</span><span class="lab r">${hechas} de ${ls.length} acertados</span></div>
+      <div class="ini-tk-h">${vivo ? '<i class="dot"></i>' : `<span class="ini-cmb-ic">${IC_CMB}</span>`}<span class="lab ell">Combinada de ${ls.length}${mpN(ls) ? `<span class="mp-tag"> · ${mpN(ls)} del mismo partido</span>` : ''}</span><span class="lab r">${hechas} de ${ls.length} acertados</span></div>
       <div class="ini-pls">${ls.map(filaPata).join('')}</div>
       <div class="ini-tk-f"><span class="k"><span class="ini-k2">${N(c.stake)}${coin()}${aCuota(c.odds)}</span></span><span class="p"><span>cobrarías</span><b>${N(c.stake * Number(c.odds))}${coin()}</b></span></div>
     </article>`;

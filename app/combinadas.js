@@ -12,6 +12,7 @@
   const traduce = (el) => { if (window.GM_LANG && el) { try { GM_LANG.traduce(el) } catch {} } };
   const IC_X = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>';
   const C = { t: 0, list: null, vivo: false, sure: 0, busy: false, err: '' };
+  const mpN = (ls) => { const k = {}; for (const l of ls || []) k[l.match_id] = (k[l.match_id] || 0) + 1; return Object.values(k).filter((v) => v > 1).reduce((t, v) => t + v, 0) };   // db/067: cuantas van del mismo partido que otra
   // cancelar en directo (db/033): lo que vale cada combinada tuya abierta con algun partido empezado, cada 20 s
   const CQ = { t: 0, q: new Map(), vivo: false, sure: 0, busy: false };
   async function cargaCQ(forzar) {
@@ -74,7 +75,7 @@
     const hechas = legs.filter((l) => l.result === 'won').length;
     const sure = C.sure === c.id;
     return `<article class="cmb ${c.status}">
-      <header><span class="cmb-t">Combinada de ${legs.length}</span>${c.status === 'open' ? `<span class="cmb-va">${hechas} de ${legs.length} acertados</span>` : ''}<span class="cmb-no">Nº C${String(c.id).padStart(5, '0')}</span></header>
+      <header><span class="cmb-t">Combinada de ${legs.length}${mpN(legs) ? `<span class="mp-tag"> · ${mpN(legs)} del mismo partido</span>` : ''}</span>${c.status === 'open' ? `<span class="cmb-va">${hechas} de ${legs.length} acertados</span>` : ''}<span class="cmb-no">Nº C${String(c.id).padStart(5, '0')}</span></header>
       <div class="cmb-ls">${legs.map((l) => { const m = l.matches || {}, [k, ic, tx] = estadoPata(l); return `<div class="cmb-l ${k}">
         <i class="cmb-i">${ic}</i><span class="cmb-p"><b>${esc(nombre(m, l.pick))}</b><small>${esc(m.home || '')} vs ${esc(m.away || '')}${m.score && (m.status === 'live' || m.status === 'final') ? ` · ${esc(String(m.score).split(' ')[0])}` : ` · ${esc(cuando(m.starts_at))}`}</small></span>
         <span class="cmb-o">${O(l.odds)}${tx ? `<small>${tx}</small>` : ''}</span></div>` }).join('')}</div>
@@ -92,7 +93,7 @@
     // PM 01-11: lo resuelto con el color de la franja de resultado.js (pastilla .rsl-chip), si esta cargado
     const dif = (c.payout || 0) - c.stake, chip = (k, v) => `<span class="rsl-chip" data-r="${k}">${v > 0 ? '▲ ' : v < 0 ? '▼ ' : ''}${N(Math.abs(v))}${coin()}</span>`;
     const fin2 = !window.GM_RES || c.status === 'open' ? fin : c.status === 'won' ? chip('won', dif) : c.status === 'lost' ? chip('lost', -c.stake) : c.status === 'void' ? `<span class="rsl-chip" data-r="void">${N(c.payout || c.stake)}${coin()}</span>` : chip('cash', dif);
-    return `<div class="cmt ${c.status}" style="--c:var(--f-${f ? f.id : 'pm'})">${ava(f)}<div class="cmt-b"><p><b>${esc(f ? f.n : '?')}</b> <span>Combinada de ${legs.length} · cuota ${O(c.odds)}</span></p>
+    return `<div class="cmt ${c.status}" style="--c:var(--f-${f ? f.id : 'pm'})">${ava(f)}<div class="cmt-b"><p><b>${esc(f ? f.n : '?')}</b> <span>Combinada de ${legs.length} · cuota ${O(c.odds)}</span>${mpN(legs) ? `<span class="mp-tag"> · ${mpN(legs)} del mismo partido</span>` : ''}</p>
       <p class="cmt-ls">${legs.map((l) => { const [k, ic] = estadoPata(l); return `<span class="cmt-l ${k}"><i>${ic || '·'}</i>${esc(nombre(l.matches || {}, l.pick))}</span>` }).join('')}</p></div>
       <span class="cmt-v"><b>${N(c.stake)}${coin()}</b>${fin2}</span></div>`;
   }

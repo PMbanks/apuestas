@@ -22,6 +22,7 @@
   const combos = () => g(() => (window.GM_CMB && GM_CMB.todas()) || null, null);
   const misCombos = () => { const t = combos(); return t ? t.filter((c) => c.player === ME) : null };
   const legsDe = (c) => (c.combo_legs || []).slice().sort((a, b) => t2(a.matches && a.matches.starts_at) - t2(b.matches && b.matches.starts_at));
+  const mpN = (ls) => { const k = {}; for (const l of ls || []) k[l.match_id] = (k[l.match_id] || 0) + 1; return Object.values(k).filter((v) => v > 1).reduce((t, v) => t + v, 0) };   // db/067: cuantas van del mismo partido que otra
   const pata = (l) => { const m = l.matches || {};
     if (l.result === 'won') return 'ok'; if (l.result === 'lost') return 'ko'; if (l.result === 'void') return 'nul';
     if (m.status === 'live' || (m.status === 'scheduled' && t2(m.starts_at) <= Date.now())) return 'vivo'; return 'pend' };
@@ -80,8 +81,8 @@
       <div class="mt-rv"><span class="mt-rf">${av(MEK, 'xl')}<b>Tú</b></span><span class="qn-seal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/></svg><span>Reto</span> ${g(() => GM_RETOS.nvm(c), '1v1')}</span><span class="mt-rf">${rivAv}<b>${nom(riv)}</b></span></div>
       ${estado ? `<p class="mt-rs">${estado}</p>` : ''}
       <div class="mt-m">${eq('a')}${eq('b')}</div>${empate}
-      <div class="mt-n">${cuadro('Pones', N(c.stake) + coin())}${cuadro('En juego', N(c.stake * 2) + coin())}${cuadro('Te llevas', N(c.stake * 2) + coin(), 'hi')}</div>
-      <p class="mt-rt-no"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>Sin cancelar · se paga al final</span></p>
+      <div class="mt-n">${cuadro('Pones', N(c.stake) + coin())}${cuadro('En juego', N(g(() => GM_RETOS.bote(c), c.stake * 2)) + coin())}${cuadro('Te llevas', N(g(() => GM_RETOS.pagoDe(c, MEK), c.stake * 2)) + coin(), 'hi')}</div>
+      ${g(() => GM_RETOS.puedeRetirar(c), false) ? `<div class="mt-act">${GM_RETOS.retirarBtn(c)}</div>` : `<p class="mt-rt-no"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>Sin cancelar · se paga al final</span></p>`}
     </article>`;
   }
   function suelta(b, i) {
@@ -127,7 +128,7 @@
     return `<article class="mt mt-c ${vivo ? 'live' : ''}" style="--i:${i}">
       ${fondo(u, false)}
       <header class="mt-band">${head}<span class="mt-bar"><i style="width:${fill.toFixed(1)}%"></i></span></header>
-      <div class="mt-meta"><span class="mt-ci">${IC_CMB}</span><span class="lab ell">Combinada de ${ls.length}</span><span class="mt-no">Nº C${String(c.id).padStart(5, '0')}</span></div>
+      <div class="mt-meta"><span class="mt-ci">${IC_CMB}</span><span class="lab ell">Combinada de ${ls.length}${mpN(ls) ? `<span class="mp-tag"> · ${mpN(ls)} del mismo partido</span>` : ''}</span><span class="mt-no">Nº C${String(c.id).padStart(5, '0')}</span></div>
       <div class="mt-legs">${ls.map(fila).join('')}</div>
       <div class="mt-n">${cuadro('Cuota', O(c.odds))}${cuadro('Apostado', N(c.stake) + coin())}${cuadro('Cobraría', N(c.stake * Number(c.odds)) + coin(), 'hi')}</div>
       <div class="mt-act ${boton ? '' : 'vacio'}" data-cmbact="${c.id}" data-h="${esc(boton)}">${boton}</div>

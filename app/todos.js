@@ -37,6 +37,7 @@
   /* ---------- combinadas (las carga combinadas.js) ---------- */
   const combos = () => g(() => (window.GM_CMB && GM_CMB.todas()) || [], []);
   const legsDe = (c) => (c.combo_legs || []).slice().sort((a, b) => t2(a.matches && a.matches.starts_at) - t2(b.matches && b.matches.starts_at));
+  const mpN = (ls) => { const k = {}; for (const l of ls || []) k[l.match_id] = (k[l.match_id] || 0) + 1; return Object.values(k).filter((v) => v > 1).reduce((t, v) => t + v, 0) };   // db/067: cuantas van del mismo partido que otra
   const pataViva = (l) => { const m = l.matches || {}; return !l.result && (m.status === 'live' || (m.status === 'scheduled' && t2(m.starts_at) <= Date.now())) };
   const nombrePata = (l) => { const m = l.matches || {}; return l.pick === '1' ? m.home : l.pick === '2' ? m.away : l.pick === 'X' ? 'Empate' : pn({ a: m.home, b: m.away }, l.pick) };
 
@@ -66,7 +67,7 @@
     const etq = vivas ? `<span class="td-tag rd">${vivas} de ${ls.length} en vivo</span>` : hechas ? `<span class="td-tag bien">${hechas} de ${ls.length} acertados</span>`
       : ls[0] && ls[0].matches ? `<span class="td-tag q">${esc(empieza(t2(ls[0].matches.starts_at)))}</span>` : '';
     return `<div class="td-tk tcmb" ${c.player === ME ? 'data-scr="apuestas"' : ''}><span class="td-ic tcmb">×${ls.length}</span>
-      <div class="t"><b><span class="nm">Combinada de ${ls.length}</span><em>${O(odds)}</em></b><small>${ls.map((l) => `<span class="tk-l ${l.result === 'won' ? 'ok' : l.result === 'lost' ? 'ko' : ''}">${l.result === 'won' ? '<i class="tk-i"></i>' : l.result === 'lost' ? '<i class="tk-i"></i>' : ''}${l.pick === '1' || l.pick === '2' ? `<span data-notr>${esc(nombrePata(l))}</span>` : '<span>Empate</span>'}</span>`).join('<span> · </span>')}</small></div>
+      <div class="t"><b><span class="nm">Combinada de ${ls.length}${mpN(ls) ? `<span class="mp-tag"> · ${mpN(ls)} del mismo partido</span>` : ''}</span><em>${O(odds)}</em></b><small>${ls.map((l) => `<span class="tk-l ${l.result === 'won' ? 'ok' : l.result === 'lost' ? 'ko' : ''}">${l.result === 'won' ? '<i class="tk-i"></i>' : l.result === 'lost' ? '<i class="tk-i"></i>' : ''}${l.pick === 'X' ? '<span>Empate</span>' : `<span data-notr>${esc(nombrePata(l))}</span>`}</span>`).join('<span> · </span>')}</small></div>
       <div class="m"><span>${N(c.stake)}</span> → <b>${N(c.stake * odds)}</b>${coin()}<small>cobraría</small></div><div class="bx">${etq}</div></div>`;
   }
   function tkReto(c, fid) {
@@ -76,7 +77,7 @@
     if (c.st === 'pending') {
       if (paraMi) { tit = `<span>${c.ab ? 'Reta a cualquiera con' : 'Te reta con'}</span> <span class="nm" data-notr>${esc(de)}</span>`; act = true;
         acc = `<span class="td-btns">${window.GM_RETOS ? GM_RETOS.accion(c, 'en-td') : ''}</span>` }
-      else if (mio) { tit = c.ab ? `<span>Retas a cualquiera</span><em data-notr>${esc(de)}</em>` : `<span>Retas a</span> <span class="nm" data-notr>${esc(fr(c.to).n)}</span><em data-notr>${esc(de)}</em>`; acc = '<span class="td-tag q">esperando</span>' }   // los retos no se cancelan
+      else if (mio) { tit = c.ab ? `<span>Retas a cualquiera</span><em data-notr>${esc(de)}</em>` : `<span>Retas a</span> <span class="nm" data-notr>${esc(fr(c.to).n)}</span><em data-notr>${esc(de)}</em>`; acc = g(() => R.retirarBtn(c, 'en-td'), '') || '<span class="td-tag q">esperando</span>' }   // sin nadie dentro aun se puede cancelar (db/066)
       else if (e && c.from !== fid) { tit = `<span>Reto de</span> <span class="nm" ${sinTr(c.from)}>${esc(nombre(c.from))}</span><em data-notr>${esc(pn(m, e.p))}</em>`; acc = '<span class="td-tag q">esperando</span>' }
       else { tit = c.ab ? `<span>Reta a cualquiera</span><em data-notr>${esc(de)}</em>` : `<span>Reta a</span> <span class="nm" ${sinTr(c.to)}>${esc(nombre(c.to))}</span><em data-notr>${esc(de)}</em>`; acc = '<span class="td-tag q">esperando</span>' }
     } else {
@@ -86,7 +87,7 @@
     }
     return `<div class="td-tk reto ${act ? 'act' : ''}" data-goto="${esc(m.id)}"><span class="td-ic vs">${R ? R.nvm(c) : '1v1'}</span>
       <div class="t"><b>${tit}</b><small><span data-notr>${esc(m.a)} vs ${esc(m.b)}</span><span> · </span><span>${N(c.stake)} cada uno</span></small></div>
-      <div class="m"><b>${N(R ? R.bote(c) : c.stake * 2)}</b>${coin()}<small>bote</small></div><div class="bx">${acc}</div></div>`;
+      ${R && c.v2 && e ? `<div class="m"><span>${N(c.stake)}</span> → <b>${N(R.pagoDe(c, fid))}</b>${coin()}<small>cobraría</small></div>` : `<div class="m"><b>${N(R ? R.bote(c) : c.stake * 2)}</b>${coin()}<small>bote</small></div>`}<div class="bx">${acc}</div></div>`;
   }
 
   /* ---------- lo ultimo resuelto de cada uno, con el estilo de resultado (franja de color) ---------- */

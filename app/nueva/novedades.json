@@ -2,6 +2,28 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "parlay-mismo-partido-0211",
+   "fecha": "2026-11-02",
+   "hora": "07:30",
+   "titulo": "Combinadas del mismo partido",
+   "texto": "En una combinada ya puedes meter varias apuestas del mismo partido (hasta 3), siempre que no se contradigan. La cuota se ajusta un poco por ir del mismo partido.",
+   "titulo_en": "Same game parlays",
+   "texto_en": "You can now put several picks from the same match in a parlay (up to 3), as long as they do not contradict each other. The odds get a small adjustment for being from the same match.",
+   "img": "novedades/parlay-mismo-partido.webp",
+   "ir": "partidos"
+  },
+  {
+   "id": "retos-banca-0211",
+   "fecha": "2026-11-02",
+   "hora": "07:31",
+   "titulo": "Retos contra la banca",
+   "texto": "Un reto ahora es una apuesta normal a la cuota del momento más lo que ponga tu rival: si ganas, cobras las dos cosas. Si nadie entra, se queda como apuesta normal. Eliges tú cuánto apostar y puedes cancelarlo mientras no entre nadie.",
+   "titulo_en": "Challenges against the bank",
+   "texto_en": "A challenge is now a normal bet at the current odds plus whatever your rival puts in: if you win, you get both. If nobody joins, it stays as a normal bet. You pick the amount and can cancel it until someone joins.",
+   "img": "novedades/retos-banca.webp",
+   "ir": "colegas"
+  },
+  {
    "id": "avisos-movil-0211",
    "fecha": "2026-11-02",
    "hora": "07:22",
