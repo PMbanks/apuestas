@@ -1399,7 +1399,7 @@ let WHEEL = null, CASOS = null, BATS = new Map();
 // PM, 01-11: "las bets rapidas que se vean como categoria distinta y que no cuenten como apuestas reales": las predicciones en directo van aparte
 const movTipo = (k) => (['apuesta', 'premio', 'devolucion', 'cashout'].includes(k) ? 'apuestas' : ['pred_apuesta', 'pred_premio', 'pred_devol'].includes(k) ? 'rapidas' :['caja', 'venta', 'batalla', 'trato', 'mercado', 'jackpot'].includes(k) ? 'cajas' : ['moneda', 'crash', 'ruleta', 'blackjack', 'plinko'].includes(k) ? 'juegos' : 'pagas');
 // 047: una tirada cada 3 dias con premios mas pequenos. [texto, tipo, probabilidad]: cada gajo mide lo que toca (spin_wheel)
-const RUEDA = [['25', 0, .34], ['Caja', 1, .065], ['50', 0, .25], ['100', 0, .12], ['Caja ★', 2, .02], ['200', 0, .05], ['75', 0, .145], ['400', 3, .01]];
+const RUEDA = [['50', 0, .34], ['Caja', 1, .065], ['75', 0, .25], ['150', 0, .12], ['Caja ★', 2, .02], ['300', 0, .05], ['100', 0, .145], ['600', 3, .01]];
 const RU_A = RUEDA.reduce((a, r) => (a.push(a[a.length - 1] + r[2] * 360), a), [0]), RU_W = RUEDA.map((r) => r[2] * 360);
 // los periodos de 3 dias de la base (ruleta_periodo): fijos desde el lunes 02/11/2026, hora de Madrid
 const RU_ANCLA = Date.UTC(2026, 10, 2);
@@ -1504,7 +1504,7 @@ function ruedaHtml() {
       ${mio || RU ? `<span class="ru-hub"><span class="cn"></span></span>` : `<button class="ru-hub can" data-act="girar" aria-label="Girar">GIRAR</button>`}</div>
     <span class="lab">Tu ruleta · cada 3 días</span>
     <h3>${RU ? 'Girando…' : mio ? (cel ? '¡Premio!' : 'Ya has girado') : 'Una tirada gratis'}</h3>
-    <p>${RU ? 'Mira dónde para la aguja' : mio ? `<span data-notr>${en() ? `Next spin ${ruSigTxt()}` : `La siguiente, ${ruSigTxt()}`}</span>` : 'De 25 a 400 V-Bucks o una caja de CS2 para abrirla tú. Una tirada cada 3 días.'}</p>
+    <p>${RU ? 'Mira dónde para la aguja' : mio ? `<span data-notr>${en() ? `Next spin ${ruSigTxt()}` : `La siguiente, ${ruSigTxt()}`}</span>` : 'De 50 a 600 V-Bucks o una caja de CS2 para abrirla tú. Una tirada cada 3 días.'}</p>
     ${mio || RU ? '' : '<button class="ru-go" data-act="girar">Girar la ruleta</button>'}
     ${premio}
     <div class="ru-todos ${S.ruTodos ? 'abre' : ''}"><button class="ru-tb" data-act="ru-todos" aria-expanded="${!!S.ruTodos}"><span class="ru-tav">${F.map((f) => av(f.id, 'sm')).join('')}</span><b>Todos</b><small>${F.filter((f) => ruMia(f.uid)).length} de ${F.length} han girado</small><i>${S.ruTodos ? '▴' : '▾'}</i></button>
