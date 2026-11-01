@@ -1,5 +1,5 @@
 """Quita el fondo a las fotos de los objetos de lujo, las encuadra sin bordes vacios y las guarda en webp con transparencia.
-Lo lanza sync/lujo-imagenes.mjs:  python sync/lujo-recorte.py <carpeta de originales> <carpeta de salida> <slug[!espejo][!mitad-der]> ...
+Lo lanza sync/lujo-imagenes.mjs:  python sync/lujo-recorte.py <carpeta de originales> <carpeta de salida> <slug[!espejo][!mitad-der][!tal]> ...
 Necesita rembg y Pillow. El modelo (isnet-general-use) se baja solo la primera vez a U2NET_HOME."""
 import sys, os
 from PIL import Image
@@ -18,7 +18,8 @@ for arg in slugs:
     im = im.convert('RGBA') if im.mode in ('RGBA', 'LA', 'P') else im.convert('RGB')
     if max(im.size) > 1400:
         im.thumbnail((1400, 1400), Image.LANCZOS)
-    cut = remove(im, session=sesion, post_process_mask=True)
+    # slug!tal: el fichero ya viene recortado (logos con fondo transparente): solo se encuadra, sin rembg
+    cut = im.convert('RGBA') if 'tal' in opc else remove(im, session=sesion, post_process_mask=True)
     alpha = cut.getchannel('A')
     # lo que queda de ruido suelto se limpia: solo cuenta lo bastante opaco
     caja = alpha.point(lambda v: 255 if v > 24 else 0).getbbox()

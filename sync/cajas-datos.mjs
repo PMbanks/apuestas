@@ -6,11 +6,13 @@
 //   node sync/cajas-datos.mjs
 //   CACHE=carpeta  guarda y reutiliza los JSON descargados (Skinport deja 8 consultas cada 5 minutos)
 //   JSON=fichero   escribe ademas los mismos datos en JSON (para probar la pantalla sin base)
+//   NUEVAS=1       NO toca CS2 ni Skinport: escribe solo db/046_cajas_nuevas.sql con las 16 cajas de lujo nuevas (sync/lujo-nuevas.mjs), con el mismo precio
+//                  (valor medio de TIER_P, MARGEN 0) y su resumen. Sin NUEVAS, 012b lleva las 26 de lujo (para que su "active = false where id not in" no apague las nuevas).
 // Node 24, sin dependencias.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LUJO, OBJETOS, BASE_IMG } from './lujo-datos.mjs';
+import { LUJO, LUJO_NUEVAS, LUJO_TODAS, OBJETOS, BASE_IMG, idLujo, imgObjeto } from './lujo-datos.mjs';
 
 const FACTOR_LUJO = 1;  // las cajas de lujo van a 1 euro = 1 V-Buck: con la paga de 1.000 por semana se pueden abrir (Zapatillas ~220, Relojes ~2.600, Coches ~21.000)
 const FACTOR = 20;     // 1 euro = 20 V-Bucks (la paga del lunes, 1.000, son 50 euros de skins)
@@ -84,7 +86,68 @@ function probDesgaste(minf, maxf) {
   return p;
 }
 
+// ---------- solo las 16 cajas nuevas: db/046_cajas_nuevas.sql ----------
+// Mismo calculo que main() para las de lujo: probabilidades TIER_P (las de 012, con las que se puso precio a todas las cajas), todos los objetos de una rareza
+// igual de probables, precio = valor medio + MARGEN. Aviso: el servidor ahora tira con las odds de CS2 de verdad (027: 79,92 / 15,98 / 3,2 / 0,64 / 0,26 %),
+// asi que a la larga cada caja (las viejas tambien) devuelve menos de lo que cuesta: eso es el margen de la casa, y aqui se imprime el de cada una.
+function nuevas() {
+  const PESO_VIVO = { mil: 7992, res: 1598, cla: 320, cov: 64, esp: 26 };
+  const DESTINO = path.join(AQUI, '..', 'db', '046_cajas_nuevas.sql');
+  const viejos = new Set(LUJO.flatMap((c) => c.items.map(([id, r]) => idLujo(id, r))));
+  const items = new Map();
+  const filas = LUJO_NUEVAS.map((c, i) => {
+    const por = {}, ids = [];
+    for (const [id, r] of c.items) {
+      const [name, eur] = OBJETOS[id], vid = idLujo(id, r), precio = Math.max(1, Math.round(eur * FACTOR_LUJO));
+      ids.push(vid);
+      (por[r] = por[r] || []).push({ vid, name, precio });
+      if (!viejos.has(vid) && !items.has(vid)) items.set(vid, { id: vid, name, rarity: r, image: imgObjeto(id), price: precio });
+    }
+    const med = (r) => por[r].reduce((a, x) => a + x.precio, 0) / por[r].length;
+    const tot = Object.keys(por).reduce((a, r) => a + TIER_P[r], 0), totVivo = Object.keys(por).reduce((a, r) => a + PESO_VIVO[r], 0);
+    const ev = Object.keys(por).reduce((a, r) => a + (TIER_P[r] / tot) * med(r), 0);
+    const evVivo = Object.keys(por).reduce((a, r) => a + (PESO_VIVO[r] / totVivo) * med(r), 0);
+    const todos = Object.values(por).flat();
+    return { id: c.id, name: c.nombre, image: BASE_IMG + 'cajas/' + c.id.replace(/^lujo-/, '') + '.webp', sort: LUJO.length + i + 1, ev, evVivo,
+      price: Math.max(1, Math.round(ev * (1 + MARGEN))), ids, n: ids.length, caro: todos.sort((a, b) => b.precio - a.precio)[0] };
+  });
+  const L = [];
+  L.push(`-- 046 (01-11). 16 CAJAS DE LUJO NUEVAS, las que dibujo Gemini: Gaming, Zapatillas, Relojes, Tecnologia 2026, Motor, Joyas, Perfumes, Bolsos, Viajes,`);
+  L.push(`-- Patinetes, Camaras, Streetwear, Oro, Cripto, Gafas y Cartas. PM: "las cartas que sean de pokemon y todo que sea de marcas de verdad y precios realistas".`);
+  L.push(`-- Generado por sync/cajas-datos.mjs (NUEVAS=1) con los datos de sync/lujo-nuevas.mjs. No se edita a mano: se vuelve a generar.`);
+  L.push(`-- Va despues de 012b_cajas_datos.sql (los objetos que ya estaban en cajas viejas, como el Rolex o el PS5, se reutilizan tal cual: no se tocan) y se puede ejecutar varias veces.`);
+  L.push(`-- Precios en euros aproximados de 2026 con 1 euro = ${FACTOR_LUJO} V-Buck (oro y cripto, a precio de mercado del 01-11-2026). Precio de cada caja: valor medio de lo que sale con TIER_P`);
+  L.push(`-- (probabilidades de 012) mas un ${Math.round(MARGEN * 100)} %: igual que las 10 de lujo de siempre. Con las odds de ahora (027) cada caja devuelve de media entre un ${Math.round(100 * Math.min(...filas.map((f) => f.evVivo / f.price)))} % y un ${Math.round(100 * Math.max(...filas.map((f) => f.evVivo / f.price)))} % de lo que cuesta.`);
+  L.push(`-- Las cajas viejas (Relojes de calle, Zapatillas hype, Tecnologia, Coches, Motos...) NO se tocan: hay inventarios que las usan. Se solapan con Zapatillas, Relojes, Tecnologia 2026 y Motor.`);
+  L.push(`-- Los objetos sin foto libre (cartas de Pokemon, perfumes, joyas de marca...) llevan como imagen la de su caja.`);
+  L.push(`-- Lujo sigue EN MANTENIMIENTO (cajas.js): estas cajas no se ven hasta que PM lo abra. Despues: 046_prueba.sql.`);
+  L.push('');
+  L.push('insert into cs_items(id, name, phase, rarity, image, minf, maxf, st, weight, price) values');
+  L.push([...items.values()].map((it) => `(${q(it.id)},${q(it.name)},null,'${it.rarity}',${q(it.image)},null,null,false,100,'{${Array(10).fill(it.price).join(',')}}')`).join(',\n'));
+  L.push('on conflict (id) do update set name = excluded.name, phase = excluded.phase, rarity = excluded.rarity, image = excluded.image,');
+  L.push('  minf = excluded.minf, maxf = excluded.maxf, st = excluded.st, weight = excluded.weight, price = excluded.price;');
+  L.push('');
+  L.push('insert into cs_cases(id, name, image, price, ev, sort, released, active, cat) values');
+  L.push(filas.map((c) => `(${q(c.id)},${q(c.name)},${q(c.image)},${c.price},${c.ev.toFixed(2)},${c.sort},null,true,'lujo')`).join(',\n'));
+  L.push('on conflict (id) do update set name = excluded.name, image = excluded.image, price = excluded.price, ev = excluded.ev,');
+  L.push('  sort = excluded.sort, released = excluded.released, active = true, cat = excluded.cat;');
+  L.push('');
+  L.push(`delete from cs_case_items where case_id in (${filas.map((c) => q(c.id)).join(',')});`);
+  L.push('insert into cs_case_items(case_id, item_id) values');
+  L.push(filas.map((c) => c.ids.map((id) => `(${q(c.id)},${q(id)})`).join(',')).join(',\n') + ';');
+  L.push('');
+  fs.writeFileSync(DESTINO, L.join('\n'));
+  if (process.env.JSON) {
+    const todo = new Map();
+    for (const c of LUJO_NUEVAS) for (const [id, r] of c.items) { const [name, eur] = OBJETOS[id], vid = idLujo(id, r); todo.set(vid, { id: vid, name, phase: null, rarity: r, image: imgObjeto(id), minf: null, maxf: null, st: false, weight: 100, price: Array(10).fill(Math.round(eur * FACTOR_LUJO)) }) }
+    fs.writeFileSync(process.env.JSON, JSON.stringify({ cases: filas.map(({ id, name, image, price, ev, sort, ids }) => ({ id, name, image, price, ev: +ev.toFixed(2), sort, cat: 'lujo', n: ids.length, ids })), items: [...todo.values()] }));
+  }
+  console.log(`${path.relative(process.cwd(), DESTINO)}: ${filas.length} cajas, ${items.size} objetos nuevos (mas ${filas.reduce((a, f) => a + f.n, 0) - items.size} usos de objetos que ya estaban), ${(fs.statSync(DESTINO).size / 1024).toFixed(0)} KB`);
+  for (const c of filas) console.log(`  ${c.name.padEnd(18)} ${String(c.n).padStart(2)} objetos  ${String(c.price).padStart(7)} V-Bucks  (valor medio ${c.ev.toFixed(1)}, con las odds de ahora ${c.evVivo.toFixed(1)} = ${(100 * c.evVivo / c.price).toFixed(0)} %)  mas caro: ${c.caro.name} ${c.caro.precio}`);
+}
+
 async function main() {
+  if (process.env.NUEVAS) return nuevas();
   const [crates, skins, precios] = await Promise.all([trae('crates'), trae('skins'), trae('precios')]);
   if (!crates || !skins) throw new Error('No he podido bajar las cajas de ByMykel/CSGO-API');
   const SK = new Map(skins.map((s) => [s.id, s]));
@@ -119,12 +182,10 @@ async function main() {
   // objetos de lujo: sin desgaste ni StatTrak (minf null, st false), el mismo precio en las 10 casillas, todos igual de probables dentro de su rareza.
   // La rareza es del objeto (cs_items.rarity), asi que si una caja lo pone con otra rareza distinta de la suya "de siempre" (la de la ultima caja de la lista
   // que lo lleva) se guarda como otro objeto con el mismo nombre y la misma foto: 'lujo-yeezy-350-cla'.
-  const primaria = {};
-  for (const c of [...LUJO].reverse()) for (const [id, r] of c.items) if (!primaria[id]) primaria[id] = r;
-  const idLujo = (id, r) => (r === primaria[id] ? id : `${id}-${r}`);
-  for (const c of LUJO) for (const [id, r] of c.items) {
+  // (primaria e idLujo viven en lujo-datos.mjs: las cajas viejas conservan sus ids y las nuevas siguen la misma regla)
+  for (const c of LUJO_TODAS) for (const [id, r] of c.items) {
     const [name, eur] = OBJETOS[id], vid = idLujo(id, r);
-    if (!items.has(vid)) items.set(vid, { id: vid, name, phase: null, rarity: r, image: BASE_IMG + id.replace(/^lujo-/, '') + '.webp', minf: null, maxf: null, st: false, weight: 100,
+    if (!items.has(vid)) items.set(vid, { id: vid, name, phase: null, rarity: r, image: imgObjeto(id), minf: null, maxf: null, st: false, weight: 100,
       eur: null, price: Array(10).fill(Math.max(1, Math.round(eur * FACTOR_LUJO))), lujo: true });
   }
   // precios en euros: 5 desgastes normal y 5 StatTrak
@@ -185,7 +246,7 @@ async function main() {
     return { id: c.id, name: c.name, image: c.image, released: (c.first_sale_date || '').replace(/\//g, '-') || null, sort: i + 1, cat: 'skins', ev, price: Math.max(1, Math.round(ev * (1 + MARGEN))), ids };
   });
   // las de lujo: la imagen de la caja es una caja dibujada (sync/lujo-cajas.py) en app/img/lujo/cajas/; precio = valor medio, igual que las de skins
-  for (const [i, c] of LUJO.entries()) {
+  for (const [i, c] of LUJO_TODAS.entries()) {
     const ids = c.items.map(([id, r]) => idLujo(id, r)), ev = evCaja(ids);
     filas.push({ id: c.id, name: c.nombre, image: BASE_IMG + 'cajas/' + c.id.replace(/^lujo-/, '') + '.webp', released: null, sort: i + 1, cat: 'lujo', ev, price: Math.max(1, Math.round(ev * (1 + MARGEN))), ids });
   }

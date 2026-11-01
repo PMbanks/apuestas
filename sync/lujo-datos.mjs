@@ -115,3 +115,27 @@ export const LUJO = [
     ['lujo-fiat-panda', 'mil'], ['lujo-seat-ibiza', 'mil'], ['lujo-mini-cooper', 'res'], ['lujo-golf-gti', 'res'], ['lujo-mustang-gt', 'cla'], ['lujo-bmw-m3', 'cla'],
     ['lujo-porsche-911', 'cov'], ['lujo-mercedes-g63', 'cov'], ['lujo-lamborghini-huracan', 'esp'] ] },
 ];
+
+// ---------- las 16 cajas nuevas (01-11): sync/lujo-nuevas.mjs ----------
+// Sus objetos se juntan en OBJETOS (asi las fotos las baja el mismo lujo-imagenes.mjs) y sus cajas van en LUJO_NUEVAS; LUJO_TODAS las junta con las viejas.
+// Un objeto sin foto libre (foto null y sin img) usa la imagen de su caja (la primera nueva que lo lleva).
+import { OBJETOS_NUEVOS, LUJO_NUEVAS } from './lujo-nuevas.mjs';
+Object.assign(OBJETOS, OBJETOS_NUEVOS);
+export { LUJO_NUEVAS };
+export const LUJO_TODAS = [...LUJO, ...LUJO_NUEVAS];
+const slug = (id) => id.replace(/^lujo-/, '');
+// la rareza "de siempre" de cada objeto: la de la ultima caja VIEJA de la lista que lo lleva (asi se guardaron en 012b y no cambian);
+// los objetos que solo estan en cajas nuevas, la de la ultima caja nueva que lo lleva
+export const primaria = {};
+for (const c of [...LUJO].reverse()) for (const [id, r] of c.items) if (!primaria[id]) primaria[id] = r;
+for (const c of [...LUJO_NUEVAS].reverse()) for (const [id, r] of c.items) if (!primaria[id]) primaria[id] = r;
+export const idLujo = (id, r) => (r === primaria[id] ? id : `${id}-${r}`);
+// foto de un objeto: su webp recortado; si no tiene (foto null), la imagen de la primera caja nueva que lo lleva
+export function imgObjeto(id) {
+  const [, , foto, opc = {}] = OBJETOS[id];
+  if (opc.img) return BASE_IMG + opc.img + '.webp';
+  if (foto) return BASE_IMG + slug(id) + '.webp';
+  const caja = LUJO_NUEVAS.find((c) => c.items.some(([i]) => i === id));
+  if (!caja) throw new Error('El objeto ' + id + ' no tiene foto ni caja nueva donde sacar la imagen');
+  return BASE_IMG + 'cajas/' + slug(caja.id) + '.webp';
+}
