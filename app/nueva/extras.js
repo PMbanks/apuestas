@@ -427,6 +427,8 @@
       const id = +((/(\d+)/.exec(art.querySelector('.bol-no')?.textContent || '') || [])[1] || 0), fila = art.querySelector('.bol-n');
       if (fila && id) pon(fila, id, art.querySelector('.xc-btn'));
     });
+    // Mis apuestas (misapuestas.js, 01-11): la fila del boton lleva el numero de la apuesta
+    document.querySelectorAll('[data-cobet]').forEach((el) => { const id = +el.dataset.cobet; if (id) pon(el, id, el.querySelector('.xc-btn')) });
     // "Tus apuestas aqui" en la ficha del partido
     document.querySelectorAll('.dm[data-bet]').forEach((dm) => pon(dm, +dm.dataset.bet, dm.querySelector('.xc-btn')));
     // la tarjeta de tus apuestas en directo, encima del perfil: una por apuesta, en el mismo orden que las del servidor
@@ -491,7 +493,7 @@
     if (document.querySelector('.p-board, .det')) { if (Date.now() - B.t > 90e3) cargaBoost(); parcheaBoost() }
     if (document.querySelector('.dv [data-dv-info]')) pintaPred();
     if (document.querySelector('.pf')) pintaPerfil();
-    if (document.querySelector('.bol, .dm[data-bet], #vivoyo .vy')) { cargaCO(); parcheaCash() }
+    if (document.querySelector('.bol, .dm[data-bet], #vivoyo .vy, [data-cobet]')) { cargaCO(); parcheaCash() }
   }
   let pendiente = false;
   new MutationObserver(() => { if (pendiente) return; pendiente = true; queueMicrotask(() => { pendiente = false; try { rev() } catch (e) { if (!rev.avisado) { rev.avisado = 1; console.warn('extras.js', e) } } }) }).observe(document.documentElement, { childList: true, subtree: true });

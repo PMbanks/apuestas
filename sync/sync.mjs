@@ -109,7 +109,8 @@ function r90(c, h, a, sh, sa) {
   return `${de(h.team.id).filter(en90).length}:${de(a.team.id).filter(en90).length}`;
 }
 // series al mejor de bo (3 o 5). p: probabilidad de que gane la serie el local. Mapas independientes con la probabilidad por
-// mapa que da esa p (como el cash out de la base): resultado exacto, +1,5 mapas de cada uno y si se juega el ultimo mapa
+// mapa que da esa p (como el cash out de la base): resultado exacto, +1,5 mapas de cada uno, si se juega el ultimo mapa y
+// (db/037) quien gana cada mapa. Gana todos los mapas es el resultado exacto sin perder mapa (S2-0, S0-2, S3-0, S0-3)
 const comb = (n, k) => fact(n) / (fact(k) * fact(n - k));
 function mercadosSerie(p, bo) {
   if (!(p > 0 && p < 1) || (bo !== 3 && bo !== 5)) return {};
@@ -125,6 +126,7 @@ function mercadosSerie(p, bo) {
   const suma = (f) => Object.entries(ex).filter(([c]) => f(+c[1], +c[3])).reduce((t, [, q]) => t + q, 0);
   for (const lado of [1, 2]) { const q = 1 - suma((x, y) => (lado === 1 ? x - y : y - x) <= -2); if (q >= 0.04 && q <= 0.96) out[`H${lado}+1.5`] = sube(fromProbs([q])[0]) }
   mkPar(out, `MO${lin(bo - 0.5)}`, `MU${lin(bo - 0.5)}`, suma((x, y) => x + y === bo));
+  for (let k = 1; k <= bo; k++) mkPar(out, `W${k}-1`, `W${k}-2`, pm);                  // db/037: ganador de cada mapa (Wk-1 local, Wk-2 visitante), con la probabilidad por mapa
   return out;
 }
 // futbol: puntos por partido de cada uno + ventaja de jugar en casa

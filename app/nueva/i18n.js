@@ -17,6 +17,10 @@
 })();
 (function () {
   const D = {
+    // Mis apuestas (01-11, misapuestas.js)
+    'Empieza en': 'Starts in', 'Tienes en juego': 'You have in play', 'Lo próximo': 'Up next', 'Tus números': 'Your numbers', 'Total': 'Total',
+    'sin aciertos aún': 'no wins yet', 'sin resultados aún': 'no results yet', 'la última, ganada': 'last one won', 'la última, perdida': 'last one lost',
+    'ganadas seguidas': 'wins in a row', 'perdidas seguidas': 'losses in a row', 'Retos acabados': 'Finished challenges',
     // menu A (01-11): Más en la barra de abajo de movil, burbuja del chat y Monedero arriba
     'Más': 'More', 'Más secciones': 'More sections', 'mantenimiento': 'maintenance', 'Abrir el chat': 'Open chat', 'Foto': 'Photo', 'Nuevos': 'New',
     // Ya jugados B (01-11): el menu del titulo de Partidos
@@ -372,6 +376,7 @@
   const DIAS = { LUN: 'MON', 'MIÉ': 'WED', JUE: 'THU', VIE: 'FRI', 'SÁB': 'SAT', DOM: 'SUN', HOY: 'TODAY', ENE: 'JAN', ABR: 'APR', AGO: 'AUG', DIC: 'DEC' };
   const MESES = { ene: 'jan', feb: 'feb', mar: 'mar', abr: 'apr', may: 'may', jun: 'jun', jul: 'jul', ago: 'aug', sep: 'sep', sept: 'sep', oct: 'oct', nov: 'nov', dic: 'dec' };
   const R = [
+    [/^(\d+) resueltas?$/, (m, n) => `${n} settled`], [/^(\d+) en vivo$/, '$1 live'],   // Mis apuestas (01-11)
     [/^(\d+) en directo$/, '$1 live'],   // menu A (01-11): la tira de directo de movil
     [/^(\d+) resultados?$/, (m, n) => `${n} result${n === '1' ? '' : 's'}`],   // Ya jugados B (01-11)
     // Apuestas de todos (01-11, todos.js)
@@ -416,6 +421,8 @@
     [/ \+(\d+),5 mapas/g, ' +$1.5 maps'], [/Ambos marcan: sí/g, 'Both teams score: yes'], [/Ambos marcan: no/g, 'Both teams score: no'],
     [/ en (.+ vs .+) no tiene resultado de los 90 minutos$/, ' in $1 has no 90 minute result'], [/ en (.+ vs .+) no tiene una serie completa$/, ' in $1 was not a full series'],
     [/^Una combinada lleva un solo pronóstico por partido$/, 'A parlay takes one pick per match'],
+    // mapas sueltos (db/037): 'Mapa 2: FaZe' en el monedero y el chat, y el mapa que no se jugo (va antes que ' no se ha jugado')
+    [/\bMapa (\d): /g, 'Map $1: '], [/ en (.+ vs .+) no se ha jugado$/, ' in $1 was not played'],
     // mercado (30-10)
     [/^Pides a (.+)$/, 'You ask $1 for'], [/^Lo que pides a (.+)$/, 'What you ask $1 for'], [/^(.+) te propone$/, '$1 offers you a trade'], [/^Le propones a (.+)$/, 'You offer $1 a trade'], [/^Tú a (.+)$/, 'You to $1'], [/^(.+) a ti$/, '$1 to you'],
     [/^Trato propuesto a (.+)$/, 'Trade offered to $1'], [/^A la venta por ([\d.]+)$/, 'For sale at $1'], [/^Comprado por ([\d.]+)$/, 'Bought for $1'],

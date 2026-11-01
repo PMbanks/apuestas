@@ -49,7 +49,13 @@
     if (f === firmaIni) return; firmaIni = f;
     try { window.dispatchEvent(new CustomEvent('gm:cmb-datos')) } catch {}
   }
-  window.GM_CMB = { todas: () => C.todas || null, carga: (f) => carga(f) };
+  // Mis apuestas (misapuestas.js, 01-11) pinta sus tarjetas y pide aqui el boton de cada combinada abierta: Cancelar antes de
+  // empezar o cancelar en directo, el mismo de siempre (los clics los sigue llevando este fichero)
+  const boton = (c) => { const legs = c.combo_legs || [], sure = C.sure === c.id;
+    if (c.status !== 'open' || c.player !== g(() => ME)) return '';
+    if (legs.length && legs.every((l) => l.matches && !empezado(l.matches))) return `<button class="x-cancel ${sure ? 'sure' : ''}" data-cmb-cancel="${c.id}">${IC_X}${sure ? `¿Seguro? Te devuelvo ${N(c.stake)}` : 'Cancelar combinada'}</button>`;
+    return botonCQ(c) };
+  window.GM_CMB = { todas: () => C.todas || null, carga: (f) => carga(f), boton: (c) => boton(c) };
   const nombre = (m, p) => (p === '1' ? m.home : p === '2' ? m.away : p === 'X' ? 'Empate' : window.GM_MK ? GM_MK.nombre({ a: m.home, b: m.away }, p) : p);   // mercados nuevos (db/036)
   const empezado = (m) => m.status !== 'scheduled' || Date.parse(m.starts_at) <= Date.now();
   function estadoPata(l) {
@@ -122,6 +128,7 @@
 
   let firma = '';
   function pinta(todo) {
+    if (window.GM_MIS) g(() => GM_MIS.cmb());   // Mis apuestas: el boton de cada combinada (misapuestas.js)
     pintaOtros();
     const slot = document.getElementById('cmb-slot'); if (!slot) return;
     if (!C.list) { carga(); return }

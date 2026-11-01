@@ -2086,6 +2086,7 @@ html.sin-anim .vy-h i{animation:none}
 img.tl{image-rendering:auto}
 @media (max-width:860px){
   .lgc{width:80px}
+  .lgc-n{max-width:76px}
   .lgc-i,.lgc:hover .lgc-i{width:52px;height:44px}
   .lgc-i img,.lgc-i img.tl{width:44px;height:38px}
   .d-meta img{width:32px;height:30px}
@@ -2152,6 +2153,9 @@ img.tl{image-rendering:auto}
 /* octavo: Isaac (30-10) */
 :root{--f-c7:#e0574f}
 .av.c7{background:var(--f-c7);color:#200606}
+/* noveno: Sebas (01-11) */
+:root{--f-c8:#3cc7ee}
+.av.c8{background:var(--f-c8);color:#03131a}
 /* moneda que se ve (moneda.js, Ajustes): mismo numero, otro logo */
 html[data-moneda="usd"] .cn{background-image:url(../img/monedas/usd.svg)}
 html[data-moneda="sol"] .cn{background-image:url(../img/monedas/sol.svg)}
