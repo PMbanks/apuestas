@@ -1075,6 +1075,7 @@ function todasHtml() {
     ${pags > 1 ? `<nav class="pags"><button data-abpg="${pg - 1}" ${pg ? '' : 'disabled'} aria-label="Anterior">‹</button>${nums.map((i) => (i === '…' ? '<span class="pags-g">…</span>' : `<button data-abpg="${i}" class="${i === pg ? 'on' : ''}">${i + 1}</button>`)).join('')}<button data-abpg="${pg + 1}" ${pg < pags - 1 ? '' : 'disabled'} aria-label="Siguiente">›</button></nav>` : ''}`;
 }
 function colegas() {
+  if (window.GM_TODOS) return GM_TODOS.html();   // PM 01-11: modelo B, una fila por amigo (todos.js); lo de abajo queda por si no carga
   const rank = [...F].sort((a, b) => b.s - a.s), admin = me().admin;
   const abiertas = ALL.filter((b) => b.st === 'open' && byId(b.m));
   const partidos = [...new Set(abiertas.map((b) => b.m))].map(byId).sort((a, b) => (b.live - a.live) || Date.parse(a.at) - Date.parse(b.at));

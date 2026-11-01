@@ -40,6 +40,13 @@
     'Retirada': 'Cashed out', 'Cobraría': 'Payout', 'Devuelto': 'Refunded', '★ Empate': '★ Draw', '★ Empate ·': '★ Draw ·',
     'Combinada cobrada': 'Parlay won', 'Combinada perdida': 'Parlay lost', 'Combinada devuelta': 'Parlay refunded', 'Combinada cancelada': 'Parlay cashed out',
     'Ninguna en juego. En Partidos, mete 2 o más cuotas en el boleto y elige Combinada.': 'None in play. In Matches, put 2 or more odds in the slip and pick Parlay.',
+    // Apuestas de todos, una fila por amigo (01-11, todos.js)
+    'Quién lleva qué': 'Who has what', 'Con algo en juego': 'With bets in play', 'Lo que tiene en juego': 'What they have in play', 'Último resultado': 'Last result',
+    'Ya ha apostado': 'Already bet', ': se ve al empezar': ': shown at kick-off', 'apostado': 'staked', 'cobraría': 'payout', 'Tu apuesta': 'Your bet',
+    'Te reta con': 'Challenges you with', 'Retas a': 'You challenge', 'Reta a': 'Challenges', 'Reto contra': 'Challenge vs', 'Acepto': 'I take', 'esperando': 'waiting',
+    'bote': 'pot', 'Último:': 'Last:', 'con el empate': 'with the draw', 'Resultados recientes': 'Recent results', 'de todos': 'from everyone',
+    'acertó con': 'won with', 'falló con': 'lost with', 'retiró con': 'cashed out with', 'acertaste con': 'won with', 'fallaste con': 'lost with', 'retiraste con': 'cashed out with',
+    'reta a': 'challenges', 'contra': 'vs', 'Combinadas': 'Parlays', 'filtra por amigo, estado o deporte': 'filter by friend, status or sport', 'Ajustes de la mesa · solo tú': 'Table settings · only you',
     // apostar en directo (31-10): frases enteras, antes de que las reglas sueltas cambien palabras sueltas
     'la cuota se mueve con el marcador': 'odds move with the score', 'Combinada de la semana': 'Parlay of the week', 'CANCELADA': 'CANCELLED', 'Combinada cancelada: cobras': 'Parlay cancelled: you get',
     // perfil con pestanas (31-10)
@@ -341,6 +348,9 @@
   const DIAS = { LUN: 'MON', 'MIÉ': 'WED', JUE: 'THU', VIE: 'FRI', 'SÁB': 'SAT', DOM: 'SUN', HOY: 'TODAY', ENE: 'JAN', ABR: 'APR', AGO: 'AUG', DIC: 'DEC' };
   const MESES = { ene: 'jan', feb: 'feb', mar: 'mar', abr: 'apr', may: 'may', jun: 'jun', jul: 'jul', ago: 'aug', sep: 'sep', sept: 'sep', oct: 'oct', nov: 'nov', dic: 'dec' };
   const R = [
+    // Apuestas de todos (01-11, todos.js)
+    [/^Los (\d+)$/, 'All $1'], [/^(\d+) apuestas?$/, (m, n) => `${n} bet${n === '1' ? '' : 's'}`], [/^(\d+) de (\d+) acertadas$/, '$1 of $2 won'], [/^(\d+) de (\d+) en vivo$/, '$1 of $2 live'],
+    [/^([\d.]+) cada uno$/, '$1 each'], [/^pierde ([\d.]+)$/, 'loses $1'], [/^(\d+) cobradas?$/, '$1 won'], [/^(\d+) te esperan?$/, '$1 waiting for you'],
     // Inicio (01-11): van primero porque son frases enteras de un nodo
     [/^desde las ([\d:]+)$/, 'since $1'], [/^desde el (\d+) ([a-z]+)$/, (m, d, mo) => `since ${d} ${MESES[mo] || mo}`],
     [/^mañana ([\d:]+)$/, 'tomorrow $1'], [/^hace (\d+) min$/, '$1 min ago'], [/^hace (\d+) h$/, '$1 h ago'], [/^en vivo\b/, 'live'],

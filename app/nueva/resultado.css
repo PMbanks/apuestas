@@ -102,3 +102,11 @@ html.sin-anim .rsl-pt{animation:none}
 #view.entra .rsl{animation:tkIn .55s var(--ease) both;animation-delay:calc(var(--i,0) * 70ms + 80ms)}
 html.sin-anim #view.entra .rsl{animation:none}
 html.sin-anim .rsl:hover{transform:none}
+
+/* la cifra de un resultado en una linea (Apuestas de todos: ultimo resultado, resultados recientes, combinadas):
+   una pastilla con el color de la franja */
+.rsl-chip{display:inline-flex;align-items:center;flex:none;padding:6px 10px 6px 11px;border-radius:999px;background:linear-gradient(100deg,#34dc86,#22b96b);color:#05301b;font:700 13.5px/1 var(--mono);letter-spacing:-.03em;white-space:nowrap}
+.rsl-chip[data-r=lost]{background:linear-gradient(100deg,#f26464,#d94848);color:#3a0808}
+.rsl-chip[data-r=void]{background:linear-gradient(100deg,#7d8591,#666d79);color:#14171c}
+.rsl-chip[data-r=cash]{background:linear-gradient(100deg,#9cadff,#7a8cf0);color:#0d1440}
+.rsl-chip .cn{--s:1.05em;margin-left:.25em;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
