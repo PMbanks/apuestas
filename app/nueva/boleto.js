@@ -1,6 +1,9 @@
 // Boleto multiple de Gambling Addicts (PM, 30-10: "haz mas facil apostar en varias a la vez").
 //  - Tocar una cuota en la lista de Partidos o en la ficha la mete en el boleto (marcada en dorado) en vez de abrir la ficha.
-//    Tocarla otra vez la quita. Una sola eleccion por partido: tocar otra del mismo partido la cambia.
+//    Tocarla otra vez la quita. Una sola eleccion por mercado y partido: tocar otra del mismo mercado la cambia.
+//  - Combinada con varias del mismo partido (db/067, PM 02-11): solo las parejas compatibles de la tabla de 067 (sgpChoque, la misma
+//    que cmb_choque), como mucho 3 por partido, y la cuota x 0,85 por cada una de mas del mismo partido (cuotaExacta, con enteros:
+//    el mismo redondeo que cmb_total en la base).
 //  - El boleto flota: en escritorio, abajo a la derecha, se despliega; en movil, barra encima de la barra de abajo que abre
 //    una hoja. Vacio no se ve. Cada eleccion lleva su importe; arriba, "mismo importe para todas" con atajos.
 //  - "Apostar" pide confirmacion (dos toques) y llama a place_bet una por una, en serie (db/001 y db/022: cierre al empezar,
@@ -45,7 +48,60 @@
   // combinada (db/029, PM 30-10 noche): una sola apuesta con todos los partidos del boleto, cuotas multiplicadas, solo cobra si aciertas todos
   const COMB_MAX = 8;
   const comb = () => B.modo === 'comb' && B.items.length >= 2;
-  const cuotaComb = () => Math.min(1000, Math.round(B.items.reduce((t, it) => { const c = cuota(it); return t * (c.base ?? c.o ?? 1) }, 1) * 100) / 100);
+  // db/067: familia de mercado de una eleccion en su deporte y si dos del mismo partido se pueden combinar (null) o por que no.
+  // Es la tabla de cmb_fam / cmb_choque: si se cambia aqui, se cambia alli.
+  const sgpFam = (s, p) => {
+    if (/^F[WPTLXQSCK]:/.test(p)) return 'F';
+    if (s === 'f') return p === '1' || p === 'X' || p === '2' ? 'R' : /^[OU]\d\.5$/.test(p) ? 'G' : p === 'GG' || p === 'NG' ? 'A' : 'Z:' + p;
+    if (s === 'v' || s === 'c') return /^W[1-5]-[12]$/.test(p) ? 'W' + p[1] : 'SER';
+    if (s === 'b') return p === '1' || p === '2' ? 'R' : /^SP[12]/.test(p) ? 'SP' : /^T[OU]/.test(p) ? 'TP' : /^J[12]:/.test(p) ? 'J:' + p.split(':')[1] : 'Z:' + p;
+    return 'R';
+  };
+  function sgpChoque(s, p1, p2) {
+    let a = sgpFam(s, p1), b = sgpFam(s, p2), p = p1, q = p2;
+    if (p1 === p2) return 'misma';
+    if (a === b) return a === 'F' ? 'gp' : a.startsWith('J:') ? 'jugador' : 'mercado';
+    if (a > b) { [a, b] = [b, a]; [p, q] = [q, p] }
+    if (s === 'f') {
+      if (a === 'A' && b === 'R' && (((q === '1' || q === '2') && p === 'GG') || (q === 'X' && p === 'NG'))) return null;
+      if (a === 'G' && b === 'R' && q === 'X' && ['O1.5', 'O2.5', 'O3.5'].includes(p)) return null;
+    } else if (s === 'v' || s === 'c') { if (/^W\d$/.test(a) && /^W\d$/.test(b)) return null }
+    else if (s === 'b') { if ((a === 'R' && b === 'TP') || (a === 'SP' && b === 'TP') || (a.startsWith('J:') && b.startsWith('J:'))) return null }
+    return 'unidas';
+  }
+  const SGP_POR = { misma: 'Es la misma apuesta dos veces', mercado: 'Son del mismo mercado: elige solo una', jugador: 'Son del mismo jugador: elige solo una',
+    unidas: 'Van demasiado unidas: no se pueden combinar', gp: 'Una combinada no puede llevar dos apuestas del mismo Gran Premio' };
+  const SGP_MAX = 3;
+  // cuota de la combinada exacta: producto de las cuotas (en centimos, con BigInt) x 0,85 por cada una de mas del mismo partido,
+  // redondeada a 2 decimales con la mitad hacia arriba y tope 1.000 (igual que cmb_total: 1,40 x 1,50 x 0,85 = 1,785 -> 1,79)
+  function cuotaExacta(odds, ids) {
+    const e = BigInt(ids.length - new Set(ids).size);
+    let num = 1n, den = 1n;
+    for (const o of odds) { num *= BigInt(Math.round(o * 100)); den *= 100n }
+    num *= 85n ** e * 100n; den *= 100n ** e;
+    const c = (2n * num + den) / (2n * den);
+    return Number(c > 100000n ? 100000n : c) / 100;
+  }
+  const repes = () => B.items.length - new Set(B.items.map((it) => it.m)).size;          // apuestas de mas del mismo partido
+  const oddsBase = () => B.items.map((it) => { const c = cuota(it); return c.base ?? c.o ?? 1 });
+  const cuotaComb = () => cuotaExacta(oddsBase(), B.items.map((it) => it.m));
+  const cuotaSinAjuste = () => cuotaExacta(oddsBase(), B.items.map((it, i) => i));
+  const factorTxt = () => String(Math.round(0.85 ** repes() * 1e4) / 1e4).replace('.', document.documentElement.lang === 'en' ? '.' : ',');
+  // las parejas del mismo partido que no se pueden combinar, y los partidos con mas de 3
+  function sgpProblemas() {
+    const out = [], por = new Map();
+    for (const it of B.items) { if (!por.has(it.m)) por.set(it.m, []); por.get(it.m).push(it) }
+    for (const [mid, its] of por) {
+      if (its.length < 2) continue;
+      const m = partido(mid), s = (m && m.s) || its[0].s;
+      if (its.length > SGP_MAX) { out.push(`<p class="blt-av"><span>Como mucho 3 apuestas del mismo partido</span></p>`); continue }
+      for (let i = 0; i < its.length; i++) for (let j = i + 1; j < its.length; j++) {
+        const k = sgpChoque(s, its[i].p, its[j].p); if (!k) continue;
+        out.push(`<p class="blt-av blt-sgp"><b>${esc(nombre(its[i], m))} + ${esc(nombre(its[j], m))}</b> <span>${SGP_POR[k]}</span></p>`);
+      }
+    }
+    return out;
+  }
   function carga() {
     try {
       const d = JSON.parse(localStorage.getItem(CLAVE) || 'null'); if (!d) return;
@@ -167,7 +223,8 @@
     if (comb()) {
       if (B.items.some((it) => cuota(it).o == null)) out.push('<p class="blt-av">Quita las que ya no tienen cuota</p>');
       if (B.items.length > COMB_MAX) out.push(`<p class="blt-av">Una combinada lleva ${COMB_MAX} partidos como máximo</p>`);
-      if (new Set(B.items.map((it) => it.m)).size < B.items.length) out.push('<p class="blt-av">Una combinada lleva un solo pronóstico por partido</p>');
+      const sg = sgpProblemas(); out.push(...sg);
+      if (!sg.length && repes() && B.items.every((it) => cuota(it).o != null) && cuotaComb() <= 1) out.push('<p class="blt-av">Con el ajuste por ir del mismo partido la cuota no pasa de 1,00</p>');
       if (B.cst < 1) out.push('<p class="blt-av">Pon un importe</p>');
       else if (B.cst > s) out.push(`<p class="blt-av"><span>Te faltan</span> <b>${N(B.cst - s)}${coin()}</b> <span>para apostarlo</span></p>`);
       if (B.cerr) out.push(`<p class="blt-av">${esc(B.cerr)}</p>`);
@@ -245,7 +302,9 @@
     const fila = (t, v, cls) => `<div class="blt-tot ${cls || ''}"><span>${t}</span><b>${v}</b></div>`;
     if (comb()) {
       const pr = problemas(), q = cuotaComb(), txt = B.busy ? B.prog : B.sure ? '¿Seguro? Toca otra vez' : `Apostar combinada de ${n}`;
-      el.innerHTML = `<div class="blt-sum">${fila('Importe', `${N(B.cst)}${coin()}`)}${fila('Cuota total', O(q), 'cuota')}${fila(`Cobrarías si aciertas las ${n}`, `${N(B.cst * q)}${coin()}`, 'gana')}</div>
+      // db/067: con varias del mismo partido, la cuota sin ajustar tachada, el 0,85 y la cuota que vale de verdad
+      const aj = repes() ? `${fila('Cuota sin ajustar', `<s>${O(cuotaSinAjuste())}</s>`, 'sin')}${fila('Ajuste por ir del mismo partido', `×${factorTxt()}`, 'aj')}${fila('Cuota ajustada por ir del mismo partido', O(q), 'cuota')}` : fila('Cuota total', O(q), 'cuota');
+      el.innerHTML = `<div class="blt-sum">${fila('Importe', `${N(B.cst)}${coin()}`)}${aj}${fila(`Cobrarías si aciertas las ${n}`, `${N(B.cst * q)}${coin()}`, 'gana')}</div>
         <div class="blt-avs">${pr.join('')}</div>
         <button type="button" class="go blt-go ${B.sure ? 'sure' : ''}" data-blt="apuesta" ${pr.length || B.busy ? 'disabled' : ''}>${esc(txt)}</button>`;
       return;
@@ -602,6 +661,10 @@
 .blt-tot.gana b{font-size:26px;color:var(--acc)}
 .blt-tot b .cn{--s:20px;margin-left:8px}
 .blt-tot.cuota b::after{content:"";display:block;width:28px}
+.blt-tot.sin b{color:var(--dim);font-size:14px}.blt-tot.sin s{text-decoration-thickness:1px}
+.blt-tot.aj b{color:var(--acc2);font-size:14px}
+.blt-tot.cuota span{min-width:0;overflow-wrap:anywhere}
+.blt-sgp b{font-weight:700;overflow-wrap:anywhere}
 .blt-avs{display:grid;gap:8px}
 .blt-avs:empty{display:none}
 .blt-av{display:flex;flex-wrap:wrap;align-items:center;gap:0 4px;padding:8px 12px;border-radius:10px;background:rgba(255,138,138,.1);font:12px/1.45 var(--mono);color:#ff8a8a}
