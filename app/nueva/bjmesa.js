@@ -42,7 +42,14 @@
   const toast = (h) => { if (ctx && ctx.toast) ctx.toast(h) };
   const falla = (e) => { const m = msgErr(e); S.aviso = m; toast(esc(m)); pintaCtl(true) };
   const manoDe = (d, s) => (d && d.ronda && fase(d) !== 'espera' ? d.manos.find((m) => m.asiento === s) : null);
-  const miMano = (d) => (d && d.yo ? manoDe(d, d.yo) : null) || (d && d.ronda && fase(d) !== 'espera' ? d.manos.find((m) => m.player === ctx.me) : null);
+  // varias manos por jugador (db/048): mis asientos, mis manos de la ronda que se ve y el numero de cada una (1, 2, 3 por asiento)
+  const misAsientos = (d) => (d && Array.isArray(d.mios) ? d.mios : d && d.yo ? [d.yo] : []);
+  const misManos = (d) => (d && d.ronda && fase(d) !== 'espera' ? d.manos.filter((m) => m.player === ctx.me).sort((a, b) => a.asiento - b.asiento) : []);
+  const ordenMio = (d) => [...new Set([...misAsientos(d), ...misManos(d).map((m) => m.asiento)])].sort((a, b) => a - b);
+  const numDe = (d, s) => ordenMio(d).indexOf(s) + 1;
+  const turnoMio = (d) => { const r = d && d.ronda; return r && r.estado === 'turnos' ? misManos(d).find((m) => m.asiento === r.turno) || null : null };
+  // la mano mia que importa ahora: la que juega, si no la primera
+  const miMano = (d) => turnoMio(d) || misManos(d)[0] || null;
   const saldo = () => (S.saldo != null ? S.saldo : ctx ? ctx.saldo : 0);
   const MAX = () => (D && D.cfg && D.cfg.max) || 100000;
 
@@ -85,7 +92,7 @@
         <div class="bjm-res" data-res></div>
         <div class="bjm-hw"><div class="bjm-hand" data-h></div><span class="bjm-pill num" data-v></span></div>
         <div class="bjm-spot"><span class="bjm-chs" data-ch></span><b class="bjm-amt num" data-a></b></div>
-        <button class="bjm-who" data-bjm="sit" data-v="${s}" aria-label="Asiento ${s}"><span class="bjm-avw"><svg class="bjm-ring" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22.5"/></svg><span class="bjm-av" data-av></span></span><span class="bjm-nm" data-n data-notr></span></button>
+        <button class="bjm-who" data-bjm="sit" data-v="${s}" aria-label="Asiento ${s}"><span class="bjm-avw"><svg class="bjm-ring" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22.5"/></svg><span class="bjm-av" data-av></span><b class="bjm-nb num" data-nb></b></span><span class="bjm-nm" data-n data-notr></span></button>
       </div>`;
     }
     el.innerHTML = `<div class="bjm-felt" data-felt>
@@ -285,7 +292,7 @@
     }
     // el turno: un aviso cuando te toca
     const turnoK = r && r.estado === 'turnos' ? r.id + ':' + r.turno : null;
-    if (turnoK && turnoK !== S.turnoVisto && d.yo && r.turno === d.yo && !inicial) setTimeout(() => suena('turno'), dur);
+    if (turnoK && turnoK !== S.turnoVisto && turnoMio(d) && !inicial) setTimeout(() => suena('turno'), dur);
     S.turnoVisto = turnoK;
     centro(); pintaCtl(); tic();
   }
@@ -330,11 +337,14 @@
     for (let s = 1; s <= NA; s++) if (!mv || ocup.includes(s)) vis.push(s);
     for (let s = 1; s <= NA; s++) {
       const seat = el.querySelector(`.bjm-seat[data-s="${s}"]`), a = d.asientos.find((x) => x.asiento === s), m = manos.find((x) => x.asiento === s);
-      const yo = a && a.player === ctx.me, turno = r && r.estado === 'turnos' && r.turno === s && f === 'turnos';
+      const m0 = manos.find((x) => x.asiento === s), yo = (a && a.player === ctx.me) || (!a && m0 && m0.player === ctx.me), turno = r && r.estado === 'turnos' && r.turno === s && f === 'turnos';
       const k = vis.indexOf(s), mid = (vis.length - 1) / 2, dist = vis.length > 1 ? Math.abs(k - mid) / Math.max(1, mid) : 0;
       seat.style.setProperty('--y', (mv ? 0 : -Math.round(dist * dist * 34)) + 'px');
       seat.hidden = k < 0;
       seat.classList.toggle('libre', !a); seat.classList.toggle('yo', !!yo); seat.classList.toggle('turno', !!turno);
+      seat.classList.toggle('activa', !!(turno && yo));
+      const nb = seat.querySelector('[data-nb]'), orden = ordenMio(d);
+      setTxt(nb, yo && orden.length > 1 ? String(orden.indexOf(s) + 1) : '');
       seat.classList.toggle('con', !!m); seat.classList.toggle('fuera', !!(a && !m && f === 'turnos'));
       const who = seat.querySelector('.bjm-who');
       who.disabled = !!a && !yo;
@@ -372,7 +382,6 @@
   }
   // resultado de cada asiento: cartel y fichas
   function resultados(d, manos, anima, sonar) {
-    const mia = miMano(d);
     for (const m of manos) {
       if (!m.resultado) continue;
       const seat = el.querySelector(`.bjm-seat[data-s="${m.asiento}"]`), res = seat.querySelector('[data-res]');
@@ -393,11 +402,13 @@
       seat.classList.toggle('gano', m.resultado === 'gana' || m.resultado === 'blackjack');
       seat.classList.toggle('perdio', m.resultado === 'pierde');
     }
-    if (sonar && mia && mia.resultado && !resultados.dicho?.[mia.asiento + ':' + d.ronda.id]) { resultados.dicho = { [mia.asiento + ':' + d.ronda.id]: 1 }; suena(mia.resultado === 'pierde' ? 'perder' : mia.resultado === 'empate' ? 'clic' : 'cobrar') }
-    if (anima && mia && (mia.resultado === 'blackjack' || mia.resultado === 'gana') && !quieto()) brillo(mia.resultado === 'blackjack');
+    const mis = misManos(d).filter((m) => m.resultado), neto = mis.reduce((a, m) => a + m.pago - m.total, 0);
+    const mejor = mis.filter((m) => m.pago > m.total).sort((a, b) => (b.pago - b.total) - (a.pago - a.total))[0];
+    if (sonar && mis.length && resultados.dicho !== d.ronda.id) { resultados.dicho = d.ronda.id; suena(neto < 0 ? 'perder' : neto === 0 ? 'clic' : 'cobrar') }
+    if (anima && mejor && !quieto()) brillo(mejor.resultado === 'blackjack', mejor.asiento);
   }
-  function brillo(fuerte) {
-    const felt = el.querySelector('[data-felt]'), s = el.querySelector(`.bjm-seat[data-s="${D && D.yo}"]`);
+  function brillo(fuerte, asiento) {
+    const felt = el.querySelector('[data-felt]'), s = el.querySelector(`.bjm-seat[data-s="${asiento}"]`);
     felt.animate([{ filter: 'brightness(1)' }, { filter: `brightness(${fuerte ? 1.32 : 1.16})` }, { filter: 'brightness(1)' }], { duration: 900 });
     const fr = felt.getBoundingClientRect(), sr = s ? s.getBoundingClientRect() : null;
     confeti(felt, { n: fuerte ? 110 : 50, x: sr ? sr.left - fr.left + sr.width / 2 : null, y: sr ? sr.top - fr.top + sr.height * 0.4 : null, cols: fuerte ? ['#f2c14e', '#ffdc85', '#fff'] : undefined });
@@ -432,11 +443,11 @@
     let tt = '', ss = '', cls = 'bjm-t', ring = false;
     const sentados = d.asientos.length;
     if (S.fx === 'banca' && f === 'fin') { tt = 'Juega la banca' }
-    else if (f === 'espera') { tt = 'Mesa abierta'; ss = d.yo ? 'Apuesta para empezar una mano' : 'Siéntate y apuesta para empezar una mano' }
+    else if (f === 'espera') { tt = 'Mesa abierta'; ss = misAsientos(d).length ? 'Apuesta para empezar una mano' : 'Siéntate y apuesta para empezar una mano' }
     else if (f === 'apuestas') { tt = 'Apuestas'; ss = 'Se reparte al acabar la cuenta'; ring = true }
     else if (f === 'turnos') {
       if (S.fx === 'reparto') tt = 'Repartiendo';
-      else if (d.yo && r.turno === d.yo) { tt = 'Tu turno'; cls = 'bjm-t yo'; ss = 'Pide carta, plántate o dobla'; ring = true }
+      else if (turnoMio(d)) { tt = 'Tu turno'; cls = 'bjm-t yo'; ss = ordenMio(d).length > 1 ? `Mano ${numDe(d, r.turno)} · Pide carta, plántate o dobla` : 'Pide carta, plántate o dobla'; ring = true }
       else { const m = d.manos.find((x) => x.asiento === r.turno); tt = m ? `Turno de ${nom(m.player)}` : 'Repartiendo'; ring = !!m }
     } else if (f === 'fin') {
       const b = r.banca, vb = r.valor_banca;
@@ -489,35 +500,65 @@
       return `<span class="bjm-mi ${g > 0 ? 'win' : g < 0 ? 'lose' : 'eq'}">${g > 0 ? '▲ ' + N(g) : g < 0 ? '▼ ' + N(-g) : '='}</span>`;
     }).join('')}</div></div>`;
   }
+  // una fila por cada mano mia: su numero (el mismo que en el tapete), su valor, como va y lo puesto
+  function filaMano(d, m, o = {}) {
+    const n = numDe(d, m.asiento), g = m.pago - m.total;
+    const val = o.res ? (g > 0 ? '▲ ' + N(g) : g < 0 ? '▼ ' + N(-g) : '=') : o.apuesta ? N(m.total) : S.fx === 'reparto' ? '' : String(m.valor);
+    const cls = o.res ? (g > 0 ? 'win' : g < 0 ? 'lose' : '') : m.estado === 'pasada' ? 'lose' : m.estado === 'blackjack' ? 'acc' : '';
+    const txt = o.res ? resTxt(m) : o.apuesta ? '' : o.estado(m);
+    const fin = o.apuesta ? `<button class="bjm-qm" data-bjm="quitar" data-v="${m.asiento}" ${S.ocupa ? 'disabled' : ''}>Quitar mano</button>` : o.res ? '' : `<em class="num">${N(m.total)}</em>`;
+    return `<div class="bjm-mr ${o.on ? 'on' : ''}"><i class="bjm-nb num">${n}</i><b class="num ${cls}">${val}</b><span>${txt}</span>${fin}</div>`;
+  }
+  const resTxt = (x) => (x.resultado === 'blackjack' ? 'Blackjack' : x.resultado === 'gana' ? 'Ganas' : x.resultado === 'empate' ? 'Te devuelvo la apuesta' : x.estado === 'pasada' ? 'Te pasas' : 'Pierdes');
   function ctlHtml(d) {
-    const f = fase(d), r = d.ronda, m = miMano(d), sentado = !!d.yo, llena = !sentado && d.asientos.length >= NA;
+    const f = fase(d), mias = misManos(d), mios = misAsientos(d), sentado = mios.length > 0, varias = ordenMio(d).length > 1;
+    const max = (d.cfg && d.cfg.manos) || 3, libres = NA - d.asientos.length, llena = !sentado && libres <= 0;
+    const enRonda = f === 'apuestas' ? mias.map((m) => m.asiento) : [];
+    const libreMio = mios.find((s) => !enRonda.includes(s));
+    const puedeOtra = sentado && mios.length < max && libres > 0;
     const ocupa = S.ocupa ? 'disabled' : '';
-    let izq = '', der = '';
+    const m = miMano(d);
+    let izq = '', der = '', arriba = '';
     if ((f === 'turnos' || (f === 'fin' && S.refrescar)) && m) {
-      const enBanca = f === 'fin', reparte = S.fx === 'reparto';
-      const miTurno = !enBanca && r.turno === m.asiento && m.estado === 'juega' && !reparte;
-      const estado = enBanca ? 'Juega la banca' : reparte ? 'Repartiendo' : m.estado === 'blackjack' ? 'Blackjack' : m.estado === 'pasada' ? 'Te pasas' : m.estado === 'plantada' ? (m.auto ? 'Te plantas sin tiempo' : 'Te plantas') : miTurno ? 'Te toca' : 'Esperas tu turno';
-      izq = `<div class="bjm-yo"><span class="lab">Tu mano</span><div class="bjm-yv"><b class="num ${m.estado === 'pasada' ? 'lose' : m.estado === 'blackjack' ? 'acc' : ''}">${reparte ? '' : m.valor}</b><span>${estado}</span></div>
-        <span class="bjm-yap"><span class="lab">En juego</span> <b class="num">${N(m.total)}</b>${coin()}</span></div>`;
-      if (miTurno) {
-        const puedeDoblar = m.cartas.length === 2 && !m.doblada && saldo() >= m.stake;
-        der = `<div class="bjm-acc bjm-3"><button class="go" data-bjm="pedir" ${ocupa}>Pedir carta</button><button class="go ghost" data-bjm="plantar" ${ocupa}>Plantarse</button>${m.cartas.length === 2 && !m.doblada ? `<button class="go ghost" data-bjm="doblar" ${puedeDoblar && !S.ocupa ? '' : 'disabled'}><span>Doblar</span> <b class="num">${N(m.stake)}</b></button>` : ''}<div class="bjm-tm"><div class="bjm-bar"><i data-mibar></i></div><p class="bjm-mis"><b class="num" data-mis></b> <span>para decidir</span></p></div></div>`;
+      const enBanca = f === 'fin', reparte = S.fx === 'reparto', act = !enBanca && !reparte ? turnoMio(d) : null;
+      const activa = act && act.estado === 'juega' ? act : null;
+      const estado = (x) => (enBanca ? 'Juega la banca' : reparte ? 'Repartiendo' : x.estado === 'blackjack' ? 'Blackjack' : x.estado === 'pasada' ? 'Te pasas'
+        : x.estado === 'plantada' ? (x.auto ? 'Te plantas sin tiempo' : 'Te plantas') : activa && x.asiento === activa.asiento ? 'Te toca' : 'Esperas tu turno');
+      const uno = activa || m;
+      izq = varias
+        ? `<div class="bjm-yo bjm-ms"><span class="lab">Tus manos</span>${mias.map((x) => filaMano(d, x, { estado, on: activa && x.asiento === activa.asiento })).join('')}</div>`
+        : `<div class="bjm-yo"><span class="lab">Tu mano</span><div class="bjm-yv"><b class="num ${uno.estado === 'pasada' ? 'lose' : uno.estado === 'blackjack' ? 'acc' : ''}">${reparte ? '' : uno.valor}</b><span>${estado(uno)}</span></div>
+        <span class="bjm-yap"><span class="lab">En juego</span> <b class="num">${N(uno.total)}</b>${coin()}</span></div>`;
+      if (activa) {
+        const puedeDoblar = activa.cartas.length === 2 && !activa.doblada && saldo() >= activa.stake;
+        der = `<div class="bjm-acc bjm-3">${varias ? `<p class="bjm-cual"><span>Juegas la mano</span> <i class="bjm-nb num">${numDe(d, activa.asiento)}</i></p>` : ''}<button class="go" data-bjm="pedir" ${ocupa}>Pedir carta</button><button class="go ghost" data-bjm="plantar" ${ocupa}>Plantarse</button>${activa.cartas.length === 2 && !activa.doblada ? `<button class="go ghost" data-bjm="doblar" ${puedeDoblar && !S.ocupa ? '' : 'disabled'}><span>Doblar</span> <b class="num">${N(activa.stake)}</b></button>` : ''}<div class="bjm-tm"><div class="bjm-bar"><i data-mibar></i></div><p class="bjm-mis"><b class="num" data-mis></b> <span>para decidir</span></p></div></div>`;
       } else der = '<div class="bjm-acc bjm-wait"><p class="bjm-note">La banca juega cuando acaben todos</p></div>';
     } else if (f === 'turnos') {
       izq = `<div class="bjm-yo"><span class="lab">Mano en juego</span><p class="bjm-note">Apuesta para la siguiente mano</p></div>${apuestaHtml(false)}`;
       der = '<div class="bjm-acc"><button class="go" disabled>Siguiente mano</button></div>';
-    } else if (f === 'apuestas' && m) {
-      izq = `<div class="bjm-yo"><span class="lab">Tu apuesta</span><div class="bjm-yv"><b class="num">${N(m.total)}</b>${coin()}</div><p class="bjm-note">Se reparte al acabar la cuenta</p></div>`;
-      der = `<div class="bjm-acc"><button class="go ghost" data-bjm="quitar" ${ocupa}>Quitar apuesta</button></div>`;
     } else {
-      const mf = f === 'fin' && m && m.resultado ? m : null;
-      const g = mf ? mf.pago - mf.total : 0;
-      const res = mf ? `<div class="bjm-yo bjm-last"><span class="lab">Tu mano</span><div class="bjm-yv"><b class="num ${g > 0 ? 'win' : g < 0 ? 'lose' : ''}">${g > 0 ? '▲ ' + N(g) : g < 0 ? '▼ ' + N(-g) : '='}</b><span>${mf.resultado === 'blackjack' ? 'Blackjack' : mf.resultado === 'gana' ? 'Ganas' : mf.resultado === 'empate' ? 'Te devuelvo la apuesta' : mf.estado === 'pasada' ? 'Te pasas' : 'Pierdes'}</span></div></div>` : '';
-      izq = res + apuestaHtml(llena);
-      der = `<div class="bjm-acc"><button class="go" data-bjm="apostar" data-go ${llena || S.ocupa ? 'disabled' : ''}>${llena ? '<span>La mesa está llena</span>' : `<span>Apostar</span> <span class="num" data-bjm-n>${N(S.stake)}</span>`}</button>${f === 'apuestas' ? '<p class="bjm-note">Entras en esta mano</p>' : ''}</div>`;
+      // apostar: lo ya puesto (cada mano con Quitar mano), la cantidad, Apostar y Anadir otra mano
+      let previo = '';
+      if (f === 'apuestas' && mias.length) {
+        arriba = `<div class="bjm-ms h"><span class="lab">${mias.length > 1 ? 'Tus manos' : 'Tu apuesta'}</span>${mias.map((x) => filaMano(d, x, { apuesta: true })).join('')}</div>`;
+      } else if (f === 'fin' && mias.some((x) => x.resultado)) {
+        const hechas = mias.filter((x) => x.resultado), neto = hechas.reduce((a, x) => a + x.pago - x.total, 0);
+        const big = (g) => `<b class="num ${g > 0 ? 'win' : g < 0 ? 'lose' : ''}">${g > 0 ? '▲ ' + N(g) : g < 0 ? '▼ ' + N(-g) : '='}</b>`;
+        if (hechas.length > 1) arriba = `<div class="bjm-ms h bjm-last"><span class="lab">Tus manos</span>${hechas.map((x) => filaMano(d, x, { res: true })).join('')}<p class="bjm-tot">${big(neto)} <span>en total</span></p></div>`;
+        else previo = `<div class="bjm-yo bjm-last"><span class="lab">Tu mano</span><div class="bjm-yv">${big(hechas[0].pago - hechas[0].total)}<span>${resTxt(hechas[0])}</span></div></div>`;
+      }
+      const todas = sentado && !libreMio;                                           // todas tus manos ya tienen apuesta
+      izq = previo + (todas && !puedeOtra ? '' : apuestaHtml(llena));
+      const principal = todas
+        ? (puedeOtra ? `<button class="go" data-bjm="otra" data-go ${ocupa}><span>Otra mano</span> <span class="num" data-bjm-n>${N(S.stake)}</span></button>` : '')
+        : `<button class="go" data-bjm="apostar" data-go ${llena || S.ocupa ? 'disabled' : ''}>${llena ? '<span>La mesa está llena</span>' : `<span>Apostar</span> <span class="num" data-bjm-n>${N(S.stake)}</span>`}</button>`;
+      const nota = !todas && ordenMio(d).length > 1 ? `<p class="bjm-note">Va a tu mano ${numDe(d, libreMio)}</p>` : f === 'apuestas' && !mias.length ? '<p class="bjm-note">Entras en esta mano</p>' : '';
+      const otra = !todas && puedeOtra ? '<button class="go ghost bjm-otra" data-bjm="otra" ' + ocupa + '><span>Añadir otra mano</span></button>' : '';
+      const tope = todas && !puedeOtra ? (mios.length >= max ? `<p class="bjm-note">Ya tienes ${max} manos</p>` : '<p class="bjm-note">La mesa está llena</p>') : '';
+      der = `<div class="bjm-acc">${principal}${nota}${otra}${tope}</div>`;
     }
     const pie = `<div class="bjm-pie">${miasHtml(d)}<div class="bjm-pd">${sentado ? `<button class="bjm-lev" data-bjm="levantarse" ${S.ocupa ? 'disabled' : ''}>Levantarse</button>` : ''}<span class="bjm-cnt"><b class="num">${d.asientos.length}</b> <span>de 7 asientos</span></span></div></div>`;
-    return `<div class="bjm-row">${izq ? `<div class="bjm-l">${izq}</div>` : ''}${der}</div><p class="jg-aviso bjm-aviso" data-aviso>${esc(S.aviso)}</p>${pie}`;
+    return `${arriba}<div class="bjm-row">${izq ? `<div class="bjm-l">${izq}</div>` : ''}${der}</div><p class="jg-aviso bjm-aviso" data-aviso>${esc(S.aviso)}</p>${pie}`;
   }
   function pintaCtl(fuerza) {
     if (!el || !D || err) return;
@@ -535,15 +576,16 @@
     if (a === 'q') return cantidad(b.dataset.v);
     if (a === 'nada') return;
     if (S.ocupa) return;
-    const fn = { apostar: 'bjm_apostar', quitar: 'bjm_quitar', sit: 'bjm_sentarse', levantarse: 'bjm_levantarse', pedir: 'bjm_pedir', plantar: 'bjm_plantarse', doblar: 'bjm_doblar' }[a];
+    const fn = { apostar: 'bjm_apostar', otra: 'bjm_otra_mano', quitar: 'bjm_quitar', sit: 'bjm_sentarse', levantarse: 'bjm_levantarse', pedir: 'bjm_pedir', plantar: 'bjm_plantarse', doblar: 'bjm_doblar' }[a];
     if (!fn) return;
     let args = {};
-    if (a === 'apostar') {
+    if (a === 'apostar' || a === 'otra') {
       if (!(S.stake >= 1)) return falla({ message: 'Pon una cantidad' });
       if (S.stake > saldo()) return falla({ message: `No tienes tanto: te quedan ${N(saldo())}` });
       args = { p_stake: S.stake };
     }
-    if (a === 'sit') { if (D && D.yo && miMano(D) && fase(D) !== 'fin') return; args = { p_asiento: +b.dataset.v } }
+    if (a === 'sit') args = { p_asiento: +b.dataset.v };                       // un asiento libre: te sientas (otra mano mas, hasta 3)
+    if (a === 'quitar' && b.dataset.v) args = { p_asiento: +b.dataset.v };
     S.ocupa = true; S.aviso = ''; pintaCtl(true);
     const t0 = Date.now();
     try {
@@ -552,7 +594,7 @@
       reloj(data, t0);
       S.saldo = data.saldo; S.ocupa = false;
       recibe(data);
-      if (a === 'apostar' || a === 'quitar' || a === 'doblar' || a === 'levantarse') { if (ctx.refresh && !S.anim) ctx.refresh() }
+      if (a === 'apostar' || a === 'otra' || a === 'quitar' || a === 'doblar' || a === 'levantarse') { if (ctx.refresh && !S.anim) ctx.refresh() }
     } catch (e) { S.ocupa = false; falla(e); carga() }
     finally { S.ocupa = false; pintaCtl() }
   }

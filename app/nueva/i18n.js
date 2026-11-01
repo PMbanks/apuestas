@@ -434,6 +434,10 @@
     'Espera a que acabe la mano para cambiar de asiento': 'Wait for the hand to end to change seats', 'Espera a la siguiente mano': 'Wait for the next hand', 'Ya has apostado en esta mano': 'You already bet on this hand',
     'Ya se ha repartido: la apuesta sigue en juego': 'Cards are out: your bet stays in play', 'No tienes apuesta en esta mano': 'You have no bet on this hand', 'No hay ninguna mano en juego': 'No hand in play',
     'No juegas en esta mano': 'You are not in this hand', 'No es tu turno': 'It is not your turn',
+    // varias manos por jugador (db/048)
+    'Tus manos': 'Your hands', 'Añadir otra mano': 'Add another hand', 'Otra mano': 'Another hand', 'Quitar mano': 'Remove hand', 'Juegas la mano': 'Playing hand',
+    'en total': 'in total', 'Ya has apostado en todas tus manos': 'You already bet on all your hands', 'Esa mano ya tiene apuesta': 'That hand already has a bet',
+    'Ese asiento ya es tuyo': 'That seat is already yours', 'Ese asiento no es tuyo': 'That seat is not yours',
     'Blackjack: apuesta retirada': 'Blackjack: bet taken back', 'Blackjack: mano devuelta al abrir la mesa': 'Blackjack: hand refunded when the table opened',
   };
   const DIAS = { LUN: 'MON', 'MIÉ': 'WED', JUE: 'THU', VIE: 'FRI', 'SÁB': 'SAT', DOM: 'SUN', HOY: 'TODAY', ENE: 'JAN', ABR: 'APR', AGO: 'AUG', DIC: 'DEC' };
@@ -444,6 +448,7 @@
     [/^Pones ([\d.]+)\. El primero que entre se lo queda y hay ([\d.]+) en juego\. Si nadie entra antes de empezar, te lo devolvemos\.$/, 'You put in $1. The first to join takes it and $2 is at stake. If nobody joins before the match starts, you get it back.'], [/^Pones ([\d.]+)\. Si (.+) acepta, hay ([\d.]+) en juego\.$/, 'You put in $1. If $2 accepts, $3 is at stake.'],
     [/^(\d+) resueltas?$/, (m, n) => `${n} settled`], [/^(\d+) en vivo$/, '$1 live'],   // Mis apuestas (01-11)
     // la mesa de blackjack (bjmesa.js)
+    [/^Mano (\d) · Pide carta, plántate o dobla$/, 'Hand $1 · Hit, stand or double'], [/^Va a tu mano (\d)$/, 'Goes to your hand $1'], [/^Ya tienes (\d) manos$/, 'You already have $1 hands'], [/^Como mucho (\d) manos por jugador$/, 'At most $1 hands per player'],
     [/^Turno de (.+)$/, 'Turn: $1'], [/^La banca tiene (\d+)$/, 'Dealer has $1'], [/^Asiento (\d)$/, 'Seat $1'],
     [/^(\d+) en directo$/, '$1 live'], [/^Reto 1 contra 1 · Contra (.+)$/, 'Challenge · against $1'], [/^Reto 1 contra 1 · Esperando a que entre alguien$/, 'Challenge · waiting for someone to join'], [/^Reto 1 contra 1 · Esperando a que (.+) acepte$/, 'Challenge · waiting for $1 to accept'], [/^Empate: Tú$/, 'Draw: You'], [/^Empate: (.+)$/, 'Draw: $1'],   // menu A (01-11): la tira de directo de movil
     [/^(\d+) resultados?$/, (m, n) => `${n} result${n === '1' ? '' : 's'}`],   // Ya jugados B (01-11)
