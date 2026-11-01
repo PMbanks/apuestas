@@ -839,7 +839,7 @@ function partidos() {
     h += `<div class="day"><b>${DD(ms[0].at)}</b><span>${dayLab(ms[0].at)}</span><i>${ms.length} ${ms.length > 1 ? 'partidos' : 'partido'}</i></div>`;
     for (const m of ms) {
       const open = isOpen(m);
-      h += `<div class="row ${S.foc === m.id ? 'on' : ''} ${m.live && m.vivo ? 'cv' : ''}" data-foc="${m.id}" style="--i:${Math.min(ri++, 14)}">
+      h += `<div class="row ${S.foc === m.id ? 'on' : ''} ${m.live && m.vivo ? 'cv' : ''} ${m.live ? 'envivo' : ''}" data-foc="${m.id}" style="--i:${Math.min(ri++, 14)}">
         <span class="t">${m.live ? '<em>VIVO</em>' : HM(m.at)}${m.live ? (m.vivo ? '' : `<small class="sc">${esc(String(m.score || '').split(' ')[0])}</small>`) : Date.parse(m.at) <= NOW ? '<small class="pe">por empezar</small>' : `<small>${CD(m.at)}</small>`}</span>
         <span class="llw" title="${esc(L[m.lg][0])} · ${SP[m.s][0]}"><img class="ll" src="${esc(L[m.lg][1])}" alt="" loading="lazy">${m.s === 'c' || m.s === 'v' ? `<img class="lls" src="${SP[m.s][1]}" alt="">` : ''}</span>
         <span class="tms"><span class="tm">${logo(m, 'a')}<span>${esc(m.a)}</span>${esFav(favK(m.s, m.a)) || esFav('pa:' + m.id) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${dailyTag(m)}${vN(m, 'a')}</span><span class="tm">${logo(m, 'b')}<span>${esc(m.b)}</span>${esFav(favK(m.s, m.b)) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${vN(m, 'b')}</span>${vL(m)}</span>
@@ -1047,11 +1047,12 @@ const histRow = (b) => { const m = byId(b.m); if (!m) return ''; const t = Date.
   const [c, r] = b.cash ? [b.pay >= b.stake ? 'h-g' : 'h-p', 'RETIRADA ' + N(b.pay) + coin()] : b.st === 'won' ? ['h-g', '▲ ' + N(b.pay) + coin()] : b.st === 'lost' ? ['h-p', '▼ ' + N(b.stake) + coin()] : b.st === 'void' ? ['h-e', 'anulada'] : [m.live ? 'h-o h-live' : 'h-o', m.live ? 'EN VIVO' : 'EN JUEGO'];
   return `<div class="hst ${c}" data-goto="${m.id}"><span class="hd">${DD(t)} ${MO(t)}<small>${HM(t)}</small></span><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt="" loading="lazy"><span class="hm"><strong>${esc(m.a)} vs ${esc(m.b)}</strong><small>${b.p ? esc(pn(m, b.p)) + ' · ' + O(b.o) : 'oculta hasta empezar'} · ${N(b.stake)}${coin()} apostados</small></span><b>${r}</b></div>` };
 function historial(f) {
-  const bs = ALL.filter((b) => b.k === f.id && byId(b.m)).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)), lim = S.histAll ? bs.length : 15;
+  // PM, 01-11: "en history tambien lo de las flechas: despues de 6 bets que haya flechas"
+  const bs = ALL.filter((b) => b.k === f.id && byId(b.m)).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)), POR = 6, pags = Math.max(1, Math.ceil(bs.length / POR)), pg = Math.min(S.hp || 0, pags - 1);
   const g = bs.filter((b) => b.st === 'won'), pe = bs.filter((b) => b.st === 'lost'), neto = g.reduce((a, b) => a + b.pay - b.stake, 0) - pe.reduce((a, b) => a + perd(b), 0);
   return `<section class="cs" id="historial"><div class="cs-h"><div><h3>Historial</h3><p>${bs.length} apuestas · ${g.length} ganadas · ${pe.length} perdidas · ${neto >= 0 ? '▲' : '▼'} ${N(Math.abs(neto))}${coin()} en total</p></div></div>
-    <div class="hsts">${bs.slice(0, lim).map(histRow).join('') || '<p class="hint">Todavía no ha apostado.</p>'}</div>
-    ${bs.length > lim ? `<button class="q hst-mas" data-act="hist-all">Ver las ${bs.length}</button>` : ''}</section>`;
+    <div class="hsts">${bs.slice(pg * POR, pg * POR + POR).map(histRow).join('') || '<p class="hint">Todavía no ha apostado.</p>'}</div>
+    ${pags > 1 ? `<nav class="pags"><button data-hp="${pg - 1}" ${pg ? '' : 'disabled'} aria-label="Anterior">‹</button><span class="pags-n" data-notr>${pg + 1} / ${pags}</span><button data-hp="${pg + 1}" ${pg < pags - 1 ? '' : 'disabled'} aria-label="Siguiente">›</button></nav>` : ''}</section>`;
 }
 // PM, 30-10: "all bets lo quiero mejor, esta raro y feo" y "que se vea con que equipo van":
 // arriba los jugadores; luego cada partido con sus opciones y las caras de quien va con cada una; al final lo resuelto
@@ -1960,7 +1961,7 @@ document.addEventListener('click', (e) => { const b = e.target.closest('[data-lg
 document.addEventListener('click', async (e) => {
   if (S.onl && !e.target.closest('.onl')) { S.onl = false; pintaOnline() }
   if (S.pmenu && !e.target.closest('[data-act=pmenu]')) { S.pmenu = false; document.querySelector('.pm-hd.abre')?.classList.remove('abre') }
-  const t = e.target.closest('[data-pft],[data-jugmas],[data-abf],[data-abpg],[data-eqv],[data-eqtab],[data-eqpg],[data-vivo],[data-fav],[data-nov],[data-ct],[data-ft],[data-tclaim],[data-bsp],[data-bp],[data-side],[data-bm],[data-dv],[data-dtv],[data-mt],[data-mp],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
+  const t = e.target.closest('[data-hp],[data-pft],[data-jugmas],[data-abf],[data-abpg],[data-eqv],[data-eqtab],[data-eqpg],[data-vivo],[data-fav],[data-nov],[data-ct],[data-ft],[data-tclaim],[data-bsp],[data-bp],[data-side],[data-bm],[data-dv],[data-dtv],[data-mt],[data-mp],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
   const d = t.dataset;
   if (d.side && t.matches('[data-side]')) { S.shTodos = false; S.side = d.side; document.querySelector('.det')?.scrollTo?.(0, 0); return render() }
   if (d.act === 'sheet-back') { S.side = null; return render() }
@@ -1968,6 +1969,7 @@ document.addEventListener('click', async (e) => {
   if (d.act === 'dv-ver') { S.dvVer = !S.dvVer; return render() }
   if (d.vivo) { S.scr = 'directo'; S.dv = d.vivo; S.dtv = null; S.dvm = null; S.dvVer = false; S.nvp = false; document.getElementById('view').scrollTop = 0; return render() }
   if (d.dtv != null && t.matches('[data-dtv]')) { S.dtv = +d.dtv; S.dvm = dvSel().m?.id; return render() }
+  if (d.hp != null && t.matches('[data-hp]')) { S.hp = +d.hp; render(); document.getElementById('historial')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); return }
   if (d.mt) { S.mt = d.mt; S.mp = 0; return render() }
   if (d.bsp) { S.bsp = d.bsp; S.bp = 0; return render() }
   if (d.bp != null && t.matches('[data-bp]')) { S.bp = +d.bp; render(); document.querySelector('.mb-rs2')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); return }
@@ -2054,7 +2056,7 @@ document.addEventListener('click', async (e) => {
   else if (d.bf) { S.bf = d.bf; S.bp = 0 }
   else if (d.vis) { const { error } = await db.rpc('admin_set', { p_key: 'vis', p_value: d.vis }); if (error) return toast(errMsg(error)); return refresh() }
   else if (d.pf) S.pf = d.pf;
-  else if (d.prof) { if (S.scr !== 'perfil') S.prev = S.scr; S.prof = d.prof; S.scr = 'perfil'; S.sheet = false; document.getElementById('view').scrollTop = 0 }
+  else if (d.prof) { if (S.scr !== 'perfil') S.prev = S.scr; S.prof = d.prof; S.hp = 0; S.scr = 'perfil'; S.sheet = false; document.getElementById('view').scrollTop = 0 }
   else if (d.jugmas) S.jugN = (S.jugN || 8) + 8;
   else if (d.goto) { S.scr = 'partidos'; S.foc = d.goto; S.sheet = true; document.getElementById('view').scrollTop = 0 }
   else if (d.pick) { S.side = null; const [m, p] = d.pick.split('|'); S.sel = isSel(byId(m), p) ? null : { m, p }; if (S.foc !== m) { S.foc = m; S.sheet = true } }

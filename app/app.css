@@ -1011,6 +1011,7 @@ html.sin-anim .claim{animation:none}
 .pags{display:flex;justify-content:center;gap:6px;margin-top:18px}
 .pags button{min-width:34px;height:34px;border-radius:999px;font:500 13px var(--mono);color:var(--mute)}
 .pags button.on{background:var(--acc);color:#141008}
+.pags-n{align-self:center;padding:0 10px;font:600 13px var(--mono);color:var(--mute)}
 .pags button:disabled{opacity:.3}
 .pags button:not(.on):not(:disabled):hover{background:rgba(255,255,255,.06);color:var(--ink)}
 .rueda{display:grid;grid-template-columns:240px minmax(0,1fr);gap:44px;align-items:center;margin-top:44px;padding:30px 0;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}
@@ -2309,3 +2310,14 @@ html[data-moneda="robux"] .cn{background-image:url(img/monedas/robux.svg)}
 .alta-ok dd{margin:0;user-select:all;overflow-wrap:anywhere}
 :root{--f-c9:#7bd389;--f-c10:#f28cc0;--f-c11:#8fa3ff;--f-c12:#d9a066}
 .av.c9{background:var(--f-c9);color:#06170b}.av.c10{background:var(--f-c10);color:#22081a}.av.c11{background:var(--f-c11);color:#0a0f2b}.av.c12{background:var(--f-c12);color:#1f1205}
+/* PM, 01-11: "Elche Valencia no esta bien centrado": forma, numeros y Seguir debajo de cada escudo, en las mismas columnas */
+.d-vs{grid-template-columns:minmax(0,1fr) 104px minmax(0,1fr)}
+.tp{grid-template-columns:minmax(0,1fr) 104px minmax(0,1fr)}
+.tp>span:first-child,.tp>span:last-child{text-align:center}
+.tp .fm{justify-content:center}
+.tp.h2h>span:last-child{text-align:right}
+@media (min-width:861px){.d-favs{grid-template-columns:minmax(0,1fr) 104px minmax(0,1fr)}.d-favs>:nth-child(2){white-space:nowrap}}
+/* PM, 01-11: "lo que este live, pon toda la linea del partido en amarillo para diferenciarlo" */
+.row.envivo{background:linear-gradient(90deg,rgba(242,193,78,.15),rgba(242,193,78,.06) 60%,rgba(242,193,78,.03));color:var(--ink)}
+.row.envivo::after{content:"";position:absolute;left:-14px;top:10px;bottom:10px;width:3px;border-radius:3px;background:var(--acc)}
+.row.envivo:hover{background:linear-gradient(90deg,rgba(242,193,78,.2),rgba(242,193,78,.08) 60%,rgba(242,193,78,.04))}

@@ -16,7 +16,7 @@
   const g = (f, d) => { try { return f() } catch { return d } };
   const t2 = (x) => (typeof x === 'number' ? x : Date.parse(x || '')) || 0;
   const tr = (el) => { if (window.GM_LANG && el) g(() => GM_LANG.traduce(el)) };
-  const POR = 9;
+  const POR = 6;                                                        // PM, 01-11: flechas despues de 6
 
   /* ---------- combinadas (las carga combinadas.js) ---------- */
   const combos = () => g(() => (window.GM_CMB && GM_CMB.todas()) || null, null);
