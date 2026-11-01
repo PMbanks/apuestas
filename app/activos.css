@@ -62,3 +62,14 @@
   .ac-lado .rt-j .rt-j1 .rt-eq{display:none}
 }
 html.sin-anim .ac-vivo i{animation:none}
+
+/* PM 01-11: arriba de la pantalla del partido y en el chat: quien esta dentro y los retos con su boton de unirse */
+.ac-top{display:grid;gap:12px;margin:0 0 18px;padding:0}
+.ac-quien{display:grid;gap:8px}
+.ac-qs{display:flex;flex-wrap:wrap;gap:8px}
+.ac-q1{display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:999px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);font:600 13px/1 var(--sans);min-width:0}
+.ac-q1 b{font-weight:700;white-space:nowrap}
+.ac-q1 i{font-style:normal;color:var(--mute);font-weight:500;max-width:14ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ac-q1 em{font:600 13px var(--mono);font-style:normal;color:var(--acc2);white-space:nowrap}
+.c-side .ac-top{margin:0 0 22px}
+.c-side .ac-c{padding:14px}

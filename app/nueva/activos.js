@@ -60,5 +60,15 @@
     </section>`;
   }
 
-  window.GM_ACTIVOS = { html, lista };
+  // los retos de UN partido (para la pantalla del partido y el chat), con sus botones de unirse
+  const retos = (mid) => lista().filter((c) => c.m === mid).map(tarjeta).join('');
+  // PM 01-11: "si alguien se ha metido en una bet o hay algun challenge que salga arriba para meterse, que se vea facil meterse":
+  // arriba de la pantalla del partido, quien ha apostado y los retos de ese partido con su boton de unirse
+  function arriba(m) {
+    const cs = retos(m.id), bs = g(() => whoOn(m.id), []);
+    if (!cs && !bs.length) return '';
+    const dentro = bs.length ? `<div class="ac-quien"><span class="lab">Quién está dentro</span><div class="ac-qs">${bs.map((x) => `<span class="ac-q1">${cara(x.f)}<b data-notr>${esc(g(() => fr(x.f).n, '·'))}</b>${x.p ? `<i data-notr>${esc(g(() => pn(m, x.p), ''))}</i>` : ''}<em class="num">${N(x.stake)}${g(() => coin(), '')}</em></span>`).join('')}</div></div>` : '';
+    return `<section class="ac ac-top" aria-label="Quién está dentro">${dentro}${cs ? `<div class="ac-lista">${cs}</div>` : ''}</section>`;
+  }
+  window.GM_ACTIVOS = { html, lista, retos, arriba };
 })();

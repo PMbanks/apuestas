@@ -2359,3 +2359,10 @@ html[data-moneda="robux"] .cn{background-image:url(../img/monedas/robux.svg)}
 
 /* PM 01-11: el logo (la ficha GA) es fijo; la moneda .cn cambia con la divisa que elijas */
 .logo-ga{display:inline-block;flex:none;width:var(--s,28px);height:var(--s,28px);border-radius:50%;background:url(../img/logo-ga.webp) center/contain no-repeat;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
+
+/* PM 01-11: "gentle mates gc 2 y kru blaze 1 estan muy pegados": en la tarjeta En juego ahora del chat el nombre y su marcador van en lineas aparte, con aire */
+.live-m>div{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;line-height:1.25}
+.live-m>div .vn{display:inline-flex;align-items:baseline;justify-content:center;gap:10px;margin:2px 0 0}
+.live-m>div .vn em{font:600 24px/1 var(--mono);font-style:normal}
+.live-m>div .vn small{font:500 14px/1 var(--mono);opacity:.8;padding:3px 8px;border-radius:8px;background:rgba(255,255,255,.08)}
+.live-m img{margin:0 auto}

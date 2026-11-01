@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "quien-dentro-arriba-0111",
+   "fecha": "2026-11-02",
+   "hora": "01:00",
+   "titulo": "Quién está dentro, arriba",
+   "texto": "Al abrir un partido, arriba salen quién ha apostado y los retos de ese partido con su botón para unirte en un toque. En el chat, el marcador del partido en juego tiene más aire y también lista sus retos.",
+   "titulo_en": "Who is in, at the top",
+   "texto_en": "When you open a match, the top now shows who has bet and the challenges on that match with a button to join in one tap. In the chat, the live match score has more room and also lists its challenges.",
+   "img": "novedades/quien-dentro.webp",
+   "ir": "partidos"
+  },
+  {
    "id": "logo-nuevo-0111",
    "fecha": "2026-11-02",
    "hora": "00:30",
