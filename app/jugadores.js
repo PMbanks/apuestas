@@ -15,7 +15,7 @@
   const Q = () => window.GM_EQ;
   const nk = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const juego = (s) => (s === 'v' ? 'valorant' : 'csgo');
-  const NO = '[data-pick],[data-stake],[data-cancel],[data-retirar],[data-accept],[data-decline],[data-sumo],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-share],[data-xc],[data-cmb-co],[data-bsp]';
+  const NO = '[data-pick],[data-stake],[data-cancel],[data-retirar],[data-accept],[data-decline],[data-sumo],[data-retar],[data-pn],[data-rto],[data-rpick],[data-rstake],[data-share],[data-xc],[data-cmb-co],[data-bsp]';
   const IC_X = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
   /* ---------- datos ---------- */

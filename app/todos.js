@@ -74,7 +74,7 @@
     let tit, acc = '', act = false;
     if (c.st === 'pending') {
       if (paraMi) { tit = `<span>${c.ab ? 'Reta a cualquiera con' : 'Te reta con'}</span> <span class="nm" data-notr>${esc(de)}</span>`; act = true;
-        acc = `<span class="td-btns">${picksOf(m).filter((p) => p !== c.fp).map((p) => `<button class="td-btn g" data-accept="${c.id}|${p}"><span>${c.ab ? 'Entro con' : 'Acepto'}</span> <span data-notr>${esc(pn(m, p))}</span></button>`).join('')}${c.ab ? '' : `<button class="td-btn q" data-decline="${c.id}">No</button>`}</span>` }
+        acc = `<span class="td-btns">${window.GM_RETOS ? GM_RETOS.accion(c, 'en-td') : ''}</span>` }
       else if (mio) { tit = c.ab ? `<span>Retas a cualquiera</span><em data-notr>${esc(de)}</em>` : `<span>Retas a</span> <span class="nm" data-notr>${esc(fr(c.to).n)}</span><em data-notr>${esc(de)}</em>`; acc = '<span class="td-tag q">esperando</span>' }   // los retos no se cancelan
       else { tit = c.ab ? `<span>Reta a cualquiera</span><em data-notr>${esc(de)}</em>` : `<span>Reta a</span> <span class="nm" ${sinTr(c.to)}>${esc(nombre(c.to))}</span><em data-notr>${esc(de)}</em>`; acc = '<span class="td-tag q">esperando</span>' }
     } else {

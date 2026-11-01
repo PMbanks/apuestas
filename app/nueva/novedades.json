@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "retos-faciles-0111",
+   "fecha": "2026-11-01",
+   "hora": "21:40",
+   "titulo": "Retos en dos toques",
+   "texto": "Retar y aceptar retos es mucho más fácil: botón Retar en cada partido y un solo panel con todo a la vista (a quién, tu lado y cuánto), listo en dos toques. Y el reto que te llega se acepta de un toque con \"Aceptar, pones 250, ganas 500\". Un reto no se puede cancelar, y te lo recordamos en el mismo botón.",
+   "titulo_en": "Challenges in two taps",
+   "texto_en": "Sending and accepting challenges is much easier: a Challenge button on every match opens one panel with everything in view (who, your side, how much), done in two taps. And a challenge sent to you is accepted in one tap with \"Accept, you put in 250, you win 500\". A challenge cannot be cancelled, and we remind you right on the button.",
+   "img": "novedades/retos-faciles.webp",
+   "ir": "partidos"
+  },
+  {
    "id": "liga-periodos-0111",
    "fecha": "2026-11-01",
    "hora": "21:15",

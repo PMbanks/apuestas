@@ -418,6 +418,10 @@
     'Todas las apuestas': 'All bets', 'En vivo': 'Live', 'Devueltas': 'Refunded', 'Retiradas': 'Cashed out', 'RETIRADA': 'CASHED OUT', 'EN JUEGO': 'OPEN', 'Oculta hasta empezar': 'Hidden until kick-off', 'Nada con estos filtros.': 'Nothing with these filters.', 'Todavía nadie ha apostado.': 'Nobody has bet yet.',
     // ranking de Juegos: tira de caras y duelo (modelo F, 01-11)
     'Ranking ·': 'Leaderboard ·', 'Tu posición': 'Your position', 'Delante': 'Ahead', 'detrás': 'behind', 'Detrás': 'Behind', 'Vais igualados': 'You are level',
+    // retos mas faciles (01-11): boton Retar, panel de enviar y Aceptar en un toque
+    'Retar': 'Challenge', 'A quién': 'Who', 'Cuánto': 'How much', 'Elige tu lado': 'Pick your side', 'Retar por': 'Challenge for', 'el que acierte se lleva': 'whoever is right takes',
+    'Tu rival se queda con': 'Your opponent takes', '· si empatan, se devuelve': '· if they draw, it is refunded', 'tú irías con': 'you would back',
+    'Aceptar · pones': 'Accept · you put in', ', ganas': ', you win', 'Te faltan': 'You are short by',
     // retos: reto abierto, tarjeta de reto pendiente y doble confirmacion (retos.js) y ocultar ligas y juegos (ocultas.js), 01-11
     'Retar a un amigo o a cualquiera': 'Challenge a friend or anyone', 'Elige a quién retas y el resultado.': 'Pick who to challenge and a result.',
     'Un reto no se puede cancelar después.': 'A challenge cannot be cancelled afterwards.', 'Un reto no se puede cancelar': 'A challenge cannot be cancelled',
@@ -473,7 +477,7 @@
     [/^(\d+) mensajes nuevos$/, '$1 new messages'],
     [/^Te faltan ([\d.]+)$/, 'You need $1 more'],
     [/^(\d+) amigos?$/, (m, n) => `${n} ${n === '1' ? 'friend' : 'friends'}`], [/^Esperando a que (.+) acepte$/, 'Waiting for $1 to accept'],   // quien.js (01-11)
-    [/^Pones ([\d.]+)\. El primero que entre se lo queda y hay ([\d.]+) en juego\. Si nadie entra antes de empezar, te lo devolvemos\.$/, 'You put in $1. The first to join takes it and $2 is at stake. If nobody joins before the match starts, you get it back.'], [/^Pones ([\d.]+)\. Si (.+) acepta, hay ([\d.]+) en juego\.$/, 'You put in $1. If $2 accepts, $3 is at stake.'],
+    [/^Te faltan ([\d.]+)$/, 'You are short by $1'], [/^Pones ([\d.]+)\. El primero que entre se lo queda y hay ([\d.]+) en juego\. Si nadie entra antes de empezar, te lo devolvemos\.$/, 'You put in $1. The first to join takes it and $2 is at stake. If nobody joins before the match starts, you get it back.'], [/^Pones ([\d.]+)\. Si (.+) acepta, hay ([\d.]+) en juego\.$/, 'You put in $1. If $2 accepts, $3 is at stake.'],
     [/^(\d+) resueltas?$/, (m, n) => `${n} settled`], [/^(\d+) en vivo$/, '$1 live'],   // Mis apuestas (01-11)
     // la mesa de blackjack (bjmesa.js)
     [/^Mano (\d) · Pide carta, plántate o dobla$/, 'Hand $1 · Hit, stand or double'], [/^Va a tu mano (\d)$/, 'Goes to your hand $1'], [/^Ya tienes (\d) manos$/, 'You already have $1 hands'], [/^Como mucho (\d) manos por jugador$/, 'At most $1 hands per player'],
