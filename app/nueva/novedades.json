@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "blackjack-manos-0111",
+   "fecha": "2026-11-01",
+   "hora": "19:25",
+   "titulo": "Blackjack a varias manos",
+   "texto": "Puedes jugar hasta 3 manos a la vez en la misma ronda, cada una en su asiento y con su apuesta. Añade otra mano antes de repartir o quítala si te arrepientes; cada una se juega en su turno y se paga por separado.",
+   "titulo_en": "Multi-hand blackjack",
+   "texto_en": "You can play up to 3 hands at once in the same round, each on its own seat with its own bet. Add another hand before the deal or take it back; each one plays its own turn and pays out on its own.",
+   "img": "novedades/blackjack-manos.webp",
+   "ir": "juegos"
+  },
+  {
    "id": "liga-nueva-0111",
    "fecha": "2026-11-01",
    "hora": "19:15",
