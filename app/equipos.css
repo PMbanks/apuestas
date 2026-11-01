@@ -1,0 +1,155 @@
+/* Equipos (01-11): plantilla separada, banderas, agentes y roles, palmares de siempre y cambios. Se cuelga del panel "Todo sobre el equipo" de app.css. */
+
+/* el panel de equipo puede abrirse desde dentro de la ventana del partido (z 75): por encima de ella */
+#eqp .rw-fondo{z-index:79}
+#eqp .eqp{z-index:80}
+
+/* logos que abren un equipo */
+img.eqx-lg{cursor:pointer;transition:transform var(--t),filter var(--t)}
+img.eqx-lg:hover{transform:scale(1.1);filter:brightness(1.18) drop-shadow(0 0 .6px rgba(255,255,255,.7))}
+
+/* banderas de verdad */
+.fl{display:inline-block;flex:none;width:20px;height:15px;object-fit:cover;border-radius:3px;vertical-align:-2px;margin-right:6px;background:rgba(255,255,255,.08)}
+.vv-p .fl{width:16px;height:12px;margin:0 0 0 6px;vertical-align:-1px}
+.pl .fl,.pls .fl{width:16px;height:12px;margin-right:5px;vertical-align:-1px}
+.eq-c small .fl{width:14px;height:10px;margin-right:4px;vertical-align:0}
+.eq-k .fl{width:22px;height:16px;margin-right:8px;vertical-align:-2px}
+.eq-k>div:has(.fl){grid-column:span 2}
+
+/* cabecera: pais y siglas junto al nombre */
+.eq-ps{display:flex;align-items:center;gap:0;margin-top:5px;font:500 12.5px var(--sans);color:var(--soft)}
+.eq-ps .fl{margin-right:8px}
+.eq-sg{margin-left:10px;padding-left:10px;border-left:1px solid var(--hair);font:600 11px var(--mono);letter-spacing:.1em;color:var(--mute)}
+.eq-h:has(.eq-ps) .eq-fm{margin-top:6px}
+
+/* secciones de la plantilla */
+.eqx-h{display:flex;align-items:baseline;gap:10px;margin:22px 0 12px}
+.eqx-h:first-child{margin-top:6px}
+.eqp .eq-cu h4.eqx-h{margin:22px 0 12px;font:800 17px var(--disp);letter-spacing:-.02em}
+.eqp .eq-cu h4.eqx-h:first-child{margin-top:6px}
+.eqx-h i{font:500 12px var(--mono);font-style:normal;color:var(--dim)}
+
+/* jugadores */
+.eqx-pl{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:22px 16px}
+.eqx-p{display:grid;align-content:start;gap:5px;min-width:0}
+.eqx-ph{position:relative;display:block;width:76px;height:76px;margin-bottom:5px}
+.eqx-ph>img:first-child,.eqx-i{width:76px;height:76px;border-radius:50%;object-fit:cover;object-position:50% 14%;background:rgba(255,255,255,.07)}
+.eqx-i{display:grid;place-items:center;font:700 20px var(--disp);color:var(--mute)}
+.eqx-ph .eqx-fb{position:absolute;right:-5px;bottom:2px;width:26px;height:19px;margin:0;border-radius:4px;box-shadow:0 0 0 3px var(--bg)}
+.eqx-n{display:flex;align-items:center;gap:8px;min-width:0}
+.eqx-n b{min-width:0;font:800 17px/1.15 var(--disp);letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eqx-cap{flex:none;padding:2px 6px;border-radius:5px;background:rgba(242,193,78,.16);color:var(--acc);font:700 9.5px var(--mono);font-style:normal;letter-spacing:.08em;text-transform:uppercase}
+.eqx-p small{font:11.5px/1.35 var(--sans);color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eqx-ds,.eqx-est{font:11px var(--mono);color:var(--dim)}
+.eqx-est span:first-child{color:var(--acc)}
+.eqx-ds time,.eqx-est time{color:var(--mute)}
+.eqx-pl.chico{grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px 18px}
+.eqx-p.chico{grid-template-columns:48px minmax(0,1fr);column-gap:12px;align-items:center}
+.eqx-p.chico .eqx-ph{grid-row:1/5;width:48px;height:48px;margin:0}
+.eqx-p.chico .eqx-ph>img:first-child,.eqx-p.chico .eqx-i{width:48px;height:48px;font-size:14px}
+.eqx-p.chico .eqx-fb{width:20px;height:15px;right:-4px;bottom:0;box-shadow:0 0 0 2px var(--bg)}
+.eqx-p.chico .eqx-n b{font-size:15px}
+
+/* agentes (Valorant) y roles (CS2) */
+.eqx-ags{display:flex;gap:8px;margin-top:6px}
+.eqx-ag{position:relative;display:grid;grid-template-rows:34px 12px;justify-items:center;gap:3px;width:40px}
+.eqx-ag img{width:34px;height:34px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.07);opacity:0;transition:opacity .25s}
+.eqx-ag.ok img{opacity:1}
+.eqx-ag.sin img{display:none}
+.eqx-ag u{display:none;text-decoration:none}
+.eqx-ag.sin{width:auto;min-width:40px;grid-template-rows:auto 12px}
+.eqx-ag.sin u{display:block;padding:7px 8px;border-radius:999px;background:rgba(255,255,255,.07);font:600 10.5px var(--sans);color:var(--soft)}
+.eqx-ag i{font:500 10px var(--mono);font-style:normal;color:var(--dim)}
+.eqx-p.chico .eqx-ags{margin-top:4px;gap:6px}
+.eqx-p.chico .eqx-ag{width:30px;grid-template-rows:26px 10px}
+.eqx-p.chico .eqx-ag img{width:26px;height:26px}
+.eqx-ros{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.eqx-ro{padding:3px 9px;border-radius:999px;background:rgba(242,193,78,.14);color:var(--acc);font:600 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+
+/* cuerpo tecnico y organizacion */
+.eqx-ss{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 28px}
+.eqx-s{display:grid;grid-template-columns:20px minmax(0,1.1fr) minmax(0,1fr) auto;align-items:center;gap:0 12px;min-height:42px;border-bottom:1px solid rgba(255,255,255,.05)}
+.eqx-s .fl,.eqx-sf{margin:0}
+.eqx-sf{display:block;width:20px;height:15px}
+.eqx-sn{display:grid;min-width:0}
+.eqx-sn b{font:700 13.5px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eqx-sn small{font:11px var(--sans);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eqx-sr{font:12px var(--sans);color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eqx-s time{font:11px var(--mono);color:var(--dim);white-space:nowrap}
+.eqx-ss.org .eqx-sn b{font-weight:600;color:var(--soft)}
+.eqx-ss.org .eqx-sr{color:var(--mute)}
+.eqx-at{margin:26px 0 4px;font:11px/1.6 var(--sans);color:var(--dim)}
+.eqx-at a{color:var(--mute);text-decoration:underline;text-decoration-color:rgba(255,255,255,.2);text-underline-offset:3px}
+.eqx-at a:hover{color:var(--ink)}
+.eqx-at small{font-size:10.5px}
+.eqx-nota{margin:14px 0 0;font:11px/1.5 var(--sans);color:var(--dim)}
+
+/* palmares de siempre */
+.eqx-tt{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 34px;padding:4px 0 14px}
+.eqx-tt b{display:block;margin-top:5px;font:600 20px var(--mono)}
+.eqx-tt .eqx-big b{font:800 56px/.95 var(--disp);letter-spacing:-.05em;color:var(--acc)}
+.eqx-tr{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:2px 0 8px}
+.eqx-tr .lab{margin-right:6px}
+.eqx-tr button{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:999px;background:rgba(255,255,255,.05);font:600 12px var(--mono);color:var(--mute);transition:background var(--t),color var(--t)}
+.eqx-tr button:hover{color:var(--ink)}
+.eqx-tr button.on{background:rgba(242,193,78,.16);color:var(--acc)}
+.eqx-tr i{font:500 10.5px var(--mono);font-style:normal;opacity:.7}
+.eqx-w{display:grid;grid-template-columns:86px minmax(0,1fr) 26px 96px;align-items:center;gap:12px;min-height:46px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.eqx-w time{font:11.5px var(--mono);color:var(--dim)}
+.eqx-wn{display:grid;min-width:0}
+.eqx-wn b{font:600 13.5px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eqx-wn small{font:11px var(--mono);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eqx-w.s .eqx-wn b{color:var(--acc)}
+.eqx-wk{justify-self:center;display:grid;place-items:center;width:22px;height:22px;border-radius:7px;background:rgba(255,255,255,.07);font:700 10.5px var(--mono);color:var(--soft)}
+.eqx-w.s .eqx-wk{background:rgba(242,193,78,.18);color:var(--acc)}
+.eqx-wp{justify-self:end;font:600 12px var(--mono);color:var(--win)}
+/* futbol: titulos del club */
+.eqx-fs{display:grid}
+.eqx-f{display:grid;grid-template-columns:minmax(0,1fr) auto auto minmax(0,.9fr);align-items:baseline;gap:10px;min-height:42px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.eqx-fn{font:600 13.5px var(--sans);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eqx-f b{font:800 20px var(--disp);color:var(--acc);text-align:right}
+.eqx-fv{font:11px var(--mono);color:var(--dim)}
+.eqx-f small{font:11px var(--mono);color:var(--dim);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* cambios de plantilla */
+.eqx-c{display:grid;grid-template-columns:92px 74px minmax(0,1fr) minmax(0,.9fr);align-items:center;gap:12px;min-height:44px;border-bottom:1px solid rgba(255,255,255,.05)}
+.eqx-c time{font:11.5px var(--mono);color:var(--dim)}
+.eqx-ck{font:700 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.eqx-c.in .eqx-ck{color:var(--win)}
+.eqx-c.out .eqx-ck{color:#e0646f}
+.eqx-c.ina .eqx-ck{color:var(--acc)}
+.eqx-cq{display:flex;align-items:center;min-width:0}
+.eqx-cq b{font:700 13.5px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eqx-cq small{margin-left:9px;font:11px var(--sans);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eqx-cq .fl,.eqx-cq .eqx-sf{margin-right:9px}
+.eqx-cn{font:600 12.5px var(--sans);color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eqx-cn span{color:var(--dim);font-weight:400}
+
+@media (max-width:860px){
+  .eqx-pl{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 12px}
+  .eqx-pl.chico{grid-template-columns:1fr;gap:14px}
+  .eqx-ph{width:68px;height:68px}
+  .eqx-ph>img:first-child,.eqx-i{width:68px;height:68px}
+  .eqx-ss{grid-template-columns:1fr}
+  .eqx-s{grid-template-columns:20px minmax(0,1fr) auto}
+  .eqx-s .eqx-sr{grid-column:2/4;grid-row:2;margin-top:-6px;padding-bottom:6px}
+  .eqx-s time{grid-column:3;grid-row:1}
+  .eqx-tt{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px}
+  .eqx-tt .eqx-big{grid-column:1/-1}
+  .eqx-tt .eqx-big b{font-size:46px}
+  .eqx-tt b{font-size:17px}
+  .eqx-w{grid-template-columns:minmax(0,1fr) 24px 80px;gap:4px 10px}
+  .eqx-w time{grid-column:1/4;grid-row:1;font-size:11px}
+  .eqx-wn{grid-column:1;grid-row:2}
+  .eqx-wk{grid-column:2;grid-row:2}
+  .eqx-wp{grid-column:3;grid-row:2}
+  .eqx-w{padding:8px 0}
+  .eqx-c{grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:8px 0}
+  .eqx-c time{grid-column:1;grid-row:1}
+  .eqx-ck{grid-column:2;grid-row:1;justify-self:end}
+  .eqx-cq{grid-column:1/3;grid-row:2}
+  .eqx-cn{grid-column:1/3;grid-row:3}
+  .eqx-cn:empty{display:none}
+  .eqx-f{grid-template-columns:minmax(0,1fr) auto auto}
+  .eqx-f small{grid-column:1/4;text-align:left}
+}

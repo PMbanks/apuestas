@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "equipos-0111",
+   "fecha": "2026-11-01",
+   "hora": "18:20",
+   "titulo": "Fichas de equipos",
+   "texto": "Toca el escudo de cualquier equipo y se abre su ficha. Titulares, suplentes y cuerpo técnico con banderas de verdad, los agentes que juega cada jugador de Valorant con sus iconos oficiales, el rol de cada jugador de CS2, los torneos ganados de siempre y todos los cambios de plantilla.",
+   "titulo_en": "Team profiles",
+   "texto_en": "Tap any team logo to open its profile. Starters, substitutes and staff with real flags, the agents each Valorant player uses with their official icons, each CS2 player role, all time tournament wins and every roster change.",
+   "img": "novedades/equipos.webp",
+   "ir": "partidos"
+  },
+  {
    "id": "abrir-cajas-0111",
    "fecha": "2026-11-01",
    "hora": "17:45",
