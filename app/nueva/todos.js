@@ -70,13 +70,13 @@
       <div class="m"><span>${N(c.stake)}</span> → <b>${N(c.stake * odds)}</b>${coin()}<small>cobraría</small></div><div class="bx">${etq}</div></div>`;
   }
   function tkReto(c, fid) {
-    const m = byId(c.m), suyo = fid && c.to === fid && c.st !== 'pending', paraMi = c.to === MEK && c.st === 'pending' && isOpen(m), mio = c.from === MEK, de = pn(m, c.fp);
+    const m = byId(c.m), suyo = fid && c.to === fid && c.st !== 'pending', paraMi = (c.to === MEK || (c.ab && c.from !== MEK)) && c.st === 'pending' && isOpen(m), mio = c.from === MEK, de = pn(m, c.fp);
     let tit, acc = '', act = false;
     if (c.st === 'pending') {
-      if (paraMi) { tit = `<span>Te reta con</span> <span class="nm" data-notr>${esc(de)}</span>`; act = true;
-        acc = `<span class="td-btns">${picksOf(m).filter((p) => p !== c.fp).map((p) => `<button class="td-btn g" data-accept="${c.id}|${p}"><span>Acepto</span> <span data-notr>${esc(pn(m, p))}</span></button>`).join('')}<button class="td-btn q" data-decline="${c.id}">No</button></span>` }
-      else if (mio) { tit = `<span>Retas a</span> <span class="nm" data-notr>${esc(fr(c.to).n)}</span><em data-notr>${esc(de)}</em>`; acc = `<button class="td-btn q" data-retirar="${c.id}">Retirar</button>` }
-      else { tit = `<span>Reta a</span> <span class="nm" ${sinTr(c.to)}>${esc(nombre(c.to))}</span><em data-notr>${esc(de)}</em>`; acc = '<span class="td-tag q">esperando</span>' }
+      if (paraMi) { tit = `<span>${c.ab ? 'Reta a cualquiera con' : 'Te reta con'}</span> <span class="nm" data-notr>${esc(de)}</span>`; act = true;
+        acc = `<span class="td-btns">${picksOf(m).filter((p) => p !== c.fp).map((p) => `<button class="td-btn g" data-accept="${c.id}|${p}"><span>${c.ab ? 'Entro con' : 'Acepto'}</span> <span data-notr>${esc(pn(m, p))}</span></button>`).join('')}${c.ab ? '' : `<button class="td-btn q" data-decline="${c.id}">No</button>`}</span>` }
+      else if (mio) { tit = c.ab ? `<span>Retas a cualquiera</span><em data-notr>${esc(de)}</em>` : `<span>Retas a</span> <span class="nm" data-notr>${esc(fr(c.to).n)}</span><em data-notr>${esc(de)}</em>`; acc = '<span class="td-tag q">esperando</span>' }   // los retos no se cancelan
+      else { tit = c.ab ? `<span>Reta a cualquiera</span><em data-notr>${esc(de)}</em>` : `<span>Reta a</span> <span class="nm" ${sinTr(c.to)}>${esc(nombre(c.to))}</span><em data-notr>${esc(de)}</em>`; acc = '<span class="td-tag q">esperando</span>' }
     } else {
       const va = comoVa(m, suyo ? c.tp : c.fp);
       tit = `<span>Reto contra</span> <span class="nm" ${sinTr(suyo ? c.from : c.to)}>${esc(nombre(suyo ? c.from : c.to))}</span><em data-notr>${esc(suyo ? pn(m, c.tp) : de)}</em>`;
@@ -154,7 +154,7 @@
     const cmbRec = combos().filter((c) => c.status === 'open' || t2(c.settled_at) > Date.now() - 2 * DIA), cmbGan = cmbRec.filter((c) => c.status === 'won').length;
     const caras = (ks) => [...new Set(ks)].filter(Boolean).slice(0, 4).map((k) => av(k, 'sm')).join('');
     const kDeUid = (uid) => g(() => F.find((x) => x.uid === uid).id, null);
-    const retoTeEspera = CH.filter((c) => c.to === MEK && c.st === 'pending' && byId(c.m) && isOpen(byId(c.m))).length;
+    const retoTeEspera = CH.filter((c) => (c.to === MEK || (c.ab && c.from !== MEK)) && c.st === 'pending' && byId(c.m) && isOpen(byId(c.m))).length;
     const blk = (k, h3, i, pv, cuerpo) => `<details class="td-blk" data-tdb="${k}" ${T.blk[k] ? 'open' : ''}><summary><h3>${h3}</h3>${i ? `<i>${i}</i>` : ''}<span class="pv">${pv || ''}</span>${CHEV}</summary><div class="in">${cuerpo}</div></details>`;
     const bajo = `<div class="td-bajo">
         ${blk('res', 'Resultados recientes', 'de todos', '', hechas.map(hecha).join('') || '<p class="hint">Todavía no se ha resuelto ninguna. Cuando acabe un partido sale aquí quién acertó.</p>')}

@@ -73,6 +73,7 @@ async function load() {
 const LIGAS_FUERA = new Set(['eng.fa', 'usa.1', 'uefa.europa.conf', 'ned.1', 'bra.1', 'mex.1', 'por.1']);
 const LIGAS_FUERA_NOMBRE = /gamers ?club|betboom/i;                                   // PM, 01-11: fuera Gamers Club (CS2) y BetBoom (Valorant)
 function build(st, rows, chat, ex) {
+  window.BUILD_ARGS = [st, rows, chat, ex];   // ocultas.js: al ocultar o mostrar una liga se vuelve a construir con esto, sin pedir nada
   NOW = Date.now(); PAY = nextMonday(); WEEK0 = PAY - 7 * DAY;
   ME = st.me; VIS = st.vis; WEEKLY = st.weekly; SEASON = st.season_start;
   const key = new Map(st.players.map((p) => [p.id, p.color]));
@@ -81,15 +82,20 @@ function build(st, rows, chat, ex) {
   // db/028 borra lo que habia); si quedara algun partido suyo con apuestas, se sigue viendo para que se pueda seguir
   const conBets = new Set((st.bets || []).map((b) => b.match));
   rows = rows.filter((r) => !(LIGAS_FUERA.has(r.league) || LIGAS_FUERA_NOMBRE.test(r.league_name || '')) || conBets.has(r.id));
-  M = rows.map((r) => ({
+  // ligas y juegos que cada jugador oculta (ocultas.js): no salen en Partidos, Inicio ni Directo, pero lo que ya tienes apostado
+  // o retado sigue saliendo en Mis apuestas (esos partidos se quedan en MI y en L, fuera de M)
+  const oc = window.GM_OCULTAS ? GM_OCULTAS.parte(rows, { bets: st.bets, ch: ex?.challenges, me: ME }) : { vis: rows, ocu: [] };
+  rows = oc.vis;
+  const mkM = (r) => ({
     id: r.id, s: r.sport, lg: r.league, a: r.home, b: r.away, la: r.home_logo, lb: r.away_logo, at: r.starts_at,
     o: [r.odds_1, r.odds_x, r.odds_2].map((x) => (x == null ? null : Number(x))), status: r.status, live: r.status === 'live',
     score: r.score, winner: r.winner, tag: r.tag, venue: r.venue, stage: r.stage, bo: r.bo, tape: r.details?.tape || [], src: r.odds_src,
     tv: r.details?.tv || [], espn: r.details?.espn || null, players: r.details?.players || null, recent: r.details?.recent || null, tier: r.details?.tier || null, tid: r.details?.ids || null, games: r.details?.games || null, tour: r.details?.bracket ? `${r.details.game}:${r.details.tour}` : null,
-  }));
-  MI = new Map(M.map((m) => [m.id, m]));
+  });
+  M = rows.map(mkM);
+  MI = new Map(M.concat(oc.ocu.map(mkM)).map((m) => [m.id, m]));
   // logos de liga de ESPN a 128 px (se pintan a 40 y en pantallas de doble densidad se veian borrosos a 64)
-  L = {}; for (const r of rows) if (!L[r.league]) L[r.league] = [r.league_name, (r.league_logo || '').replace(/([?&])w=64&h=64/, '$1w=128&h=128') || (r.sport === 'c' || r.sport === 'v' ? lgSigla(r.league_name, r.sport) : SP[r.sport][1]), r.sport];
+  L = {}; for (const r of rows.concat(oc.ocu)) if (!L[r.league]) L[r.league] = [r.league_name, (r.league_logo || '').replace(/([?&])w=64&h=64/, '$1w=128&h=128') || (r.sport === 'c' || r.sport === 'v' ? lgSigla(r.league_name, r.sport) : SP[r.sport][1]), r.sport];
   // cash out (db/024): una apuesta retirada cuenta como resuelta; con beneficio es 'won' (cobra pay), con perdida es 'lost' (pierde stake - pay). cash = true
   ALL = st.bets.map((b) => { const c = b.status === 'cashout', w = c && b.payout > b.stake; return { id: b.id, k: key.get(b.player), m: b.match, p: b.pick, stake: b.stake, o: w ? b.payout / b.stake : Number(b.odds), st: c ? (w ? 'won' : 'lost') : b.status, pay: b.payout, at: b.created, set: b.settled, cash: c } });
   LEDGER = st.ledger.map((l) => ({ t: when(l.at), at: Date.parse(l.at), kind: l.kind, c: KIND[l.kind] || l.kind, d: l.note, a: l.amount }));
@@ -138,7 +144,7 @@ function build(st, rows, chat, ex) {
   const st2 = [...F].sort((a, b) => b.streak - a.streak)[0]; if (st2?.streak >= 2) AW.push(['Mejor racha', String(st2.streak), st2.id, 'ganadas seguidas']);
   if (!F.some((f) => f.id === S.pf)) S.pf = MEK;
   const uk = new Map(st.players.map((p) => [p.id, p.color]));
-  CH = (ex?.challenges || []).map((c) => ({ id: c.id, m: c.match, from: uk.get(c.from), to: uk.get(c.to), fp: c.from_pick, tp: c.to_pick, stake: c.stake, st: c.status, at: c.created, set: c.settled }));
+  CH = (ex?.challenges || []).map((c) => ({ id: c.id, m: c.match, from: uk.get(c.from), to: uk.get(c.to), ab: c.to == null, fp: c.from_pick, tp: c.to_pick, stake: c.stake, st: c.status, at: c.created, set: c.settled }));
   DAILY = ex?.daily || []; DAILY_ON = !!ex?.daily_on; DAILY_BONUS = Number(ex?.daily_bonus) || 1.25;
   // primera tanda de ideas (db/009): premio diario, rescate, bote, reacciones, encuestas
   CLAIM = ex?.claim || null; BOTE = ex?.bote || null;
@@ -201,7 +207,7 @@ const dayLab = (t) => (today(t) ? `HOY · ${WD(t)}` : `${WD(t)} · ${MO(t)}`);
 const stakeNow = () => Math.max(0, Math.min(S.stake, me().s));
 const chips = () => [50, 100, 250, 500, 'all'].map((v) => { const on = v === 'all' ? S.stake >= me().s : S.stake === v; return `<button class="chip ${on ? 'on' : ''}" data-stake="${v}">${v === 'all' ? 'Todo' : N(v)}</button>` }).join('');
 const filt = () => { const b = board().filter(inLeague), cnt = (k) => b.filter((m) => k === 'all' || m.s === k).length;
-  return [['all', 'Todo', null], ...DEP.map((k) => [k, ...SP[k]])].map(([k, n, im]) => `<button class="f ${S.f === k ? 'on' : ''}" data-f="${k}">${im ? `<img src="${im}" alt="">` : ''}${n}<i>${cnt(k)}</i></button>`).join('') };
+  return [['all', 'Todo', null], ...DEP.filter((k) => !(window.GM_OCULTAS && GM_OCULTAS.depOculto(k))).map((k) => [k, ...SP[k]])].map(([k, n, im]) => `<button class="f ${S.f === k ? 'on' : ''}" data-f="${k}">${im ? `<img src="${im}" alt="">` : ''}${n}<i>${cnt(k)}</i></button>`).join('') };
 const IC_TOP = '<svg viewBox="0 0 24 24"><path d="M12 3.2l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.5l6-.8z"/></svg>';
 const IC_ALL = '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></svg>';
 // PM, 30-10: "los menus de champions league, europa... no me gusta nada": una fila de escudos, el elegido con su nombre encendido
@@ -249,6 +255,7 @@ const oddBtn = (m, p, open) => { const o = po(m, p); if (o == null) return '<spa
 
 /* datos en directo de ESPN (posesion, tiros, ultimos 5, clasificacion, canales). Se piden desde la app, solo para el partido abierto */
 const ESPN = new Map();
+const ESPN_HTML = new Map();   // lo ultimo pintado en el cuadro de ESPN de cada partido: al repintar la ficha (p. ej. al pulsar Retar) no se vacia a "Cargando" y no salta lo de debajo
 async function espnData(m) {
   if (!m.espn) return null;
   const k = m.id, c = ESPN.get(k);
@@ -316,7 +323,8 @@ async function fillEspn() {
   if (!m.espn) { box.innerHTML = tvHtml(m.tv || [], m); return }
   const d = await espnData(m);
   const now = document.getElementById('espn-box'); if (!now || now.dataset.m !== m.id) return;
-  now.innerHTML = d ? espnHtml(m, d) : tvHtml(m.tv || [], m);
+  const html = d ? espnHtml(m, d) : tvHtml(m.tv || [], m); ESPN_HTML.set(m.id, html);
+  if (now.innerHTML !== html) now.innerHTML = html;
   if (window.GM_LANG) GM_LANG.traduce(now);
 }
 
@@ -658,25 +666,29 @@ function directo() {
 const chName = (st) => ({ pending: 'Esperando respuesta', accepted: 'En juego', declined: 'Rechazado', expired: 'Sin contestar', canceled: 'Retirado', won_from: 'Ganado', won_to: 'Ganado', void: 'Sin ganador' }[st] || st);
 function retoRow(c) {
   const m = byId(c.m); if (!m) return '';
-  const forMe = c.to === MEK && c.st === 'pending' && isOpen(m), mine = c.from === MEK && c.st === 'pending';
+  // retos.js (01-11): un reto abierto (c.ab) no tiene destinatario: lo coge el primero que entra. Los retos no se cancelan:
+  // ya no hay boton Retirar (si nadie entra antes de empezar, la base devuelve lo puesto)
+  const forMe = (c.to === MEK || (c.ab && c.from !== MEK)) && c.st === 'pending' && isOpen(m);
   const win = c.st === 'won_from' ? c.from : c.st === 'won_to' ? c.to : null;
   let act = '';
-  if (forMe) act = `<span class="rt-act">${picksOf(m).filter((p) => p !== c.fp).map((p) => `<button class="chip" data-accept="${c.id}|${p}">Acepto ${esc(pn(m, p))}</button>`).join('')}<button class="chip q" data-decline="${c.id}">No</button></span>`;
-  else if (mine) act = `<span class="rt-act"><button class="chip q" data-retirar="${c.id}">Retirar</button></span>`;
-  return `<div class="rt ${c.st}"><div class="rt-who">${av(c.from, 'sm')}<i>vs</i>${av(c.to, 'sm')}</div>
-    <div style="min-width:0"><strong>${esc(fr(c.from).n)} · ${esc(pn(m, c.fp))}${c.tp ? ` <i>contra</i> ${esc(fr(c.to).n)} · ${esc(pn(m, c.tp))}` : ` <i>reta a</i> ${esc(fr(c.to).n)}`}</strong>
+  if (forMe) act = `<span class="rt-act">${picksOf(m).filter((p) => p !== c.fp).map((p) => `<button class="chip" data-accept="${c.id}|${p}">${c.ab ? 'Entro con' : 'Acepto'} ${esc(pn(m, p))}</button>`).join('')}${c.ab ? '' : `<button class="chip q" data-decline="${c.id}">No</button>`}</span>`;
+  const rival = c.ab ? '<span class="av sm rt-any" title="Cualquiera"><svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 6.2a3 3 0 0 1 0 5.6M17.5 14a5 5 0 0 1 3 5"/></svg></span>' : av(c.to, 'sm');
+  return `<div class="rt ${c.st} ${c.ab ? 'ab' : ''}"><div class="rt-who">${av(c.from, 'sm')}<i>vs</i>${rival}</div>
+    <div style="min-width:0"><strong>${esc(fr(c.from).n)} · ${esc(pn(m, c.fp))}${c.tp ? ` <i>contra</i> ${esc(fr(c.to).n)} · ${esc(pn(m, c.tp))}` : c.ab ? ` <i>reta a</i> cualquiera` : ` <i>reta a</i> ${esc(fr(c.to).n)}`}</strong>
     <span class="m">${esc(m.a)} vs ${esc(m.b)} · ${m.live ? 'en juego' : c.st === 'pending' || c.st === 'accepted' ? WD(m.at).toLowerCase() + ' ' + HM(m.at) + ' · ' + CD(m.at) : when(c.set || c.at)}</span></div>
-    <div class="v"><b>${N(c.stake * 2)}${coin()}</b><span class="st">${win ? 'Gana ' + esc(fr(win).n) : chName(c.st)}</span></div>${act}</div>`;
+    <div class="v"><b>${N(c.stake * 2)}${coin()}</b><span class="st">${win ? 'Gana ' + esc(fr(win).n) : c.ab && c.st === 'pending' ? 'Abierto a todos' : chName(c.st)}</span></div>${act}</div>`;
 }
 const retosHtml = (list, empty) => (list.length ? `<div class="rts">${list.map(retoRow).join('')}</div>` : `<p class="hint">${empty}</p>`);
 function retoForm(m) {
-  const r = S.reto; if (!r || r.m !== m.id) return `<button class="go ghost" data-retar="${m.id}">Retar a un amigo en este partido</button>`;
-  const others = F.filter((f) => !f.me), st = Math.max(0, Math.min(r.stake, me().s));
+  const ab = !!(window.GM_RETOS && GM_RETOS.abiertoOK());   // db/042: reto abierto a cualquiera
+  const r = S.reto; if (!r || r.m !== m.id) return `<button class="go ghost" data-retar="${m.id}">${ab ? 'Retar a un amigo o a cualquiera' : 'Retar a un amigo en este partido'}</button>`;
+  const others = F.filter((f) => !f.me), st = Math.max(0, Math.min(r.stake, me().s)), any = r.to === 'any';
   return `<div class="rform"><span class="lab">Reto 1 contra 1 · el que acierte se lleva lo de los dos</span>
-    <div class="rf-row">${others.map((f) => `<button class="rf-to ${r.to === f.id ? 'on' : ''}" data-rto="${f.id}">${av(f.id)}<span>${esc(f.n)}</span></button>`).join('')}</div>
+    <div class="rf-row">${ab ? `<button class="rf-to rf-any ${any ? 'on' : ''}" data-rto="any"><span class="av sm rt-any"><svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 6.2a3 3 0 0 1 0 5.6M17.5 14a5 5 0 0 1 3 5"/></svg></span><span>Cualquiera</span></button>` : ''}${others.map((f) => `<button class="rf-to ${r.to === f.id ? 'on' : ''}" data-rto="${f.id}">${av(f.id)}<span>${esc(f.n)}</span></button>`).join('')}</div>
     <div class="rf-row">${picksOf(m).map((p) => `<button class="chip ${r.p === p ? 'on' : ''}" data-rpick="${p}">${esc(pn(m, p))}</button>`).join('')}</div>
     <div class="rf-row">${[100, 250, 500, 1000].map((v) => `<button class="chip ${r.stake === v ? 'on' : ''}" data-rstake="${v}">${N(v)}</button>`).join('')}</div>
-    <p class="hint">${r.to && r.p ? `Pones ${N(st)}. Si ${esc(fr(r.to).n)} acepta, hay ${N(st * 2)} en juego.` : 'Elige amigo y resultado.'}</p>
+    <p class="hint">${r.to && r.p ? (any ? `Pones ${N(st)}. El primero que entre se lo queda y hay ${N(st * 2)} en juego. Si nadie entra antes de empezar, te lo devolvemos.` : `Pones ${N(st)}. Si ${esc(fr(r.to).n)} acepta, hay ${N(st * 2)} en juego.`) : 'Elige a quién retas y el resultado.'}</p>
+    <p class="hint rf-no">Un reto no se puede cancelar después.</p>
     <div class="rf-row"><button class="go" data-act="reto-send" ${r.to && r.p && st >= 1 ? '' : 'disabled'}>Enviar reto de ${N(st)}</button><button class="chip q" data-act="reto-close">Cerrar</button></div></div>`;
 }
 
@@ -717,11 +729,12 @@ function avisos() {
       const was = SNAP.ch.get(c.id), m = byId(c.m); if (!m) continue;
       if (!was && c.to === MEK && c.st === 'pending') avisa(`${fr(c.from).n} te reta`, `${m.a} vs ${m.b} · ${N(c.stake)} a ${pn(m, c.fp)}`);
       if (was && was !== c.st && (c.st === 'won_from' || c.st === 'won_to')) { const w = c.st === 'won_from' ? c.from : c.to; if (w === MEK) confeti(); if (c.from === MEK || c.to === MEK) avisa(w === MEK ? '¡Reto ganado!' : 'Reto perdido', `${m.a} ${m.score || ''} ${m.b}`) }
-      if (was === 'pending' && c.st === 'accepted' && c.from === MEK) avisa(`${fr(c.to).n} acepta tu reto`, `${m.a} vs ${m.b} · ${N(c.stake * 2)} en juego`);
+      if (was === 'pending' && c.st === 'accepted' && c.from === MEK && !(window.GM_RETOS && GM_RETOS.fueAbierto(c.id))) avisa(`${fr(c.to).n} acepta tu reto`, `${m.a} vs ${m.b} · ${N(c.stake * 2)} en juego`);
     }
     for (const id of now.live) if (!SNAP.live.has(id)) { const m = byId(id); avisa('Empieza tu partido', `${m.a} vs ${m.b}`) }
   }
   SNAP = now;
+  if (window.GM_RETOS) GM_RETOS.tras();   // retos.js: retos que te llegan, retos abiertos nuevos y quien entra en el tuyo
 }
 function avisa(t, b) { try { if (window.Notification && Notification.permission === 'granted' && document.hidden) new Notification(t, { body: b, icon: '../img/icon-192.png', tag: t + b }) } catch {} }
 function confeti(ox, oy) {
@@ -886,7 +899,7 @@ function ficha(m) {
   }
   const mineHere = myBetsOn(m.id);
   if (mineHere.length) h += `<div class="d-mine"><span class="lab">Tus apuestas aquí</span>${mineHere.map((b) => `<div class="dm" data-bet="${b.id}"><strong>${esc(pn(m, b.p))} <em>${O(b.o)}</em></strong><span>${N(b.stake)} → <b>${N(b.stake * b.o)}${coin()}</b></span><button class="x-share" data-share="${b.id}">Al chat</button>${cancelBtn(b)}</div>`).join('')}</div>`;
-  h += `<div id="espn-box" class="espn" data-m="${m.id}">${m.espn ? '<p class="hint">Cargando datos de ESPN…</p>' : tvHtml(m.tv || [], m)}</div>`;
+  h += `<div id="espn-box" class="espn" data-m="${m.id}">${m.espn ? ESPN_HTML.get(m.id) || '<p class="hint">Cargando datos de ESPN…</p>' : tvHtml(m.tv || [], m)}</div>`;
   const rts = CH.filter((c) => c.m === m.id);
   if (isOpen(m) || rts.length) h += `<div class="d-retos">${rts.length ? retosHtml(rts, '') : ''}${isOpen(m) ? retoForm(m) : ''}</div>`;
   const ws = whoOn(m.id);
@@ -1634,6 +1647,7 @@ function ajustes() {
     <section class="aj-s"><h3 class="lab">Sonido y movimiento</h3>${sw('sonido', snd, 'Sonidos', 'Botones, ruletas, premios y mensajes')}${sw('anim', an, 'Animaciones', 'Ruletas, confeti y transiciones')}</section>
     <section class="aj-s"><h3 class="lab">Moneda</h3><p class="aj-n">Cambia el logo y el nombre. Lo que tienes es lo mismo.</p>
       <div class="aj-ops" data-nomon>${mons.map(([k, n, img]) => `<button class="aj-m ${mo === k ? 'on' : ''}" data-act="mon" data-mon="${k}" aria-pressed="${mo === k}"><img src="${img}" alt=""><b data-notr>${n}</b></button>`).join('')}</div></section>
+    ${window.GM_OCULTAS ? GM_OCULTAS.seccion() : ''}
     <section class="aj-s"><h3 class="lab">Idioma</h3><div class="aj-ops">${[['es', 'Español'], ['en', 'English']].map(([l, n]) => `<button type="button" class="aj-m ${lg === l ? 'on' : ''}" data-lang="${l}"><b data-notr>${n}</b></button>`).join('')}</div></section>
     <section class="aj-s"><h3 class="lab">Avisos</h3>${avisos}</section>
     <section class="aj-s"><h3 class="lab">Cuenta</h3><div class="aj-ops"><button class="aj-a" data-act="pass">Cambiar contraseña</button><button class="aj-a q" data-act="logout">Cerrar sesión</button></div>
@@ -2036,20 +2050,16 @@ document.addEventListener('click', async (e) => {
     toast(`Cancelada: te devuelvo <b>${N(data.devuelto)}</b>`); return refresh();
   }
   if (d.calc != null && d.calc !== undefined && t.matches('[data-calc]')) { S.calc = +d.calc; try { localStorage.setItem('apuestas-calc', S.calc) } catch {} return render() }
-  if (d.retar) { S.reto = { m: d.retar, to: F.find((f) => !f.me)?.id || null, p: null, stake: 250 }; return render() }
+  if (d.retar) { S.reto = { m: d.retar, to: window.GM_RETOS && GM_RETOS.abiertoOK() ? 'any' : F.find((f) => !f.me)?.id || null, p: null, stake: 250 }; return render() }
   if (d.rto) { S.reto.to = d.rto; return render() }
   if (d.rpick) { S.reto.p = d.rpick; return render() }
   if (d.rstake) { S.reto.stake = +d.rstake; return render() }
-  if (d.accept) { e.stopPropagation(); const [id, p] = d.accept.split('|'); const { error } = await db.rpc('challenge_answer', { p_id: +id, p_accept: true, p_pick: p }); if (error) return toast(errMsg(error)); toast('Reto aceptado'); return refresh() }
+  if (d.accept) { e.stopPropagation(); const [id, p] = d.accept.split('|'); return window.GM_RETOS && GM_RETOS.entra(+id, p) }   // retos.js: doble confirmacion y challenge_answer / challenge_join
   if (d.decline) { e.stopPropagation(); const { error } = await db.rpc('challenge_answer', { p_id: +d.decline, p_accept: false }); if (error) return toast(errMsg(error)); toast('Reto rechazado'); return refresh() }
-  if (d.retirar) { e.stopPropagation(); const { error } = await db.rpc('challenge_cancel', { p_id: +d.retirar }); if (error) return toast(errMsg(error)); toast('Reto retirado: te devuelvo lo puesto'); return refresh() }
+  if (d.retirar) { e.stopPropagation(); return toast('Un reto no se puede cancelar') }   // PM, 01-11: los retos no se cancelan
   if (d.daily) { const { error } = await db.rpc('admin_set', { p_key: 'daily_on', p_value: d.daily === 'true' }); if (error) return toast(errMsg(error)); return refresh() }
   if (d.act === 'reto-close') { S.reto = null; return render() }
-  if (d.act === 'reto-send') {
-    const r = S.reto, to = fr(r.to); const st = Math.max(0, Math.min(r.stake, me().s));
-    const { error } = await db.rpc('challenge_create', { p_match: r.m, p_to: to.uid, p_pick: r.p, p_stake: st }); if (error) return toast(errMsg(error));
-    S.reto = null; toast(`Reto enviado a ${esc(to.n)}`); return refresh();
-  }
+  if (d.act === 'reto-send') return window.GM_RETOS && GM_RETOS.crea();   // retos.js: doble confirmacion y challenge_create
   if (d.act === 'notif') { try { const r = await Notification.requestPermission(); toast(r === 'granted' ? 'Avisos activados' : 'El navegador no ha dado permiso') } catch {} return render() }
   if (d.scr) { S.scr = d.scr; S.sheet = false; S.nvp = false; S.eqp = null; document.getElementById('view').scrollTop = 0 }
   else if (d.f) S.f = d.f;
