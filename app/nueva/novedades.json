@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "nba-equipo-0111",
+   "fecha": "2026-11-01",
+   "hora": "23:30",
+   "titulo": "Fichas de equipo NBA completas",
+   "texto": "La ficha de cada equipo de la NBA ya es completa: plantilla con puntos, rebotes, asistencias y minutos de cada jugador, clasificación de su conferencia y división, estadísticas del equipo y el calendario de toda la temporada con sus resultados.",
+   "titulo_en": "Full NBA team pages",
+   "texto_en": "Every NBA team page is now complete: the full roster with each player's points, rebounds, assists and minutes, the standings of its conference and division, team stats, and the whole season schedule with results.",
+   "img": "novedades/nba-equipo.webp",
+   "ir": "partidos"
+  },
+  {
    "id": "blackjack-estable-0111",
    "fecha": "2026-11-01",
    "hora": "23:05",
