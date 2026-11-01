@@ -196,7 +196,7 @@ const short = (m) => (m.s === 'u' ? m.a.split(' ').pop().slice(0, 3) + '·' + m.
 const en = () => !!(window.GM_LANG && GM_LANG.get() === 'en');
 const coin = (cls = '') => `<span class="cn ${cls}"></span>`;
 const LOCK = '<svg class="lock" viewBox="0 0 12 12"><rect x="2" y="5.5" width="8" height="5.5" rx="1.2"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5"/></svg>';
-const av = (k, cls = '') => { const f = fr(k); return `<span class="av ${k} ${cls} ${f.photo ? 'ph' : ''} ${CAMPEON?.k === k ? 'rey' : ''}" data-prof="${k}" title="Perfil de ${esc(f.n)}">${esc(f.ini)}</span>` };
+const av = (k, cls = '') => { const f = fr(k); return `<span class="av ${k} ${cls} ${f.photo ? 'ph' : ''} ${window.GM_RATIO && GM_RATIO.top1() === k ? 'rey' : ''}" data-prof="${k}" title="Perfil de ${esc(f.n)}">${esc(f.ini)}</span>` };
 const net = (f) => { const d = f.s - f.recibido; return `<span class="net ${d >= 0 ? 'up' : ''}">${d >= 0 ? '▲' : '▼'} ${N(Math.abs(d))}${coin()}</span>` };
 const img = (src, cls = '') => (src ? `<img class="${cls}" src="${esc(src)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<span class="noimg ${cls}"></span>`);
 const logo = (m, side) => img(side === 'a' ? m.la : m.lb, m.s === 'u' ? 'face' : 'tl');

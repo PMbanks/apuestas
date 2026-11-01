@@ -51,3 +51,15 @@
   .lq-r .lq-n>.lq-rt.sin{display:none}
   .rt-pop{max-height:min(60vh,380px)}
 }
+/* el numero junto al nombre y los textos nuevos */
+.lq-n i.lq-rv,.lq-nn i.lq-rv{margin-left:9px;font:500 11px var(--mono);letter-spacing:0;text-transform:none;color:var(--soft);vertical-align:1px}
+.lq-n i.lq-rv.sin{color:var(--dim)}
+.lq-n i.lq-rv.m1{color:#f2c14e}.lq-n i.lq-rv.m2{color:#c4cad3}.lq-n i.lq-rv.m3{color:#cd8a52}
+.lq-rt b{font-weight:600}.lq-rt s{text-decoration:none}
+.rt-tx small{font:10.5px/1.2 var(--sans);color:var(--mute)}
+.rt-tx span em{font:500 12.5px var(--mono);font-style:normal;letter-spacing:-.02em;margin-left:2px}
+@media (max-width:700px){
+  .lq-r .lq-n>.lq-rt s{display:none}
+  .lq-r .lq-n>.lq-rt.sin{display:block;font-size:10px}
+  .lq-n i.lq-rv,.lq-nn i.lq-rv{margin-left:7px;font-size:10px}
+}

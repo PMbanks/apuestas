@@ -34,7 +34,7 @@
       // las de todos (las ven todos, como las apuestas sueltas): Mis apuestas se queda con las tuyas
       const { data, error } = await db.from('combos')
         .select('id,player,stake,odds,status,payout,created_at,settled_at,combo_legs(match_id,pick,odds,result,matches(home,away,sport,status,starts_at,score,winner))')
-        .order('created_at', { ascending: false }).limit(80);
+        .order('created_at', { ascending: false }).limit(400);
       if (error) throw error;
       C.todas = data || []; C.list = C.todas.filter((c) => c.player === me); C.err = '';
     } catch (e) { C.err = /does not exist|PGRST/.test(String(e && (e.message || e.code))) ? '' : 'No se han podido cargar tus combinadas'; if (!C.list) C.list = [] }

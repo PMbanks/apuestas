@@ -33,7 +33,7 @@
     const r6 = (x) => Math.round(x * 1e6);
     const orden = filas.filter((x) => x.n >= mn).sort((a, b) => r6(b.ratio) - r6(a.ratio) || b.n - a.n || String(a.nombre).localeCompare(String(b.nombre)));
     orden.forEach((x, i) => (x.pos = i + 1));
-    const fuera = filas.filter((x) => x.n < mn).sort((a, b) => b.n - a.n || String(a.nombre).localeCompare(String(b.nombre)));
+    const fuera = filas.filter((x) => x.n < mn).sort((a, b) => r6(b.ratio) - r6(a.ratio) || b.n - a.n || String(a.nombre).localeCompare(String(b.nombre)));
     const por = {}; for (const x of filas) por[x.id] = x;
     return { orden, fuera, por, min: mn };
   }
@@ -49,6 +49,9 @@
     for (const b of g(() => ALL, [])) { const v = valorSuelta(b), a = vals.get(b.k); if (v != null && a) a.push(v) }
     const uk = new Map(F.map((f) => [f.uid, f.id]));
     for (const c of g(() => GM_CMB.todas(), null) || []) { const v = valorCombinada(c), a = vals.get(uk.get(c.player)); if (v != null && a) a.push(v) }
+    // PM 01-11: un reto 1 contra 1 resuelto cuenta como una apuesta a cuota 2,00 para cada uno de los dos (como en Mis apuestas)
+    for (const c of g(() => CH, [])) { if ((c.st !== 'won_from' && c.st !== 'won_to') || !c.set || !c.from || !c.to) continue; const gana = c.st === 'won_from' ? c.from : c.to;
+      for (const k of [c.from, c.to]) { const a = vals.get(k); if (a) a.push(k === gana ? 2 : 0) } }
     return ranking(F.map((f) => ({ id: f.id, n: f.n, vals: vals.get(f.id) })), MIN);
   }
   // las combinadas llegan por su cuenta (cada 30 s como mucho): pedirlas cada vez que se pinta mantiene el puesto al dia
@@ -62,13 +65,13 @@
 
   function texto(x) {
     if (x.pos) return `<span>${T(`Top ${x.pos} en ratio`, `Top ${x.pos} in ratio`)}</span><em class="num">${fx(x.ratio)}</em>`;
-    const f = MIN - x.n;
-    return `<span>${en() ? `Ratio: ${f} more ${f === 1 ? 'bet' : 'bets'} needed` : `Ratio: te ${f === 1 ? 'falta 1 apuesta' : `faltan ${f} apuestas`}`}</span>`;
+    if (!x.n) return `<span>${T('Sin puesto', 'Unranked')}</span><small>${T('aún sin apuestas', 'no bets yet')}</small>`;
+    return `<span>${T('Sin puesto', 'Unranked')} <em class="num">${fx(x.ratio)}</em></span><small>${T(`${x.n} de ${MIN} apuestas`, `${x.n} of ${MIN} bets`)}</small>`;
   }
   function lista(R, id) {
     const fila = (x, pos) => `<div class="rt-r${x.id === id ? ' yo' : ''}${pos ? medalla(pos) : ' fuera'}" data-prof="${x.id}">
       <span class="rt-p">${pos ? puesto(pos) : '·'}</span>${av(x.id, 'sm')}<b class="rt-n">${esc(x.nombre)}</b>
-      <span class="rt-v">${pos ? `<b class="num">${fx(x.ratio)}</b>` : `<em>${x.n} ${T('de', 'of')} ${MIN}</em>`}<small>${apuestas(x.n)}</small></span></div>`;
+      <span class="rt-v">${x.n ? `<b class="num">${fx(x.ratio)}</b>` : `<em>·</em>`}<small>${pos ? apuestas(x.n) : x.n ? T(`${x.n} de ${MIN}`, `${x.n} of ${MIN}`) : T('sin apuestas', 'no bets')}</small></span></div>`;
     return `<div class="rt-pop" role="dialog" aria-label="${T('Ranking de ratio', 'Ratio ranking')}"><span class="rt-h">${T('Ranking de ratio', 'Ratio ranking')}</span>
       ${R.orden.map((x) => fila(x, x.pos)).join('')}
       ${R.fuera.length ? `<span class="rt-sep">${T(`Aún sin puesto · mínimo ${MIN} apuestas`, `Not ranked yet · at least ${MIN} bets`)}</span>${R.fuera.map((x) => fila(x, 0)).join('')}` : ''}
@@ -81,16 +84,29 @@
   }
   // la pastilla de la cabecera del perfil (alto reservado: nunca mueve nada)
   function slot(id) { pideCmb(); return `<div class="rt-slot${ABIERTO === id ? ' abre' : ''}" data-rt-slot="${id}" data-notr>${dentro(id)}</div>` }
-  // el puesto pequeno de la fila del ranking de Liga > Saldo
-  function mini(id) {
+  // Liga > Saldo: el puesto pequeno bajo el nombre, y el numero junto al nombre (en las filas; el lider grande lleva los dos juntos)
+  const miniTxt = (x, junto) => (x.pos ? `<b>#${x.pos}</b><s> ratio</s>${junto ? ` · ${fx(x.ratio)}` : ''}` : `${T('sin puesto', 'unranked')}${junto && x.n ? ` · ${fx(x.ratio)}` : ''}`);
+  const miniCls = (x) => 'lq-rt' + medalla(x.pos) + (x.pos ? '' : ' sin');
+  function mini(id, junto) {
     pideCmb();
     const x = calcula().por[id]; if (!x) return '';
-    return `<span class="lq-rt${medalla(x.pos)}${x.pos ? '' : ' sin'}" data-rt-mini="${id}" data-notr>${x.pos ? `#${x.pos} ratio` : T('ratio sin puesto', 'ratio unranked')}</span>`;
+    return `<span class="${miniCls(x)}" data-rt-mini="${id}"${junto ? ' data-rt-junto' : ''} data-notr>${miniTxt(x, junto)}</span>`;
   }
+  const numTxt = (x) => (x.n ? fx(x.ratio) : '');
+  function num(id) {
+    const x = calcula().por[id]; if (!x) return '';
+    return `<i class="lq-rv${medalla(x.pos)}${x.pos ? '' : ' sin'}" data-rt-num="${id}" data-notr>${numTxt(x)}</i>`;
+  }
+  // la corona (clase rey de av()): solo el 1.o del ranking de ratio, con puesto
+  const top1 = () => { const R = calcula(); return R.orden.length ? R.orden[0].id : null };
   // repinta solo esas piezas, con datos nuevos
   function repinta() {
+    const R = calcula();
     document.querySelectorAll('[data-rt-slot]').forEach((e) => { const id = e.dataset.rtSlot; e.classList.toggle('abre', ABIERTO === id); e.innerHTML = dentro(id) });
-    document.querySelectorAll('[data-rt-mini]').forEach((e) => { const id = e.dataset.rtMini, x = calcula().por[id]; if (!x) return; e.className = 'lq-rt' + medalla(x.pos) + (x.pos ? '' : ' sin'); e.textContent = x.pos ? `#${x.pos} ratio` : T('ratio sin puesto', 'ratio unranked') });
+    document.querySelectorAll('[data-rt-mini]').forEach((e) => { const x = R.por[e.dataset.rtMini]; if (!x) return; e.className = miniCls(x); e.innerHTML = miniTxt(x, e.hasAttribute('data-rt-junto')) });
+    document.querySelectorAll('[data-rt-num]').forEach((e) => { const x = R.por[e.dataset.rtNum]; if (!x) return; e.className = 'lq-rv' + medalla(x.pos) + (x.pos ? '' : ' sin'); e.textContent = numTxt(x) });
+    const t = R.orden.length ? R.orden[0].id : null;
+    document.querySelectorAll('.av[data-prof]').forEach((e) => e.classList.toggle('rey', e.dataset.prof === t));
   }
 
   document.addEventListener('click', (e) => {
@@ -101,5 +117,5 @@
   }, true);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && ABIERTO) { ABIERTO = null; repinta() } });
   addEventListener('gm:cmb-datos', repinta);
-  window.GM_RATIO = { calcula, slot, mini, repinta, ranking, MIN };
+  window.GM_RATIO = { calcula, slot, mini, num, top1, repinta, ranking, MIN };
 })();
