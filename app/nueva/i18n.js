@@ -17,6 +17,9 @@
 })();
 (function () {
   const D = {
+    // Abrir una caja con tira ancha (01-11, cajas.js)
+    'Atrás': 'Back', 'Prueba gratis': 'Free trial', 'Normal': 'Normal', 'Ultra': 'Ultra', 'Giro automático': 'Auto spin', 'Parar': 'Stop', 'Parando…': 'Stopping…', 'Abriendo…': 'Opening…', 'Contenido de la caja': 'Box contents',
+    'No se ha cobrado ni ganado nada. Es solo para ver cómo gira.': 'Nothing was charged or won. It is only to see how it spins.', 'Sin saldo: el giro automático se ha parado': 'No balance: auto spin stopped',
     // Mis apuestas (01-11, misapuestas.js)
     'Empieza en': 'Starts in', 'Tienes en juego': 'You have in play', 'Lo próximo': 'Up next', 'Tus números': 'Your numbers', 'Total': 'Total',
     'sin aciertos aún': 'no wins yet', 'sin resultados aún': 'no results yet', 'la última, ganada': 'last one won', 'la última, perdida': 'last one lost',
