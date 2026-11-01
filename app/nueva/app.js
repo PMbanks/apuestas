@@ -1371,7 +1371,7 @@ function chat() {
   else { const maxId = Math.max(0, ...CHAT.map((c) => c.id)); if (maxId > lastSeen) { lastSeen = maxId; try { localStorage.setItem('apuestas-chat-visto', maxId) } catch {} } }
   const un = fd ? unread() : 0;
   const tabs = `<nav class="ch-tabs"><button class="${fd ? '' : 'on'}" data-ct="chat">Chat${un ? `<i>${un}</i>` : ''}</button><button class="${fd ? 'on' : ''}" data-ct="feed">Feed${!fd && feedNuevo() ? '<i class="nv-pt"></i>' : ''}</button></nav>`;
-  return `<div class="c-wrap ${live ? '' : 'solo'}"><section class="c-main">${tabs}${fd ? `<div class="fd-wrap" data-keep="fd">${feedHtml()}</div>` : `<div class="chat"><div class="ch-list" data-chat>${conDias(CHAT.filter((c) => c.k)) || '<p class="hint">Escribe el primero.</p>'}</div>
+  return `<div class="c-wrap ${live ? '' : 'solo'}"><section class="c-main">${tabs}${fd ? `<div class="fd-wrap" data-keep="fd">${feedHtml()}</div>` : `<div class="chat"><div class="ch-list" data-chat>${window.GM_CHAT ? GM_CHAT.lista() : conDias(CHAT.filter((c) => c.k)) || '<p class="hint">Escribe el primero.</p>'}</div>
     ${S.pollForm ? `<div class="poll-f"><input type="text" id="poll-q" maxlength="140" placeholder="La pregunta" autocomplete="off">${[0, 1, 2, 3].map((i) => `<input type="text" id="poll-o${i}" maxlength="40" placeholder="Opción ${i + 1}${i > 1 ? ' (si quieres)' : ''}" autocomplete="off">`).join('')}<div class="poll-b"><button class="q" data-act="poll-x">Cancelar</button><button class="go-s" data-act="poll-ok">Crear encuesta</button></div></div>` : ''}<div class="ch-in"><button class="ic" data-act="img" aria-label="Mandar foto">${IC_IMG}</button><button class="ic" data-act="poll" aria-label="Encuesta">${IC_POLL}</button><button class="ic mic ${REC ? 'on' : ''}" data-act="mic" aria-label="${REC ? 'Parar y enviar' : 'Nota de voz'}">${IC_MIC}</button>${REC ? `<span class="rec" data-rec>${recTxt()}</span><button class="q rec-x" data-act="mic-x">Cancelar</button>` : ''}<input type="text" id="msg" data-msg placeholder="Escribe a tus amigos" maxlength="500" autocomplete="off"><button class="send" data-act="send" aria-label="Enviar">${IC_SEND}</button><input type="file" id="pic" accept="image/*" data-file hidden></div></div>`}</section>
     ${live ? `<aside class="c-side">
       ${live ? `<section><span class="lab">En juego ahora</span><div class="live-m" data-goto="${live.id}" style="cursor:pointer"><div>${logo(live, 'a')}${esc(live.a)}${vN(live, 'a')}</div><b>${live.vivo ? vL(live) || '·' : esc(live.score || '')}</b><div>${logo(live, 'b')}${esc(live.b)}${vN(live, 'b')}</div></div></section>
@@ -1943,6 +1943,7 @@ async function micEmpieza() {
     const r = REC; REC = null; clearInterval(r.iv); r.st.getTracks().forEach((t) => t.stop()); render();
     if (r.cancel || !r.trozos.length) return;
     const secs = Math.max(1, Math.round((Date.now() - r.t0) / 1000)), blob = new Blob(r.trozos, { type: (mr.mimeType || 'audio/webm').split(';')[0] });
+    if (window.GM_CHAT) return GM_CHAT.envia({ audio: true, blob, secs });
     try {
       toast('Enviando nota de voz…');
       const ext = /mp4/.test(blob.type) ? 'm4a' : /ogg/.test(blob.type) ? 'ogg' : 'webm', path = `${ME}/voz-${Date.now()}.${ext}`;
@@ -1956,6 +1957,7 @@ async function micEmpieza() {
 }
 function micPara(cancel) { if (!REC) return; REC.cancel = !!cancel; try { REC.mr.stop() } catch {} }
 async function sendMsg(file) {
+  if (window.GM_CHAT) return GM_CHAT.envia(file);   // mensajes.js: sale al instante en pantalla y no espera a recargar todo
   const el = document.querySelector('[data-msg]'), txt = el ? el.value.trim() : '';
   if (!txt && !file) return;
   try {
@@ -2136,7 +2138,7 @@ const pintaOnline = () => document.querySelectorAll('[data-onl]').forEach((e) =>
 function live() {
   if (chan) return;
   let to; const soon = () => { if (window.GM_JUEGOS && GM_JUEGOS.ocupado()) return; clearTimeout(to); to = setTimeout(refresh, 700) };
-  chan = db.channel('vivo', { config: { presence: { key: String(ME) } } }).on('presence', { event: 'sync' }, () => { const ps = Object.values(chan.presenceState()).flat(); ONLINE = new Set(ps.map((x) => x.k)); ONT = {}; for (const x of ps) if (x.k && (!ONT[x.k] || (x.t && x.t < ONT[x.k]))) ONT[x.k] = x.t || Date.now(); MIRA = {}; for (const x of ps) if (x.v) MIRA[x.k] = x.v; pintaOnline(); if (S.scr === 'directo') render() }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pulse' }, soon).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat' }, soon).subscribe(async (st) => { if (st === 'SUBSCRIBED') try { MIRA_YO = undefined; avisaMira(); if (MIRA_YO === undefined || MIRA_YO === null) await chan.track({ k: MEK, v: null, t: ENTRADA }) } catch {} });
+  chan = db.channel('vivo', { config: { presence: { key: String(ME) } } }).on('presence', { event: 'sync' }, () => { const ps = Object.values(chan.presenceState()).flat(); ONLINE = new Set(ps.map((x) => x.k)); ONT = {}; for (const x of ps) if (x.k && (!ONT[x.k] || (x.t && x.t < ONT[x.k]))) ONT[x.k] = x.t || Date.now(); MIRA = {}; for (const x of ps) if (x.v) MIRA[x.k] = x.v; pintaOnline(); if (S.scr === 'directo') render() }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pulse' }, soon).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat' }, (pl) => (window.GM_CHAT ? GM_CHAT.entra(pl.new) : soon())).subscribe(async (st) => { if (st === 'SUBSCRIBED' && window.GM_CHAT) GM_CHAT.alDia(); if (st === 'SUBSCRIBED') try { MIRA_YO = undefined; avisaMira(); if (MIRA_YO === undefined || MIRA_YO === null) await chan.track({ k: MEK, v: null, t: ENTRADA }) } catch {} });
   // cuenta atras cada minuto y datos frescos cada 5, solo con la pantalla visible
   let ticks = 0;
   setInterval(() => { if (document.hidden) return; ticks++; if (ticks % 5 === 0) return refresh(); if (!document.activeElement?.matches('input,textarea')) render() }, 60000);

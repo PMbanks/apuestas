@@ -25,7 +25,8 @@
     const nov = g(() => novSinVer(), 0);
     const rw = g(() => { const p = rwPend(); return [p.diario, p.rueda, p.rescate, p.bote].filter(Boolean).length + (p.tiempo || 0) }, 0);
     const res = !!document.querySelector('#top .gnd-b.hay');
-    return { nov, rw, res, hay: !!(nov || rw || res) };
+    const chat = g(() => unread(), 0);   // mensajes del chat sin leer: punto en Más y fila Chat en la hoja
+    return { nov, rw, res, chat, hay: !!(nov || rw || res || chat) };
   };
 
   /* ---------- boton Más de la barra de abajo (solo movil) ---------- */
@@ -57,6 +58,7 @@
     const fila = (attr, ic, n, extra) => `<button type="button" class="mas-r" ${attr}><span class="mas-ri">${ic}</span><span class="mas-rn">${n}</span>${extra}${ico(P_IR, 'mas-ch')}</button>`;
     const html = `<h2 class="lab">Más secciones</h2><div class="mas-ts">${tiles}</div>
       <h2 class="lab">Avisos</h2><div class="mas-l">
+        ${fila('data-scr="chat"', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">${P_CHAT}</svg>`, 'Chat', av.chat ? `<b class="mas-bd">${av.chat > 99 ? '99+' : av.chat}</b>` : '')}
         ${fila('data-act="nvp"', IC_NUEVO, 'Novedades', av.nov ? `<b class="mas-bd az">${av.nov}</b>` : '')}
         ${fila('data-act="rw"', IC_GIFT, 'Recompensas', av.rw ? `<b class="mas-bd">${av.rw}</b>` : '')}
         ${fila('data-mas-res', IC_BELL, 'Resultados', av.res ? '<b class="mas-bd ve">Nuevos</b>' : '')}
@@ -84,16 +86,31 @@
   }
 
   /* ---------- burbuja del chat ---------- */
+  // aviso de mensaje nuevo (PM, 01-11): cuando llega uno de otro y no estas en el chat, sale una pastilla con quien y el principio
+  // del mensaje junto a la burbuja (tambien en movil, encima de la barra) y se va sola a los 6 s; el contador de la burbuja se queda
+  let AV_VISTO = null, AVISO = null, avT = 0;
+  const AV_MS = 6500;
+  function nuevoMensaje() {
+    const m = CHAT.reduce((a, c) => (c.k && c.k !== MEK && c.id > a ? c.id : a), 0);
+    if (AV_VISTO == null) { AV_VISTO = m; return }
+    if (S.scr === 'chat') { AVISO = null; AV_VISTO = Math.max(AV_VISTO, m); return }
+    if (m > AV_VISTO) {
+      AV_VISTO = m; AVISO = { id: m, hasta: Date.now() + AV_MS };
+      document.body.classList.remove('chb-min');   // en movil la burbuja se encoge al bajar: vuelve para que se vea
+      clearTimeout(avT); avT = setTimeout(vigila, AV_MS + 60);
+    }
+  }
   const resumen = (c) => (c.txt ? [c.txt, true] : c.img ? ['Foto', false] : c.aud ? ['Nota de voz', false] : c.bet ? ['Apuesta', false] : c.poll ? ['Encuesta', false] : ['', false]);
   function burbuja() {
     let el = document.getElementById('chatb');
     if (!el) { el = document.createElement('div'); el.id = 'chatb'; document.body.appendChild(el) }
+    g(nuevoMensaje);
     const ver = S.scr !== 'chat';
     document.body.classList.toggle('chb-on', ver);
     el.hidden = !ver;
     if (!ver) return;
     const un = g(() => unread(), 0);
-    const ult = un ? CHAT.filter((c) => c.id > lastSeen && c.k && c.k !== MEK).sort((a, b) => b.id - a.id)[0] : null;
+    const ult = un && AVISO && Date.now() < AVISO.hasta ? CHAT.find((c) => c.id === AVISO.id) : null;
     let teaser = '';
     if (ult) {
       const [txt, suyo] = resumen(ult), a = av(ult.k).replace(/ data-prof="[^"]*"/, '').replace(/ title="[^"]*"/, '');

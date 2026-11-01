@@ -17,6 +17,17 @@
 })();
 (function () {
   const D = {
+    // Chat rapido (mensajes.js) y Cara o cruz rehecha (juegos.js), 01-11
+    'Enviando': 'Sending', 'No se ha enviado': 'Not sent', 'Reintentar': 'Try again', 'Descartar': 'Discard', 'Mensaje nuevo': 'New message',
+    'No se ha enviado un mensaje del chat': 'A chat message was not sent', 'Está tardando demasiado': 'It is taking too long',
+    'Pones una cantidad y eliges cara o cruz. Quien acepte pone lo mismo, se lanza la moneda y el que acierte se lleva todo.': 'You put in an amount and pick heads or tails. Whoever accepts puts in the same, the coin is tossed and whoever calls it right takes it all.',
+    'Salió': 'It came up', 'Te llevas': 'You take', 'Pierdes': 'You lose', 'Aceptó': 'Accepted by', 'te reta': 'challenges you', 'reta a cualquiera': 'challenges anyone',
+    'Va a': 'Goes for', 'tú vas a': 'you go for', 'Tú vas a': 'You go for', 'No te llega': 'Not enough', 'Pones': 'You put in', 'ganas': 'you win', 'Esperando a': 'Waiting for',
+    'has puesto': 'you put in', 'Quitar reto': 'Remove challenge', 'Te devuelvo': 'You get back', 'Retos abiertos': 'Open challenges', 'Tus retos esperando': 'Your waiting challenges',
+    'Ahora no hay ningún reto abierto. Crea uno y espera a que alguien lo acepte.': 'No open challenges right now. Create one and wait for someone to accept.',
+    'Si nadie acepta en 24 horas, te devuelvo lo que pusiste.': 'If nobody accepts within 24 hours, you get your stake back.',
+    'le gana a': 'beats', 'le ganas a': 'beat', 'Crear un reto': 'Create a challenge', 'Cuánto pones': 'How much you put in', 'Tienes': 'You have', 'Contra quién': 'Against whom',
+    'si sale cara te llevas': 'if it lands heads you take', 'si sale cruz te llevas': 'if it lands tails you take',
     // Ventana del partido (01-11, ventana.js)
     'Ver en Partidos': 'View in Matches', 'Apuesta de': 'Bet by', 'Tus apuestas': 'Your bets', 'Perdido': 'Lost', 'Anulado': 'Cancelled', 'Partido': 'Match', 'Descanso': 'Half time',
     'Oculta hasta que empiece': 'Hidden until kickoff', 'Estadísticas del partido': 'Match stats', 'Todavía no hay estadísticas de este partido.': 'There are no stats for this match yet.',
@@ -415,6 +426,8 @@
   const DIAS = { LUN: 'MON', 'MIÉ': 'WED', JUE: 'THU', VIE: 'FRI', 'SÁB': 'SAT', DOM: 'SUN', HOY: 'TODAY', ENE: 'JAN', ABR: 'APR', AGO: 'AUG', DIC: 'DEC' };
   const MESES = { ene: 'jan', feb: 'feb', mar: 'mar', abr: 'apr', may: 'may', jun: 'jun', jul: 'jul', ago: 'aug', sep: 'sep', sept: 'sep', oct: 'oct', nov: 'nov', dic: 'dec' };
   const R = [
+    [/^(\d+) mensajes nuevos$/, '$1 new messages'],
+    [/^Te faltan ([\d.]+)$/, 'You need $1 more'],
     [/^Pones ([\d.]+)\. El primero que entre se lo queda y hay ([\d.]+) en juego\. Si nadie entra antes de empezar, te lo devolvemos\.$/, 'You put in $1. The first to join takes it and $2 is at stake. If nobody joins before the match starts, you get it back.'], [/^Pones ([\d.]+)\. Si (.+) acepta, hay ([\d.]+) en juego\.$/, 'You put in $1. If $2 accepts, $3 is at stake.'],
     [/^(\d+) resueltas?$/, (m, n) => `${n} settled`], [/^(\d+) en vivo$/, '$1 live'],   // Mis apuestas (01-11)
     // la mesa de blackjack (bjmesa.js)
