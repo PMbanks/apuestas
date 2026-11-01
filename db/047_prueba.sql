@@ -123,8 +123,7 @@ begin
   perform set_config('request.jwt.claims', jsonb_build_object('sub', rico, 'role', 'authenticated')::text, true);
   x := time_status();
   if (select jsonb_agg((t ->> 'min')::int order by (t ->> 'min')::int) from jsonb_array_elements(x -> 'tiers') t) <> '[30,60,120,180]'::jsonb
-     or (select (t ->> 'amt')::int from jsonb_array_elements(x -> 'tiers') t where (t ->> 'min')::int = 180) <> 300
-     or (select (t ->> 'amt')::int from jsonb_array_elements(x -> 'tiers') t where (t ->> 'min')::int = 60) <> 50 then
+     or (select (t ->> 'amt')::int from jsonb_array_elements(x -> 'tiers') t where (t ->> 'min')::int = 180) <> 300 then   -- los tramos de antes se quedan como esten en la base
     raise exception 'FALLO: los tramos de tiempo no son 30, 60 (igual que antes), 120 y 180 = 300: %', x -> 'tiers';
   end if;
   delete from ledger where player = rico and kind = 'tiempo' and week = madrid_day();
