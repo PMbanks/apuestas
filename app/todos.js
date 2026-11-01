@@ -57,7 +57,7 @@
       : m.live ? (va ? `<span class="td-tag ${VA[va][0]}">${VA[va][1]}</span>` : '')
       : isOpen(m) ? (isMine(m, b.p) ? '<span class="td-tag q">Tú también</span>' : `<button class="td-sumo" data-sumo="${esc(m.id)}|${b.p}">${PLUS}Me sumo</button>`) : '';
     return `<div class="td-tk ${m.live ? 'live' : ''}" data-goto="${esc(m.id)}">${caraPick(m, b.p)}
-      <div class="t"><b><span class="nm" data-notr>${esc(pn(m, b.p))}</span><em>${O(b.o)}</em>${r.add}</b><small>${partido(m)}</small></div>
+      <div class="t"><b><span class="nm" ${b.p === 'X' ? '' : 'data-notr'}>${esc(pn(m, b.p))}</span><em>${O(b.o)}</em>${r.add}</b><small>${partido(m)}</small></div>
       <div class="m"><span>${N(b.stake)}</span> → <b>${N(b.stake * b.o)}</b>${coin()}<small>cobraría</small></div><div class="bx">${accion}</div>${r.fila}</div>`;
   }
   function tkCombo(c) {
@@ -65,7 +65,7 @@
     const etq = vivas ? `<span class="td-tag rd">${vivas} de ${ls.length} en vivo</span>` : hechas ? `<span class="td-tag bien">${hechas} de ${ls.length} acertados</span>`
       : ls[0] && ls[0].matches ? `<span class="td-tag q">${esc(empieza(t2(ls[0].matches.starts_at)))}</span>` : '';
     return `<div class="td-tk tcmb" ${c.player === ME ? 'data-scr="apuestas"' : ''}><span class="td-ic tcmb">×${ls.length}</span>
-      <div class="t"><b><span class="nm">Combinada de ${ls.length}</span><em>${O(odds)}</em></b><small data-notr>${ls.map((l) => esc(nombrePata(l))).join(' · ')}</small></div>
+      <div class="t"><b><span class="nm">Combinada de ${ls.length}</span><em>${O(odds)}</em></b><small>${ls.map((l) => (l.pick === '1' || l.pick === '2' ? `<span data-notr>${esc(nombrePata(l))}</span>` : '<span>Empate</span>')).join('<span> · </span>')}</small></div>
       <div class="m"><span>${N(c.stake)}</span> → <b>${N(c.stake * odds)}</b>${coin()}<small>cobraría</small></div><div class="bx">${etq}</div></div>`;
   }
   function tkReto(c, fid) {
