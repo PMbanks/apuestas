@@ -2321,3 +2321,12 @@ html[data-moneda="robux"] .cn{background-image:url(img/monedas/robux.svg)}
 .row.envivo{background:linear-gradient(90deg,rgba(242,193,78,.15),rgba(242,193,78,.06) 60%,rgba(242,193,78,.03));color:var(--ink)}
 .row.envivo::after{content:"";position:absolute;left:-14px;top:10px;bottom:10px;width:3px;border-radius:3px;background:var(--acc)}
 .row.envivo:hover{background:linear-gradient(90deg,rgba(242,193,78,.2),rgba(242,193,78,.08) 60%,rgba(242,193,78,.04))}
+/* contrasenas de los amigos (alta.js, db/044, solo el admin) */
+.pw-l{display:grid;gap:8px;margin-top:12px}
+.pw-r{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;min-height:44px}
+.pw-r b{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pw-r .aj-a.pw-seg{color:var(--rojo,#e0646f)}
+.pw-h{margin-top:22px}
+.pw-log{display:grid;gap:6px;margin:10px 0 0;padding:0;list-style:none}
+.pw-log li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:baseline;font-size:14px}
+.pw-log span{color:var(--soft)}.pw-log small{font:12px var(--mono);color:var(--dim)}
