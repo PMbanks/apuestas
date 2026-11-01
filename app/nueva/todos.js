@@ -37,6 +37,7 @@
   /* ---------- combinadas (las carga combinadas.js) ---------- */
   const combos = () => g(() => (window.GM_CMB && GM_CMB.todas()) || [], []);
   const legsDe = (c) => (c.combo_legs || []).slice().sort((a, b) => t2(a.matches && a.matches.starts_at) - t2(b.matches && b.matches.starts_at));
+  const mpN = (ls) => { const k = {}; for (const l of ls || []) k[l.match_id] = (k[l.match_id] || 0) + 1; return Object.values(k).filter((v) => v > 1).reduce((t, v) => t + v, 0) };   // db/067: cuantas van del mismo partido que otra
   const pataViva = (l) => { const m = l.matches || {}; return !l.result && (m.status === 'live' || (m.status === 'scheduled' && t2(m.starts_at) <= Date.now())) };
   const nombrePata = (l) => { const m = l.matches || {}; return l.pick === '1' ? m.home : l.pick === '2' ? m.away : l.pick === 'X' ? 'Empate' : pn({ a: m.home, b: m.away }, l.pick) };
 
@@ -66,7 +67,7 @@
     const etq = vivas ? `<span class="td-tag rd">${vivas} de ${ls.length} en vivo</span>` : hechas ? `<span class="td-tag bien">${hechas} de ${ls.length} acertados</span>`
       : ls[0] && ls[0].matches ? `<span class="td-tag q">${esc(empieza(t2(ls[0].matches.starts_at)))}</span>` : '';
     return `<div class="td-tk tcmb" ${c.player === ME ? 'data-scr="apuestas"' : ''}><span class="td-ic tcmb">×${ls.length}</span>
-      <div class="t"><b><span class="nm">Combinada de ${ls.length}</span><em>${O(odds)}</em></b><small>${ls.map((l) => `<span class="tk-l ${l.result === 'won' ? 'ok' : l.result === 'lost' ? 'ko' : ''}">${l.result === 'won' ? '<i class="tk-i"></i>' : l.result === 'lost' ? '<i class="tk-i"></i>' : ''}${l.pick === '1' || l.pick === '2' ? `<span data-notr>${esc(nombrePata(l))}</span>` : '<span>Empate</span>'}</span>`).join('<span> · </span>')}</small></div>
+      <div class="t"><b><span class="nm">Combinada de ${ls.length}${mpN(ls) ? `<span class="mp-tag"> · ${mpN(ls)} del mismo partido</span>` : ''}</span><em>${O(odds)}</em></b><small>${ls.map((l) => `<span class="tk-l ${l.result === 'won' ? 'ok' : l.result === 'lost' ? 'ko' : ''}">${l.result === 'won' ? '<i class="tk-i"></i>' : l.result === 'lost' ? '<i class="tk-i"></i>' : ''}${l.pick === 'X' ? '<span>Empate</span>' : `<span data-notr>${esc(nombrePata(l))}</span>`}</span>`).join('<span> · </span>')}</small></div>
       <div class="m"><span>${N(c.stake)}</span> → <b>${N(c.stake * odds)}</b>${coin()}<small>cobraría</small></div><div class="bx">${etq}</div></div>`;
   }
   function tkReto(c, fid) {

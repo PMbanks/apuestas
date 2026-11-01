@@ -22,6 +22,7 @@
   const combos = () => g(() => (window.GM_CMB && GM_CMB.todas()) || null, null);
   const misCombos = () => { const t = combos(); return t ? t.filter((c) => c.player === ME) : null };
   const legsDe = (c) => (c.combo_legs || []).slice().sort((a, b) => t2(a.matches && a.matches.starts_at) - t2(b.matches && b.matches.starts_at));
+  const mpN = (ls) => { const k = {}; for (const l of ls || []) k[l.match_id] = (k[l.match_id] || 0) + 1; return Object.values(k).filter((v) => v > 1).reduce((t, v) => t + v, 0) };   // db/067: cuantas van del mismo partido que otra
   const pata = (l) => { const m = l.matches || {};
     if (l.result === 'won') return 'ok'; if (l.result === 'lost') return 'ko'; if (l.result === 'void') return 'nul';
     if (m.status === 'live' || (m.status === 'scheduled' && t2(m.starts_at) <= Date.now())) return 'vivo'; return 'pend' };
@@ -127,7 +128,7 @@
     return `<article class="mt mt-c ${vivo ? 'live' : ''}" style="--i:${i}">
       ${fondo(u, false)}
       <header class="mt-band">${head}<span class="mt-bar"><i style="width:${fill.toFixed(1)}%"></i></span></header>
-      <div class="mt-meta"><span class="mt-ci">${IC_CMB}</span><span class="lab ell">Combinada de ${ls.length}</span><span class="mt-no">Nº C${String(c.id).padStart(5, '0')}</span></div>
+      <div class="mt-meta"><span class="mt-ci">${IC_CMB}</span><span class="lab ell">Combinada de ${ls.length}${mpN(ls) ? `<span class="mp-tag"> · ${mpN(ls)} del mismo partido</span>` : ''}</span><span class="mt-no">Nº C${String(c.id).padStart(5, '0')}</span></div>
       <div class="mt-legs">${ls.map(fila).join('')}</div>
       <div class="mt-n">${cuadro('Cuota', O(c.odds))}${cuadro('Apostado', N(c.stake) + coin())}${cuadro('Cobraría', N(c.stake * Number(c.odds)) + coin(), 'hi')}</div>
       <div class="mt-act ${boton ? '' : 'vacio'}" data-cmbact="${c.id}" data-h="${esc(boton)}">${boton}</div>
