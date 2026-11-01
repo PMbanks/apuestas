@@ -6,8 +6,9 @@ const db = supabase.createClient(CFG.url, CFG.anon, { auth: { persistSession: tr
 const TZ = 'Europe/Madrid', DAY = 864e5, DOMAIN = '@apuestas.app';
 const TOP = new Set(['esp.1', 'eng.1', 'ger.1', 'ita.1', 'fra.1', 'uefa.champions', 'uefa.europa', 'esp.copa_del_rey']);
 const SP = { f: ['Fútbol', '../img/futbol.svg'], v: ['Valorant', '../img/valorant.svg'], c: ['CS2', '../img/cs2.png'], u: ['UFC', '../img/ufc.png'],
-  b: ['NBA', 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" fill="#f58426"/><g fill="none" stroke="#1d1309" stroke-width="3.4"><circle cx="32" cy="32" r="29"/><path d="M3 32h58M32 3v58M13 10c8 6 12 13 12 22s-4 16-12 22M51 10c-8 6-12 13-12 22s4 16 12 22"/></g></svg>')] };   // NBA (nba.js, db/039)
-const DEP = ['f', 'v', 'c', 'u', 'b'];
+  b: ['NBA', 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" fill="#f58426"/><g fill="none" stroke="#1d1309" stroke-width="3.4"><circle cx="32" cy="32" r="29"/><path d="M3 32h58M32 3v58M13 10c8 6 12 13 12 22s-4 16-12 22M51 10c-8 6-12 13-12 22s4 16 12 22"/></g></svg>')],
+  r: ['Fórmula 1', 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" fill="#e10600"/><text x="32" y="41" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-style="italic" font-size="26" text-anchor="middle" fill="#fff">F1</text></svg>')] };   // NBA (nba.js, db/039) y F1 (f1.js, db/052)
+const DEP = ['f', 'v', 'c', 'u', 'b', 'r'];
 const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', tiempo: 'Tiempo en la app', trato: 'Trato entre amigos', mercado: 'Mercado', jackpot: 'Jackpot', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', ruleta_semana: 'Ruleta de premios', ruleta_global: 'Ruleta global', premio_semana: 'Premio de la semana', moneda: 'Cara o cruz', crash: 'Crash', ruleta: 'Ruleta', blackjack: 'Blackjack', plinko: 'Plinko', cashout: 'Cash out', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta' };
 let TIEMPO = null, CLAIM = null, BOTE = null, REACT = new Map(), POLLS = new Map(), CAMPEON = null;
 
@@ -90,7 +91,7 @@ function build(st, rows, chat, ex) {
   rows = oc.vis;
   const mkM = (r) => ({
     id: r.id, s: r.sport, lg: r.league, a: r.home, b: r.away, la: r.home_logo, lb: r.away_logo, at: r.starts_at,
-    o: [r.odds_1, r.odds_x, r.odds_2].map((x) => (x == null ? null : Number(x))), status: r.status, live: r.status === 'live',
+    o: [r.odds_1, r.odds_x, r.odds_2].map((x) => (x == null ? null : Number(x))), status: r.status, live: r.status === 'live' && r.sport !== 'r', fk: r.details?.kind || null,
     score: r.score, winner: r.winner, tag: r.tag, venue: r.venue, stage: r.stage, bo: r.bo, tape: r.details?.tape || [], src: r.odds_src,
     tv: r.details?.tv || [], espn: r.details?.espn || null, players: r.details?.players || null, recent: r.details?.recent || null, tier: r.details?.tier || null, tid: r.details?.ids || null, games: r.details?.games || null, tour: r.details?.bracket ? `${r.details.game}:${r.details.tour}` : null,
   });
@@ -201,8 +202,8 @@ const net = (f) => { const d = f.s - f.recibido; return `<span class="net ${d >=
 const img = (src, cls = '') => (src ? `<img class="${cls}" src="${esc(src)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<span class="noimg ${cls}"></span>`);
 const logo = (m, side) => img(side === 'a' ? m.la : m.lb, m.s === 'u' ? 'face' : 'tl');
 const form = (s) => `<span class="fm">${[...s].map((c) => `<b class="${c === 'G' ? 'g' : c === 'E' ? 'e' : ''}">${c}</b>`).join('')}</span>`;
-const board = () => M.filter((m) => (m.status === 'scheduled' || m.live) && (m.live || Date.parse(m.at) > NOW - 4 * 3600e3) && Date.parse(m.at) < NOW + (m.s === 'u' ? 72 : 8) * DAY);
-const inLeague = (m) => S.lg === 'fav' ? sigo(m) : S.lg === 'all' ? true : S.lg === 'top' ? m.live || m.s === 'v' || m.s === 'b' || (m.s === 'c' ? 'sa'.includes(m.tier || 'x') : m.s === 'u' ? !!m.tag : TOP.has(m.lg)) || whoOn(m.id).length > 0 : m.lg === S.lg;
+const board = () => M.filter((m) => (m.status === 'scheduled' || m.live || (m.s === 'r' && m.status === 'live')) && (m.live || Date.parse(m.at) > NOW - (m.s === 'r' ? 8 : 4) * 3600e3) && Date.parse(m.at) < NOW + (m.s === 'u' ? 72 : m.s === 'r' ? 120 : 8) * DAY);
+const inLeague = (m) => S.lg === 'fav' ? sigo(m) : S.lg === 'all' ? true : S.lg === 'top' ? m.live || m.s === 'v' || m.s === 'b' || (m.s === 'r' && (S.f === 'r' || ['race', 'quali', 'sprint'].includes(m.fk))) || (m.s === 'c' ? 'sa'.includes(m.tier || 'x') : m.s === 'u' ? !!m.tag : TOP.has(m.lg)) || whoOn(m.id).length > 0 : m.lg === S.lg;
 const filtered = () => board().filter((m) => (S.f === 'all' || m.s === S.f) && inLeague(m)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
 const groups = (list) => { const g = new Map(); for (const m of list) { const k = DK(m.at); if (!g.has(k)) g.set(k, []); g.get(k).push(m) } return [...g.values()].map((ms) => (window.GM_QUIEN ? GM_QUIEN.dia(ms) : ms)) };
 const dayLab = (t) => (today(t) ? `HOY · ${WD(t)}` : `${WD(t)} · ${MO(t)}`);
@@ -695,7 +696,7 @@ const LOGROS = [
   ['racha5', 'Imparable', '5 ganadas seguidas', (f) => f.streak >= 5],
   ['valiente', 'Valiente', 'Gana con cuota de 3 o más', (f, b) => b.some((x) => x.st === 'won' && x.o >= 3)],
   ['tirador', 'Francotirador', 'Gana con cuota de 5 o más', (f, b) => b.some((x) => x.st === 'won' && x.o >= 5)],
-  ['todo', 'Todoterreno', 'Apuesta en fútbol, Valorant y UFC', (f, b) => DEP.filter((s) => s !== 'b').every((s) => b.some((x) => byId(x.m)?.s === s))],
+  ['todo', 'Todoterreno', 'Apuesta en fútbol, Valorant y UFC', (f, b) => DEP.filter((s) => s !== 'b' && s !== 'r').every((s) => b.some((x) => byId(x.m)?.s === s))],
   ['fiel', 'Fiel', '20 apuestas', (f, b) => b.length >= 20],
   ['ballena', 'Ballena', 'Apuesta 1.000 de una vez', (f, b) => b.some((x) => x.stake >= 1000)],
   ['verde', 'En verde', 'Ten más de lo que te han dado', (f) => f.s > f.recibido && f.bets > 0],
@@ -842,7 +843,7 @@ function partidos() {
       <span class="lab"><img src="${esc(L[m.lg][1])}" alt=""><b>${WD(m.at)} ${HM(m.at)}</b> · ${isDaily(m) ? 'Apuesta del día' : esc(m.tag || L[m.lg][0])}</span>
       <span class="ft-v">${logo(m, 'a')}<i>vs</i>${logo(m, 'b')}</span><span class="ft-n">${esc(m.a)} · ${esc(m.b)}</span>
       <span class="ft-o">${picksOf(m).map((p) => `<span>${p} <b>${po(m, p) ? O(po(m, p)) : '·'}</b></span>`).join('')}</span></button>`).join('')}</div>` : ''}
-    ${jugMenu(list.length)}<nav class="fil">${filt()}</nav>${leagues()}${S.soloJug ? '' : '<p class="cmb-hint"><i>+</i><span>Toca 2 o más cuotas y en el boleto elige <b>Combinada</b>: las cuotas se multiplican y cobras si aciertas todas.</span></p>'}`;
+    ${jugMenu(list.length)}<nav class="fil">${filt()}</nav>${leagues()}${window.GM_F1 && S.f === 'r' ? GM_F1.cabeza() : ''}${S.soloJug ? '' : '<p class="cmb-hint"><i>+</i><span>Toca 2 o más cuotas y en el boleto elige <b>Combinada</b>: las cuotas se multiplican y cobras si aciertas todas.</span></p>'}`;
   if (!list.length && !S.soloJug) h += `<p class="hint" style="padding:30px 0">No hay partidos con este filtro en los próximos días.</p>`;
   const jugH = jugadosHtml();
   if (S.soloJug && !jugH) h += `<p class="hint" style="padding:30px 0">No hay partidos jugados con este filtro.</p>`;
@@ -852,17 +853,18 @@ function partidos() {
     for (const m of ms) {
       const open = isOpen(m), qn = window.GM_QUIEN ? GM_QUIEN.fila(m) : { cls: '', who: '', movil: '' };
       h += `<div class="row ${S.foc === m.id ? 'on' : ''} ${m.live && m.vivo ? 'cv' : ''} ${m.live ? 'envivo' : ''} ${qn.cls}" data-foc="${m.id}" style="--i:${Math.min(ri++, 14)}">
-        <span class="t">${m.live ? '<em>VIVO</em>' : HM(m.at)}${m.live ? (m.vivo ? '' : `<small class="sc">${esc(String(m.score || '').split(' ')[0])}</small>`) : Date.parse(m.at) <= NOW ? '<small class="pe">por empezar</small>' : `<small>${CD(m.at)}</small>`}${open && window.GM_RETOS ? GM_RETOS.btn(m, 'tiempo') : ''}</span>
+        <span class="t">${m.live ? '<em>VIVO</em>' : HM(m.at)}${m.live ? (m.vivo ? '' : `<small class="sc">${esc(String(m.score || '').split(' ')[0])}</small>`) : Date.parse(m.at) <= NOW ? `<small class="pe">${m.s === 'r' ? 'en juego' : 'por empezar'}</small>` : `<small>${CD(m.at)}</small>`}${open && window.GM_RETOS ? GM_RETOS.btn(m, 'tiempo') : ''}</span>
         <span class="llw" title="${esc(L[m.lg][0])} · ${SP[m.s][0]}"><img class="ll" src="${esc(L[m.lg][1])}" alt="" loading="lazy">${m.s === 'c' || m.s === 'v' ? `<img class="lls" src="${SP[m.s][1]}" alt="">` : ''}</span>
         <span class="tms"><span class="tm">${logo(m, 'a')}<span>${esc(m.a)}</span>${esFav(favK(m.s, m.a)) || esFav('pa:' + m.id) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${dailyTag(m)}${vN(m, 'a')}</span><span class="tm">${logo(m, 'b')}<span>${esc(m.b)}</span>${esFav(favK(m.s, m.b)) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${vN(m, 'b')}</span>${vL(m)}${qn.movil}${open && window.GM_RETOS ? GM_RETOS.btn(m, 'fila') : ''}</span>
         <span class="who">${window.GM_QUIEN ? qn.who : [...new Set(whoOn(m.id).map((x) => x.f))].map((k) => av(k, 'sm')).join('')}</span>
-        ${['1', 'X', '2'].map((p) => oddBtn(m, p, open)).join('')}
+        ${window.GM_F1 && GM_F1.es(m) ? GM_F1.cuotasFila(m, open) : ['1', 'X', '2'].map((p) => oddBtn(m, p, open)).join('')}
       </div>`;
     }
   }
   return h + jugH + `</section>${byId(S.foc) ? ficha(byId(S.foc)) : '<section class="det"></section>'}</div>`;
 }
 function ficha(m) {
+  if (window.GM_F1 && GM_F1.es(m)) return GM_F1.ficha(m);   // F1 (f1.js): un Gran Premio no es A contra B
   if (S.brk && m.tour) return bracketSheet(m);
   if (S.side) return sheet(m, S.side);
   const open = isOpen(m), ps = picksOf(m).filter((p) => po(m, p) != null);
@@ -917,7 +919,7 @@ function ficha(m) {
 const perd = (b) => (b.cash ? b.stake - b.pay : b.stake);   // lo que se pierde de verdad (en un cash out con perdida, solo la diferencia)
 const neto = (b) => (b.st === 'won' ? b.pay - b.stake : b.st === 'lost' ? -perd(b) : 0);
 const signo = (v) => `${v > 0 ? '▲' : v < 0 ? '▼' : ''} ${N(Math.abs(v))}`.trim();
-const SPC = { f: '#2bd47d', v: '#ff4655', c: '#f5a524', u: '#e0464f', b: '#f58426' };
+const SPC = { f: '#2bd47d', v: '#ff4655', c: '#f5a524', u: '#e0464f', b: '#f58426', r: '#e10600' };
 const codigo = (b) => 'Nº ' + String(b.id).padStart(6, '0');
 function mbCard(b, i) {
   const m = byId(b.m); if (!m) return '';

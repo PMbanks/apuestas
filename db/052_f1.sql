@@ -40,7 +40,8 @@
 -- relacionados) y una sola de campeonato.
 -- Cambia: el check de matches.sport, mk_valido y las restricciones de bets y combo_legs, mk_encaja, pick_name, mk_resultado,
 -- ex_cash_value (sin cash out en directo), settle_match (el texto del chat), ex_live_odds y place_combo.
--- Nuevas: sync_f1_pendientes (el sincronizador pregunta que Grandes Premios siguen abiertos para anular los que ya no existen).
+-- Nuevas: sync_f1_pendientes (el sincronizador pregunta que Grandes Premios siguen abiertos) y sync_f1_anula (anula los que Jolpica
+-- ya no trae en el calendario: se devuelve todo).
 -- Se puede ejecutar varias veces. Despues: 052_prueba.sql.
 
 
@@ -419,8 +420,23 @@ begin
                      from matches where sport = 'r' and not settled), '[]'::jsonb);
 end $$;
 
+-- Anula (status canceled: settle_match devuelve todo lo apostado) los Grandes Premios que Jolpica ya no trae en el calendario.
+-- Solo F1, solo lo que aun no se ha pagado ni acabado.
+create or replace function sync_f1_anula(p_secret text, p_ids text[]) returns int
+language plpgsql security definer set search_path = public as $$
+declare n int;
+begin
+  if p_secret is null or p_secret <> (select value #>> '{}' from settings where key = 'sync_secret') then
+    raise exception 'Clave de sincronización no válida';
+  end if;
+  update matches set status = 'canceled', updated_at = now()
+   where sport = 'r' and id = any(coalesce(p_ids, '{}')) and not settled and status <> 'final';
+  get diagnostics n = row_count;
+  return n;
+end $$;
+
 -- ---------- quien puede llamar a que ----------
 -- (place_combo, mk_valido, mk_encaja, pick_name, mk_resultado, ex_cash_value, settle_match y ex_live_odds conservan los permisos
 --  de antes: create or replace no los toca)
-revoke all on function sync_f1_pendientes(text) from public;
-grant execute on function sync_f1_pendientes(text) to anon, authenticated;
+revoke all on function sync_f1_pendientes(text), sync_f1_anula(text, text[]) from public;
+grant execute on function sync_f1_pendientes(text), sync_f1_anula(text, text[]) to anon, authenticated;

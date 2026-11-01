@@ -263,6 +263,16 @@ begin
     raise exception 'FALLO: sync_f1_pendientes: %', r; end if;
   fallo := false; begin perform sync_f1_pendientes('mala'); exception when others then fallo := true; end;
   if not fallo then raise exception 'FALLO: sync_f1_pendientes acepta una clave mala'; end if;
+  fallo := false; begin perform sync_f1_anula('mala', array['zz:s1']); exception when others then fallo := true; end;
+  if not fallo then raise exception 'FALLO: sync_f1_anula acepta una clave mala'; end if;
+  -- anular un Gran Premio que ya no existe: se devuelve todo; no toca lo que no es F1 ni lo ya acabado
+  execute saldo into s0 using jug[1];
+  b1 := (place_bet('zz:s1', 'FW:max_verstappen', 100)->>'bet')::bigint;
+  if sync_f1_anula(sec, array['zz:s1', 'zz:f1f', 'zz:f1q']) <> 1 then raise exception 'FALLO: sync_f1_anula deberia anular solo zz:s1'; end if;
+  if (select status from matches where id = 'zz:f1f') = 'canceled' then raise exception 'FALLO: sync_f1_anula ha anulado futbol'; end if;
+  perform settle_match('zz:s1');
+  execute saldo into s1 using jug[1];
+  if (select status from bets where id = b1) <> 'void' or s1 <> s0 then raise exception 'FALLO: anular un Gran Premio deberia devolver todo (%)', s1 - s0; end if;
   resumen := resumen || 'Sincronizador: guarda la F1, tira los codigos raros y pregunta lo pendiente. ';
 
   -- ---------- lo interno, cerrado ----------

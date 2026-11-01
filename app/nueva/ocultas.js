@@ -12,7 +12,7 @@
   const en = () => !!(window.GM_LANG && GM_LANG.get() === 'en');
   const tr = (el) => { if (window.GM_LANG) GM_LANG.traduce(el) };
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const DEPS = ['f', 'v', 'c', 'u'];
+  const DEPS = ['f', 'v', 'c', 'u', 'r'];
 
   let ST = { d: [], l: {} }, KEY = '';
   const LG = new Map();           // todas las ligas vistas en los partidos cargados: id -> { n, s, logo }

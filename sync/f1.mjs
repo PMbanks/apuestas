@@ -264,10 +264,10 @@ function estadoSesion(inicio, duracion, tiene, ahora, resultados) {
 // n: carreras de la temporada. ctx: { ahora, lineup, st, pdnf, grid, ph, resQ, resR, resS }
 export function filasGP(c, n, D) {
   const { ahora } = D, filas = [];
-  const dr = Object.fromEntries(D.lineup.map((p) => [p.id, p.nombre])), eq = Object.fromEntries(D.lineup.map((p) => [p.eq, p.eqNombre]));
+  const dr = Object.fromEntries(D.lineup.map((p) => [p.id, p.nombre])), eq = Object.fromEntries(D.lineup.map((p) => [p.eq, p.eqNombre])), tm = Object.fromEntries(D.lineup.map((p) => [p.id, p.eq]));
   const gpEs = nombreGP(c.nombre, c.pais);
   const detalle = (kind, extra = {}) => ({ kind, gp: `${c.temporada}-${c.ronda}`, year: c.temporada, round: c.ronda, gpEn: c.nombre, circ: { id: c.circuito, name: c.circuitoNombre, loc: c.lugar, country: c.pais },
-    ses: { Q: c.quali, S: c.sprint, R: c.carrera }, dr, eq, ...extra });
+    ses: { Q: c.quali, S: c.sprint, R: c.carrera }, dr, tm, eq, ...extra });
   const logoPais = banderaPais(c.pais);
   const mk = (kind, key, inicio, resultados, p) => {
     const abierta = ahora < inicio;
@@ -316,7 +316,7 @@ export function filasCampeonato(year, ult, D) {
     id, sport: 'r', league: 'f1', league_name: 'Fórmula 1', league_logo: null, stage: `Temporada ${year}`, tag: null, venue: null, home, away: 'Fórmula 1',
     home_logo: null, away_logo: WEB + 'campeonato.svg', starts_at: new Date(ult.carrera).toISOString(), status: res ? 'final' : (D.ahora > ult.carrera + 4 * DAY ? 'canceled' : D.ahora >= ult.carrera ? 'live' : 'scheduled'),
     score: res ? res.nombre : null, winner: res ? '1' : null, bo: null, odds_1: null, odds_x: null, odds_2: null, odds_src: 'modelo',
-    details: { kind, gp: `C${year}`, year, dr: Object.fromEntries(D.lineup.map((p) => [p.id, p.nombre])), eq: Object.fromEntries(D.lineup.map((p) => [p.eq, p.eqNombre])), ...(res ? { res: { o: res.o } } : {}) }, odds_mk: mkp });
+    details: { kind, gp: `C${year}`, year, dr: Object.fromEntries(D.lineup.map((p) => [p.id, p.nombre])), tm: Object.fromEntries(D.lineup.map((p) => [p.id, p.eq])), eq: Object.fromEntries(D.lineup.map((p) => [p.eq, p.eqNombre])), ...(res ? { res: { o: res.o } } : {}) }, odds_mk: mkp });
   const mkP = {}, mkE = {};
   if (D.pCamp && D.ahora < ult.carrera) {
     for (const [id, p] of Object.entries(D.pCamp.pilotos)) { const q = cuota(p, { sube: D.sube, min: 0.004, tope: 150 }); if (q && D.lineup.some((x) => x.id === id)) mkP['FC:' + id] = q }
@@ -443,7 +443,6 @@ export async function f1(ctx = {}) {
       // la forma de las ultimas carreras ya esta en los puntos de la temporada; para el titulo basta con eso
       const pdnf = probAbandono(D.lineup, { form: {}, retirados: {} });
       D.pCamp = simulaCampeonato(D.lineup, st, pdnf, restantes, ptsP, ptsE, hash(`camp-${year}-${rondasHechas}`));
-      if (process.env.F1_DEBUG) console.log("camp", restantes.length, JSON.stringify(D.pCamp));
     }
     rows.push(...filasCampeonato(year, ult, D));
   }
