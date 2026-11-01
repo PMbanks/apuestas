@@ -32,7 +32,7 @@ begin
     n := n + 1;
     perform set_config('request.jwt.claims', format('{"sub":"%s","role":"authenticated"}',
       (select player from bjm_mano where ronda = rd.id and asiento = rd.turno)), true);
-    perform bjm_plantar();
+    perform bjm_plantarse();
     select * into rd from bjm_ronda where id = rd.id;
   end loop;
   if rd.estado <> 'fin' then raise exception 'FALLO: la ronda no acaba (%)', rd.estado; end if;
