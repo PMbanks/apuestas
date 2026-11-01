@@ -52,6 +52,7 @@
   }
 
   /* ---------- una combinada resuelta (formato de la tabla combos con combo_legs, como la carga combinadas.js) ---------- */
+  const mpN = (ls) => { const k = {}; for (const l of ls || []) k[l.match_id] = (k[l.match_id] || 0) + 1; return Object.values(k).filter((v) => v > 1).reduce((t, v) => t + v, 0) };   // db/067: cuantas van del mismo partido que otra
   const nombrePata = (l) => { const m = l.matches || {}; return l.pick === '1' ? m.home : l.pick === '2' ? m.away : l.pick === 'X' ? 'Empate' : pn({ a: m.home, b: m.away }, l.pick) };
   const ladoPata = (p) => (window.GM_MK && GM_MK.es(p) ? GM_MK.lado(p) : p);
   const estadoPata = (l) => { const m = l.matches || {};
@@ -83,7 +84,7 @@
     return `<article class="rsl rsl-c" data-r="${k}" style="--i:${op.i || 0}">
       ${wms.map((u, i) => fondo(u, false, i ? 'b' : '')).join('')}
       ${franja(k, txt, cifra + coin(), signo)}
-      <div class="rsl-meta"><span class="lab ell">Combinada de ${legs.length}</span><span class="lab n">${cuando(t)}</span></div>
+      <div class="rsl-meta"><span class="lab ell">Combinada de ${legs.length}${mpN(legs) ? `<span class="mp-tag"> · ${mpN(legs)} del mismo partido</span>` : ''}</span><span class="lab n">${cuando(t)}</span></div>
       <div class="rsl-legs">${legs.map(pata).join('')}</div>
       <div class="rsl-n">${cuadro('Cuota', O(c.odds))}${cuadro('Apostado', N(c.stake) + coin())}${tercero}</div>
     </article>`;
