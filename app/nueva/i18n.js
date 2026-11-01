@@ -17,6 +17,17 @@
 })();
 (function () {
   const D = {
+    // Equipos (01-11, equipos.js): plantilla, palmares de siempre y cambios
+    'Titulares': 'Starters', 'Suplentes y banquillo': 'Substitutes and bench', 'Organización': 'Organisation', 'Capitán': 'Captain', 'Cedido': 'On loan', 'Suplente': 'Substitute',
+    'Suplente temporal': 'Stand in', 'Inactivo': 'Inactive', 'Desde': 'Since', 'Cambios': 'Changes', 'Entra': 'Joins', 'Sale': 'Leaves', 'Pasa a inactivo': 'Goes inactive', 'Jugador': 'Player',
+    'Torneos ganados': 'Tournaments won', 'Segundo puesto': 'Runner up', 'Tercer puesto': 'Third place', 'Torneos jugados': 'Tournaments played', 'Nivel del torneo': 'Tournament tier',
+    'Sin clasificatorias ni partidos de exhibición.': 'Qualifiers and showmatches are not counted.', 'veces': 'times', 'Títulos': 'Titles', 'Subcampeonatos': 'Runner up finishes',
+    'Estadio': 'Stadium', 'Fundado': 'Founded', 'Analista': 'Analyst', 'Manager': 'Manager', 'Ojeador': 'Scout', 'Líder del equipo': 'Team leader', 'Entrenador principal': 'Head coach',
+    'Entrenador asistente': 'Assistant coach', 'Entrenador asistente y analista': 'Assistant coach and analyst', 'Preparador de rendimiento': 'Performance coach',
+    'Entrenador estratégico': 'Strategic coach', 'Entrenador interino': 'Interim coach', 'Analista de datos': 'Data analyst', 'Psicólogo deportivo': 'Sports psychologist',
+    'Sin titulares a la vista.': 'No starters to show.', 'a': 'to', 'Datos de Liquipedia': 'Data from Liquipedia', 'Datos de vlr.gg': 'Data from vlr.gg', 'Datos de Wikipedia': 'Data from Wikipedia',
+    'Datos de Wikidata (CC0)': 'Data from Wikidata (CC0)', 'Datos de ESPN': 'Data from ESPN', 'Fotos y datos de jugadores: PandaScore': 'Player photos and data: PandaScore',
+    'Iconos de agentes: Riot Games': 'Agent icons: Riot Games', 'Aproximado. Incluye lo que ganaron los jugadores mientras representaban al equipo.': 'Approximate. Includes what the players won while representing the team.',
     // Ventana del partido (01-11, ventana.js)
     'Ver en Partidos': 'View in Matches', 'Apuesta de': 'Bet by', 'Tus apuestas': 'Your bets', 'Perdido': 'Lost', 'Anulado': 'Cancelled', 'Partido': 'Match', 'Descanso': 'Half time',
     'Oculta hasta que empiece': 'Hidden until kickoff', 'Estadísticas del partido': 'Match stats', 'Todavía no hay estadísticas de este partido.': 'There are no stats for this match yet.',

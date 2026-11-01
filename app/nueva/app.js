@@ -389,9 +389,10 @@ async function eqCarga(e) {
       const y = sc?.season?.year, prev = y ? await getJ(base + '/schedule?season=' + (y - 1)) : null;
       if (sc && prev?.events?.length) sc.events = [...(sc.events || []), ...prev.events.filter((x) => !(sc.events || []).some((z) => z.id === x.id))];
       Object.assign(d, { sc, ro, tab });
+      d.x = await db.from('teams').select('extra').eq('id', `f:${e.id}`).maybeSingle().then((r) => r.data?.extra || null, () => null);
     } else if ((e.s === 'v' || e.s === 'c') && (e.tid || e.n)) {
       const juego = e.s === 'v' ? 'valorant' : 'csgo';
-      if (e.tid) { const { data } = await db.from('teams').select('data').eq('id', `${juego}:${e.tid}`).maybeSingle(); d.t = data?.data || null }
+      if (e.tid) { const { data } = await db.from('teams').select('data,extra').eq('id', `${juego}:${e.tid}`).maybeSingle(); d.t = data?.data || null; d.x = data?.extra || null }
       if (e.s === 'v') {
         if (!VLR_TEAMS) VLR_TEAMS = await getJ('https://vlr.orlandomm.net/api/v1/teams?limit=all&region=all').then((x) => x?.data || []);
         const nm = normEq(e.n), t = VLR_TEAMS.find((x) => normEq(x.name) === nm) || VLR_TEAMS.find((x) => nm.length > 2 && normEq(x.name).length > 2 && (normEq(x.name).includes(nm) || nm.includes(normEq(x.name))));
@@ -410,7 +411,7 @@ function eqNorm(e, d) {
       const sc = (z) => z?.score?.displayValue ?? z?.score ?? '', hecho = c.status?.type?.completed;
       const fila = { at: Date.parse(x.date), riv: { s: 'f', n: el.team?.displayName || '', logo: el.team?.logos?.[0]?.href || el.team?.logo || null, league: e.league, id: el.team?.id }, casa: yo?.homeAway === 'home', torneo: x.league?.name || '', grupo: x.season?.displayName || '' };
       if (hecho) o.jug.push({ ...fila, r: yo?.winner ? 'W' : el?.winner ? 'L' : 'D', marca: `${sc(yo)}:${sc(el)}` }); else o.prox.push(fila) }
-    o.gente = (d.ro?.athletes || []).map((a) => ({ img: a.headshot?.href || null, n: a.displayName, pais: a.citizenship || a.flag?.alt || '', rol: a.position?.displayName || a.position?.abbreviation || '', num: a.jersey || '', edad: a.age || '' }));
+    o.gente = (d.ro?.athletes || []).map((a) => ({ img: a.headshot?.href || null, n: a.displayName, pais: a.citizenship || a.flag?.alt || '', bandera: a.flag?.href || '', rol: a.position?.displayName || a.position?.abbreviation || '', num: a.jersey || '', edad: a.age || '' }));
     const coach = (d.ro?.coach || []).length === 1 ? d.ro.coach[0] : null;
     if (coach) o.gente.unshift({ n: `${coach.firstName || ''} ${coach.lastName || ''}`.trim(), rol: 'Entrenador', staff: true });
     const ents = (d.tab?.children || [d.tab]).flatMap((c) => c?.standings?.entries || []);
@@ -437,27 +438,28 @@ function eqNorm(e, d) {
   } else if (e.s === 'u') {
     const a = d.at?.athlete, st = Object.fromEntries((a?.statsSummary?.statistics || []).map((x) => [x.abbreviation, x.displayValue]));
     for (const x of Object.values(d.at?.eventsMap || {}).filter((z) => z.gameResult)) o.jug.push({ at: Date.parse(x.gameDate) || 0, riv: { s: 'u', n: x.opponent?.displayName || '', logo: x.opponent?.headshot?.href || null, id: x.opponent?.id || null }, torneo: x.shortName || '', grupo: String(new Date(Date.parse(x.gameDate) || 0).getFullYear()), r: x.gameResult === 'W' ? 'W' : x.gameResult === 'D' ? 'D' : 'L', marca: '' });
-    o.kpi = [['Récord', st['W-L-D'] ? String(st['W-L-D']).replace(/-/g, '·') : null], ['KO / TKO', st['(T)KO']], ['Sumisiones', st.SUB], ['Edad', a?.age], ['Altura', a?.displayHeight], ['Alcance', a?.displayReach], ['Categoría', a?.weightClass?.text], ['País', a?.flag?.alt || a?.citizenship]];
+    o.kpi = [['Récord', st['W-L-D'] ? String(st['W-L-D']).replace(/-/g, '·') : null], ['KO / TKO', st['(T)KO']], ['Sumisiones', st.SUB], ['Edad', a?.age], ['Altura', a?.displayHeight], ['Alcance', a?.displayReach], ['Categoría', a?.weightClass?.text], ['País', window.GM_EQ && a?.flag?.href ? { html: GM_EQ.flag('', a.flag.href, '', a.flag.alt) + esc(a.flag.alt || a.citizenship || '') } : a?.flag?.alt || a?.citizenship]];
   }
   // proximos que ya tenemos en Partidos (ESPN no siempre da el calendario que viene)
   if (e.s !== 'v' && e.s !== 'c') for (const x of board().filter((z) => z.s === e.s && (z.a === e.n || z.b === e.n))) if (!o.prox.some((y) => Math.abs(y.at - Date.parse(x.at)) < 36e5)) o.prox.push({ at: Date.parse(x.at), riv: eqDeMatch(x, x.a === e.n ? 'b' : 'a'), torneo: corto(L[x.lg]?.[0] || ''), live: x.live });
   o.jug.sort((a, b) => b.at - a.at); o.prox.sort((a, b) => a.at - b.at); o.kpi = o.kpi.filter((x) => x[1] != null && x[1] !== '');
   if (!o.gan && o.gente.some((x) => x.gan != null)) o.gan = { total: o.gente.reduce((s, x) => s + (+x.gan || 0), 0), anos: [] };
+  if (window.GM_EQ) GM_EQ.norm(e, d, o);   // equipos.js: ficha ampliada (plantilla, titulos, cambios, banderas)
   return o;
 }
 const eqRes = (r) => `<b class="eq-res ${r === 'W' ? 'g' : r === 'D' ? 'e' : 'p'}">${r === 'W' ? 'G' : r === 'D' ? 'E' : 'P'}</b>`;
 const eqRiv = (x) => `<button class="eq-riv" data-eqv="${esc(JSON.stringify(x.riv))}">${img(x.riv.logo, x.riv.s === 'u' ? 'face' : 'tl')}<span>${x.casa === false ? '@ ' : ''}${esc(x.riv.n)}</span></button>`;
 const eqFila = (x) => `<div class="eq-f">${x.r ? eqRes(x.r) : `<b class="eq-res ${x.live ? 'v' : 'n'}">${x.live ? '●' : '·'}</b>`}<span class="eq-d">${x.at ? dmy(x.at) : ''}</span>${eqRiv(x)}<span class="eq-m">${esc(x.marca || (x.at && !x.r ? HM(x.at) : ''))}</span><span class="eq-t">${esc(x.torneo || '')}</span></div>`;
 const eqCara = (x) => `<div class="eq-c ${x.staff ? 'st' : ''}">${x.img ? `<img src="${esc(x.img)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<span class="eq-ci">${esc(String(x.n || '?').slice(0, 2).toUpperCase())}</span>`}
-  <b>${esc(x.n)}</b><small>${esc([x.num ? '#' + x.num : '', x.rol, x.pais, x.edad ? x.edad + ' años' : ''].filter(Boolean).join(' · '))}</small>${x.gan != null ? `<em>${N(x.gan)} $</em>` : ''}</div>`;
+  <b>${esc(x.n)}</b><small>${window.GM_EQ ? GM_EQ.flag(x.pais, x.bandera, '', x.bandera ? x.pais : '') : ''}${esc([x.num ? '#' + x.num : '', x.rol, window.GM_EQ && GM_EQ.flag(x.pais, x.bandera, '', x.bandera ? x.pais : '') ? '' : x.pais, x.edad ? x.edad + ' años' : ''].filter(Boolean).join(' · '))}</small>${x.gan != null ? `<em>${N(x.gan)} $</em>` : ''}</div>`;
 const eqPags = (n, por, pg) => { const t = Math.ceil(n / por); return t > 1 ? `<nav class="pags eq-pags"><button data-eqpg="${pg - 1}" ${pg ? '' : 'disabled'} aria-label="Anterior">‹</button>${Array.from({ length: t }, (_, i) => `<button data-eqpg="${i}" class="${i === pg ? 'on' : ''}">${i + 1}</button>`).join('')}<button data-eqpg="${pg + 1}" ${pg < t - 1 ? '' : 'disabled'} aria-label="Siguiente">›</button></nav>` : '' };
 function eqHtml(e, o) {
   const P = S.eqp, forma = o.jug.slice(0, 5).reverse();
-  const tabs = [['resumen', 'Resumen', true], ['partidos', 'Partidos', o.jug.length || o.prox.length], ['plantilla', e.s === 'u' ? '' : 'Plantilla', o.gente.length], ['tabla', 'Clasificación', !!o.tabla], ['palmares', 'Palmarés', o.palm.length], ['ganancias', 'Ganancias', !!o.gan]].filter(([, n, ok]) => n && ok);
+  const tabs = [['resumen', 'Resumen', true], ['partidos', 'Partidos', o.jug.length || o.prox.length], ['plantilla', e.s === 'u' ? '' : 'Plantilla', o.gente.length], ['tabla', 'Clasificación', !!o.tabla], ['palmares', 'Palmarés', o.palm.length], ['cambios', 'Cambios', !!(o.cam && o.cam.length)], ['ganancias', 'Ganancias', !!o.gan]].filter(([, n, ok]) => n && ok);
   const tab = tabs.some(([k]) => k === P.tab) ? P.tab : 'resumen';
   let c = '';
   if (tab === 'resumen') {
-    c = `${o.kpi.length ? `<div class="eq-k">${o.kpi.map(([a, b]) => `<div><span class="lab">${a}</span><b>${esc(String(b))}</b></div>`).join('')}</div>` : ''}
+    c = `${o.kpi.length ? `<div class="eq-k">${o.kpi.map(([a, b]) => `<div><span class="lab">${a}</span><b>${b && b.html != null ? b.html : esc(String(b))}</b></div>`).join('')}</div>` : ''}
       <div class="eq-2"><section><h4>Próximos</h4>${o.prox.slice(0, 4).map(eqFila).join('') || '<p class="hint">Nada a la vista.</p>'}</section>
       <section><h4>Últimos resultados</h4>${o.jug.slice(0, 5).map(eqFila).join('') || '<p class="hint">Sin resultados.</p>'}</section></div>`;
   } else if (tab === 'partidos') {
@@ -476,8 +478,9 @@ function eqHtml(e, o) {
     const mx = Math.max(1, ...o.gan.anos.map((x) => +x.v || 0)), top = o.gente.filter((x) => x.gan != null).sort((a, b) => b.gan - a.gan).slice(0, 6);
     c = `<div class="eq-gt"><span class="lab">En total</span><b>${o.gan.total != null ? N(o.gan.total) + ' $' : '·'}</b></div>${o.gan.anos.length ? `<div class="eq-ga">${o.gan.anos.map((x) => `<div><span>${esc(String(x.a))}</span><i style="width:${((+x.v || 0) / mx) * 100}%"></i><b>${N(x.v)} $</b></div>`).join('')}</div>` : ''}${top.length ? `<h4>Quién más ha ganado</h4><div class="eq-cs">${top.map(eqCara).join('')}</div>` : ''}`;
   }
+  if (window.GM_EQ) { const h = GM_EQ.tab(tab, e, o, P); if (h != null) c = h; }   // equipos.js pinta Plantilla, Palmarés, Cambios y Ganancias con la ficha ampliada
   return `<header class="eq-h">${P.pila.length > 1 ? '<button class="eq-back" data-act="eq-atras" aria-label="Volver">‹</button>' : ''}${img(e.logo, e.s === 'u' ? 'face' : 'tl')}
-      <div class="eq-hn"><span class="lab">${esc(e.lg ? L[e.lg]?.[0] || '' : SP[e.s][0])}</span><h2>${esc(e.n)}</h2>${forma.length ? `<span class="eq-fm">${forma.map((x) => eqRes(x.r)).join('')}</span>` : ''}</div>
+      <div class="eq-hn"><span class="lab">${esc(e.lg ? L[e.lg]?.[0] || '' : SP[e.s][0])}</span><h2>${esc(e.n)}</h2>${window.GM_EQ ? GM_EQ.cab(e, o) : ''}${forma.length ? `<span class="eq-fm">${forma.map((x) => eqRes(x.r)).join('')}</span>` : ''}</div>
       <button class="rw-x" data-act="sh-info" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
     <nav class="eq-tabs">${tabs.map(([k, n]) => `<button class="${k === tab ? 'on' : ''}" data-eqtab="${k}">${n}</button>`).join('')}</nav>
     <div class="eq-cu">${c}</div>`;
@@ -487,12 +490,13 @@ async function pintaEq() {
   const P = S.eqp, e = P?.pila?.[P.pila.length - 1];
   if (!e) { if (el) el.remove(); return }
   if (!el) { el = document.createElement('div'); el.id = 'eqp'; document.body.appendChild(el); el.innerHTML = `<div class="rw-fondo" data-act="sh-info"></div><aside class="eqp abre" role="dialog" aria-label="Todo sobre el equipo"><p class="hint">Cargando…</p></aside>` }
-  const k = eqKey(e) + '|' + P.tab + '|' + (P.pag || 0); if (el.dataset.k === k) return;
+  const k = eqKey(e) + '|' + P.tab + '|' + (P.pag || 0) + '|' + (P.tier || ''); if (el.dataset.k === k) return;
   const box = el.querySelector('.eqp'); if (!EQD.has(eqKey(e))) box.innerHTML = `<header class="eq-h">${img(e.logo, e.s === 'u' ? 'face' : 'tl')}<div class="eq-hn"><h2>${esc(e.n)}</h2></div></header><p class="hint">Cargando…</p>`;
   const d = await eqCarga(e);
-  const P2 = S.eqp, e2 = P2?.pila?.[P2.pila.length - 1]; if (!e2 || eqKey(e2) + '|' + P2.tab + '|' + (P2.pag || 0) !== k) return;
+  const P2 = S.eqp, e2 = P2?.pila?.[P2.pila.length - 1]; if (!e2 || eqKey(e2) + '|' + P2.tab + '|' + (P2.pag || 0) + '|' + (P2.tier || '') !== k) return;
   el.dataset.k = k; box.innerHTML = eqHtml(e, eqNorm(e, d)); box.scrollTop = 0;
   if (window.GM_LANG) GM_LANG.traduce(el);
+  if (window.GM_EQ) GM_EQ.post(el);
 }
 function sheetFutbol(m, side, d) {
   const id = String(m.espn.ids[side]);
@@ -527,21 +531,21 @@ function sheetEsports(m, side, d) {
   let racha = 0; for (const x of h) { if (x.won === h[0]?.won) racha++; else break }
   const nm = side === 'a' ? m.a : m.b, prox = board().filter((x) => x.id !== m.id && (x.a === nm || x.b === nm)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(0, 4);
   const h2h = h.filter((x) => String(x.vsId) === String(d.rival));
-  const kpi = [['Últimos ' + h.length, `${w}-${h.length - w}`], ['Victorias', h.length ? Math.round((w / h.length) * 100) + '%' : '·'], ['Racha', h.length ? `${racha} ${h[0].won ? 'ganados' : 'perdidos'}` : '·'], ['Mapas', `${mapsW}-${mapsL}`], ['País', t.loc || '·'], ['Siglas', t.acr || '·']];
-  let o = shInfoBtn('Todo sobre el equipo') + `<div class="bio">${kpi.map(([k, v]) => `<div><span class="lab">${k}</span><b>${esc(String(v))}</b></div>`).join('')}</div>`;
+  const kpi = [['Últimos ' + h.length, `${w}-${h.length - w}`], ['Victorias', h.length ? Math.round((w / h.length) * 100) + '%' : '·'], ['Racha', h.length ? `${racha} ${h[0].won ? 'ganados' : 'perdidos'}` : '·'], ['Mapas', `${mapsW}-${mapsL}`], ['País', window.GM_EQ && t.loc && GM_EQ.flag(t.loc) ? { html: GM_EQ.flag(t.loc) + esc(GM_EQ.nombrePais(t.loc)) } : t.loc || '·'], ['Siglas', t.acr || '·']];
+  let o = shInfoBtn('Todo sobre el equipo') + `<div class="bio">${kpi.map(([k, v]) => `<div><span class="lab">${k}</span><b>${v && v.html != null ? v.html : esc(String(v))}</b></div>`).join('')}</div>`;
   if (h.length) o += `<div class="shs"><span class="lab">Forma</span><span class="fm big">${h.slice(0, 5).reverse().map((x) => res(x.won ? 'W' : 'L')).join('')}</span></div>`;
   if (h2h.length) o += `<div class="shs"><span class="lab">Cara a cara</span>${h2h.map((e) => `<div class="shr">${img(e.logo, 'tl')}<span class="nm">${esc(e.vs)}${e.t ? `<small>${esc(corto(e.t))}</small>` : ''}</span><span class="dt">${e.at ? dmy(Date.parse(e.at)) : ''}</span><span class="mk">${esc(e.score)}</span>${res(e.won ? 'W' : 'L')}</div>`).join('')}</div>`;
   const filaE = (e) => `<div class="shr">${img(e.logo, 'tl')}<span class="nm">${esc(e.vs)}${e.t ? `<small>${esc(corto(e.t))}</small>` : ''}</span><span class="dt">${e.at ? dmy(Date.parse(e.at)) : ''}</span><span class="mk">${esc(e.score)}</span>${res(e.won ? 'W' : 'L')}</div>`;
   if (h.length) o += S.shTodos ? shPorGrupo(h, (e) => corto(e.t) || 'Otros', filaE) + shMas(h.length) : `<div class="shs"><span class="lab">Últimos resultados</span>${h.slice(0, SH_POR).map(filaE).join('')}${shMas(h.length)}</div>`;
   if (prox.length) o += `<div class="shs"><span class="lab">Próximos</span>${prox.map((x) => { const r = x.a === nm ? x.b : x.a; return `<div class="shr">${img(x.a === nm ? x.lb : x.la, 'tl')}<span class="nm">${esc(r)}<small>${esc(corto(L[x.lg]?.[0] || ''))}</small></span><span class="dt">${dmy(Date.parse(x.at))}</span><span class="mk">${HM(Date.parse(x.at))}</span><span></span></div>` }).join('')}</div>`;
   const pl = t.players || m.players?.[side] || [];
-  if (pl.length) o += `<div class="shs"><span class="lab">Jugadores</span><div class="pls">${pl.map((x) => `<div class="pl">${x.img ? `<img class="face" src="${esc(x.img)}" alt="" loading="lazy">` : `<span class="pl-i">${esc((x.n || '?').slice(0, 2).toUpperCase())}</span>`}<b>${esc(x.n)}</b><span>${esc([x.nombre, x.nat, x.age ? x.age + ' años' : null].filter(Boolean).join(' · '))}</span></div>`).join('')}</div></div>`;
+  if (pl.length) o += `<div class="shs"><span class="lab">Jugadores</span><div class="pls">${pl.map((x) => `<div class="pl">${x.img ? `<img class="face" src="${esc(x.img)}" alt="" loading="lazy">` : `<span class="pl-i">${esc((x.n || '?').slice(0, 2).toUpperCase())}</span>`}<b>${esc(x.n)}</b><span>${window.GM_EQ ? GM_EQ.flag(x.nat) : ''}${esc([x.nombre, window.GM_EQ && GM_EQ.flag(x.nat) ? '' : x.nat, x.age ? x.age + ' años' : null].filter(Boolean).join(' · '))}</span></div>`).join('')}</div></div>`;
   return o;
 }
 function sheetValorant(m, side) {
   const pl = m.players?.[side] || [], rc = m.recent?.[side] || [];
   let h = '';
-  if (pl.length) h += `<div class="shs"><span class="lab">Jugadores</span><div class="pls">${pl.map((x) => `<div class="pl">${x.img ? `<img class="face" src="${esc(x.img)}" alt="" loading="lazy">` : `<span class="pl-i">${esc((x.n || '?').slice(0, 2).toUpperCase())}</span>`}<b>${esc(x.n)}</b><span>${esc([x.nombre, x.nat].filter(Boolean).join(' · '))}</span></div>`).join('')}</div></div>`;
+  if (pl.length) h += `<div class="shs"><span class="lab">Jugadores</span><div class="pls">${pl.map((x) => `<div class="pl">${x.img ? `<img class="face" src="${esc(x.img)}" alt="" loading="lazy">` : `<span class="pl-i">${esc((x.n || '?').slice(0, 2).toUpperCase())}</span>`}<b>${esc(x.n)}</b><span>${window.GM_EQ ? GM_EQ.flag(x.nat) : ''}${esc([x.nombre, window.GM_EQ && GM_EQ.flag(x.nat) ? '' : x.nat].filter(Boolean).join(' · '))}</span></div>`).join('')}</div></div>`;
   if (rc.length) h += `<div class="shs"><span class="lab">Últimos resultados</span>${rc.map((e) => `<div class="shr">${img(e.logo, 'tl')}<span class="nm">${esc(e.vs)}${e.t ? `<small>${esc(corto(e.t))}</small>` : ''}</span><span class="dt">${e.at ? dmy(Date.parse(e.at)) : ''}</span><span class="mk">${esc(e.score)}</span>${res(e.won ? 'W' : 'L')}</div>`).join('')}</div>`;
   return h || '<p class="hint">PandaScore todavía no tiene datos de este equipo.</p>';
 }
