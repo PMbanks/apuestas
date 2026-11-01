@@ -149,6 +149,19 @@
     const pb = hd.closest('[data-keep=pb]'), sc = pb && pb.scrollHeight > pb.clientHeight + 1 ? pb : document.getElementById('view');
     sc.scrollBy({ top: Math.min(falta, hd.getBoundingClientRect().top - (sc.getBoundingClientRect().top + 8)), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }
+  // Detalles (01-11): en movil la burbuja tapaba la columna de cuotas al bajar por Partidos. Al bajar se encoge a una lengueta
+  // pegada al borde (con su numero de no leidos) y vuelve al subir, al llegar arriba o al cambiar de pantalla
+  const ult = new WeakMap(); let bajado = 0, pantalla = '';
+  const encoge = (v) => { const h = document.body.classList; if (h.contains('chb-min') !== v) h.toggle('chb-min', v) };
+  document.addEventListener('scroll', (e) => {
+    if (!movil()) return encoge(false);
+    const el = e.target, t = el && el.scrollTop; if (typeof t !== 'number' || !(el.id === 'view' || (el.dataset && el.dataset.keep))) return;
+    const a = ult.get(el) ?? t, d = t - a; ult.set(el, t);
+    if (t < 24 || d < -10) { bajado = 0; return encoge(false) }
+    if (d > 0) { bajado += d; if (bajado > 60) encoge(true) }
+  }, true);
+  const vigilaPantalla = () => { const s = g(() => S.scr, ''); if (s !== pantalla) { pantalla = s; bajado = 0; encoge(false) } };
+  new MutationObserver(vigilaPantalla).observe(document.getElementById('view') || document.body, { childList: true });
   vigila();
   window.GM_MENU = { abre, pinta, pmVer };
 })();

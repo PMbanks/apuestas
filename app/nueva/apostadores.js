@@ -17,8 +17,23 @@
   const suena = (t, p) => { if (window.GM_SONIDOS) g(() => GM_SONIDOS.suena(t, p)) };
   const sinAnim = () => document.documentElement.classList.contains('sin-anim');
   const MIN = 3;   // aciertos: resueltas que hacen falta para entrar en la tabla
-  // lo que paga cada premio de la semana (settings premio_dinero, premio_ratio y premio_combinada: get_extras no los trae)
+  // lo que paga cada premio de la semana (settings premio_dinero, premio_ratio y premio_combinada: get_extras no los trae, se leen de settings)
   const PREMIO = { din: 200, cuota: 100, comb: 300 };
+  // PM 01-11: los premios se leen de la base (settings, que los jugadores pueden leer); los fijos de arriba son el respaldo
+  let premiosT = 0;
+  async function premios() {
+    if (Date.now() - premiosT < 600e3 || !g(() => db)) return;
+    premiosT = Date.now();
+    try {
+      const { data, error } = await db.from('settings').select('key,value').in('key', ['premio_dinero', 'premio_ratio', 'premio_combinada']);
+      if (error || !data) return;
+      const v = (k) => { const r = data.find((x) => x.key === k), n = r ? Number(r.value) : 0; return n > 0 ? Math.round(n) : 0 };
+      const nu = { din: v('premio_dinero') || PREMIO.din, cuota: v('premio_ratio') || PREMIO.cuota, comb: v('premio_combinada') || PREMIO.comb };
+      if (nu.din === PREMIO.din && nu.cuota === PREMIO.cuota && nu.comb === PREMIO.comb) return;
+      Object.assign(PREMIO, nu);
+      if (TAB === 'apost' && g(() => S.scr) === 'liga' && !document.activeElement?.matches('input,textarea')) g(() => render());
+    } catch { premiosT = 0 }
+  }
   let TAB = lee('gm-liga-tab') === 'saldo' ? 'saldo' : 'apost';
   const ST = { p: 'sem', m: 'din' };
 
@@ -167,6 +182,7 @@
   function html() {
     if (!g(() => loaded)) return '';
     if (window.GM_CMB) setTimeout(() => g(() => GM_CMB.carga()), 0);   // las combinadas de todos: la primera vez y luego cada 30 s como mucho
+    setTimeout(premios, 0);
     const { p, m } = ST, filas = tabla(p), sem = p === 'sem' ? filas : tabla('sem');
     const { ok, fuera } = orden(filas, m), max = ok.length ? Math.max(...ok.map((x) => Math.abs(val(x, m)))) : 0;
     // marcas de premio: solo en la semana (dinero: el bote y +200; mejor cuota: +100)

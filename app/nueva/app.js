@@ -787,15 +787,35 @@ const jugMenu = (np) => { const nj = jugados().length, nl = M.filter((m) => m.li
   const it = (on, act, ic, b, sm, n, cls = '') => `<button class="pm-it ${on ? 'on' : ''} ${cls}" ${act} role="menuitem"><span class="pm-ic"><svg viewBox="0 0 24 24">${ic}</svg></span><span class="pm-tx"><b>${b}</b><small>${sm}</small></span><em>${n}</em>${IC_CK}</button>`;
   return `<div class="pm-hd ${S.pmenu ? 'abre' : ''}"><button class="pm-tt" data-act="pmenu" aria-haspopup="menu" aria-expanded="${!!S.pmenu}"><span>${j ? 'Ya jugados' : 'Próximos'}</span><svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg></button>${j ? '<span class="pm-res">Resultados</span>' : ''}<span class="pm-n">${j ? `${nj} ${nj === 1 ? 'resultado' : 'resultados'}` : `${np} ${np === 1 ? 'partido' : 'partidos'}`}</span>
     <div class="pm-menu" role="menu">${it(!j, j ? 'data-act="soloJug"' : '', SCREENS.partidos[2], 'Próximos', 'Lo que se juega a partir de ahora', np)}${nl ? it(false, 'data-scr="directo"', SCREENS.directo[2], 'En directo', 'Partidos que se están jugando', nl, 'vivo') : ''}${it(j, j ? '' : `data-act="soloJug"${nj ? '' : ' disabled'}`, SCREENS.apuestas[2], 'Ya jugados', 'Resultados de los últimos dos días', nj)}</div></div>` };
+// PM 01-11 (Ya jugados B): en cada partido, lo que TU ganaste o perdiste (tus apuestas resueltas de ese partido) y, debajo, tus combinadas
+// con ese partido y lo que sacó cada amigo. Las combinadas las carga combinadas.js (GM_CMB); aquí solo se leen
+const jugResueltas = (k, mid) => ALL.filter((b) => b.k === k && b.m === mid && b.st !== 'open');
+const jugCmbs = (mid) => ((window.GM_CMB && GM_CMB.todas()) || []).filter((c) => c.player === ME && ['won', 'lost', 'void'].includes(c.status) && (c.combo_legs || []).some((l) => l.match_id === mid));
+const jugSig = (v) => (v > 0 ? '▲ ' : v < 0 ? '▼ ' : '');
+function jugMio(m) {
+  const bs = jugResueltas(MEK, m.id); if (!bs.length) return '<span class="jug-mi"></span>';
+  const v = bs.reduce((a, b) => a + neto(b), 0), nul = bs.every((b) => b.st === 'void'), b0 = bs[0];
+  const txt = bs.length > 1 ? `${bs.length} apuestas` : nul ? 'Devuelta' : `${N(b0.stake)} a ${esc(pn(m, b0.p))} · ${O(b0.o)}`;
+  return `<span class="jug-mi ${nul ? 'nul' : v > 0 ? 'win' : v < 0 ? 'lose' : 'nul'}"><b>${nul ? N(bs.reduce((a, b) => a + b.stake, 0)) : jugSig(v) + N(Math.abs(v))}${coin()}</b><small>${txt}</small></span>`;
+}
+function jugX(m) {
+  const cs = jugCmbs(m.id).map((c) => { const v = c.status === 'won' ? c.payout - c.stake : c.status === 'lost' ? -c.stake : 0;
+    return `<span class="jug-tg ${v > 0 ? 'win' : v < 0 ? 'lose' : ''}"><em>Combinada</em><b>${c.status === 'void' ? N(c.stake) : jugSig(v) + N(Math.abs(v))}${coin()}</b></span>` });
+  const fs = F.filter((f) => f.id !== MEK).map((f) => [f, jugResueltas(f.id, m.id)]).filter(([, bs]) => bs.length && bs.some((b) => b.st !== 'void'))
+    .map(([f, bs]) => { const v = bs.reduce((a, b) => a + neto(b), 0); return `<span class="jug-tg ${v > 0 ? 'win' : v < 0 ? 'lose' : ''}">${av(f.id, 'sm')}<b>${jugSig(v) + N(Math.abs(v))}${coin()}</b></span>` });
+  const t = [...cs, ...fs]; return t.length ? `<span class="jug-x">${t.join('')}</span>` : '';
+}
 function jugadosHtml() {
   const l = jugados(); if (!l.length) return '';
+  if (window.GM_CMB) setTimeout(() => { try { GM_CMB.carga() } catch {} }, 0);   // tus combinadas con cada partido (lo frena combinadas.js: cada 30 s)
   const n = S.soloJug ? l.length : Math.min(l.length, S.jugN || 8), gan = (m, k) => { const [x, y] = String(m.score || '').split(' ')[0].split(':').map(Number); if (!(x >= 0 && y >= 0) || x === y) return ''; return (x > y) === (k === 'home') ? 'w' : 'l' };
   return `<section class="jug"><div class="day"><b>Ya jugados</b><span>últimos dos días</span><i>${l.length}</i></div>${l.slice(0, n).map((m) => `<button class="jug-r" data-goto="${m.id}">
     <span class="jug-t">${WD(m.at)} ${HM(m.at)}<small>${esc(L[m.lg]?.[0] || '')}</small></span>
     <span class="jug-e ${gan(m, 'home')}">${logo(m, 'a')}<b>${esc(m.a)}</b></span><span class="jug-s">${esc(String(m.score || '').split(' ')[0] || 'final')}</span><span class="jug-e b ${gan(m, 'away')}"><b>${esc(m.b)}</b>${logo(m, 'b')}</span>
-    <span class="jug-w">${whoOn(m.id).slice(0, 4).map((k) => av(k, 'sm')).join('')}</span></button>`).join('')}
+    ${jugMio(m)}${jugX(m)}</button>`).join('')}
     ${n < l.length ? `<button class="jug-mas" data-jugmas="1">Ver más (${l.length - n})</button>` : ''}</section>`;
 }
+addEventListener('gm:cmb-datos', () => { if (S.scr === 'partidos' && S.soloJug && !document.activeElement?.matches('input,textarea')) render() });
 function partidos() {
   const list = filtered();
   if (!S.foc || !byId(S.foc) || !(board().some((m) => m.id === S.foc) || byId(S.foc).status === 'final')) S.foc = (featured()[0] || list[0] || {}).id;
@@ -1823,7 +1843,7 @@ function render() {
   document.getElementById('lang').innerHTML = `<button type="button" class="rail-aj ${S.scr === 'ajustes' ? 'on' : ''}" data-scr="ajustes"><svg viewBox="0 0 24 24">${SCREENS.ajustes[2]}</svg>Ajustes</button>`;
   const [t, sub] = S.scr === 'perfil' ? ['Perfil', ''] : SCREENS[S.scr];
   pintaRw(); pintaNv(); pintaVivoYo(); pintaEq();
-  document.getElementById('top').innerHTML = `<h1>${t}</h1>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}<span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>${M.some((x) => x.live) ? `<button class="dv-btn ${S.scr === 'directo' ? 'on' : ''}" data-scr="directo"><i></i>Directo <b>${M.filter((x) => x.live).length}</b></button>` : ''}${nvBoton()}${rwBoton()}<span class="onl ${S.onl ? 'abre' : ''}" data-onl>${onlineHtml()}</span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span><button class="mo-btn ${S.scr === 'monedero' ? 'on' : ''}" data-scr="monedero" aria-label="Monedero" title="Monedero"><svg viewBox="0 0 24 24">${SCREENS.monedero[2]}</svg></button><button class="aj-btn ${S.scr === 'ajustes' ? 'on' : ''}" data-scr="ajustes" aria-label="Ajustes" title="Ajustes"><svg viewBox="0 0 24 24">${SCREENS.ajustes[2]}</svg></button>`;
+  document.getElementById('top').innerHTML = `<h1>${S.scr === 'colegas' ? '<span class="t-l">Apuestas de todos</span><span class="t-s">Todos</span>' : t}</h1>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}<span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>${M.some((x) => x.live) ? `<button class="dv-btn ${S.scr === 'directo' ? 'on' : ''}" data-scr="directo"><i></i>Directo <b>${M.filter((x) => x.live).length}</b></button>` : ''}${nvBoton()}${rwBoton()}<span class="onl ${S.onl ? 'abre' : ''}" data-onl>${onlineHtml()}</span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span><button class="mo-btn ${S.scr === 'monedero' ? 'on' : ''}" data-scr="monedero" aria-label="Monedero" title="Monedero"><svg viewBox="0 0 24 24">${SCREENS.monedero[2]}</svg></button><button class="aj-btn ${S.scr === 'ajustes' ? 'on' : ''}" data-scr="ajustes" aria-label="Ajustes" title="Ajustes"><svg viewBox="0 0 24 24">${SCREENS.ajustes[2]}</svg></button>`;
   photoCss();
   if (window.GM_MERCADO) GM_MERCADO.aplicaCosmeticos(mkCtx());
   const vw = document.getElementById('view'), cambia = vw.dataset.vista !== S.scr;
