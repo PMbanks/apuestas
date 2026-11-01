@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "retoques-0111",
+   "fecha": "2026-11-01",
+   "hora": "13:56",
+   "titulo": "Retoques",
+   "texto": "En Ya jugados ves lo que ganaste o perdiste en cada partido. En el móvil la burbuja del chat se encoge al bajar para no tapar cuotas, el título de Todos ya no se corta, y en el PC el saldo se ve entero aunque la ventana sea estrecha. Más inglés en Directo.",
+   "titulo_en": "Polish",
+   "texto_en": "In Played you see what you won or lost on each match. On the phone the chat bubble shrinks while you scroll so it does not cover odds, the Everyone title no longer gets cut, and on PC the balance always fits. More English in Live.",
+   "img": "novedades/ya-jugados-tuyo.webp",
+   "ir": "partidos"
+  },
+  {
    "id": "apostadores-bote-0111",
    "fecha": "2026-11-01",
    "hora": "13:17",

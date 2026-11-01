@@ -184,3 +184,47 @@ body:has(.pm-hd.abre) #chatb>*{pointer-events:none}
 @media (hover:none){#nav .nv:not(.on):hover{color:var(--mute)}}
 /* Monedero (se abre ahora con el icono de arriba): en movil las cuatro cifras se pisaban (estilo en linea de 4 columnas) */
 @media (max-width:560px){#view .stats[style*="repeat(4"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+
+/* ===== Detalles (01-11) ===== */
+/* titulo de Apuestas de todos: largo en PC, corto ("Todos") en movil */
+.top h1 .t-s{display:none}
+@media (max-width:1000px){.top h1 .t-l{display:none}.top h1 .t-s{display:inline}}
+/* PC estrecho: el saldo se ve siempre entero; las pastillas de avisos pasan a solo icono (con su numero) antes de tocarlo */
+.top .bal,.top .mo-btn,.top .aj-btn{flex-shrink:0}
+@media (min-width:861px) and (max-width:1320px){
+  .top{gap:12px;padding:0 20px}
+  .top .claim span,.top .nvb span{display:none}
+  .top .claim,.top .nvb{padding:7px 9px;margin-right:0;gap:6px}
+  .top .dv-btn{font-size:0;gap:6px;margin-right:0;padding:7px 10px}
+  .top .onl{margin-right:0}
+  .top .pay{display:none}
+  .top h1{margin-right:auto}
+}
+/* Ya jugados: lo que ganaste o perdiste en cada partido (jugMio) y, debajo, combinadas y amigos (jugX) */
+.jug-r{grid-template-columns:92px minmax(0,1fr) 64px minmax(0,1fr) 136px;row-gap:6px}
+.jug-mi{display:grid;justify-items:end;gap:4px;min-width:0;text-align:right}
+.jug-mi b{display:inline-flex;align-items:center;gap:6px;font:500 17px/1 var(--mono);letter-spacing:-.04em;color:var(--mute)}
+.jug-mi b .cn{--s:1.05em}
+.jug-mi small{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:11px var(--mono);color:var(--dim)}
+.jug-mi.win b{color:var(--win)}.jug-mi.lose b{color:var(--red)}
+.jug-x{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:6px}
+.jug-tg{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px 0 4px;border-radius:999px;background:var(--soft-bg,rgba(255,255,255,.06));font:500 12px var(--mono);color:var(--mute);white-space:nowrap}
+.jug-tg em{padding-left:7px;font:500 11px var(--mono);font-style:normal;letter-spacing:.04em;color:var(--dim)}
+.jug-tg .av{--s:18px;width:18px;height:18px;font-size:8px}
+.jug-tg b{display:inline-flex;align-items:center;gap:4px;font-weight:500}.jug-tg b .cn{--s:1.1em}
+.jug-tg.win b{color:var(--win)}.jug-tg.lose b{color:var(--red)}
+@media (max-width:860px){
+  .jug-r{grid-template-columns:minmax(0,1fr) 52px minmax(0,1fr);row-gap:8px;padding:12px 4px}
+  .jug-mi{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left}
+  .jug-mi:empty{display:none}
+  .jug-mi small{order:-1;flex:1;min-width:0;font-size:12px}
+  .jug-mi b{font-size:19px}
+  .jug-x{grid-column:1/-1}
+}
+/* burbuja del chat en movil: al bajar se encoge a una lengueta en el borde, con el numero de no leidos a la vista */
+@media (max-width:860px){
+  #chatb{transition:bottom .25s var(--ease),opacity .2s,transform .25s var(--ease)}
+  body.chb-min #chatb{transform:translateX(52px)}
+  body.chb-min .chb-b{opacity:.85;box-shadow:0 6px 16px rgba(0,0,0,.45)}
+  body.chb-min .chb-b b{right:auto;left:-1px;top:-9px}
+}

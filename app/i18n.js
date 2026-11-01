@@ -27,7 +27,14 @@
     'desde ayer': 'since yesterday', 'desde el lunes': 'since Monday', 'desde el martes': 'since Tuesday', 'desde el miércoles': 'since Wednesday',
     'desde el jueves': 'since Thursday', 'desde el viernes': 'since Friday', 'desde el sábado': 'since Saturday', 'desde el domingo': 'since Sunday',
     'Acaba de pasar': 'Just happened', 'Tus últimos resultados': 'Your latest results', 'nada nuevo desde tu última visita': 'nothing new since your last visit',
-    'Ganaste': 'You won', 'Retiraste': 'Cashed out', 'Devuelta': 'Refunded', 'te pagan': 'paid', 'te devuelven': 'refunded',
+    // Directo (vivo.js) y lo que quedaba suelto en inglés (01-11, Detalles)
+    'Esta fuente aún no da las rondas de este mapa. Se pone aquí en cuanto las tenga.': 'This source does not give the rounds of this map yet. They show up here as soon as it does.',
+    'No hay marcador de rondas de este mapa.': 'There is no round score for this map.',
+    'Cuando ruede el balón, aquí irá todo lo que pase.': 'Once the ball rolls, everything that happens shows up here.',
+    'bomba desactivada': 'bomb defused', 'bomba explotada': 'bomb exploded', 'eliminación': 'elimination', 'se acabó el tiempo': 'time ran out',
+    'primera mitad': 'first half', 'segunda mitad': 'second half', 'prórroga': 'overtime', 'Todavía no ha empezado': 'Not started yet',
+    'penalti fallado': 'penalty missed', 'Acabado': 'Finished', 'Empezando': 'Starting', 'Últimas 3': 'Last 3',
+    'Combinada': 'Parlay', 'Ganaste': 'You won', 'Retiraste': 'Cashed out', 'Devuelta': 'Refunded', 'te pagan': 'paid', 'te devuelven': 'refunded',
     'si aciertas todo': 'if everything wins', 'Vas ganando': 'Winning', 'Vas perdiendo': 'Losing', 'Vas empatando': 'Level', 'cobrarías': 'payout',
     'Por orden de movimiento': 'By latest move', 'sin resultados nuevos': 'no new results', 'Sin movimiento': 'No moves lately',
     'Ganó con': 'Won with', 'Perdió con': 'Lost with', 'Retiró con': 'Cashed out with', 'Ganó con el': 'Won with the', 'Perdió con el': 'Lost with the', 'Retiró con el': 'Cashed out with the',
@@ -555,6 +562,13 @@
     [/^Se paga solo al acabar\.$/, 'Settles automatically at the end.'], [/^En directo: ([\d.,]+) a ([\d.,]+)$/, 'Live: $1 at $2'],
     // ranking de Juegos: tira de caras y duelo (01-11)
     [/^de (\d+)$/, 'of $1'], [/^a[\s\u00a0]([\d.,×]+)$/, 'by $1'], [/^(.+) te saca$/, '$1 is ahead by'], [/^Vas por delante de (.+) por$/, 'You are ahead of $1 by'], [/^Sin jugar · (.+)$/, 'Not played · $1'],
+    // Directo y fechas sueltas (01-11, Detalles)
+    [/^pick de (.+)$/, 'picked by $1'], [/^asistencia de (.+)$/, 'assist by $1'], [/^(.+) \(en propia\)$/, '$1 (own goal)'],
+    [/^(.+) · se actualiza cada (\d+) s$/, '$1 · updates every $2 s'], [/^Fútbol(?= · )/, 'Football'], [/^· Apuesta del día$/, '· Bet of the day'],
+    [/^No se han podido cargar las cuotas en directo\. Se paga solo al acabar\.$/, 'Could not load the live odds. It settles automatically at the end.'],
+    [/^empate (\d+)%$/, 'draw $1%'], [/\bMAR(?= · )/g, 'TUE'],
+    // Ya jugados: lo tuyo en cada partido (01-11)
+    [/^([\d.,]+) a (.+?)( · [\d.,]+)?$/, '$1 on $2$3'], [/^(\d+) apuestas$/, '$1 bets'],
     // decimales con punto en ingles (x1,25 a x1.25): esta va la ultima de la lista
     [/×(\d+),(\d\d)/g, '×$1.$2'],
   ];
