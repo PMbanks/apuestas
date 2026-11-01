@@ -237,7 +237,7 @@
   function cabTu(d, v) {
     const yo = F.find((f) => f.me) || F[0], neto = d.neto;
     const ops = [...(d.hay ? ['visita'] : []), 'sem', 'mes', 'todo'];
-    return `${av(MEK, 'ini-yo')}<div class="ini-who"><h2>Tú</h2><span class="lab">${N(yo.s)}${coin()} · ${[...F].sort((a, b) => b.s - a.s).indexOf(yo) + 1}º de ${F.length}</span></div>
+    return `${av(MEK, 'ini-yo')}<div class="ini-who"><h2>Tú</h2><span class="lab">${NS(yo.s)}${coin()} · ${[...F].sort((a, b) => b.s - a.s).indexOf(yo) + 1}º de ${F.length}</span></div>
       <div class="r ini-pw"><button type="button" class="ini-per" data-ini-pt aria-haspopup="true" aria-expanded="false"><span>${etiqueta(d, v, d.p)}</span>${IC_DESP}</button>
         <div class="ini-pm" role="menu">${ops.map((o) => `<button type="button" role="menuitem" data-ini-per="${o}" class="${o === d.p ? 'on' : ''}">${etiqueta(d, v, o)}</button>`).join('')}</div>
         <b class="ini-net ${neto > 0 ? 'up' : neto < 0 ? 'dn' : ''}">${neto ? `<small>${neto > 0 ? '▲' : '▼'}</small>` : ''}${N(Math.abs(neto))}${coin()}</b></div>`;

@@ -438,6 +438,13 @@
     // Quien esta dentro, retos y patas (quien.js, 01-11)
     'Quién está dentro': 'Who is in', 'Reto': 'Challenge', 'Reto 1 contra 1': '1 vs 1 challenge', 'cada uno': 'each', 'en juego': 'at stake', 'Apuesta oculta': 'Hidden bet', 'Esperando a que entre alguien': 'Waiting for someone to join',
     'Sin cancelar · se paga al final': 'No cancelling · paid at the end', 'en juego · se lo lleva quien acierte': 'at stake · winner takes all', 'Va ganando': 'Winning', 'Nadie ha apostado a este partido.': 'Nobody has bet on this match.',
+    // ruleta global de la semana, tu ruleta cada 3 dias y saldos en negativo (db/047, ruleta-global.js)
+    'Ruleta global de la semana': 'Weekly global wheel', 'Ruleta global de la semana pasada': 'Last week\u2019s global wheel', 'Ruleta global': 'Global wheel',
+    'Le ha tocado a': 'It went to', '¡Te ha tocado a ti!': 'You won it!', 'Ruleta de premios': 'Prize wheel', 'Tu ruleta · cada 3 días': 'Your wheel · every 3 days',
+    'Tu premio de esta tirada': 'Your prize this spin', 'gira la ruleta': 'spins the wheel',
+    'De 25 a 400 V-Bucks o una caja de CS2 para abrirla tú. Una tirada cada 3 días.': 'From 25 to 400 V-Bucks or a CS2 box to open yourself. One spin every 3 days.',
+    'Estás en negativo (': 'You are below zero (', '): no puedes apostar hasta volver a tener saldo. La paga del lunes llega sola.': '): you cannot bet until you have a balance again. Monday pay comes in by itself.',
+    'No te queda saldo para apostar. La paga del lunes llega sola.': 'You have no balance left to bet. Monday pay comes in by itself.',
   };
   const DIAS = { LUN: 'MON', 'MIÉ': 'WED', JUE: 'THU', VIE: 'FRI', 'SÁB': 'SAT', DOM: 'SUN', HOY: 'TODAY', ENE: 'JAN', ABR: 'APR', AGO: 'AUG', DIC: 'DEC' };
   const MESES = { ene: 'jan', feb: 'feb', mar: 'mar', abr: 'apr', may: 'may', jun: 'jun', jul: 'jul', ago: 'aug', sep: 'sep', sept: 'sep', oct: 'oct', nov: 'nov', dic: 'dec' };
@@ -652,6 +659,8 @@
     [/^empate (\d+)%$/, 'draw $1%'], [/\bMAR(?= · )/g, 'TUE'],
     // Ya jugados: lo tuyo en cada partido (01-11)
     [/^([\d.,]+) a (.+?)( · [\d.,]+)?$/, '$1 on $2$3'], [/^(\d+) apuestas$/, '$1 bets'],
+    // tu ruleta cada 3 dias (db/047)
+    [/^Ya has girado\. La siguiente tirada, mañana$/, 'Already spun. Next spin tomorrow'], [/^Ya has girado\. La siguiente tirada, el (\d\d)\/(\d\d)$/, 'Already spun. Next spin on $1/$2'],
     // decimales con punto en ingles (x1,25 a x1.25): esta va la ultima de la lista
     [/×(\d+),(\d\d)/g, '×$1.$2'],
   ];
