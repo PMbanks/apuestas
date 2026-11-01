@@ -131,28 +131,36 @@
   const valor = (r, v, extra) => `<span class="ini-rv" data-r="${r}"><small>${r === 'won' ? '▲' : r === 'lost' ? '▼' : ''}</small>${N(Math.abs(v || extra || 0))}${coin()}</span>`;
 
   /* ---------- Tu ---------- */
+  // PM 01-11 (resultado: A mezclada con C): franja de color arriba con como acabo y la cifra, el escudo de lo elegido grande y
+  // tenue de fondo y abajo los cuadrados Cuota, Apostado y Cobrado (en una ficha estrecha de movil, sin la cuota)
+  const IC_RC = { won: '<path d="M7 12.5l3.2 3.2L17 9"/>', lost: '<path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/>', void: '<path d="M7.5 12h9"/>', cash: '<path d="M8.8 15.2l6.4-6.4M10.2 8.8h5v5"/>' };
   function ficha(x, i) {
-    const r = x.r, est = { won: 'Ganaste', lost: 'Perdiste', void: 'Devuelta' }[r];
-    let cab, st = est, sm, go;
+    const r = x.r;
+    let cab, sm, go, wm = null, cara = false, cash, cuota, stake, pay;
     if (x.tipo === 'b') {
-      const { b, m } = x, p = b.p;
+      const { b, m } = x, p = b.p, sc = scoreCorto(m);
       cab = `${caraPick(m, p)}<b>${esc(pn(m, p))}</b>`;
-      if (b.cash) st = 'Retiraste';
-      const sc = scoreCorto(m);
-      sm = r === 'won' || b.cash ? `te pagan <b>${N(b.pay)}</b>${coin()}` : r === 'void' ? `te devuelven <b>${N(b.stake)}</b>${coin()}`
-        : m.winner ? `${sc ? `<span class="ini-sc0">${esc(sc)}</span> ` : ''}${esc(pn(m, m.winner))}` : `${esc(m.a)} vs ${esc(m.b)}`;
+      cash = !!b.cash; cuota = b.o; stake = b.stake; pay = b.pay || 0;
+      sm = `${esc(m.a)} <span class="ini-sc0">${esc(sc || 'vs')}</span> ${esc(m.b)}`;
+      wm = lado(p) ? (lado(p) === 'a' ? m.la : m.lb) : (L[m.lg] && L[m.lg][1]); cara = m.s === 'u' && !!lado(p);
       go = `data-goto="${esc(m.id)}"`;
     } else {
-      const c = x.c, ls = legsDe(c);
+      const c = x.c, ls = legsDe(c), l0 = ls[0], m0 = l0 && byId(l0.match_id);
       cab = `${carasC(c)}<b>Combinada de ${ls.length}</b>`;
-      if (c.status === 'cashout') st = 'Retiraste';
-      sm = r === 'lost' ? `${ls.filter((l) => l.result === 'won').length} de ${ls.length} acertados` : r === 'void' ? `te devuelven <b>${N(c.payout || c.stake)}</b>${coin()}` : `te pagan <b>${N(c.payout)}</b>${coin()}`;
+      cash = c.status === 'cashout'; cuota = Number(c.odds); stake = c.stake; pay = c.payout || 0;
+      sm = `<span>${ls.filter((l) => l.result === 'won').length} de ${ls.length} acertados</span>`;
+      if (m0) wm = l0.pick === '1' ? m0.la : l0.pick === '2' ? m0.lb : L[m0.lg] && L[m0.lg][1];
       go = 'data-scr="apuestas"';
     }
-    const stake = x.tipo === 'b' ? x.b.stake : x.c.stake;
-    return `<article class="ini-rc" data-r="${r}" ${go} style="--i:${i}">
+    const k = cash ? 'cash' : r, st = cash ? 'Retiraste' : { won: 'Ganaste', lost: 'Perdiste', void: 'Devuelta' }[r];
+    const cifra = N(Math.abs(x.v || (r === 'void' ? (x.tipo === 'c' ? pay || stake : stake) : 0)));
+    const ultimo = r === 'lost' && !cash ? ['Cobrado', '0', 'zero'] : r === 'void' && !cash ? ['Devuelto', N(x.tipo === 'c' ? pay || stake : stake) + coin(), ''] : ['Cobrado', N(pay) + coin(), 'hi'];
+    return `<article class="ini-rc" data-r="${r}" data-k="${k}" ${go} style="--i:${i}">
+      ${wm ? `<img class="ini-rc-wm ${cara ? 'face' : ''}" src="${esc(wm)}" alt="" loading="lazy" onerror="this.remove()">` : ''}
+      <div class="ini-rc-b"><span class="ini-rc-st"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><g>${IC_RC[k] || ''}</g></svg><span>${st}</span></span><span class="ini-rc-v">${r === 'won' ? '<small>▲</small>' : r === 'lost' ? '<small>▼</small>' : ''}${cifra}${coin()}</span></div>
       <div class="ini-rc-h">${cab}<span class="ini-when">${esc(fue(x.t))}</span></div>
-      <div class="ini-rc-c"><span class="ini-rc-st">${st}</span><div class="ini-rc-v"><small>${r === 'won' ? '▲' : r === 'lost' ? '▼' : ''}</small>${N(Math.abs(x.v || (r === 'void' ? stake : 0)))}${coin()}</div><span class="ini-rc-sm">${sm}</span></div>
+      <span class="ini-rc-sm">${sm}</span>
+      <div class="ini-rc-n"><span class="q"><small>Cuota</small><b>${O(cuota)}</b></span><span><small>Apostado</small><b>${N(stake)}${coin()}</b></span><span class="${ultimo[2]}"><small>${ultimo[0]}</small><b>${ultimo[1]}</b></span></div>
     </article>`;
   }
   function ticket(x) {

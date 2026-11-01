@@ -900,6 +900,7 @@ function mbCard(b, i) {
   </article>`;
 }
 function mbFila(b, i) {
+  if (window.GM_RES) { const h = GM_RES.apuesta(b, { i }); if (h) return h }   // PM 01-11: franja de color, escudo de fondo y cuadrados (resultado.js)
   const m = byId(b.m); if (!m) return '';
   const t = Date.parse(b.set || b.at), v = neto(b);
   const cr = (s, p) => `<span class="bor-cr ${b.p === p ? 'on' : ''}">${logo(m, s)}</span>`;
@@ -1048,7 +1049,8 @@ async function cargaAbp() {
   ABP = error ? { key, srv: false } : { key, srv: true, total: data?.total || 0, rows: (data?.rows || []).map(abMap).filter((b) => b.k) };
   if (S.scr === 'colegas') render();
 }
-function abTicket(b) {
+function abTicket(b, i) {
+  if (window.GM_RES) { const h = GM_RES.apuesta(b, { i, quien: true }); if (h) return h }   // como en Mis apuestas (resultado.js)
   const m = byId(b.m); if (!m) return '';
   const est = abEst(b), t = Date.parse(b.set || b.at), v = b.st === 'won' ? b.pay - b.stake : 0;
   const cr = (sd, p) => `<span class="bor-cr ${b.p === p ? 'on' : ''}">${logo(m, sd)}</span>`;
@@ -1080,6 +1082,7 @@ function todasHtml() {
     ${pags > 1 ? `<nav class="pags"><button data-abpg="${pg - 1}" ${pg ? '' : 'disabled'} aria-label="Anterior">‹</button>${nums.map((i) => (i === '…' ? '<span class="pags-g">…</span>' : `<button data-abpg="${i}" class="${i === pg ? 'on' : ''}">${i + 1}</button>`)).join('')}<button data-abpg="${pg + 1}" ${pg < pags - 1 ? '' : 'disabled'} aria-label="Siguiente">›</button></nav>` : ''}`;
 }
 function colegas() {
+  if (window.GM_TODOS) return GM_TODOS.html();   // PM 01-11: modelo B, una fila por amigo (todos.js); lo de abajo queda por si no carga
   const rank = [...F].sort((a, b) => b.s - a.s), admin = me().admin;
   const abiertas = ALL.filter((b) => b.st === 'open' && byId(b.m));
   const partidos = [...new Set(abiertas.map((b) => b.m))].map(byId).sort((a, b) => (b.live - a.live) || Date.parse(a.at) - Date.parse(b.at));
