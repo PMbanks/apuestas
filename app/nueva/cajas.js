@@ -20,7 +20,8 @@
   const RELLENO = { mil: 60, res: 25, cla: 9, cov: 4, esp: 2 };
   const X_TRAMOS = [[0, 0.07, 0.03], [0.07, 0.15, 0.24], [0.15, 0.38, 0.33], [0.38, 0.45, 0.24], [0.45, 1, 0.16]];
   const CORTES = [0, 0.07, 0.15, 0.38, 0.45, 1.000001];
-  const BARATA = 10;          // "elegir las baratas": las que valen menos de esto
+  const BARATAS_N = [5, 10];  // atajos del inventario: "las N mas baratas"
+  const MENOS_DE = [10, 50, 100];   // atajo "menos de X" (V-Bucks)
   const POR_PAG = 8;          // batallas terminadas por pagina
   const INV_PASO = 60;        // skins del inventario que se pintan de cada vez
   const ESP_VER = 6;          // cuchillos y guantes que se ven de primeras en lo que trae una caja
@@ -41,7 +42,7 @@
 
   /* ---------- estado ---------- */
   let ctx = null, root = null;
-  const S = { tab: 'abrir', cat: GRUPOS.some((g) => g[0] === lee('cj-cat')) ? lee('cj-cat') : 'cs2', caja: null, n: 1, rapido: lee('cj-rapido') === '1', vel: ['0', '1', '2'].includes(lee('cj-vel')) ? lee('cj-vel') : lee('cj-rapido') === '1' ? '1' : '0', auto: false, tiras: null, tirasK: '', tirasC: null, fase: 'idle', prueba: false, quien: null, sel: new Set(), bat: null, nueva: null, res: null, sure: null, rep: null, espTodo: null,
+  const S = { tab: 'abrir', cat: GRUPOS.some((g) => g[0] === lee('cj-cat')) ? lee('cj-cat') : 'cs2', caja: null, n: 1, rapido: lee('cj-rapido') === '1', vel: ['0', '1', '2'].includes(lee('cj-vel')) ? lee('cj-vel') : lee('cj-rapido') === '1' ? '1' : '0', auto: false, tiras: null, tirasK: '', tirasC: null, fase: 'idle', prueba: false, quien: null, sel: new Set(), ancla: null, anclaOn: true, bat: null, nueva: null, res: null, sure: null, rep: null, espTodo: null,
     orden: ['valor', 'nuevas', 'rareza'].includes(lee('cj-orden')) ? lee('cj-orden') : 'valor', fR: null, fC: null, invN: INV_PASO, pag: 0 };
   const D = { cases: null, caja: new Map(), items: new Map(), st: null, bats: new Map(), err: null, hechas: null, cajasDe: new Map() };
   let anim = null, pendiente = false, cargando = null, otraVez = false, ultima = 0, ocupado = false;
@@ -213,15 +214,164 @@
     return cargando;
   }
 
+  /* ---------- seleccion del inventario ---------- */
+  // PM, 02-11: "que puedas seleccionar rapido en inventory para poder vender varios a la vez pero no todos".
+  // Tocar una carta la marca o desmarca (como siempre). En PC: mayus y clic marca el rango, arrastrar con el raton pulsado pinta,
+  // ctrl o cmd y clic suma una. En movil: mantener pulsado y arrastrar marca varias. Nada de esto repinta la rejilla: solo cambia
+  // la clase .on de las cartas tocadas (con 300 objetos un repintado entero a cada movimiento iria a saltos) y el texto de la barra.
+  const P = { act: false, on: true, down: null, t: null, tm: 0, ult: null, sup: 0, auto: 0, ptr: null };
+  let tiles = new Map();      // id -> boton de la carta, solo las que estan pintadas
+  const armados = (el) => el.querySelectorAll('[data-cj]').forEach((b) => { const f = ARMADO[b.dataset.cj]; if (f) b.classList.toggle('armado', S.sure === f(b.dataset.v)) });
+  function indexa() { tiles = new Map(); if (root) root.querySelectorAll('.cj-inv [data-cj="sel"]').forEach((b) => tiles.set(+b.dataset.v, b)) }
+  // una carta se puede vender si sigue en el inventario y no esta bloqueada (en una batalla, en un trato...)
+  const vendible = (i) => !!i && (i.status == null || i.status === 'own') && !i.locked && !i.bloqueado && !i.hold;
+  const porId = (id) => (D.st && D.st.inv || []).find((i) => i.id === id);
+  const enFiltro = (i) => (!S.fR || item(i.item).rarity === S.fR) && (!S.fC || i.case === S.fC);
+  const visibles = () => ordena(D.st.inv.filter(enFiltro));
+  // marca o desmarca una carta sin repintar: false si no ha cambiado nada (ya estaba asi, o no se puede vender)
+  function pon(id, on) {
+    if (on && !vendible(porId(id))) return false;
+    if (S.sel.has(id) === on) return false;
+    if (on) S.sel.add(id); else S.sel.delete(id);
+    const el = tiles.get(id); if (el) el.classList.toggle('on', on);
+    return true;
+  }
+  function barraHtml() {
+    const inv = D.st.inv, sel = inv.filter((i) => S.sel.has(i.id)), val = sel.reduce((a, i) => a + i.value, 0);
+    if (!sel.length) return '';
+    const todos = sel.length === inv.length, fuera = sel.filter((i) => !enFiltro(i)).length;
+    const boton = S.sure === 'inv' ? `<span>${todos ? `¿Vender las ${N(sel.length)} por ${N(val)}? Toca otra vez` : '¿Seguro? Toca otra vez'}</span>` : `<span>${todos ? 'Vender todo por' : 'Vender por'}</span><b>${N(val)}</b>${coin()}`;
+    return `<span class="cj-bar-l"><b>${cuantas(sel.length, sel)}</b><em>${N(val)}${coin()}</em>${fuera > 0 ? `<small>${N(fuera)} fuera del filtro</small>` : ''}<button class="chip" data-cj="nosel">Quitar selección</button></span>
+      <span class="cj-bar-b"><button class="go ${todos ? 'todo' : ''}" data-cj="vender">${boton}</button></span>`;
+  }
+  // la barra de abajo: solo se reescribe ella, no la pantalla
+  function pintaBarra() {
+    const b = root && root.querySelector('[data-selbar]'); if (!b) return;
+    const h = barraHtml();
+    b.hidden = !h;
+    if (b.dataset.h !== h) { b.dataset.h = h; b.innerHTML = h; armados(b); traduce(b) }
+  }
+  function cambioSel() { S.sure = null; pintaBarra() }
+  let barraRaf = 0;
+  const pintaBarraRaf = () => { if (!barraRaf) barraRaf = requestAnimationFrame(() => { barraRaf = 0; pintaBarra() }) };
+
+  // atajos de arriba: actuan sobre lo que se ve (el filtro activo) y dejan en paz lo marcado fuera de el
+  function atajo(tipo, v) {
+    const vis = visibles().filter(vendible);
+    if (tipo === 'ninguno') { for (const id of [...S.sel]) pon(id, false); S.sel.clear(); S.ancla = null; return cambioSel() }
+    let ids;
+    if (tipo === 'todo') ids = new Set(vis.map((i) => i.id));
+    else if (tipo === 'invertir') ids = new Set(vis.filter((i) => !S.sel.has(i.id)).map((i) => i.id));
+    else if (tipo === 'baratas') ids = new Set(vis.slice().sort((a, b) => a.value - b.value || a.id - b.id).slice(0, +v).map((i) => i.id));
+    else if (tipo === 'menos') ids = new Set(vis.filter((i) => i.value < +v).map((i) => i.id));
+    else if (tipo === 'rareza') ids = new Set(vis.filter((i) => item(i.item).rarity === v).map((i) => i.id));
+    else return;
+    for (const i of vis) pon(i.id, ids.has(i.id));
+    cambioSel();
+  }
+  // toque o clic en una carta
+  function tocaCarta(id, e) {
+    if (!vendible(porId(id))) return;
+    const orden = [...tiles.keys()];
+    if (e && e.shiftKey && S.ancla != null && S.ancla !== id && tiles.has(S.ancla)) {
+      const a = orden.indexOf(S.ancla), b = orden.indexOf(id);
+      for (let k = Math.min(a, b); k <= Math.max(a, b); k++) pon(orden[k], S.anclaOn);
+      try { window.getSelection().removeAllRanges() } catch {}
+    } else {
+      const on = !S.sel.has(id);
+      pon(id, on); S.ancla = id; S.anclaOn = on;
+    }
+    cambioSel();
+  }
+  const cartaEn = (x, y) => { const el = document.elementFromPoint(x, y); return el && el.closest ? el.closest('.cj-inv [data-cj="sel"]') : null };
+  // pinta por donde pasa el puntero, rellenando los huecos si ha ido rapido (un punto cada 14 px)
+  function pasa(x, y) {
+    const a = P.ptr || [x, y], d = Math.hypot(x - a[0], y - a[1]), n = Math.max(1, Math.ceil(d / 14));
+    for (let k = 1; k <= n; k++) {
+      const c = cartaEn(a[0] + (x - a[0]) * k / n, a[1] + (y - a[1]) * k / n);
+      if (c && c !== P.ult) { P.ult = c; if (pon(+c.dataset.v, P.on)) { S.ancla = +c.dataset.v; S.anclaOn = P.on } }
+    }
+    P.ptr = [x, y];
+    pintaBarraRaf();
+  }
+  function empieza(id) {
+    P.act = true; P.on = !S.sel.has(id); P.ult = tiles.get(id) || null; P.ptr = null;
+    pon(id, P.on); S.ancla = id; S.anclaOn = P.on;
+    document.documentElement.classList.add('cj-pintando');
+    cambioSel();
+  }
+  function finPinta() {
+    clearTimeout(P.tm); clearInterval(P.auto); P.down = null; P.t = null;
+    if (!P.act) return;
+    P.act = false; P.ult = null; P.ptr = null; P.sup = Date.now();
+    document.documentElement.classList.remove('cj-pintando');
+    pintaBarra();
+    if (pendiente && !anim) pinta();
+  }
+  const enRejilla = (e) => !!(root && e.target && e.target.closest && e.target.closest('.cj-inv [data-cj="sel"]'));
+  // PC: raton pulsado y moverse = pintar
+  document.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0 || !enRejilla(e)) return;
+    P.down = { id: +e.target.closest('[data-cj="sel"]').dataset.v, x: e.clientX, y: e.clientY };
+  });
+  document.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    if ((P.down || P.act) && !(e.buttons & 1)) { finPinta(); return }
+    if (P.down && !P.act) {
+      const c = cartaEn(e.clientX, e.clientY);
+      if (!c || +c.dataset.v === P.down.id) return;      // sigue en la misma carta: sera un clic normal
+      empieza(P.down.id);
+      P.ptr = [P.down.x, P.down.y];
+    }
+    if (P.act) pasa(e.clientX, e.clientY);
+  });
+  document.addEventListener('pointerup', (e) => { if (e.pointerType === 'mouse') finPinta() });
+  document.addEventListener('pointercancel', (e) => { if (e.pointerType === 'mouse') finPinta() });
+  // movil: mantener pulsado marca esa carta, y sin soltar el dedo se marcan las que se rozan
+  document.addEventListener('touchstart', (e) => {
+    if (!enRejilla(e) || e.touches.length !== 1) { finPinta(); return }
+    const t = e.touches[0], id = +e.target.closest('[data-cj="sel"]').dataset.v;
+    P.t = { id, x: t.clientX, y: t.clientY, cy: t.clientY }; clearTimeout(P.tm);
+    P.tm = setTimeout(() => {
+      if (!P.t) return;
+      empieza(P.t.id); P.sup = Date.now();
+      try { navigator.vibrate && navigator.vibrate(18) } catch {}
+      // cerca del borde de arriba o de abajo la lista se desplaza sola
+      clearInterval(P.auto);
+      P.auto = setInterval(() => {
+        const sc = root && root.closest('.scr'); if (!sc || !P.act || !P.t) return;
+        const r = sc.getBoundingClientRect(), y = P.t.cy, borde = 90;
+        const v = (d) => Math.min(14, Math.ceil(d / 12)), dy = y < r.top + borde ? -v(r.top + borde - y) : y > r.bottom - borde ? v(y - (r.bottom - borde)) : 0;
+        if (dy) { sc.scrollTop += dy; pasa(P.t.x, P.t.cy) }
+      }, 16);
+    }, 380);
+  }, { passive: true });
+  // touchmove no pasivo solo dentro de Cajas (si estuviera en todo el documento frenaria el desplazamiento de toda la app)
+  const ligaToque = (el) => el.addEventListener('touchmove', (e) => {
+    if (!P.t) return;
+    const t = e.touches[0];
+    if (!P.act) { if (Math.hypot(t.clientX - P.t.x, t.clientY - P.t.y) > 10) { clearTimeout(P.tm); P.t = null } return }   // se movio antes: es un desplazamiento normal
+    if (e.cancelable) e.preventDefault();
+    P.t.x = t.clientX; P.t.cy = t.clientY;
+    pasa(t.clientX, t.clientY);
+  }, { passive: false });
+  document.addEventListener('touchend', finPinta);
+  document.addEventListener('touchcancel', finPinta);
+  // ni el menu del movil al mantener pulsado, ni arrastrar la foto, ni seleccionar texto al pintar
+  document.addEventListener('contextmenu', (e) => { if (enRejilla(e)) e.preventDefault() });
+  document.addEventListener('dragstart', (e) => { if (enRejilla(e)) e.preventDefault() });
+
   /* ---------- pintar ---------- */
   function pinta(forzar) {
     if (!root) return;
-    if (anim && !forzar) { pendiente = true; return }
+    if ((anim || P.act) && !forzar) { pendiente = true; return }
     pendiente = false;
+    if (S.tab !== 'inventario' && S.sel.size) { S.sel.clear(); S.ancla = null }   // la seleccion se queda en el inventario: al salir se limpia
     root.innerHTML = vista();
     // los botones que piden confirmacion (cancelar, salir, vender) se ponen en rojo mientras esperan el segundo toque,
     // tambien el de la batalla abierta
-    root.querySelectorAll('[data-cj]').forEach((b) => { const f = ARMADO[b.dataset.cj]; if (f) b.classList.toggle('armado', S.sure === f(b.dataset.v)) });
+    armados(root);
+    indexa();
     traduce(root);
     if (!anim && S.tab === 'batallas' && S.bat && !S.rep) {
       const b = D.bats.get(S.bat);
@@ -243,7 +393,7 @@
   // una skin (u objeto de lujo) en rejilla: imagen sobre el color de su rareza, arma, nombre, desgaste y valor
   function tile(it, ex = {}) {
     const n = nombre(it), top = n.top || ex.top || '', main = n.main, tag = ex.boton ? 'button' : 'div';
-    return `<${tag} class="cj-it ${ex.on ? 'on' : ''} ${it.rarity || ''}" style="--c:${color(it.rarity)}" title="${esc(it.name)}" ${ex.boton || ''}>
+    return `<${tag} class="cj-it ${ex.on ? 'on' : ''} ${ex.bloq ? 'bloq' : ''} ${it.rarity || ''}" style="--c:${color(it.rarity)}" title="${esc(it.name)}" ${ex.boton || ''}>
       <span class="cj-it-img">${pic(it.image, 256)}</span>
       <span class="cj-it-t">${top ? `<span class="lab" data-notr>${esc(top)}</span>` : ''}
         <b data-notr>${it.rarity === 'esp' && n.top ? '★ ' : ''}${esc(main)}</b>
@@ -404,25 +554,31 @@
     if (S.fR && !nR[S.fR]) S.fR = null;
     if (S.fC && !nC.has(S.fC)) S.fC = null;
     const rars = ORDEN.filter((r) => nR[r]);
-    const vis = ordena(inv.filter((i) => (!S.fR || item(i.item).rarity === S.fR) && (!S.fC || i.case === S.fC))), ver = vis.slice(0, S.invN);
-    const sel = mio ? inv.filter((i) => S.sel.has(i.id)) : [], selV = sel.reduce((a, i) => a + i.value, 0);
-    const baratas = mio ? inv.filter((i) => i.value < BARATA && !S.sel.has(i.id)).length : 0, faltan = vis.filter((i) => !S.sel.has(i.id)).length;
+    const vis = visibles(), ver = vis.slice(0, S.invN);
+    if (mio) for (const id of [...S.sel]) if (!vendible(porId(id))) S.sel.delete(id);   // lo que ya no esta (vendida desde otro sitio) sale de la seleccion
     const filtrado = S.fR || S.fC;
     const filtros = inv.length < 2 ? '' : `<div class="cj-filt">
         ${seg('orden', ORDENES, S.orden, 'sm')}
         ${rars.length > 1 ? `<nav class="cj-rars"><button class="${!S.fR ? 'on' : ''}" data-cj="fR" data-v="">Todas</button>${rars.map((r) => `<button class="${S.fR === r ? 'on' : ''}" style="--c:${color(r)}" data-cj="fR" data-v="${r}"><i></i><span>${RAR[r][0]}</span><b>${nR[r]}</b></button>`).join('')}</nav>` : ''}
       </div>
       ${nC.size > 1 ? `<nav class="cj-fcs"><button class="cj-fc ${!S.fC ? 'on' : ''}" data-cj="fC" data-v=""><span>Todas las cajas</span></button>${[...nC].sort((a, b) => b[1] - a[1]).map(([id, n]) => `<button class="cj-fc ${S.fC === id ? 'on' : ''}" data-cj="fC" data-v="${esc(id)}" title="${esc(caja(id).name || '')}">${pic(caja(id).image, 128)}<span data-notr>${esc(caja(id).name || id)}</span><b>${n}</b></button>`).join('')}</nav>` : ''}`;
-    const herramientas = mio ? `<div class="cj-tools"><span class="hint">Toca una para elegirla</span>
-        ${faltan > 1 ? `<button class="chip" data-cj="todas">Elegir las ${faltan}</button>` : ''}
-        ${baratas && !filtrado ? `<button class="chip" data-cj="baratas">Elegir las de menos de ${BARATA}</button>` : ''}
+    const herramientas = mio ? `<div class="cj-tools"><span class="hint cj-hint"><span class="pc">Clic para elegir, Mayús y clic para un rango, arrastra para marcar varias</span><span class="mv">Toca para elegir, mantén y arrastra para marcar varias</span></span>
         ${D.st.inv.length ? `<button class="chip cj-todo ${S.sure === 'todo' ? 'on' : ''}" data-cj="vendertodo">${S.sure === 'todo' ? `¿Vender las ${N((S.todo || []).length)} por ${N((S.todo || []).reduce((a, x) => a + x.value, 0))}? Toca otra vez` : 'Vender todo el inventario'}</button>` : ''}</div>` : '';
+    // atajos: sobre lo que se ve (el filtro activo)
+    const rarVis = ORDEN.filter((r) => vis.some((i) => item(i.item).rarity === r));
+    const atajos = mio && vis.length > 1 ? `<div class="cj-at">
+        <button data-cj="at" data-t="todo"><span>Todo lo visible</span><i>${N(vis.length)}</i></button>
+        <button data-cj="at" data-t="ninguno"><span>Ninguno</span></button>
+        <button data-cj="at" data-t="invertir"><span>Invertir</span></button>
+        <span class="cj-at-g">${BARATAS_N.filter((n) => n < vis.length).map((n) => `<button data-cj="at" data-t="baratas" data-v="${n}"><span>Las ${n} más baratas</span></button>`).join('')}</span>
+        <span class="cj-at-g"><em>Menos de</em>${MENOS_DE.map((x) => `<button data-cj="at" data-t="menos" data-v="${x}"><span>${x}</span></button>`).join('')}</span>
+        ${rarVis.length > 1 ? `<span class="cj-at-g"><em>Por rareza</em>${rarVis.map((r) => `<button data-cj="at" data-t="rareza" data-v="${r}" style="--c:${color(r)}"><i></i><span>${RAR[r][0]}</span></button>`).join('')}</span>` : ''}</div>` : '';
     return `${fila}${tuyas}${head}${herramientas}${filtros}
       ${filtrado ? `<p class="cj-count"><span>${cuantas(vis.length, vis)}</span><span class="num">${N(vis.reduce((a, i) => a + i.value, 0))}${coin()}</span><button class="chip" data-cj="sinfiltro">Quitar filtros</button></p>` : ''}
-      <div class="cj-grid cj-inv">${ver.map((i) => tile(item(i.item), { top: caja(i.case).name, meta: metaDe(i), valor: i.value, on: S.sel.has(i.id), boton: mio ? `data-cj="sel" data-v="${i.id}"` : '' })).join('')}</div>
+      ${atajos}
+      <div class="cj-grid cj-inv">${ver.map((i) => { const ok = vendible(i); return tile(item(i.item), { top: caja(i.case).name, meta: metaDe(i), valor: i.value, on: S.sel.has(i.id), bloq: mio && !ok, boton: mio && ok ? `data-cj="sel" data-v="${i.id}"` : '' }) }).join('')}</div>
       ${vis.length > ver.length ? `<div class="cj-more"><button class="chip" data-cj="mas">Ver ${Math.min(INV_PASO, vis.length - ver.length)} más</button></div>` : ''}
-      ${sel.length ? `<div class="cj-bar"><span class="cj-bar-l"><b>${cuantas(sel.length, sel)}</b><em>${N(selV)}${coin()}</em><button class="chip" data-cj="nosel">Quitar</button></span>
-        <span class="cj-bar-b"><button class="go" data-cj="vender">${S.sure === 'inv' ? '<span>¿Seguro? Toca otra vez</span>' : `<span>Vender por</span><b>${N(selV)}</b>${coin()}`}</button></span></div>` : ''}`;
+      ${mio ? `<div class="cj-bar" data-selbar ${S.sel.size ? '' : 'hidden'}>${S.sel.size ? barraHtml() : ''}</div>` : ''}`;
   }
 
   /* ----- batallas ----- */
@@ -724,6 +880,14 @@
     setTimeout(() => { if (S.sure === clave && tok === sureT) { S.sure = null; pinta() } }, ms);
     return false;
   }
+  // el segundo toque de "Vender por": solo se repinta la barra. Dura mas si es TODO el inventario
+  function seguroInv() {
+    if (S.sure === 'inv') { S.sure = null; return true }
+    S.sure = 'inv'; pintaBarra();
+    const tok = ++sureT, todo = D.st.inv.length && S.sel.size >= D.st.inv.length;
+    setTimeout(() => { if (S.sure === 'inv' && tok === sureT) { S.sure = null; pintaBarra() } }, todo ? 5000 : 3500);
+    return false;
+  }
   async function hazlo(fn) {
     if (ocupado) return null;
     ocupado = true;
@@ -733,7 +897,7 @@
     const r = await hazlo(() => rpc('cs_sell', { p_ids: ids }));
     if (!r) return;
     if (S.res) for (const i of S.res.items) if (ids.includes(i.id)) i.status = 'sold';
-    for (const id of ids) S.sel.delete(id);
+    S.sel.clear(); S.ancla = null;      // tras vender se limpia toda la seleccion
     avisa(`${r.vendidas === 1 ? 'Vendida' : 'Vendidas ' + r.vendidas} por <b>${N(r.total)}</b>`);
     pinta();
     if (ctx.refresh) ctx.refresh();
@@ -755,6 +919,7 @@
     const t = e.target.closest('[data-cj]');
     if (!t || !root || !root.contains(t) || t.disabled) return;
     const a = t.dataset.cj, v = t.dataset.v;
+    if (a === 'sel' && P.sup && Date.now() - P.sup < 450) { P.sup = 0; return }   // el clic que sigue a soltar un arrastre
     const navega = ['tab', 'cajas', 'batallas', 'ver', 'quien', 'caja', 'cat'];
     if (anim && navega.includes(a)) para();
     if (navega.includes(a)) S.auto = false;     // salir de la caja para el giro automatico
@@ -787,8 +952,9 @@
       case 'saltar': return para();
       case 'vender1': return vender([+v]);
       case 'venderRes': if (!seguro('res')) return; return vender(S.res.items.filter((i) => i.status !== 'sold').map((i) => i.id));
-      case 'quien': S.quien = v === ctx.me ? null : v; S.sel.clear(); S.sure = null; S.fR = null; S.fC = null; S.invN = INV_PASO; pinta(); return cargar(true);
-      case 'sel': { const id = +v; if (S.sel.has(id)) S.sel.delete(id); else S.sel.add(id); S.sure = null; return pinta() }
+      case 'quien': S.quien = v === ctx.me ? null : v; S.sel.clear(); S.ancla = null; S.sure = null; S.fR = null; S.fC = null; S.invN = INV_PASO; pinta(); return cargar(true);
+      case 'sel': return tocaCarta(+v, e);
+      case 'at': return atajo(t.dataset.t, v);
       // PM, 30-10: "un botón para vender todo el inventario" (todo lo suyo, no solo lo cargado en pantalla)
       case 'vendertodo': {
         if (S.sure !== 'todo') {
@@ -799,10 +965,8 @@
         S.sure = null; const ids = (S.todo || []).map((x) => x.id); S.todo = null; if (!ids.length) return pinta();
         return vender(ids);
       }
-      case 'baratas': for (const i of D.st.inv) if (i.value < BARATA) S.sel.add(i.id); S.sure = null; return pinta();
-      case 'todas': for (const i of D.st.inv) if ((!S.fR || item(i.item).rarity === S.fR) && (!S.fC || i.case === S.fC)) S.sel.add(i.id); S.sure = null; return pinta();
-      case 'nosel': S.sel.clear(); S.sure = null; return pinta();
-      case 'vender': if (!S.sel.size || !seguro('inv')) return; return vender([...S.sel]);
+      case 'nosel': return atajo('ninguno');
+      case 'vender': { const ids = D.st.inv.filter((i) => S.sel.has(i.id) && vendible(i)).map((i) => i.id); if (!ids.length || !seguroInv()) return; return vender(ids) }
       case 'orden': S.orden = v; guarda('cj-orden', v); return filtra();
       case 'fR': S.fR = v || null; return filtra();
       case 'fC': S.fC = v || null; return filtra();
@@ -853,10 +1017,10 @@
     montar(el, c, nueva) {
       ctx = c;
       try { window.dispatchEvent(new CustomEvent('gm:cajas-montada', { detail: { db: c.db, me: c.me } })) } catch {}   // en directo (cajas-vivo.js)
-      if (!root) { root = document.createElement('div'); root.className = 'cj'; pinta() }
+      if (!root) { root = document.createElement('div'); root.className = 'cj'; ligaToque(root); pinta() }
       const hueco = el && (el.matches && el.matches('[data-cajas]') ? el : el.querySelector('[data-cajas]'));
       if (hueco) hueco.replaceWith(root); else if (el && !root.isConnected) el.appendChild(root);
-      if (nueva) { root.classList.remove('cj-in'); void root.offsetWidth; root.classList.add('cj-in') }
+      if (nueva) { S.sel.clear(); S.ancla = null; root.classList.remove('cj-in'); void root.offsetWidth; root.classList.add('cj-in') }
       else if (!anim && pendiente) pinta();
       cargar();
     },

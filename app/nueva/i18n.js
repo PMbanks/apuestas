@@ -311,6 +311,9 @@
     'El lado que saque más valor se lleva todas las skins.': 'The side with the most value takes every skin.',
     'Páginas': 'Pages', 'Anterior': 'Previous', 'Siguiente': 'Next', 'Ganador': 'Winner',
     'Toca una para elegirla': 'Tap one to select it', '1 objeto': '1 item', 'Cargando…': 'Loading…',
+    // seleccionar varias del inventario (02-11)
+    'Clic para elegir, Mayús y clic para un rango, arrastra para marcar varias': 'Click to select, Shift and click for a range, drag to select several', 'Toca para elegir, mantén y arrastra para marcar varias': 'Tap to select, hold and drag to select several',
+    'Todo lo visible': 'Everything visible', 'Invertir': 'Invert', 'Menos de': 'Under', 'Quitar selección': 'Clear selection',
     'Tus cajas': 'Your boxes', 'Cajas sin abrir': 'Unopened boxes', 'Tuyas sin abrir': 'Yours, unopened',
     'Abrir la tuya': 'Open yours', 'Abrir una tuya': 'Open one of yours', 'Abrir otra tuya': 'Open another of yours',
     'Cara o cruz, crash y blackjack': 'Coin flip, crash and blackjack',
@@ -733,6 +736,7 @@
     [/^ROI (.+) · (\d+) resueltas?$/, 'ROI $1 · $2 settled'], [/^(\d+) resueltas?$/, '$1 settled'], [/^cobradas ([\d.]+)$/, 'paid $1'],
     // cajas (CAJAS-I18N.md, 30-10) y subtitulo de Juegos
     [/^(\d+) objetos$/, '$1 items'], [/^(\d+) rondas$/, '$1 rounds'], [/^(\d+) de 10$/, '$1 of 10'], [/^bote de ([\d.]+)$/, 'pot of $1'],
+    [/^Las (\d+) más baratas$/, 'The $1 cheapest'], [/^([\d.]+) fuera del filtro$/, '$1 outside the filter'], [/^¿Vender las ([\d.]+) por ([\d.,]+)\? Toca otra vez$/, 'Sell all $1 for $2? Tap again'], [/^([\d.]+) objetos$/, '$1 items'], [/^([\d.]+) skins$/, '$1 skins'],
     [/^Inventario de (.+)$/, "$1's inventory"], [/^Elegir las (\d+)$/, 'Select all $1'], [/^Ver los (\d+)$/, 'See all $1'], [/^Ver (\d+) más$/, 'Show $1 more'],
     // recompensas y ruleta nuevas (30-10)
     [/^([\d.]+) V-Bucks cada día que lo reclames$/, '$1 V-Bucks every day you claim them'], [/^([\d.]+) cada uno, de lunes a miércoles · se lo lleva quien más gane$/, '$1 each, Monday to Wednesday · the biggest winner takes it'],
