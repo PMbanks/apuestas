@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "avisos-movil-0211",
+   "fecha": "2026-11-02",
+   "hora": "07:22",
+   "titulo": "Avisos en tu móvil",
+   "texto": "Ahora te avisamos al móvil aunque tengas la app cerrada: cuando te retan, cuando entra alguien en tu reto, cuando se resuelve una apuesta tuya, cuando te quitan el puesto 1 del ranking o te llega la paga. Actívalo en Ajustes, en Avisos en tu móvil. En iPhone, primero instala la app desde Compartir, Añadir a pantalla de inicio.",
+   "titulo_en": "Alerts on your phone",
+   "texto_en": "We now alert your phone even with the app closed: when someone challenges you, when someone joins your challenge, when one of your bets is settled, when someone takes your top spot in the ranking or your allowance arrives. Turn it on in Settings, under Alerts on your phone. On iPhone, install the app first from Share, Add to Home Screen.",
+   "img": "novedades/avisos-movil.webp",
+   "ir": "ajustes"
+  },
+  {
    "id": "ahora-mismo-0211",
    "fecha": "2026-11-02",
    "hora": "07:20",
