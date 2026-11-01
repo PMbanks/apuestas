@@ -20,6 +20,9 @@
     // Ventana del partido (01-11, ventana.js)
     'Ver en Partidos': 'View in Matches', 'Apuesta de': 'Bet by', 'Tus apuestas': 'Your bets', 'Perdido': 'Lost', 'Anulado': 'Cancelled', 'Partido': 'Match', 'Descanso': 'Half time',
     'Oculta hasta que empiece': 'Hidden until kickoff', 'Estadísticas del partido': 'Match stats', 'Todavía no hay estadísticas de este partido.': 'There are no stats for this match yet.',
+    // Abrir una caja con tira ancha (01-11, cajas.js)
+    'Atrás': 'Back', 'Prueba gratis': 'Free trial', 'Normal': 'Normal', 'Ultra': 'Ultra', 'Giro automático': 'Auto spin', 'Parar': 'Stop', 'Parando…': 'Stopping…', 'Abriendo…': 'Opening…', 'Contenido de la caja': 'Box contents',
+    'No se ha cobrado ni ganado nada. Es solo para ver cómo gira.': 'Nothing was charged or won. It is only to see how it spins.', 'Sin saldo: el giro automático se ha parado': 'No balance: auto spin stopped',
     // Mis apuestas (01-11, misapuestas.js)
     'Empieza en': 'Starts in', 'Tienes en juego': 'You have in play', 'Lo próximo': 'Up next', 'Tus números': 'Your numbers', 'Total': 'Total',
     'sin aciertos aún': 'no wins yet', 'sin resultados aún': 'no results yet', 'la última, ganada': 'last one won', 'la última, perdida': 'last one lost',

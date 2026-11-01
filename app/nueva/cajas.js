@@ -30,7 +30,7 @@
 
   /* ---------- estado ---------- */
   let ctx = null, root = null;
-  const S = { tab: 'abrir', cat: lee('cj-cat') === 'lujo' ? 'lujo' : 'skins', caja: null, n: 1, rapido: lee('cj-rapido') === '1', quien: null, sel: new Set(), bat: null, nueva: null, res: null, sure: null, rep: null, espTodo: null,
+  const S = { tab: 'abrir', cat: lee('cj-cat') === 'lujo' ? 'lujo' : 'skins', caja: null, n: 1, rapido: lee('cj-rapido') === '1', vel: ['0', '1', '2'].includes(lee('cj-vel')) ? lee('cj-vel') : lee('cj-rapido') === '1' ? '1' : '0', auto: false, tiras: null, tirasK: '', tirasC: null, fase: 'idle', prueba: false, quien: null, sel: new Set(), bat: null, nueva: null, res: null, sure: null, rep: null, espTodo: null,
     orden: ['valor', 'nuevas', 'rareza'].includes(lee('cj-orden')) ? lee('cj-orden') : 'valor', fR: null, fC: null, invN: INV_PASO, pag: 0 };
   const D = { cases: null, caja: new Map(), items: new Map(), st: null, bats: new Map(), err: null, hechas: null, cajasDe: new Map() };
   let anim = null, pendiente = false, cargando = null, otraVez = false, ultima = 0, ocupado = false;
@@ -238,13 +238,81 @@
   const seg = (accion, opciones, actual, cls = '') => `<nav class="cj-seg ${cls}">${opciones.map(([k, n]) => `<button class="${actual === k ? 'on' : ''}" data-cj="${accion}" data-v="${k}">${n}</button>`).join('')}</nav>`;
 
   /* ----- abrir ----- */
+  // PM, 01-11: la pantalla de abrir una caja es una tira ancha de premios (parada, con la caja en el centro; al abrir corre y frena
+  // en el premio), debajo sus botones en una fila y, mas abajo, el contenido de la caja. Una tira por caja abierta, una encima de otra.
+  // G (46) es la carta que gana y sonidos.js tambien la cuenta; INI es la carta del centro cuando esta parada.
+  const G = 46, INI = 3, TOTAL = 54, DUR = [5600, 1400, 650], PASO = [330, 120, 60], FIN = [750, 250, 120], REPOSO = [1500, 650, 300];
+  const sinAnim = () => document.documentElement.classList.contains('sin-anim');
+  const valorDe = (x) => { const v = tipico(x); return v == null ? 0 : v };
+  // una tira: sus cartas (la del premio en G si ya se sabe) y cuanto se desvia al parar
+  function nuevaTira(info, inv) {
+    const cs = [];
+    // que no salgan dos cartas iguales seguidas (ni a una de distancia) si la caja tiene de donde elegir
+    for (let i = 0; i < TOTAL; i++) {
+      if (i === G && inv) { cs.push({ x: item(inv.item), v: inv.value }); continue }
+      let x = relleno(info);
+      for (let k = 0; k < 12 && cs.slice(-2).some((c) => c.x.id === x.id); k++) x = relleno(info);
+      cs.push({ x, v: valorDe(x) });
+    }
+    return { cs, j: inv ? (Math.random() - 0.5) * 0.6 : 0, premio: inv || null };
+  }
+  function kcard(t, gana) {
+    const { x, v } = t, n = nombre(x), sinFoto = x.rarity === 'esp' && !esLujo(x.id) && !x.image;
+    return `<div class="cj-k ${gana ? 'gana' : ''}" style="--c:${color(x.rarity)}"><span class="cj-k-i">${sinFoto ? '<i class="cj-k-star">★</i>' : pic(x.image, 256, '', true)}</span>
+      ${n.top ? `<em data-notr>${esc(n.top)}</em>` : ''}<b data-notr>${esc(n.main)}</b><span class="cj-k-v">${N(v)}${coin()}</span></div>`;
+  }
+  function vTira(t, modo, c) {
+    const fin = modo === 'fin', col = t.premio ? color(item(t.premio.item).rarity) : color('mil');
+    return `<div class="cj-strip ${fin ? 'fin' : ''}" style="--i:${fin ? G : INI};--j:${fin ? t.j.toFixed(3) : 0};--c:${col}"><div class="cj-track">${t.cs.map((k, i) => kcard(k, fin && i === G)).join('')}</div><i class="cj-mark"></i>${modo === 'idle' ? `<span class="cj-box">${pic(c.image, 256, '', true)}</span>` : ''}</div>`;
+  }
+  // las tiras: paradas con la caja en medio, girando (cj-spin: sonidos.js la oye) o ya paradas en el premio
+  function vEscena(c, info) {
+    const propias = S.tiras && S.tirasC === c.id && S.fase !== 'idle';
+    if (!propias) {
+      const k = c.id + '|' + S.n;
+      if (!S.tiras || S.tirasK !== k) { S.tiras = Array.from({ length: S.n }, () => nuevaTira(info)); S.tirasK = k; S.tirasC = c.id; S.fase = 'idle' }
+    }
+    const modo = propias ? S.fase : 'idle', test = S.prueba && modo !== 'idle';
+    return `<div class="${modo === 'gira' ? 'cj-spin' : 'cj-idle'} ca-tiras n${S.tiras.length} ${test ? 'prueba' : ''}">${test ? '<span class="ca-badge">Prueba gratis</span>' : ''}
+      ${S.tiras.map((t) => vTira(t, modo, c)).join('')}${modo === 'gira' ? '<button class="cj-skip" data-cj="saltar">Saltar</button>' : ''}</div>`;
+  }
   function vAbrir() {
     const c = S.caja && (D.cases.find((x) => x.id === S.caja) || D.caja.get(S.caja));
     if (!c) return vCajas();
-    const info = D.caja.get(c.id);
-    return `<button class="cj-back" data-cj="cajas">Todas las cajas</button>
-      <section class="cj-stage" data-cj-stage>${S.res && S.res.caja === c.id ? vRes(c) : vHero(c, info)}</section>
-      ${info ? vContenido(info) : '<p class="hint cj-c">Cargando lo que trae…</p>'}`;
+    const info = D.caja.get(c.id), cat = (CATS.find((k) => k[0] === catDe(c)) || CATS[0])[1];
+    const cab = `<header class="ca-h"><button class="cj-back" data-cj="cajas">Atrás</button>
+      <div class="ca-id"><span class="ca-img">${pic(c.image, 256, '', true)}</span><div class="ca-nm"><h2 data-notr>${esc(c.name)}</h2><span class="lab">${cat}</span></div></div>
+      <p class="ca-price"><b class="num">${N(c.price)}</b>${coin()}<em>por caja</em></p></header>`;
+    if (!info) return `<section class="ca" style="--g:${brillo(c)}">${cab}<p class="hint cj-c">Cargando lo que trae…</p></section>`;
+    const esperaSrv = ocupado && !anim, busy = !!anim || ocupado, total = c.price * S.n, falta = ctx.saldo < total, tuyas = mias(c.id), off = busy || S.auto ? 'disabled' : '';
+    const go = S.auto ? '<button class="go ca-go ca-stop" data-cj="parar"><i></i><span>Parar</span></button>'
+      : `<button class="go ca-go" data-cj="abrir" ${falta || busy ? 'disabled' : ''}>${esperaSrv ? '<span>Abriendo…</span>' : `<span>${falta ? 'Sin saldo' : 'Abrir por'}</span><b>${N(total)}</b>${coin()}`}</button>`;
+    const barra = `<div class="ca-bar">
+      <button class="ca-try" data-cj="prueba" ${off}>Prueba gratis</button>
+      <div class="ca-ns" role="group" aria-label="Cuántas">${[1, 2, 3, 4, 5].map((n) => `<button class="${S.n === n ? 'on' : ''}" data-cj="n" data-v="${n}" ${off}>${n}</button>`).join('')}</div>
+      ${go}
+      ${seg('vel', [['0', 'Normal'], ['1', 'Rápido'], ['2', 'Ultra']], S.vel, 'sm ca-vel')}
+      <button class="cj-fast ca-auto ${S.auto ? 'on' : ''}" data-cj="auto" aria-pressed="${S.auto}" ${busy || S.auto || falta ? 'disabled' : ''}><i></i><span>Giro automático</span></button>
+    </div>
+    ${tuyas.length ? `<button class="go ghost ca-mia" data-cj="abrirMia" data-v="${tuyas[0].id}" ${busy ? 'disabled' : ''}><span>${tuyas.length === 1 ? 'Abrir la tuya' : 'Abrir una tuya'}</span>${tuyas.length > 1 ? `<b>×${tuyas.length}</b>` : ''}</button>` : ''}
+    ${falta && !tuyas.length && !S.auto ? `<p class="hint ca-hint">Tienes ${N(ctx.saldo)}. La paga del lunes llega sola.</p>` : ''}`;
+    return `<section class="ca" style="--g:${brillo(c)}">${cab}${vEscena(c, info)}${vResultado(c)}${barra}</section>${vContenido(info)}`;
+  }
+  // lo que ha salido: cada premio con su valor y, si es de verdad, Vender. Si fue una prueba, solo se dice lo que habria salido
+  function vResultado(c) {
+    const r = S.res; if (!r || r.caja !== c.id || S.tirasC !== c.id) return '';
+    const it = r.items, uno = it.length === 1, vivas = it.filter((i) => i.status !== 'sold');
+    const suma = vivas.reduce((a, i) => a + i.value, 0), todo = it.reduce((a, i) => a + i.value, 0), total = c.price * r.n;
+    const filas = it.map((i) => {
+      const x = item(i.item), { top, main } = nombre(x), vendida = i.status === 'sold';
+      return `<div class="ca-rw ${vendida ? 'sold' : ''}" style="--c:${color(x.rarity)}"><span class="ca-rw-i">${pic(x.image, 256)}</span>
+        <span class="ca-rw-t">${top ? `<span class="lab" data-notr>${esc(top)}</span>` : `<span class="lab">${(RAR[x.rarity] || RAR.mil)[0]}</span>`}<b data-notr>${x.rarity === 'esp' && top ? '★ ' : ''}${esc(main)}</b></span>
+        <span class="ca-rw-v">${N(i.value)}${coin()}</span>
+        ${r.prueba ? '' : vendida ? '<span class="cj-sold">Vendida</span>' : `<button class="chip" data-cj="vender1" data-v="${i.id}">Vender</button>`}</div>`;
+    }).join('');
+    if (r.prueba) return `<div class="ca-got prueba"><p class="ca-test"><b>Prueba gratis</b><span>No se ha cobrado ni ganado nada. Es solo para ver cómo gira.</span></p>${filas}</div>`;
+    return `<div class="ca-got">${uno ? '' : `<p class="ca-sum"><span class="lab">Has sacado</span><b class="num">${N(todo)}</b>${coin()}<em>por ${N(total)}</em></p>`}${filas}
+      ${vivas.length ? `<button class="go ghost ca-sell" data-cj="venderRes">${S.sure === 'res' ? '<span>¿Seguro? Toca otra vez</span>' : `<span>${uno ? 'Vender por' : 'Vender todo por'}</span><b>${N(suma)}</b>${coin()}`}</button>` : ''}</div>`;
   }
   function vCajas() {
     const hay = new Set(D.cases.map(catDe)), dos = hay.size > 1;
@@ -256,66 +324,25 @@
         <span class="cj-case-p">${N(x.price)}${coin()}</span></button>`).join('')}</section>
       ${vFeed()}`;
   }
-  function vHero(c, info) {
-    const total = c.price * S.n, falta = ctx.saldo < total, pr = probs(info), tuyas = mias(c.id);
-    return `<div class="cj-hero" style="--g:${brillo(c)}">
-      <div class="cj-hero-img">${pic(c.image, 360, '', true)}</div>
-      <h2 data-notr>${esc(c.name)}</h2>
-      <p class="cj-hero-p"><b class="num">${N(c.price)}</b>${coin()}<em>por caja</em></p>
-      <div class="cj-odds">${ORDEN.slice().reverse().filter((r) => pr[r]).map((r) => `<span style="--c:${color(r)}"><i></i><b>${pr[r]}</b><em>${RAR[r][0]}</em></span>`).join('')}</div>
-      <div class="cj-ctl">
-        <div class="cj-ns"><span class="lab">Cuántas</span>${[1, 2, 3, 4, 5].map((n) => `<button class="${S.n === n ? 'on' : ''}" data-cj="n" data-v="${n}">${n}</button>`).join('')}</div>
-        <button class="cj-fast ${S.rapido ? 'on' : ''}" data-cj="rapido" aria-pressed="${S.rapido}"><i></i><span>Rápido</span></button>
-      </div>
-      ${tuyas.length ? `<button class="go cj-go" data-cj="abrirMia" data-v="${tuyas[0].id}"><span>${tuyas.length === 1 ? 'Abrir la tuya' : 'Abrir una tuya'}</span>${tuyas.length > 1 ? `<b>×${tuyas.length}</b>` : ''}</button>` : ''}
-      <button class="go cj-go ${tuyas.length ? 'ghost' : ''}" data-cj="abrir" ${falta ? 'disabled' : ''}><span>${falta ? 'Sin saldo' : 'Abrir por'}</span><b>${N(total)}</b>${coin()}</button>
-      ${falta && !tuyas.length ? `<p class="hint">Tienes ${N(ctx.saldo)}. La paga del lunes llega sola.</p>` : ''}
-    </div>`;
-  }
-  function vRes(c) {
-    const it = S.res.items, uno = it.length === 1, vivas = it.filter((i) => i.status !== 'sold');
-    const suma = vivas.reduce((a, i) => a + i.value, 0), todo = it.reduce((a, i) => a + i.value, 0), total = c.price * S.res.n, falta = ctx.saldo < total, quedan = mias(c.id);
-    const drops = it.map((i) => {
-      const x = item(i.item), { top, main } = nombre(x), vendida = i.status === 'sold', sub = top || (esLujo(x.id) ? c.name : '');
-      return `<div class="cj-drop ${x.rarity} ${vendida ? 'sold' : ''}" style="--c:${color(x.rarity)}">
-        <div class="cj-drop-img">${pic(x.image, uno ? 512 : 360, '', true)}</div>
-        ${sub ? `<span class="lab" data-notr>${esc(sub)}</span>` : `<span class="lab">${(RAR[x.rarity] || RAR.mil)[0]}</span>`}
-        <h3 data-notr>${x.rarity === 'esp' && top ? '★ ' : ''}${esc(main)}</h3>
-        <p class="cj-meta">${metaDe(i)}${i.float != null ? `<span class="cj-fl">${flo(i.float)}</span>` : ''}</p>
-        <div class="cj-val">${N(i.value)}${coin()}</div>
-        ${uno ? (vendida ? '<span class="cj-sold">Vendida</span>' : '') : vendida ? '<span class="cj-sold">Vendida</span>' : `<button class="chip" data-cj="vender1" data-v="${i.id}">Vender</button>`}
-      </div>`;
-    }).join('');
-    // varias: primero el total (en el movil, si no, queda muy abajo) y debajo cada una
-    return `<div class="cj-res ${uno ? 'uno' : ''}" style="--n:${it.length}">
-      ${uno ? '' : `<div class="cj-res-sum"><span class="lab">Has sacado</span><b class="num">${N(todo)}</b>${coin()}<em>por ${N(total)}</em></div>`}
-      <div class="cj-drops">${drops}</div>
-      <div class="cj-res-act">
-        ${quedan.length ? `<button class="go" data-cj="abrirMia" data-v="${quedan[0].id}"><span>Abrir otra tuya</span>${quedan.length > 1 ? `<b>×${quedan.length}</b>` : ''}</button>` : ''}
-        <button class="go ${quedan.length ? 'ghost' : ''}" data-cj="abrir" ${falta ? 'disabled' : ''}><span>${uno ? 'Otra por' : 'Otras ' + it.length + ' por'}</span><b>${N(total)}</b>${coin()}</button>
-        ${vivas.length ? `<button class="go ghost" data-cj="venderRes">${S.sure === 'res' ? '<span>¿Seguro? Toca otra vez</span>' : `<span>${uno ? 'Vender por' : 'Vender todo por'}</span><b>${N(suma)}</b>${coin()}`}</button>` : ''}
-      </div>
-      <button class="cj-link" data-cj="otra">Volver a la caja</button>
-    </div>`;
-  }
+  // el contenido de la caja: una sola rejilla, de más a menos valor, con la franja de su rareza y el % arriba a la derecha
   function vContenido(info) {
-    const pr = probs(info), pn = probN(info), out = [];
+    const pn = probN(info), filas = [];
     for (const r of ORDEN) {
       const list = info.por[r]; if (!list) continue;
-      let tiles, mas = '';
       const wsum = list.reduce((a, it) => a + (it.weight || 100), 0) || 1;
       if (r === 'esp') {
         // las fases de un Doppler cuentan como una: se pinta una y "desde" lo que vale la mas barata
         const por = new Map();
         for (const it of list) { const v = tipico(it), w = it.weight || 100, p = por.get(it.name); if (!p) por.set(it.name, { it, v, n: 1, w }); else { p.n++; p.w += w; if (v != null && (p.v == null || v < p.v)) p.v = v } }
-        const todos = [...por.values()].sort((a, b) => (b.v || 0) - (a.v || 0)), ver = S.espTodo === info.id ? todos : todos.slice(0, ESP_VER);
-        tiles = ver.map((p) => tile({ ...p.it, phase: null }, { valor: p.v, desde: p.n > 1, pct: pn[r] * p.w / wsum })).join('');
-        if (todos.length > ver.length) mas = `<div class="cj-more"><button class="chip" data-cj="esptodo" data-v="${esc(info.id)}">Ver los ${todos.length}</button></div>`;
-      } else tiles = [...list].sort((a, b) => (tipico(b) || 0) - (tipico(a) || 0)).map((it) => tile(it, { valor: tipico(it), pct: pn[r] * (it.weight || 100) / wsum })).join('');
-      out.push(`<div class="cj-grp" style="--c:${color(r)}"><h4 class="cj-grp-h"><i></i><span>${r === 'esp' ? '★ Objeto especial' : RAR[r][0]}</span><b>${pr[r] || ''}</b></h4>
-        <div class="cj-grid fit ${r === 'esp' ? 'esp' : ''}">${tiles}</div>${mas}</div>`);
+        for (const p of por.values()) filas.push({ it: { ...p.it, phase: null }, v: p.v, desde: p.n > 1, pct: pn[r] * p.w / wsum });
+      } else for (const it of list) filas.push({ it, v: tipico(it), pct: pn[r] * (it.weight || 100) / wsum });
     }
-    return `<section class="cj-cont"><header class="cj-sec-h"><h3>Lo que trae</h3></header>${out.join('')}</section>`;
+    filas.sort((a, b) => (b.v || 0) - (a.v || 0));
+    return `<section class="cj-cont ca-cont"><header class="cj-sec-h"><h3>Contenido de la caja</h3></header><div class="ca-grid">${filas.map((f) => {
+      const x = f.it, n = nombre(x);
+      return `<div class="ca-c" style="--c:${color(x.rarity)}" title="${esc(x.name)}"><span class="ca-pct">${pctTxt(f.pct)}</span><span class="ca-ci">${pic(x.image, 256)}</span>
+        <span class="ca-ct">${n.top ? `<em data-notr>${esc(n.top)}</em>` : ''}<b data-notr>${esc(n.main)}</b></span><span class="ca-cv">${f.desde ? '<i>desde</i>' : ''}${N(f.v || 0)}${coin()}</span></div>`;
+    }).join('')}</div></section>`;
   }
   function vFeed() {
     const f = D.st.feed; if (!f.length) return '';
@@ -547,62 +574,85 @@
     for (const k of hay) { if (x < RELLENO[k]) { r = k; break } x -= RELLENO[k] }
     const l = info.por[r]; return l[(Math.random() * l.length) | 0];
   }
-  // un cuchillo o unos guantes salen en la ruleta con su skin y el brillo dorado (PM 30-10: "si es una estrella, que sea la skin,
-  // no la estrella"); la estrella solo si no hay foto
-  const carta = (it) => it.rarity === 'esp' && !esLujo(it.id) && !it.image ? '<div class="cj-k esp"><span>★</span></div>' : `<div class="cj-k" style="--c:${color(it.rarity)}">${pic(it.image, 256, '', true)}</div>`;
-  function girar(el, info, inv, dur) {
-    if (!el) return Promise.resolve();
-    const G = 46, cartas = [];
-    for (let i = 0; i < 54; i++) cartas.push(i === G ? item(inv.item) : relleno(info));
-    el.innerHTML = `<div class="cj-strip"><div class="cj-track">${cartas.map(carta).join('')}</div><i class="cj-mark"></i></div>`;
-    const strip = el.firstElementChild, track = strip.firstElementChild, k = track.children[G], w = strip.clientWidth;
+  // la tira corre desde la carta del centro (INI) hasta la del premio (G) y frena con el mismo desvio que luego pinta el CSS
+  function gira(strip, t, dur) {
+    const track = strip.firstElementChild, ini = track.children[INI], k = track.children[G], kw = k.offsetWidth;
     // al parar: la ganadora crece y brilla con el color de su rareza y el resto se apaga
-    const fin = () => { k.classList.add('gana'); strip.style.setProperty('--c', color(item(inv.item).rarity)); strip.classList.add('fin') };
-    if (!el.isConnected || !w) { track.style.transform = 'none'; fin(); return Promise.resolve() }
-    const dx = k.offsetLeft + k.offsetWidth / 2 - w / 2 + (Math.random() - 0.5) * k.offsetWidth * 0.6;
-    const a = track.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${-dx}px)` }], { duration: quieto() ? 0 : dur, easing: 'cubic-bezier(.08,.6,.12,1)', fill: 'forwards' });
+    const fin = () => { k.classList.add('gana'); strip.classList.add('fin') };
+    if (!strip.isConnected || !kw) { fin(); return Promise.resolve() }
+    const x0 = -(ini.offsetLeft + ini.offsetWidth / 2), x1 = -(k.offsetLeft + kw / 2 + t.j * kw);
+    const a = track.animate([{ transform: `translateX(${x0}px)` }, { transform: `translateX(${x1}px)` }], { duration: dur, easing: 'cubic-bezier(.08,.6,.12,1)', fill: 'forwards' });
     if (anim) anim.anims.push(a);
     return a.finished.then(fin, fin);
   }
   function para() { if (REP) return termina(); if (!anim) return; anim.saltar = true; for (const a of anim.anims) { try { a.finish() } catch {} } }
 
-  // mia: id de una caja sin abrir (cs_owned); se abre sin pagar con la misma ruleta y el mismo resultado
-  async function abrir(mia) {
-    if (anim || ocupado) return;
+  // mia: id de una caja sin abrir (cs_owned); se abre sin pagar con las mismas tiras y el mismo resultado.
+  // prueba: gira de mentira. No llama a la base, no cobra, no da nada y no avisa a los demas: el premio sale del azar de la pantalla.
+  // Devuelve true si ha abierto (para el giro automatico).
+  async function abrir(mia, prueba) {
+    if (anim || ocupado) return false;
     const c = D.cases.find((x) => x.id === S.caja) || D.caja.get(S.caja), info = D.caja.get(S.caja), n = mia ? 1 : S.n;
-    if (!c || !info) return;
-    if (!mia && c.price * n > ctx.saldo) return avisa('No tienes saldo suficiente');
-    ocupado = true;
-    root.querySelectorAll('[data-cj=abrir],[data-cj=abrirMia]').forEach((b) => { b.disabled = true });
-    // mientras contesta el servidor, el boton lo dice (si no, parece que no ha hecho nada)
-    const b0 = root.querySelector(mia ? `[data-cj=abrirMia][data-v="${mia}"]` : '.cj-go[data-cj=abrir], .cj-res-act [data-cj=abrir]');
-    if (b0) { b0.classList.add('abriendo'); b0.innerHTML = '<span>Abriendo…</span>'; traduce(b0) }
-    let r;
-    try { r = mia ? await rpc('cs_open_owned', { p_id: mia }) : await rpc('cs_open', { p_case: c.id, p_n: n }) } catch (e) { ocupado = false; pinta(); return avisa(esc(msgErr(e))) }
-    ocupado = false;
-    try { const f = (x) => ({ r: x.rarity, i: src(x.image, 256), l: esLujo(x.id) ? 1 : 0 }); window.dispatchEvent(new CustomEvent('gm:caja-abierta', { detail: { quien: ctx.me, nombre: jug(ctx.me).n, caja: c.id, cajaNombre: c.name, items: r.items.map((i) => ({ ...f(item(i.item)), n: item(i.item).name, v: i.value })), pool: Array.from({ length: 24 }, () => f(relleno(info))) } })) } catch {}   // en directo (cajas-vivo.js)
-    if (mia) D.cajasDe.set(ctx.me, mias().filter((o) => o.id !== mia));
-    // la imagen grande del premio se va bajando mientras gira
-    for (const i of r.items) { const im = new Image(); im.decoding = 'async'; im.src = src(item(i.item).image, r.items.length === 1 ? 512 : 360) }
-    S.res = null; S.sure = null;
+    if (!c || !info) return false;
+    let items;
+    if (prueba) items = Array.from({ length: n }, () => { const x = relleno(info); return { id: 0, item: x.id, value: valorDe(x), status: 'prueba' } });
+    else {
+      if (!mia && c.price * n > ctx.saldo) { avisa('No tienes saldo suficiente'); return false }
+      ocupado = true;
+      root.querySelectorAll('[data-cj=abrir],[data-cj=abrirMia],[data-cj=prueba],[data-cj=auto],[data-cj=n]').forEach((b) => { b.disabled = true });
+      // mientras contesta el servidor, el boton lo dice (si no, parece que no ha hecho nada)
+      const b0 = root.querySelector(mia ? `[data-cj=abrirMia][data-v="${mia}"]` : '.ca-go[data-cj=abrir]');
+      if (b0) { b0.classList.add('abriendo'); b0.innerHTML = '<span>Abriendo…</span>'; traduce(b0) }
+      let r;
+      try { r = mia ? await rpc('cs_open_owned', { p_id: mia }) : await rpc('cs_open', { p_case: c.id, p_n: n }) } catch (e) { ocupado = false; pinta(); avisa(esc(msgErr(e))); return false }
+      ocupado = false;
+      items = r.items;
+      try { const f = (x) => ({ r: x.rarity, i: src(x.image, 256), l: esLujo(x.id) ? 1 : 0 }); window.dispatchEvent(new CustomEvent('gm:caja-abierta', { detail: { quien: ctx.me, nombre: jug(ctx.me).n, caja: c.id, cajaNombre: c.name, items: r.items.map((i) => ({ ...f(item(i.item)), n: item(i.item).name, v: i.value })), pool: Array.from({ length: 24 }, () => f(relleno(info))) } })) } catch {}   // en directo (cajas-vivo.js)
+      if (mia) D.cajasDe.set(ctx.me, mias().filter((o) => o.id !== mia));
+      // la imagen grande del premio se va bajando mientras gira
+      for (const i of r.items) { const im = new Image(); im.decoding = 'async'; im.src = src(item(i.item).image, 256) }
+    }
+    const animar = !sinAnim();
+    S.res = null; S.sure = null; S.prueba = !!prueba;
+    S.tiras = items.map((inv) => nuevaTira(info, inv)); S.tirasK = ''; S.tirasC = c.id;
+    S.fase = animar ? 'gira' : 'fin';
     anim = { anims: [], saltar: false };
-    pinta(true);    // la caja con su sitio para la ruleta
-    const stage = root.querySelector('[data-cj-stage]');
-    if (stage) {
-      if (stage.isConnected && stage.getBoundingClientRect().top < 64) stage.scrollIntoView({ block: 'start', behavior: quieto() ? 'auto' : 'smooth' });
-      stage.innerHTML = `<div class="cj-spin n${r.items.length}"><header class="cj-spin-h"><span class="lab" data-notr>${esc(c.name)}</span></header>${r.items.map((_, i) => `<div class="cj-spin-row" data-row="${i}"></div>`).join('')}<button class="chip cj-skip" data-cj="saltar">Saltar</button></div>`;
-      traduce(stage);
-      const dur = S.rapido ? 1400 : 5600;
-      await Promise.all(r.items.map((inv, i) => girar(stage.querySelector(`[data-row="${i}"]`), info, inv, dur + i * 330)));
-      await espera(S.rapido ? 250 : 750);
+    pinta(true);    // las tiras con su sitio, ya con el premio dentro
+    if (animar) {
+      const strips = [...root.querySelectorAll('.cj-spin .cj-strip')], sc = root.querySelector('.ca-tiras');
+      if (sc && sc.getBoundingClientRect().top < 64) sc.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      const v = +S.vel;
+      await Promise.all(strips.map((s, i) => gira(s, S.tiras[i], DUR[v] + i * PASO[v])));
+      await espera(FIN[v]);
+    } else {
+      const top = items.reduce((a, i) => (i.value > a.value ? i : a), items[0]);
+      window.dispatchEvent(new CustomEvent('gm:sonido', { detail: { tipo: 'caja-final', rareza: item(top.item).rarity, vol: 0.6 } }));
     }
     anim = null;
-    S.res = { caja: c.id, n, items: r.items };
+    if (S.caja === c.id) { S.fase = 'fin'; S.res = { caja: c.id, n, items, prueba: !!prueba } }
     pinta();
-    const top = r.items.reduce((a, i) => (i.value > a.value ? i : a), r.items[0]);
+    if (prueba) return true;
+    const top = items.reduce((a, i) => (i.value > a.value ? i : a), items[0]);
     if (item(top.item).rarity === 'esp') avisa(`¡${esc(item(top.item).name)}! <b>${N(top.value)}</b>`);
-    if (ctx.refresh) ctx.refresh();
+    // el saldo nuevo tiene que estar antes del siguiente giro del automatico
+    try { if (ctx.refresh) await ctx.refresh() } catch {}
     cargar(true);
+    return true;
+  }
+  // giro automatico: abre y abre hasta que lo paras, se acaba el saldo o falla algo
+  async function auto() {
+    if (S.auto || anim || ocupado) return;
+    const id = S.caja;
+    S.auto = true; pinta();
+    try {
+      while (S.auto && S.caja === id && S.tab === 'abrir' && root && root.isConnected) {
+        const c = caja(id);
+        if (!c.price || ctx.saldo < c.price * S.n) { avisa('Sin saldo: el giro automático se ha parado'); break }
+        if (!(await abrir())) break;
+        if (!S.auto) break;
+        await new Promise((ok) => setTimeout(ok, REPOSO[+S.vel]));
+      }
+    } finally { S.auto = false; if (!anim) pinta() }
   }
 
   function repeticion(b) {
@@ -679,31 +729,34 @@
     const a = t.dataset.cj, v = t.dataset.v;
     const navega = ['tab', 'cajas', 'batallas', 'ver', 'quien', 'caja', 'cat'];
     if (anim && navega.includes(a)) para();
+    if (navega.includes(a)) S.auto = false;     // salir de la caja para el giro automatico
     switch (a) {
       case 'tab':
-        if (S.tab === v) { if (v === 'abrir') { S.caja = null; S.res = null } if (v === 'batallas') { S.bat = null; S.nueva = null } }
+        if (S.tab === v) { if (v === 'abrir') { S.caja = null; S.res = null; S.fase = 'idle'; S.prueba = false } if (v === 'batallas') { S.bat = null; S.nueva = null } }
         S.tab = v; S.sure = null; if (v !== 'batallas') S.bat = null;
         pinta(); arriba();
         if (v === 'batallas' && !S.bat) { await cargaHechas(); pinta() }
         return;
       case 'cat': S.cat = ['lujo', 'cosmeticos'].includes(v) ? v : 'skins'; guarda('cj-cat', S.cat); return pinta();
-      case 'caja': S.caja = v; S.res = null; pinta(); arriba(); try { await cargaCaja(v) } catch (err) { avisa(esc(msgErr(err))) } return pinta();
-      case 'cajas': S.caja = null; S.res = null; pinta(); return arriba();
-      case 'n': S.n = +v; return pinta();
-      case 'rapido': S.rapido = !S.rapido; guarda('cj-rapido', S.rapido ? '1' : '0'); return pinta();
+      case 'caja': S.caja = v; S.res = null; S.fase = 'idle'; S.prueba = false; pinta(); arriba(); try { await cargaCaja(v) } catch (err) { avisa(esc(msgErr(err))) } return pinta();
+      case 'cajas': S.caja = null; S.res = null; S.fase = 'idle'; S.prueba = false; pinta(); return arriba();
+      case 'n': S.n = +v; S.res = null; S.fase = 'idle'; S.prueba = false; return pinta();
+      case 'vel': S.vel = v; S.rapido = v !== '0'; guarda('cj-vel', v); guarda('cj-rapido', S.rapido ? '1' : '0'); return pinta();
       case 'abrir': return abrir();
+      case 'prueba': return abrir(null, true);
+      case 'auto': return auto();
+      case 'parar': S.auto = false; t.disabled = true; t.innerHTML = '<span>Parando…</span>'; traduce(t); if (!anim) pinta(); return;
       case 'abrirMia': {
         // desde el inventario o la caja: se va a la caja y gira alli, igual que al pagar
         const id = +v, o = mias().find((x) => x.id === id);
         if (!o || anim || ocupado) return;
         if (S.tab !== 'abrir' || S.caja !== o.case_id) {
-          S.tab = 'abrir'; S.caja = o.case_id; S.res = null; S.sure = null; S.bat = null; pinta(); arriba();
+          S.tab = 'abrir'; S.caja = o.case_id; S.res = null; S.fase = 'idle'; S.prueba = false; S.sure = null; S.bat = null; pinta(); arriba();
           try { await cargaCaja(o.case_id) } catch (err) { return avisa(esc(msgErr(err))) }
         }
         return abrir(id);
       }
       case 'saltar': return para();
-      case 'otra': S.res = null; return pinta();
       case 'vender1': return vender([+v]);
       case 'venderRes': if (!seguro('res')) return; return vender(S.res.items.filter((i) => i.status !== 'sold').map((i) => i.id));
       case 'quien': S.quien = v === ctx.me ? null : v; S.sel.clear(); S.sure = null; S.fR = null; S.fC = null; S.invN = INV_PASO; pinta(); return cargar(true);
