@@ -62,6 +62,25 @@
     if (t - NOW < 60e3) return `<span class="mt-st">${IC_RELOJ}<span>Empezando</span></span>${extra || ''}`;
     return `<span class="mt-st">${IC_RELOJ}<span>Empieza en</span> <b>${CD(t)}</b></span>${extra || ''}`;
   }
+  // PM 01-11: "en my bets no sale el desafio que he hecho con Darkam; tendria que salir aunque no pudiera cancelarlo, para verlo":
+  // cada reto 1 contra 1 vivo es una tarjeta mas de En juego (antes era una linea al final que en el movil no se veia)
+  function reto(c, i) {
+    const m = byId(c.m); if (!m) return '';
+    const live = !!m.live, d = live ? vyDatos(m) : null, yo = c.from === MEK, riv = yo ? c.to : c.from;
+    const mio = yo ? c.fp : c.tp, suyo = yo ? c.tp : c.fp, nom = (k) => (k ? esc(fr(k).n) : 'Cualquiera');
+    const eq = (s) => { const p = s === 'a' ? '1' : '2', sc = s === 'a' ? d && d.sa : d && d.sb, quien = mio === p ? 'Tú' : suyo === p ? nom(riv) : '';
+      return `<div class="mt-eq ${mio === p ? 'mio' : ''}"><span class="mt-cr">${logo(m, s)}</span><span class="mt-nm"><b>${esc(s === 'a' ? m.a : m.b)}</b>${quien ? `<em>${quien}</em>` : ''}</span>${live && sc != null ? `<span class="mt-pts"><b>${sc}</b></span>` : ''}</div>` };
+    const empate = mio === 'X' || suyo === 'X' ? `<p class="mt-pk"><i>★</i><b>Empate: ${mio === 'X' ? 'Tú' : nom(riv)}</b></p>` : '';
+    const estado = c.st === 'pending' ? (c.ab ? 'Esperando a que entre alguien' : `Esperando a que ${nom(riv)} acepte`) : `Contra ${nom(riv)}`;
+    const head = live ? `<span class="mt-st"><i class="mt-pt"></i><span>En vivo</span></span>` : banda(m, `<span class="mt-when">${empieza(t2(m.at))}</span>`);
+    return `<article class="mt mt-r ${live ? 'live' : ''}" data-goto="${esc(m.id)}" style="--i:${i};--sc:${SPC[m.s] || 'var(--acc)'}">
+      <header class="mt-band">${head}<span class="mt-bar"><i style="width:${live ? 100 : 40}%"></i></span></header>
+      <div class="mt-meta"><span class="mt-rt-ic">${riv ? av(riv, 'sm') : ''}</span><span class="lab ell">Reto 1 contra 1 · ${estado}</span></div>
+      <div class="mt-m">${eq('a')}${eq('b')}</div>${empate}
+      <div class="mt-n">${cuadro('Pones', N(c.stake) + coin())}${cuadro('En juego', N(c.stake * 2) + coin())}${cuadro('Te llevas', N(c.stake * 2) + coin(), 'hi')}</div>
+      <p class="mt-rt-no">Los retos no se cancelan: se paga al acabar el partido.</p>
+    </article>`;
+  }
   function suelta(b, i) {
     const m = byId(b.m); if (!m) return '';
     const live = !!m.live, d = live ? vyDatos(m) : null, mkp = !!(window.GM_MK && GM_MK.es(b.p));
@@ -125,12 +144,13 @@
     const cs = misCombos();
     const comb = (cs || []).filter((c) => c.status === 'open').map((c) => { const ls = legsDe(c), sig = ls.find((l) => pata(l) === 'pend');
       return { k: 'c', c, live: ls.some((l) => pata(l) === 'vivo'), t: sig ? t2(sig.matches.starts_at) : 0 } });
-    const xs = [...sueltas, ...comb].sort((a, b) => (b.live - a.live) || a.t - b.t);
-    const puesto = xs.reduce((a, x) => a + (x.k === 'b' ? x.b.stake : x.c.stake), 0), cobra = xs.reduce((a, x) => a + (x.k === 'b' ? x.b.stake * x.b.o : x.c.stake * Number(x.c.odds)), 0);
+    const retos = CH.filter((c) => (c.from === MEK || c.to === MEK) && (c.st === 'pending' || c.st === 'accepted') && byId(c.m))
+      .map((c) => ({ k: 'r', r: c, live: !!byId(c.m).live, t: t2(byId(c.m).at) }));
+    const xs = [...sueltas, ...comb, ...retos].sort((a, b) => (b.live - a.live) || a.t - b.t);
+    const puesto = xs.reduce((a, x) => a + (x.k === 'b' ? x.b.stake : x.k === 'r' ? x.r.stake : x.c.stake), 0), cobra = xs.reduce((a, x) => a + (x.k === 'b' ? x.b.stake * x.b.o : x.k === 'r' ? x.r.stake * 2 : x.c.stake * Number(x.c.odds)), 0);
     const vivas = xs.filter((x) => x.live).length, prox = xs.find((x) => !x.live && x.t > NOW);
-    const retos = CH.filter((c) => (c.from === MEK || c.to === MEK) && (c.st === 'pending' || c.st === 'accepted'));
-    const cards = xs.map((x, i) => (x.k === 'b' ? suelta(x.b, i) : combinada(x.c, i))).join('');
-    const proxTxt = !prox ? '' : prox.k === 'b' ? `${esc(byId(prox.b.m).a)} <i>vs</i> ${esc(byId(prox.b.m).b)}` : `<span>Combinada de ${legsDe(prox.c).length}</span>`;
+    const cards = xs.map((x, i) => (x.k === 'b' ? suelta(x.b, i) : x.k === 'r' ? reto(x.r, i) : combinada(x.c, i))).join('');
+    const proxTxt = !prox ? '' : prox.k === 'b' ? `${esc(byId(prox.b.m).a)} <i>vs</i> ${esc(byId(prox.b.m).b)}` : prox.k === 'r' ? `<span>Reto: ${esc(byId(prox.r.m).a)} <i>vs</i> ${esc(byId(prox.r.m).b)}</span>` : `<span>Combinada de ${legsDe(prox.c).length}</span>`;
     const resumen = `<aside class="mis-sum">
         <div class="mis-sum-a"><span class="lab">Tienes en juego</span><b class="num">${N(puesto)}${coin()}</b><small><span>${xs.length} ${xs.length === 1 ? 'apuesta' : 'apuestas'}</span>${vivas ? `<span> · </span><span>${vivas} en vivo</span>` : ''}</small></div>
         <div class="mis-sum-b"><span class="lab">Si aciertas todo</span><b class="num">${N(cobra)}${coin()}</b><small><span>${flecha(cobra - puesto)} ${N(Math.abs(cobra - puesto))}</span> <span>limpias</span></small></div>
@@ -139,8 +159,7 @@
       </aside>`;
     return `<section class="mis-sec mis-ab">
       <div class="mis-h"><span class="mis-k">01</span><h2>En juego</h2><i>${xs.length}</i></div>
-      <div class="mis-cols ${xs.length ? '' : 'solo'}"><div class="mis-main">${xs.length ? `<div class="mt-grid ${xs.length === 1 ? 'uno' : ''}">${cards}</div>` : cs ? vacio() : '<div class="mis-vacio mis-esp" aria-hidden="true"></div>'}
-        ${retos.length ? `<div class="mis-sub"><h3>Retos 1 contra 1</h3><i>${retos.length}</i></div>${retosHtml(retos, '')}` : ''}</div>
+      <div class="mis-cols ${xs.length ? '' : 'solo'}"><div class="mis-main">${xs.length ? `<div class="mt-grid ${xs.length === 1 ? 'uno' : ''}">${cards}</div>` : cs ? vacio() : '<div class="mis-vacio mis-esp" aria-hidden="true"></div>'}</div>
         ${xs.length ? resumen : ''}</div>
     </section>`;
   }

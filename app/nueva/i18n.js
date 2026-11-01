@@ -74,7 +74,7 @@
     // perfil con pestanas (31-10)
     'Resumen': 'Summary', 'Dinero': 'Money', 'Duelos y premios': 'Duels and prizes', 'Dónde ganas y pierdes': 'Where you win and lose',
     'Lo que te ha dado o quitado cada cosa desde el principio.': 'What each thing has given or taken from you since the start.',
-    'Sueltas, combinadas, predicciones y cancelaciones': 'Singles, parlays, predictions and cancellations', 'Sueltas, combinadas y cancelaciones': 'Singles, parlays and cancellations', 'Contraseña nueva (6 o más)': 'New password (6 or more)', 'Mínimo 6 caracteres': 'At least 6 characters', 'PM puede ver esta contraseña para devolvértela si la pierdes. No uses la de tu correo ni la de nada más.': 'PM can see this password to give it back if you lose it. Do not use the one from your email or anything else.', 'Apuestas rápidas': 'Quick bets', 'Predicciones en directo: gol o siguiente ronda': 'Live predictions: next goal or next round', 'Cajas y skins': 'Cases and skins',
+    'Sueltas, combinadas, predicciones y cancelaciones': 'Singles, parlays, predictions and cancellations', 'Sueltas, combinadas y cancelaciones': 'Singles, parlays and cancellations', 'Pones': 'You put', 'Te llevas': 'You take', 'Los retos no se cancelan: se paga al acabar el partido.': 'Challenges cannot be cancelled: paid when the match ends.', 'Contraseña nueva (6 o más)': 'New password (6 or more)', 'Mínimo 6 caracteres': 'At least 6 characters', 'PM puede ver esta contraseña para devolvértela si la pierdes. No uses la de tu correo ni la de nada más.': 'PM can see this password to give it back if you lose it. Do not use the one from your email or anything else.', 'Apuestas rápidas': 'Quick bets', 'Predicciones en directo: gol o siguiente ronda': 'Live predictions: next goal or next round', 'Cajas y skins': 'Cases and skins',
     'Cajas abiertas, skins vendidas y batallas': 'Cases opened, skins sold and battles', 'Blackjack, crash y los demás': 'Blackjack, crash and the rest',
     'Pagas y premios': 'Pay and prizes', 'Paga del lunes, recompensas, bote y premios': 'Monday pay, rewards, pot and prizes',
     'Tus apuestas sueltas': 'Your single bets', 'Sus apuestas sueltas': 'Their single bets', 'Beneficio de las resueltas, por tipo.': 'Profit of settled bets, by type.',
@@ -419,7 +419,7 @@
     [/^(\d+) resueltas?$/, (m, n) => `${n} settled`], [/^(\d+) en vivo$/, '$1 live'],   // Mis apuestas (01-11)
     // la mesa de blackjack (bjmesa.js)
     [/^Turno de (.+)$/, 'Turn: $1'], [/^La banca tiene (\d+)$/, 'Dealer has $1'], [/^Asiento (\d)$/, 'Seat $1'],
-    [/^(\d+) en directo$/, '$1 live'],   // menu A (01-11): la tira de directo de movil
+    [/^(\d+) en directo$/, '$1 live'], [/^Reto 1 contra 1 · Contra (.+)$/, 'Challenge · against $1'], [/^Reto 1 contra 1 · Esperando a que entre alguien$/, 'Challenge · waiting for someone to join'], [/^Reto 1 contra 1 · Esperando a que (.+) acepte$/, 'Challenge · waiting for $1 to accept'], [/^Empate: Tú$/, 'Draw: You'], [/^Empate: (.+)$/, 'Draw: $1'],   // menu A (01-11): la tira de directo de movil
     [/^(\d+) resultados?$/, (m, n) => `${n} result${n === '1' ? '' : 's'}`],   // Ya jugados B (01-11)
     // Apuestas de todos (01-11, todos.js)
     [/^Los (\d+)$/, 'All $1'], [/^(\d+) apuestas?$/, (m, n) => `${n} bet${n === '1' ? '' : 's'}`], [/^(\d+) de (\d+) acertadas$/, '$1 of $2 won'], [/^(\d+) de (\d+) en vivo$/, '$1 of $2 live'],

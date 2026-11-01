@@ -246,3 +246,7 @@ html.sin-anim .mt-pt{animation:none}
 }
 /* movil con dos o mas apuestas en vivo: la tira de #vivoyo (app.js) de la barra de abajo no debe ensanchar la pagina */
 @media (max-width:860px){#vivoyo{contain:inline-size}}
+/* reto 1 contra 1 como tarjeta de En juego (PM 01-11) */
+.mt-r .mt-meta{gap:8px}
+.mt-rt-ic .av{width:22px;height:22px;font-size:10px}
+.mt-rt-no{margin:10px 0 0;font:400 12px var(--mono);color:var(--mute)}
