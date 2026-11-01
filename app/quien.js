@@ -82,7 +82,12 @@
         <span class="rc-cara">${S.k ? cara(S.k, 'xl') : `<span class="av xl rt-any">${ANY}</span>`}</span>
         <b class="rc-n" ${S.k ? 'data-notr' : ''}>${S.k ? nom(S.k) : 'Cualquiera'}</b>
         <span class="rc-pick">${S.p ? `${escudo(S.p)}<span ${S.p === 'X' ? '' : 'data-notr'}>${esc(pn(m, S.p))}</span>` : '<span class="rc-sin">esperando</span>'}</span></div>`;
-    const centro = hay ? `<span class="rc-sc"><b>${d.sa}</b><i>:</i><b>${d.sb}</b></span><span class="rc-vs s">vs</span>` : '<span class="rc-vs">VS</span>';
+    // PM 01-11: "se ve como que Darkam esta ganando cuando no es verdad, el 1 esta en el lado que no es": el marcador va en el orden de
+    // los jugadores (cada numero junto a la cara del que eligio ese equipo), no en el del partido (local:visitante)
+    const gol = (p) => (p === '1' ? d.sa : p === '2' ? d.sb : null);
+    let sA = hay ? gol(A.p) : null, sB = hay ? gol(B.p) : null;
+    const mapeado = hay && sA != null && sB != null && A.p !== B.p;
+    const centro = hay ? (mapeado ? `<span class="rc-sc"><b>${sA}</b><i>:</i><b>${sB}</b></span>` : `<span class="rc-sc"><b>${d.sa}</b><i>:</i><b>${d.sb}</b></span><small class="rc-sc-n" data-notr>${esc(m.a)} · ${esc(m.b)}</small>`) + '<span class="rc-vs s">vs</span>' : '<span class="rc-vs">VS</span>';
     const t = Date.parse(m.at) || 0;
     const estado = m.live ? `<span class="rc-st live"><i></i><span>En vivo</span></span>`
       : c.st === 'pending' ? `<span class="rc-st">${c.to ? 'Esperando respuesta' : 'Abierto a todos'}</span>`
