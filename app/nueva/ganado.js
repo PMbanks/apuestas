@@ -92,10 +92,13 @@
   // el bote y los premios de la semana: del monedero
   const premios = () => g(() => LEDGER, []).filter((l) => l.kind === 'bote_gana' || l.kind === 'premio_semana').map((l) => ({ key: 'l' + l.kind + l.at, k: yo(), t: l.at, tipo: l.kind === 'bote_gana' ? 'bote' : 'semana', res: 'won', m: null, pick: l.kind === 'bote_gana' ? 'Bote de la semana' : l.d || 'Premio de la semana', o: null, stake: 0, pay: l.a }));
   // retos entre colegas
-  const retosDe = (k) => g(() => CH, []).filter((c) => (c.from === k || c.to === k) && /^(won_from|won_to|void)$/.test(c.st) && c.set).map((c) => {
-    const m = partido(c.m), mio = c.from === k, w = c.st === 'won_from' ? c.from : c.st === 'won_to' ? c.to : null, p = mio ? c.fp : c.tp;
-    return { key: 'r' + c.id, k, t: Date.parse(c.set), tipo: 'reto', res: !w ? 'void' : w === k ? 'won' : 'lost', m, side: lado(p), pick: eleccion(m, p), rival: mio ? c.to : c.from, o: null, stake: c.stake, pay: w === k ? c.stake * 2 : !w ? c.stake : 0 };
+  // PM 01-11: los retos pueden ser de mas gente (2v1, 2v2...): la tarjeta sale a cada participante. rival = el primero del otro lado, mas = cuantos mas hay
+  const retosDe = (k) => g(() => CH, []).filter((c) => g(() => GM_RETOS.dentro(c, k), c.from === k || c.to === k) && /^(won_|void)/.test(c.st) && c.set).map((c) => {
+    const R = window.GM_RETOS, m = partido(c.m), e = R.pl(c).find((x) => x.k === k), ws = R.ganan(c), p = e ? e.p : c.fp;
+    const otros = R.pl(c).filter((x) => x.p !== p).map((x) => x.k), rivales = otros.length ? otros : R.pl(c).filter((x) => x.k !== k).map((x) => x.k);
+    return { key: 'r' + c.id, k, t: Date.parse(c.set), tipo: 'reto', res: c.st === 'void' ? 'void' : ws.includes(k) ? 'won' : 'lost', m, side: lado(p), pick: eleccion(m, p), rival: rivales[0], mas: Math.max(0, rivales.length - 1), nv: R.nvm(c), o: null, stake: c.stake, pay: R.pagoDe(c, k) };
   });
+  const rv = (x) => nombre(x.rival) + (x.mas ? ` +${x.mas}` : '');
   const mios = () => [...apuestasDe(yo()), ...predicciones(), ...premios(), ...retosDe(yo())].filter((x) => isFinite(x.t)).sort((a, b) => b.t - a.t);
 
   /* ---------- lo ya enseñado ---------- */
@@ -225,7 +228,7 @@
   const partidoLinea = (m) => (m ? `<span>${esc(m.a)}</span> <span class="gnd-sc2">${esc(marcador(m) || 'vs')}</span> <span>${esc(m.b)}</span>` : '');
   function htmlUna(x) {
     const m = x.m, liga = ligaDe(m), sub = x.tipo === 'semana' ? `<p class="gnd-st"><span>${esc(x.pick)}</span></p>`
-      : x.tipo === 'reto' ? `<p class="gnd-st"><span>Reto a</span> <b>${esc(nombre(x.rival))}</b> · <span>Apostaste</span> <b>${N(x.stake)}</b></p>`
+      : x.tipo === 'reto' ? `<p class="gnd-st"><span>Reto</span> <em>${x.nv}</em> <span>contra</span> <b>${esc(rv(x))}</b> · <span>Apostaste</span> <b>${N(x.stake)}</b></p>`
       : x.stake ? `<p class="gnd-st"><span>Apostaste</span> <b>${N(x.stake)}</b> · <b class="gnd-up">+${N(x.pay - x.stake)}</b> <span>limpias</span></p>` : '';
     return `<div class="gnd-c uno" role="dialog" aria-modal="true" aria-label="${esc(ETIQ[x.tipo])}">
       <span class="gnd-lab"><i></i><span>${ETIQ[x.tipo]}</span></span>
@@ -305,7 +308,7 @@
      challenge a Darkam y no le ha llegado nada en la pantalla"): sin confeti ni monedas, en rojo apagado y con un sonido grave ---------- */
   const ETIQP = { apuesta: 'Apuesta perdida', pred: 'Predicción fallada', cash: 'Cash out con pérdida', reto: 'Reto perdido' };
   function htmlPerdidaUna(x) {
-    const m = x.m, liga = ligaDe(m), sub = x.tipo === 'reto' ? `<p class="gnd-st"><span>Reto contra</span> <b>${esc(nombre(x.rival))}</b> · <span>Apostaste</span> <b>${N(x.stake)}</b></p>`
+    const m = x.m, liga = ligaDe(m), sub = x.tipo === 'reto' ? `<p class="gnd-st"><span>Reto</span> <em>${x.nv}</em> <span>contra</span> <b>${esc(rv(x))}</b> · <span>Apostaste</span> <b>${N(x.stake)}</b></p>`
       : x.stake ? `<p class="gnd-st"><span>Apostaste</span> <b>${N(x.stake)}</b></p>` : '';
     return `<div class="gnd-c uno perdida" role="dialog" aria-modal="true" aria-label="${esc(ETIQP[x.tipo] || 'Perdida')}">
       <span class="gnd-lab"><i></i><span>${ETIQP[x.tipo] || 'Perdida'}</span></span>
@@ -325,7 +328,7 @@
       <span class="gnd-lab"><i></i><span>${lejos ? 'Desde la última vez' : 'Resultados nuevos'}</span></span>
       <span class="gnd-has">Has perdido</span>
       <b class="gnd-amt"><span>−${N(tot)}</span>${coin}</b>
-      <div class="gnd-l">${ver.map((x) => `<div class="gnd-r"><span class="gnd-ri">${icono(x)}</span><span class="gnd-rt"><b>${esc(x.tipo === 'reto' ? 'Reto con ' + nombre(x.rival) : x.pick)}</b>${x.o ? ` <em>${O(x.o)}</em>` : ''}<small>${x.m ? partidoLinea(x.m) : ''}</small></span><b class="gnd-rv gnd-ko">−${N(perdido(x))}${coin}</b></div>`).join('')}
+      <div class="gnd-l">${ver.map((x) => `<div class="gnd-r"><span class="gnd-ri">${icono(x)}</span><span class="gnd-rt"><b>${esc(x.tipo === 'reto' ? 'Reto con ' + rv(x) : x.pick)}</b>${x.o ? ` <em>${O(x.o)}</em>` : ''}<small>${x.m ? partidoLinea(x.m) : ''}</small></span><b class="gnd-rv gnd-ko">−${N(perdido(x))}${coin}</b></div>`).join('')}
         ${resto > 0 ? `<p class="gnd-mas"><b>+${resto}</b> <span>más en Resultados</span></p>` : ''}</div>
       ${pieTarjeta()}
     </div>`;
@@ -348,7 +351,7 @@
   function lineaHtml(x) {
     const nm = x.pick || '';
     if (x.tipo === 'cash') return `<span>Cash out con</span> <em>${esc(nm)}</em> <b>▼ ${N(perdido(x))}</b>${coin}`;
-    if (x.tipo === 'reto') return x.res === 'void' ? `<span>Reto devuelto</span> <b>${N(x.pay)}</b>${coin}` : `<span>Perdiste el reto con</span> <em>${esc(nombre(x.rival))}</em> <b>▼ ${N(x.stake)}</b>${coin}`;
+    if (x.tipo === 'reto') return x.res === 'void' ? `<span>Reto devuelto</span> <b>${N(x.pay)}</b>${coin}` : `<span>Perdiste el reto con</span> <em>${esc(rv(x))}</em> <b>▼ ${N(x.stake)}</b>${coin}`;
     if (x.res === 'void') return `<span>Te devolvemos</span> <b>${N(x.pay)}</b>${coin}${x.m ? ` <small>${esc(x.m.a)} <i>vs</i> ${esc(x.m.b)}</small>` : ` <small>${esc(nm)}</small>`}`;
     return `<span>Perdiste</span> <b>${N(x.stake)}</b>${coin} <span>con</span> <em>${esc(nm)}</em>${x.m ? ` <small>${esc(x.m.a)} ${esc(marcador(x.m) || 'vs')} ${esc(x.m.b)}</small>` : ''}`;
   }
@@ -402,7 +405,7 @@
     const cls = x.res + (nuevo ? ' nuevo' : '');
     const tit = x.tipo === 'bote' || x.tipo === 'semana' ? ETIQ[x.tipo] : x.pick || ETIQ[x.tipo];
     const que = x.tipo === 'pred' ? 'Predicción rápida' : x.tipo === 'cash' ? 'Cash out' : x.tipo === 'reto' ? null : x.tipo === 'semana' ? x.pick : null;
-    const det = [que ? `<span>${esc(que)}</span>` : '', x.tipo === 'reto' ? `<span>Reto a</span> <span>${esc(nombre(x.rival))}</span>` : '', x.m ? partidoLinea(x.m) : '', `<span>${esc(cuando(x.t))}</span>`].filter(Boolean).join(' · ');
+    const det = [que ? `<span>${esc(que)}</span>` : '', x.tipo === 'reto' ? `<span>Reto</span> <span>${x.nv}</span> <span>contra</span> <span>${esc(rv(x))}</span>` : '', x.m ? partidoLinea(x.m) : '', `<span>${esc(cuando(x.t))}</span>`].filter(Boolean).join(' · ');
     const val = x.res === 'won' ? `+${N(x.pay)}` : x.res === 'lost' ? `▼ ${N(perdido(x))}` : `${N(x.pay)}`;
     return `<div class="gnd-pr ${cls}"><span class="gnd-pi">${icono(x)}</span><span class="gnd-pt2"><span class="gnd-pn"><b>${esc(tit)}</b>${x.o ? ` <em>${O(x.o)}</em>` : ''}${nuevo ? ' <i class="gnd-nv">Nuevo</i>' : ''}</span><small>${det}</small></span><span class="gnd-pv"><b>${val}${coin}</b>${x.res === 'void' ? '<small>devuelta</small>' : ''}</span></div>`;
   }

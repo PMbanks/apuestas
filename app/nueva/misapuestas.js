@@ -77,7 +77,7 @@
     const head = live ? `<span class="mt-st"><i class="mt-pt"></i><span>En vivo</span></span>` : banda(m, `<span class="mt-when">${empieza(t2(m.at))}</span>`);
     return `<article class="mt mt-r ${live ? 'live' : ''}" data-goto="${esc(m.id)}" style="--i:${i};--sc:${SPC[m.s] || 'var(--acc)'}">
       <header class="mt-band">${head}<span class="mt-bar"><i style="width:${live ? 100 : 40}%"></i></span></header>
-      <div class="mt-rv"><span class="mt-rf">${av(MEK, 'xl')}<b>Tú</b></span><span class="qn-seal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/></svg><span>Reto 1 contra 1</span></span><span class="mt-rf">${rivAv}<b>${nom(riv)}</b></span></div>
+      <div class="mt-rv"><span class="mt-rf">${av(MEK, 'xl')}<b>Tú</b></span><span class="qn-seal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/></svg><span>Reto</span> ${g(() => GM_RETOS.nvm(c), '1v1')}</span><span class="mt-rf">${rivAv}<b>${nom(riv)}</b></span></div>
       ${estado ? `<p class="mt-rs">${estado}</p>` : ''}
       <div class="mt-m">${eq('a')}${eq('b')}</div>${empate}
       <div class="mt-n">${cuadro('Pones', N(c.stake) + coin())}${cuadro('En juego', N(c.stake * 2) + coin())}${cuadro('Te llevas', N(c.stake * 2) + coin(), 'hi')}</div>
@@ -150,10 +150,10 @@
     const cs = misCombos();
     const comb = (cs || []).filter((c) => c.status === 'open').map((c) => { const ls = legsDe(c), sig = ls.find((l) => pata(l) === 'pend');
       return { k: 'c', c, live: ls.some((l) => pata(l) === 'vivo'), t: sig ? t2(sig.matches.starts_at) : 0 } });
-    const retos = CH.filter((c) => (c.from === MEK || c.to === MEK) && (c.st === 'pending' || c.st === 'accepted') && byId(c.m))
+    const retos = CH.filter((c) => GM_RETOS.dentro(c) && (c.st === 'pending' || c.st === 'accepted') && byId(c.m))
       .map((c) => ({ k: 'r', r: c, live: !!byId(c.m).live, t: t2(byId(c.m).at) }));
     const xs = [...sueltas, ...comb, ...retos].sort((a, b) => (b.live - a.live) || a.t - b.t);
-    const puesto = xs.reduce((a, x) => a + (x.k === 'b' ? x.b.stake : x.k === 'r' ? x.r.stake : x.c.stake), 0), cobra = xs.reduce((a, x) => a + (x.k === 'b' ? x.b.stake * x.b.o : x.k === 'r' ? x.r.stake * 2 : x.c.stake * Number(x.c.odds)), 0);
+    const puesto = xs.reduce((a, x) => a + (x.k === 'b' ? x.b.stake : x.k === 'r' ? x.r.stake : x.c.stake), 0), cobra = xs.reduce((a, x) => a + (x.k === 'b' ? x.b.stake * x.b.o : x.k === 'r' ? GM_RETOS.pagoDe(x.r, MEK) : x.c.stake * Number(x.c.odds)), 0);
     const vivas = xs.filter((x) => x.live).length, prox = xs.find((x) => !x.live && x.t > NOW);
     const cards = xs.map((x, i) => (x.k === 'b' ? suelta(x.b, i) : x.k === 'r' ? reto(x.r, i) : combinada(x.c, i))).join('');
     const proxTxt = !prox ? '' : prox.k === 'b' ? `${esc(byId(prox.b.m).a)} <i>vs</i> ${esc(byId(prox.b.m).b)}` : prox.k === 'r' ? `<span>Reto: ${esc(byId(prox.r.m).a)} <i>vs</i> ${esc(byId(prox.r.m).b)}</span>` : `<span>Combinada de ${legsDe(prox.c).length}</span>`;
@@ -179,9 +179,11 @@
       out.push({ t: t2(c.settled_at || c.created_at), st: s, v: netoC(c), stake: c.stake, o: Number(c.odds), txt: `Combinada de ${legsDe(c).length}`, c: 1 }) }
     // PM 01-11: "en my bets los challenges tambien cuentan como apuestas, lo digo por las stats": un reto resuelto es una apuesta a cuota 2,00
     // (el que acierta se lleva lo de los dos); los devueltos o sin rival no cuentan
-    for (const c of CH) { if (c.from !== MEK && c.to !== MEK) continue; if (c.st !== 'won_from' && c.st !== 'won_to') continue; if (!c.set) continue;
-      const gano = (c.st === 'won_from') === (c.from === MEK), riv = c.from === MEK ? c.to : c.from, m = byId(c.m);
-      out.push({ t: t2(c.set), st: gano ? 'won' : 'lost', v: gano ? c.stake : -c.stake, stake: c.stake, o: 2, txt: `Reto contra ${g(() => fr(riv).n, '')}`, mk: false, r: 1, sub: m ? `${m.a} vs ${m.b}` : '' }) }
+    // (ahora con la cuota real del reto: 2,00 en un 1v1, el bote entre los que aciertan si hay mas gente)
+    for (const c of CH) { if (!GM_RETOS.dentro(c) || !/^won_/.test(c.st) || !c.set) continue;
+      const gano = GM_RETOS.ganan(c).includes(MEK), m = byId(c.m), pay = GM_RETOS.pagoDe(c, MEK), rs = GM_RETOS.pl(c).filter((x) => x.k !== MEK), n = GM_RETOS.lados(c).length;
+      const riv = (GM_RETOS.pl(c).find((x) => x.k === MEK) || {}).p, otros = GM_RETOS.pl(c).filter((x) => x.p !== riv), rk = (otros[0] || rs[0] || {}).k;
+      out.push({ t: t2(c.set), st: gano ? 'won' : 'lost', v: gano ? pay - c.stake : -c.stake, stake: c.stake, o: GM_RETOS.cuotaEf(c, MEK) || 2, txt: `Reto contra ${g(() => fr(rk).n, '')}${otros.length > 1 ? ' +' + (otros.length - 1) : ''}`, mk: false, r: 1, sub: m ? `${m.a} vs ${m.b}` : '' }) }
     return out.sort((a, b) => a.t - b.t);
   }
   let CHART = null;   // la curva pintada: puntos y escala, para el recuadro que sale al pasar el dedo o el raton
@@ -241,7 +243,7 @@
     const list = set.filter((x) => (bf === 'all' || x.st === bf) && (sp === 'all' || x.sp.includes(sp)));
     const pags = Math.max(1, Math.ceil(list.length / POR)), pg = Math.min(S.bp || 0, pags - 1);
     const carta = (x, i) => (x.k === 'b' ? GM_RES.apuesta(x.b, { i }) : GM_RES.combinada(x.c, { i }));
-    const retos = CH.filter((c) => (c.from === MEK || c.to === MEK) && c.st !== 'pending' && c.st !== 'accepted');
+    const retos = CH.filter((c) => GM_RETOS.dentro(c) && c.st !== 'pending' && c.st !== 'accepted');
     return `<section class="mis-sec mis-his">
       <div class="mis-h"><span class="mis-k">03</span><h2>Historial</h2><i>${set.length}</i></div>
       ${set.length ? `<nav class="mb-fil mis-fil"><span class="mb-fg">${ests.map(([k, n]) => `<button class="chip ${bf === k ? 'on' : ''}" data-bf="${k}">${n} <i>${k === 'all' ? set.length : set.filter((x) => x.st === k).length}</i></button>`).join('')}</span>
