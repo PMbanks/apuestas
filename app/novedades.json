@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "ruleta-3dias-2-0211",
+   "fecha": "2026-11-02",
+   "hora": "06:00",
+   "titulo": "Ruleta de 3 días con más premio",
+   "texto": "La ruleta que giras cada 3 días sube sus premios otra vez: de 75 a 900 monedas, o una caja para abrir. Las probabilidades son las mismas.",
+   "titulo_en": "3 day wheel pays more",
+   "texto_en": "The wheel you spin every 3 days pays more again: from 75 to 900 coins, or a box to open. The odds are the same.",
+   "img": "novedades/lleva-tiempo.webp",
+   "ir": "inicio"
+  },
+  {
    "id": "monedas-reales-0211",
    "fecha": "2026-11-02",
    "hora": "05:30",

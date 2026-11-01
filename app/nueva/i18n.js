@@ -530,7 +530,7 @@
     'Ruleta global de la semana': 'Weekly global wheel', 'Ruleta global de la semana pasada': 'Last week\u2019s global wheel', 'Ruleta global': 'Global wheel',
     'Le ha tocado a': 'It went to', '¡Te ha tocado a ti!': 'You won it!', 'Ruleta de premios': 'Prize wheel', 'Tu ruleta · cada 3 días': 'Your wheel · every 3 days',
     'Tu premio de esta tirada': 'Your prize this spin', 'gira la ruleta': 'spins the wheel',
-    'De 50 a 600 V-Bucks o una caja de CS2 para abrirla tú. Una tirada cada 3 días.': 'From 50 to 600 V-Bucks or a CS2 box to open yourself. One spin every 3 days.',
+    'De 75 a 900 V-Bucks o una caja de CS2 para abrirla tú. Una tirada cada 3 días.': 'From 75 to 900 V-Bucks or a CS2 box to open yourself. One spin every 3 days.',
     'Estás en negativo (': 'You are below zero (', '): no puedes apostar hasta volver a tener saldo. La paga del lunes llega sola.': '): you cannot bet until you have a balance again. The Monday payday comes in by itself.',
     'No te queda saldo para apostar. La paga del lunes llega sola.': 'You have no balance left to bet. The Monday payday comes in by itself.',
     // Ficha de partido pro (01-11, fichapro.js)
