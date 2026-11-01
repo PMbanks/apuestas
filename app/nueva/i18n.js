@@ -17,6 +17,14 @@
 })();
 (function () {
   const D = {
+    // Jugadores (01-11, jugadores.js): ficha de jugador, vista previa, copas y ganancias torneo a torneo
+    'Agentes que más juega': 'Most played agents', 'Últimos 60 días, según vlr.gg. Iconos oficiales de Riot Games.': 'Last 60 days, from vlr.gg. Official icons by Riot Games.',
+    'Rol en el equipo': 'Role in the team', 'Sus mejores premios': 'Biggest prizes', 'Todavía no tenemos sus ganancias: se cargan solas, jugador a jugador.': 'We do not have his earnings yet: they load by themselves, player by player.',
+    'De este nombre solo hay lo que consta en la ficha del equipo.': 'This name only has what the team page lists.', 'No encontramos a este jugador en la ficha de su equipo.': 'We could not find this player on his team page.',
+    'Ganancias de siempre': 'All time earnings', 'En el equipo desde': 'In the team since', 'Función': 'Role', 'Estado': 'Status', 'Ex jugador': 'Former player', 'Equipos': 'Teams', 'Torneo a torneo': 'Tournament by tournament',
+    'Aproximado: Liquipedia da el premio de cada torneo para el equipo entero y aquí se reparte a partes iguales entre cinco jugadores.': 'Approximate: Liquipedia gives each tournament prize for the whole team, and here it is split equally between five players.',
+    'Lo que ha ganado en cada evento, según vlr.gg.': 'What he won at each event, from vlr.gg.', 'hoy': 'today', 'hasta': 'until', 'Pulsa para ver su ficha': 'Click to open his profile',
+    'Puesto final': 'Placement', 'Oro': 'Gold', 'Plata': 'Silver', 'Bronce': 'Bronze',
     // Equipos (01-11, equipos.js): plantilla, palmares de siempre y cambios
     'Titulares': 'Starters', 'Suplentes y banquillo': 'Substitutes and bench', 'Organización': 'Organisation', 'Capitán': 'Captain', 'Cedido': 'On loan', 'Suplente': 'Substitute',
     'Suplente temporal': 'Stand in', 'Inactivo': 'Inactive', 'Desde': 'Since', 'Cambios': 'Changes', 'Entra': 'Joins', 'Sale': 'Leaves', 'Pasa a inactivo': 'Goes inactive', 'Jugador': 'Player',

@@ -52,6 +52,8 @@
   }
   // despues de pintar el panel: pone el icono de cada agente (hasta que llegue, el hueco ya tiene su tamano y no salta nada)
   function post(el) {
+    const top = g(() => S.eqp.pila[S.eqp.pila.length - 1], null);
+    if (top && !top.jug && (top.s === 'v' || top.s === 'c')) for (const b of el.querySelectorAll('.eq-c:not(.st):not(.eqx-p) > b:not([data-jug])')) { b.dataset.jug = b.textContent.trim(); b.dataset.jtid = top.tid || ''; b.dataset.js = top.s; b.dataset.jtn = top.n || ''; b.classList.add('eqx-jn') }
     const on = el && el.querySelector && el.querySelector('.eq-tabs .on'); if (on && on.scrollIntoView) g(() => on.scrollIntoView({ inline: 'center', block: 'nearest' }));   // en el movil la pestana activa puede quedar fuera de la vista
     const hs = el && el.querySelectorAll ? el.querySelectorAll('.eqx-ag[data-ag]:not(.ok)') : [];
     if (!hs.length) return;
@@ -73,6 +75,9 @@
     const d = new Date(Date.UTC(+m[1], +m[2] - 1, +(m[3] || 1), 12));
     return new Intl.DateTimeFormat(loc(), { timeZone: 'UTC', ...(m[3] ? { day: 'numeric' } : {}), month: 'short', year: 'numeric' }).format(d).replace(/\./g, '');
   };
+  // "5º a 8º" -> "5th to 8th" en ingles
+  const ordEn = (n) => { n = +n; const v = n % 100; return n + (v >= 11 && v <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th') };
+  const pst = (t) => (EN() ? String(t || '').replace(/(\d+)º/g, (m, n) => ordEn(n)).replace(/ a /g, ' to ') : String(t || ''));
   const ini = (n) => String(n || '?').trim().slice(0, 2).toUpperCase();
   const cap = (t) => String(t || '').charAt(0).toUpperCase() + String(t || '').slice(1);
 
@@ -129,6 +134,14 @@
   };
 
   /* ---------- pestana Plantilla ---------- */
+  // el nombre de un jugador tocable: jugadores.js lo atiende (ficha al pulsar, vista previa al pasar el raton)
+  const ja = (nick, e) => `data-jug="${esc(nick)}" data-jtid="${esc((e && e.tid) || '')}" data-js="${esc((e && e.s) || '')}" data-jtn="${esc((e && e.n) || '')}"`;
+  const pn = (t) => { const m = String(t || '').match(/^(\d+)/); return m ? +m[1] : 0 };
+  // copa dibujada aqui (no es arte de ningun juego): oro, plata y bronce segun el puesto; del 4 en adelante, un punto
+  const copa = (n) => (n >= 1 && n <= 3 ? `<svg class="eqx-copa c${n}" viewBox="0 0 24 24" aria-hidden="true"><path class="as" d="M7.5 5H4.5v1.6A3.6 3.6 0 0 0 8 10.2M16.5 5h3v1.6a3.6 3.6 0 0 1-3.5 3.6"/><path class="cu" d="M7 3h10v5.2a5 5 0 0 1-10 0z"/><path class="pi" d="M12 13.2v3.3M9.2 16.5h5.6l.7 4H8.5z"/></svg>` : '<span class="eqx-pt"></span>');
+  const LOGO = 'https://liquipedia.net/commons/images/';
+  // icono de un titulo: el logo del torneo (Liquipedia) con una copa pequena, o solo la copa si no hay logo
+  const icono = (l, n) => `<span class="eqx-ic${l ? '' : ' sin'}">${l ? `<img src="${LOGO}${esc(l)}" referrerpolicy="no-referrer" alt="" loading="lazy" onerror="this.parentNode.classList.add('sin');this.remove()">` : ''}${copa(n)}</span>`;
   const sec = (t, n, cuerpo) => `<h4 class="eqx-h"><span>${t}</span>${n != null ? `<i>${n}</i>` : ''}</h4>${cuerpo}`;
   const foto = (j) => (j.foto ? `<img src="${esc(j.foto)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<span class="eqx-i">${esc(ini(j.nombre))}</span>`);
   function agentes(j) {
@@ -140,14 +153,14 @@
     const est = j.estado === 'Inactive' ? ['Inactivo', j.inactivo_desde] : j.estado === 'Substitute' ? ['Suplente', ''] : j.estado === 'Stand-in' ? ['Suplente temporal', ''] : j.estado === 'Loan' ? ['Cedido', ''] : null;
     const real = [j.nombre_real && j.nombre_real !== j.nombre ? sg(j.nombre_real) : '', j.edad ? j.edad + ' años' : ''].filter(Boolean).join(' · ');
     return `<div class="eqx-p${chico ? ' chico' : ''}">
-      <span class="eqx-ph">${foto(j)}${flag(j.pais, null, 'eqx-fb')}</span>
-      <span class="eqx-n"><b>${esc(j.nombre)}</b>${j.capitan ? '<em class="eqx-cap">Capitán</em>' : ''}</span>
+      <span class="eqx-ph" ${ja(j.nombre, e)}>${foto(j)}${flag(j.pais, null, 'eqx-fb')}</span>
+      <span class="eqx-n"><b class="eqx-jn" ${ja(j.nombre, e)}>${esc(j.nombre)}</b>${j.capitan ? '<em class="eqx-cap">Capitán</em>' : ''}</span>
       ${real ? `<small>${esc(real)}</small>` : ''}
       ${e.s === 'v' ? agentes(j) : rolesCs(j)}
       ${est ? `<span class="eqx-est"><span>${est[0]}</span>${est[1] ? ` <span>desde</span> <time>${esc(fe(est[1]))}</time>` : ''}</span>` : j.desde ? `<span class="eqx-ds"><span>Desde</span> <time>${esc(fe(j.desde))}</time></span>` : ''}
     </div>`;
   }
-  const filaStaff = (s) => `<div class="eqx-s">${flag(s.pais) || '<i class="eqx-sf"></i>'}<span class="eqx-sn"><b>${esc(s.nombre)}</b>${s.nombre_real && s.nombre_real !== s.nombre ? `<small>${esc(sg(s.nombre_real))}</small>` : ''}</span><span class="eqx-sr">${esc(rolStaff(s.rol))}</span>${s.desde ? `<time>${esc(fe(s.desde))}</time>` : '<time></time>'}</div>`;
+  const filaStaff = (s, e) => `<div class="eqx-s">${flag(s.pais) || '<i class="eqx-sf"></i>'}<span class="eqx-sn"><b class="eqx-jn" ${ja(s.nombre, e)}>${esc(s.nombre)}</b>${s.nombre_real && s.nombre_real !== s.nombre ? `<small>${esc(sg(s.nombre_real))}</small>` : ''}</span><span class="eqx-sr">${esc(rolStaff(s.rol))}</span>${s.desde ? `<time>${esc(fe(s.desde))}</time>` : '<time></time>'}</div>`;
   function atrib(x, e) {
     const l = (x.atribucion || []).filter((a) => a && a.texto);
     const hs = l.map((a) => (a.url ? `<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.texto)}</a>` : `<span>${esc(a.texto)}</span>`) + (a.licencia ? ` <small>${esc(sg(a.licencia))}</small>` : ''));
@@ -161,22 +174,27 @@
     const tec = (x.staff || []).filter(esTec), org = (x.staff || []).filter((s) => !esTec(s));
     let h = sec(v2 ? 'Titulares' : 'Plantilla', tit.length, `<div class="eqx-pl">${tit.map((j) => card(j, e)).join('') || '<p class="hint">Sin titulares a la vista.</p>'}</div>`);
     if (ban.length) h += sec('Suplentes y banquillo', ban.length, `<div class="eqx-pl chico">${ban.map((j) => card(j, e, true)).join('')}</div>`);
-    if (tec.length) h += sec('Cuerpo técnico', tec.length, `<div class="eqx-ss">${tec.map(filaStaff).join('')}</div>`);
-    if (org.length) h += sec('Organización', org.length, `<div class="eqx-ss org">${org.map(filaStaff).join('')}</div>`);
+    if (tec.length) h += sec('Cuerpo técnico', tec.length, `<div class="eqx-ss">${tec.map((s) => filaStaff(s, e)).join('')}</div>`);
+    if (org.length) h += sec('Organización', org.length, `<div class="eqx-ss org">${org.map((s) => filaStaff(s, e)).join('')}</div>`);
     return h + atrib(x, e);
   }
 
   /* ---------- pestana Palmares ---------- */
   function palmares(e, o, P) {
     const T = o.x.titulos; if (!T || !(T.lista || []).length) return null;
-    const tiers = Object.entries(T.por_tier || {}).filter(([k]) => tier(k)).sort((a, b) => 'SABCD'.indexOf(a[0]) - 'SABCD'.indexOf(b[0])), filtro = tier(P.tier) && T.por_tier[P.tier] ? P.tier : '';
-    const lista = filtro ? T.lista.filter((x) => x.k === filtro) : T.lista, pg = Math.min(P.pag || 0, Math.max(0, Math.ceil(lista.length / EQ_POR) - 1));
-    const filas = lista.slice(pg * EQ_POR, pg * EQ_POR + EQ_POR).map((x) => `<div class="eqx-w${x.k === 'S' ? ' s' : ''}"><time>${esc(fe(x.f))}</time>
-      <span class="eqx-wn"><b>${esc(sg(x.t))}</b>${x.r || x.m ? `<small>${x.m ? esc(x.m) : ''}${x.r ? ` <span>contra</span> ${esc(sg(x.r))}` : ''}</small>` : ''}</span>
+    const todos = [...T.lista.map((x) => ({ ...x, n: 1 })), ...(T.podios || [])].sort((a, b) => String(b.f).localeCompare(String(a.f)));
+    const pto = ['1', '2', '3'].includes(String(P.pto)) ? +P.pto : 0, porPto = (n) => todos.filter((x) => x.n === n).length;
+    const base = pto ? todos.filter((x) => x.n === pto) : todos;
+    const tiers = [...new Set(base.map((x) => x.k).filter(tier))].sort((a, b) => 'SABCD'.indexOf(a) - 'SABCD'.indexOf(b)), filtro = tier(P.tier) && tiers.includes(P.tier) ? P.tier : '';
+    const lista = filtro ? base.filter((x) => x.k === filtro) : base, pg = Math.min(P.pag || 0, Math.max(0, Math.ceil(lista.length / EQ_POR) - 1));
+    const filas = lista.slice(pg * EQ_POR, pg * EQ_POR + EQ_POR).map((x) => `<div class="eqx-w n${x.n}">${icono(x.l, x.n)}
+      <span class="eqx-wn"><b>${esc(sg(x.t))}</b><small><time>${esc(fe(x.f))}</time>${x.m ? ` · ${esc(x.m)}` : ''}${x.r ? ` <span>contra</span> ${esc(sg(x.r))}` : ''}</small></span>
       <span class="eqx-wk">${x.k ? esc(x.k) : ''}</span>${x.p ? `<b class="eqx-wp">${N(x.p)} $</b>` : '<span></span>'}</div>`).join('');
     const kp = (a, b) => (b != null ? `<div><span class="lab">${a}</span><b>${b}</b></div>` : '');
+    const chip = (n, txt) => `<button data-eqpto="${n}" class="${pto === n ? 'on' : ''}">${n ? copa(n) : ''}${txt}<i>${n ? porPto(n) : todos.length}</i></button>`;
     return `<div class="eqx-tt"><div class="eqx-big"><span class="lab">Torneos ganados</span><b>${N(T.total)}</b></div>${kp('Segundo puesto', T.segundos != null ? N(T.segundos) : null)}${kp('Tercer puesto', T.terceros != null ? N(T.terceros) : null)}${kp('Torneos jugados', T.jugados != null ? N(T.jugados) : null)}${kp('Desde', T.desde ? esc(fe(T.desde)) : null)}</div>
-      <nav class="eqx-tr"><span class="lab">Nivel del torneo</span><button data-eqtier="" class="${filtro ? '' : 'on'}">Todas</button>${tiers.map(([k, n]) => `<button data-eqtier="${k}" class="${filtro === k ? 'on' : ''}">${k}<i>${n}</i></button>`).join('')}</nav>
+      <nav class="eqx-tr"><span class="lab">Puesto final</span>${chip(0, 'Todos')}${chip(1, 'Oro')}${porPto(2) ? chip(2, 'Plata') : ''}${porPto(3) ? chip(3, 'Bronce') : ''}</nav>
+      <nav class="eqx-tr"><span class="lab">Nivel del torneo</span><button data-eqtier="" class="${filtro ? '' : 'on'}">Todas</button>${tiers.map((k) => `<button data-eqtier="${k}" class="${filtro === k ? 'on' : ''}">${k}</button>`).join('')}</nav>
       <div class="eqx-ws">${filas}</div>${eqPags(lista.length, EQ_POR, pg)}
       <p class="eqx-nota">Sin clasificatorias ni partidos de exhibición.</p>${atrib(o.x, e)}`;
   }
@@ -198,24 +216,28 @@
     for (const c of ev.slice(pg * POR, pg * POR + POR)) {
       const y = c.f.slice(0, 4); if (y !== anio) { h += `<span class="lab eq-g">${y}</span>`; anio = y }
       const k = c.k === 'in' ? ['Entra', 'in'] : c.k === 'out' ? ['Sale', 'out'] : ['Pasa a inactivo', 'ina'];
-      h += `<div class="eqx-c ${k[1]}"><time>${esc(fe(c.f))}</time><span class="eqx-ck">${k[0]}</span><span class="eqx-cq">${flag(c.pais) || '<i class="eqx-sf"></i>'}<b>${esc(c.q)}</b><small>${c.rol === 'J' ? '<span>Jugador</span>' : esc(c.rol)}</small></span>${c.nuevo ? `<span class="eqx-cn"><span>a</span> ${esc(sg(c.nuevo))}</span>` : '<span></span>'}</div>`;
+      h += `<div class="eqx-c ${k[1]}"><time>${esc(fe(c.f))}</time><span class="eqx-ck">${k[0]}</span><span class="eqx-cq">${flag(c.pais) || '<i class="eqx-sf"></i>'}<b class="eqx-jn" ${ja(c.q, e)}>${esc(c.q)}</b><small>${c.rol === 'J' ? '<span>Jugador</span>' : esc(c.rol)}</small></span>${c.nuevo ? `<span class="eqx-cn"><span>a</span> ${esc(sg(c.nuevo))}</span>` : '<span></span>'}</div>`;
     }
     return `<div class="eqx-cs">${h}</div>${eqPags(ev.length, POR, pg)}${atrib(o.x, e)}`;
   }
 
   /* ---------- pestana Ganancias (con la nota de la fuente) ---------- */
-  function ganancias(o) {
+  function ganancias(e, o, P) {
     const G = o.gan; if (!G) return null;
-    const mx = Math.max(1, ...G.anos.map((x) => +x.v || 0));
+    const mx = Math.max(1, ...G.anos.slice(-6).map((x) => +x.v || 0)), T = o.x.titulos, pr = (T && T.premios) || [];
+    const pg = Math.min(P.pag || 0, Math.max(0, Math.ceil(pr.length / EQ_POR) - 1));
+    const filas = pr.slice(pg * EQ_POR, pg * EQ_POR + EQ_POR).map((x) => `<div class="eqx-w g n${pn(x[2])}"><span class="eqx-ic sin">${copa(pn(x[2]))}</span>
+      <span class="eqx-wn"><b>${esc(sg(x[1]))}</b><small><time>${esc(fe(x[0]))}</time>${x[2] ? ` · ${esc(sg(pst(x[2])))}` : ''}</small></span><span class="eqx-wk">${tier(x[4]) ? esc(x[4]) : ''}</span><b class="eqx-wp">${N(x[3])} $</b></div>`).join('');
     return `<div class="eq-gt"><span class="lab">En total</span><b>${G.total != null ? N(G.total) + ' $' : '·'}</b></div>
-      ${G.anos.length ? `<div class="eq-ga">${G.anos.map((x) => `<div><span>${esc(String(x.a))}</span><i style="width:${((+x.v || 0) / mx) * 100}%"></i><b>${N(x.v)} $</b></div>`).join('')}</div>` : ''}
+      ${G.anos.length ? `<div class="eq-ga">${G.anos.slice(-6).map((x) => `<div><span>${esc(String(x.a))}</span><i style="width:${((+x.v || 0) / mx) * 100}%"></i><b>${N(x.v)} $</b></div>`).join('')}</div>` : ''}
+      ${pr.length ? `<h4 class="eqx-h"><span>Torneo a torneo</span><i>${T.premios_n || pr.length}</i></h4><div class="eqx-ws">${filas}</div>${eqPags(pr.length, EQ_POR, pg)}` : ''}
       <p class="eqx-nota">${G.nota ? 'Aproximado. Incluye lo que ganaron los jugadores mientras representaban al equipo.' : ''}</p>${atrib(o.x, { s: 'c' })}`;
   }
   function tab(t, e, o, P) {
     if (!o || !o.x) return null;
     if (e.s === 'f') return t === 'palmares' ? palmaresFutbol(o) : null;
     if (e.s !== 'v' && e.s !== 'c') return null;
-    return t === 'plantilla' ? plantilla(e, o) : t === 'palmares' ? palmares(e, o, P) : t === 'cambios' ? cambios(e, o, P) : t === 'ganancias' ? ganancias(o) : null;
+    return t === 'plantilla' ? plantilla(e, o) : t === 'palmares' ? palmares(e, o, P) : t === 'cambios' ? cambios(e, o, P) : t === 'ganancias' ? ganancias(e, o, P) : null;
   }
 
   /* ---------- tocar un logo abre el equipo ---------- */
@@ -251,5 +273,10 @@
     e.stopPropagation(); S.eqp.tier = b.dataset.eqtier; S.eqp.pag = 0; render();
   }, true);
 
-  window.GM_EQ = { flag, norm, cab, tab, post, abre, nombrePais, de: deLogo };
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest && e.target.closest('[data-eqpto]'); if (!b || !g(() => S.eqp, null)) return;
+    e.stopPropagation(); S.eqp.pto = b.dataset.eqpto; S.eqp.pag = 0; render();
+  }, true);
+
+  window.GM_EQ = { flag, norm, cab, tab, post, abre, nombrePais, de: deLogo, fe, sg, ngr, cap, ini, copa, pst, pn, icono, rolCs, rolStaff, esTec, cargaAg, ja, loc };
 })();

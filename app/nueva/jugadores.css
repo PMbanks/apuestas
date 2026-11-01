@@ -1,0 +1,69 @@
+/* Jugadores (01-11): nombres tocables, ficha de jugador y vista previa al pasar el raton. Se apoya en equipos.css y en el panel de equipo de app.css. */
+
+/* un nombre de jugador que se puede tocar */
+.eqx-jn{cursor:pointer;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px;text-decoration-thickness:1px;transition:color var(--t),text-decoration-color var(--t)}
+.eqx-jn:hover{color:var(--acc);text-decoration-color:currentColor}
+.eqx-ph[data-jug]{cursor:pointer}
+.eqx-ph[data-jug]:hover>img:first-child,.eqx-ph[data-jug]:hover>.eqx-i{box-shadow:0 0 0 2px rgba(242,193,78,.55)}
+.vv-p b.eqx-jn{display:inline-block}
+
+/* cabecera de la ficha de jugador */
+.eq-h.fj-h{align-items:flex-start;gap:16px}
+.fj-ph{position:relative;flex:none;display:block;width:76px;height:76px}
+.fj-ph>img,.fj-ph .eqx-i{width:76px;height:76px;border-radius:50%;object-fit:cover;object-position:50% 14%;background:rgba(255,255,255,.07)}
+.fj-ph .eqx-fb{position:absolute;right:-5px;bottom:2px;width:26px;height:19px;margin:0;border-radius:4px;box-shadow:0 0 0 3px var(--bg)}
+.fj-ph.p,.fj-ph.p>img,.fj-ph.p .eqx-i{width:58px;height:58px}
+.fj-ph.p .eqx-fb{width:21px;height:15px;right:-4px;bottom:0;box-shadow:0 0 0 2px var(--bg)}
+.fj-h .eq-hn h2{margin-top:3px}
+.fj-real{display:block;margin-top:3px;font:500 12.5px var(--sans);color:var(--mute)}
+.fj-eqb{margin-top:8px;padding:5px 12px 5px 8px;border-radius:999px;background:rgba(255,255,255,.06)}
+.fj-eqb img{width:18px;height:18px}
+.fj-eqb:hover{background:rgba(255,255,255,.1)}
+.fj-vacio{margin:18px 0}
+.fj-nota{margin:4px 0 6px}
+
+/* agentes en grande (ficha) */
+.fj-ags{display:flex;flex-wrap:wrap;gap:14px 18px;margin-top:4px}
+.fj-ags .eqx-ag{width:auto;grid-template-columns:48px auto;grid-template-rows:auto auto;column-gap:12px;row-gap:1px;justify-items:start;align-items:center;min-width:130px}
+.fj-ags .eqx-ag img{grid-row:1/3;width:48px;height:48px}
+.fj-ags .eqx-ag u{display:block;grid-column:2;grid-row:1;align-self:end;font:700 14px var(--sans);color:var(--ink);text-decoration:none}
+.fj-ags .eqx-ag i{grid-column:2;grid-row:2;align-self:start;font:500 11px var(--mono);color:var(--dim)}
+.fj-ags .eqx-ag.sin{grid-template-columns:auto}
+.fj-ags .eqx-ag.sin u{grid-row:1;padding:0;background:none}
+
+/* equipos por los que paso */
+.fj-eqs{display:grid}
+.fj-eq{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:2px 16px;min-height:50px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.fj-eq b{font:700 14px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fj-eq small{grid-column:1;font:11px var(--mono);color:var(--acc)}
+.fj-rg{grid-column:2;grid-row:1/3;align-self:center;font:11.5px var(--mono);color:var(--dim);text-align:right}
+.fj-rg time{color:var(--soft)}
+.fj-eq.ya b{color:var(--acc)}
+
+/* vista previa al pasar el raton: pequena, al lado del nombre, sin tapar nada y sin captar el raton */
+.fjv{position:fixed;z-index:95;width:292px;padding:14px 16px 12px;border-radius:18px;background:rgba(30,34,43,.97);box-shadow:0 18px 50px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.06);pointer-events:none;animation:fjvIn .16s var(--ease)}
+@keyframes fjvIn{from{opacity:0;transform:translateY(4px)}}
+html.sin-anim .fjv{animation:none}
+.fjv-c{display:flex;gap:13px;align-items:center}
+.fjv-t{display:grid;gap:3px;min-width:0}
+.fjv-t b{font:800 18px/1.1 var(--disp);letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fjv-t small{font:11.5px var(--sans);color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fjv-eq{display:flex;align-items:center;gap:6px;font:600 12px var(--sans);color:var(--soft)}
+.fjv-eq img{width:16px;height:16px;object-fit:contain}
+.fjv-r{font:11px var(--mono);color:var(--acc)}
+.fjv .eqx-ags{margin-top:3px;gap:6px}
+.fjv .eqx-ag{width:30px;grid-template-rows:26px 10px}
+.fjv .eqx-ag img{width:26px;height:26px}
+.fjv .eqx-ro{padding:2px 8px}
+.fjv .eqx-ros{margin-top:2px}
+.fjv-g{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.07)}
+.fjv-g:has(.lab:empty){display:none}
+.fjv-g b{font:600 15px var(--mono);color:var(--win)}
+.fjv-h{margin-top:9px;font:10.5px var(--mono);letter-spacing:.06em;color:var(--dim)}
+
+@media (max-width:860px){
+  .fj-ph,.fj-ph>img,.fj-ph .eqx-i{width:62px;height:62px}
+  .fj-ags{gap:12px}
+  .fj-ags .eqx-ag{min-width:calc(50% - 10px)}
+}
+@media (hover:none){.fjv{display:none}}

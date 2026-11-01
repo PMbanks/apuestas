@@ -206,8 +206,8 @@
       let jug = '';
       if (m.jug && m.jug.some((l) => l.length)) {
         const val = (v) => (v == null ? '·' : esc(v));
-        const fila = (p) => `<div class="vv-p"><span class="ag">${p.ag?.img ? `<img src="${esc(p.ag.img)}" referrerpolicy="no-referrer" alt="${esc(p.ag.name)}" title="${esc(p.ag.name)}">` : ''}</span><b>${esc(p.n)}${p.flag ? (window.GM_EQ && GM_EQ.flag(p.flag)) || `<small>${esc(String(p.flag).toUpperCase())}</small>` : ''}</b><span>${val(p.acs)}</span><span>${p.k == null && p.d == null && p.as == null ? '·' : val(p.k) + '/' + val(p.d) + '/' + val(p.as)}</span><span class="adr">${val(p.adr)}</span></div>`;
-        const tabla = (n, l, c) => (l.length ? `<div class="vv-pt ${c}"><div class="vv-p h"><span></span><b>${esc(n)}</b><span>ACS</span><span>K/D/A</span><span class="adr">ADR</span></div>${l.map(fila).join('')}</div>` : '');
+        const fila = (p, tn) => `<div class="vv-p"><span class="ag">${p.ag?.img ? `<img src="${esc(p.ag.img)}" referrerpolicy="no-referrer" alt="${esc(p.ag.name)}" title="${esc(p.ag.name)}">` : ''}</span><b class="eqx-jn" data-jug="${esc(p.n)}" data-jtn="${esc(tn)}">${esc(p.n)}${p.flag ? (window.GM_EQ && GM_EQ.flag(p.flag)) || `<small>${esc(String(p.flag).toUpperCase())}</small>` : ''}</b><span>${val(p.acs)}</span><span>${p.k == null && p.d == null && p.as == null ? '·' : val(p.k) + '/' + val(p.d) + '/' + val(p.as)}</span><span class="adr">${val(p.adr)}</span></div>`;
+        const tabla = (n, l, c) => (l.length ? `<div class="vv-pt ${c}"><div class="vv-p h"><span></span><b>${esc(n)}</b><span>ACS</span><span>K/D/A</span><span class="adr">ADR</span></div>${l.map((p) => fila(p, n)).join('')}</div>` : '');
         jug = `<div class="vv-ps">${tabla(a.n, m.jug[0], 'a')}${tabla(b.n, m.jug[1], 'b')}</div>`;
       }
       det = `<section class="vv-det ${m.est}"><header><h3>${esc(mapaNombre(m))}</h3><span class="${enCurso ? 'rojo' : ''}">${enCurso ? '<i class="pto"></i>' : ''}${estadoMapa}</span></header>${marcador}${cinta}${jug}</section>`;

@@ -19,7 +19,8 @@ const DAY = 864e5;
 
 export const CFG = {
   vida: 3 * DAY,                 // una ficha no se rehace antes de 3 dias
-  presupuestoMs: 170e3,          // lo maximo que puede alargar una pasada
+  presupuestoMs: 215e3,          // lo maximo que puede alargar una pasada
+  maxJugCs: 3,                   // jugadores de CS2 por pasada (1 action=parse cada uno; los de Valorant son una pagina de vlr.gg y no cuentan)
   maxEsports: 2,                 // equipos de Valorant y CS2 por pasada (2 action=parse cada uno, la pagina y su Results, 1 cada 32 s)
   ver: 2,                        // version del formato de extra (v2: titulares y banquillo, roles de CS2, agentes de Valorant, titulos de siempre, cambios)
   maxFutbol: 8,
@@ -61,9 +62,9 @@ async function lp(wiki, params, esParse) {
   return j;
 }
 let webUlt = 0;
-async function web(url, headers = {}) {
+async function web(url, headers = {}, json = true) {
   const espera = webUlt + CFG.gapWeb - Date.now(); if (espera > 0) await sleep(espera);
-  try { return await pedir(url, { headers: { 'user-agent': UA_LP, ...headers } }); } finally { webUlt = Date.now(); }
+  try { return await pedir(url, { headers: { 'user-agent': UA_LP, ...headers }, json }); } finally { webUlt = Date.now(); }
 }
 
 // ---------- texto y HTML ----------
@@ -174,6 +175,7 @@ export function leerPaginaLp(html, wiki) {
 }
 
 // todos los torneos ganados de siempre (pagina "Equipo/Results" de Liquipedia): total, por categoria y la lista compacta
+const logoCorto = (u) => (u && /^https:\/\/liquipedia\.net\/commons\/images\//.test(u) ? u.replace('https://liquipedia.net/commons/images/', '') : null);
 export function resumirTitulos(res) {
   const ok = (res || []).filter((x) => x.fecha);
   if (!ok.length) return null;
@@ -181,12 +183,71 @@ export function resumirTitulos(res) {
   const gan = ok.filter((x) => x.puesto_n === 1 && torneo(x));
   const porTier = {};
   for (const x of gan) porTier[x.tier] = (porTier[x.tier] || 0) + 1;
+  const conPremio = ok.filter((x) => x.premio > 0), porAno = {};
+  for (const x of conPremio) { const a = x.fecha.slice(0, 4); porAno[a] = (porAno[a] || 0) + x.premio; }
   return {
     total: gan.length, otros: ok.filter((x) => x.puesto_n === 1 && !torneo(x)).length,
     segundos: ok.filter((x) => x.puesto_n === 2 && torneo(x)).length, terceros: ok.filter((x) => x.puesto_n === 3 && torneo(x)).length, jugados: ok.filter(torneo).length,
     por_tier: porTier, desde: ok[ok.length - 1].fecha,
-    lista: gan.slice(0, 120).map((x) => ({ f: x.fecha, t: x.torneo, k: x.tier, p: x.premio, r: x.rival || null, m: x.marcador || null })),
+    lista: gan.slice(0, 120).map((x) => ({ f: x.fecha, t: x.torneo, k: x.tier, p: x.premio, r: x.rival || null, m: x.marcador || null, l: logoCorto(x.logo) })),
+    // segundos y terceros puestos de los torneos grandes (S, A y B), para que el palmares tenga plata y bronce ademas del oro
+    podios: ok.filter((x) => (x.puesto_n === 2 || x.puesto_n === 3) && torneo(x) && /^[SAB]$/.test(x.tier)).slice(0, 80).map((x) => ({ f: x.fecha, t: x.torneo, k: x.tier, n: x.puesto_n, p: x.premio, l: logoCorto(x.logo) })),
+    // todo lo que cobro el equipo torneo a torneo: [fecha, torneo, puesto, premio, categoria]
+    premios: conPremio.slice(0, 150).map((x) => [x.fecha, x.torneo, x.puesto || '', x.premio, x.tier || '']),
+    premios_total: conPremio.reduce((a, x) => a + x.premio, 0), premios_n: conPremio.length,
+    por_ano: Object.entries(porAno).map(([ano, usd]) => ({ ano: +ano, usd })).sort((a, b) => a.ano - b.ano),
   };
+}
+
+// ganancias de un jugador de Liquipedia, de su pagina Jugador/Results: cada fila trae el premio de ESE EQUIPO (no el reparto), asi que aqui
+// se reparte a partes iguales entre 5 y se marca como aproximado. Devuelve filas [fecha, torneo, puesto, premio estimado, equipo]
+export function leerResultadosJugador(html, reparto = 5) {
+  const filas = [];
+  for (const tb of tablas(html)) {
+    const cab = tb.filas[0].map((c) => c.txt);
+    if (!(cab.includes('Date') && cab.includes('Place') && cab.includes('Prize') && cab.includes('Team'))) continue;
+    for (const f of tb.filas.slice(1)) {
+      const n = f.length; if (n < 8) continue;
+      const fecha = fechaLp(f[0].txt); if (!fecha) continue;
+      const premioTxt = f[n - 1].txt, premio = /\d/.test(premioTxt) ? numero(premioTxt) : null;
+      filas.push({ fecha, puesto: puestoEs(f[1].txt), tier: f[2].txt.replace(/-Tier$/, '') || null, torneo: f[n - 5].txt, equipo: f[n - 4].txt || null, premio, est: premio ? Math.round(premio / reparto) : 0 });
+    }
+  }
+  return filas;
+}
+export function resumirGananciasJugador(filas, reparto = 5) {
+  const con = filas.filter((x) => x.est > 0);
+  if (!filas.length) return null;
+  return { total: con.reduce((a, x) => a + x.est, 0), aprox: true, reparto, n: con.length, jugados: filas.length,
+    lista: con.slice(0, 80).map((x) => [x.fecha, x.torneo, x.puesto, x.est, x.equipo || '']) };
+}
+
+// ganancias de un jugador de Valorant, de su pagina de vlr.gg ("Event Placements"): cada evento con su fase, puesto, premio y equipo
+export function leerGananciasVlr(html) {
+  const t = String(html).replace(/<script[\s\S]*?<\/script>/g, '');
+  const i = t.search(/Event Placements/i); if (i < 0) return null;
+  const sec = t.slice(i);
+  const tot = sec.match(/Total Winnings[\s\S]{0,260}?\$\s*([\d,]+)/);
+  const lista = [];
+  for (const it of sec.split('player-event-item').slice(1)) {
+    const trozo = it.split('</a>')[0];
+    const titulo = (trozo.match(/class="text-of"[^>]*>\s*([^<]+?)\s*</) || [])[1]; if (!titulo) continue;
+    const ano = (trozo.match(/<div>\s*((?:19|20)\d\d)\s*<\/div>\s*$/) || [])[1] || null;
+    let premio = 0, mejor = null, equipo = '';
+    for (const b of trozo.split('line-height: 1.2;">').slice(1)) {
+      const fase = limpio(((b.match(/ge-text-light">([\s\S]*?)<\/span>/) || [])[1] || '').replace(/&ndash;/g, '|'));
+      const [stage, puesto] = fase.split('|').map((x) => x.trim());
+      const p = (b.match(/\$([\d,]+)/) || [])[1], v = p ? Number(p.replace(/,/g, '')) : 0;
+      const eq = limpio(b.split('</div>')[0].replace(/<span[\s\S]*?<\/span>/g, ' ').replace(/<br\s*\/?>/g, ' '));
+      premio += v;
+      if (!mejor || (v && !mejor.v)) mejor = { stage, puesto: puestoEs(puesto || '').replace(/\s*[–—]\s*/g, ' a '), v };
+      if (!equipo) equipo = eq;
+    }
+    lista.push([ano, dec(titulo).trim(), (mejor && mejor.puesto) || '', premio, equipo, (mejor && mejor.stage) || '']);
+  }
+  if (!lista.length && !tot) return null;
+  return { total: tot ? Number(tot[1].replace(/,/g, '')) : lista.reduce((a, x) => a + x[3], 0), aprox: false, n: lista.filter((x) => x[3] > 0).length, jugados: lista.length,
+    lista: lista.slice(0, 80) };
 }
 
 async function lpTitulo(wiki, nombre) {
@@ -198,7 +259,20 @@ async function lpTitulo(wiki, nombre) {
   return ok ? ok.title : null;
 }
 
-// roles de CS2 (igl, awp, rifle, entry, support, lurk...): "|roles=" de la ficha de cada jugador, solo la seccion 0 de su pagina
+// ficha de cada jugador de CS2 en Liquipedia (solo la seccion 0 de su pagina, una consulta barata para varios): roles (igl, awp, rifle,
+// entry, support, lurk), equipo actual y los equipos por los que paso con sus fechas ({{TH|desde — hasta|equipo|nota}})
+const fechaTh = (t) => { const m = String(t || '').match(/(\d{4})(?:-(\d\d|\?\?))?(?:-(\d\d|\?\?))?/); if (!m) return null; return m[2] && m[2] !== '??' ? (m[3] && m[3] !== '??' ? `${m[1]}-${m[2]}-${m[3]}` : `${m[1]}-${m[2]}`) : m[1]; };
+export function leerInfoJugadorLp(c) {
+  const m = c.match(/\|\s*roles?\s*=\s*([^\n|]*)/i);
+  const roles = m ? m[1].split(/[,;/]/).map((r) => r.trim().toLowerCase()).filter((r) => /^[a-z][a-z -]{1,20}$/.test(r)).slice(0, 3) : [];
+  const tm = c.match(/\|\s*team\s*=\s*([^\n|]*)/i), hist = [];
+  for (const h of c.matchAll(/\{\{TH\|([^|}]*)\|([^|}]*)(?:\|([^|}]*))?\}\}/g)) {
+    const [d, a] = String(h[1]).split(/\s*[—–]\s*|\s+-\s+/);
+    const equipo = String(h[2]).replace(/\[\[|\]\]/g, '').trim(); if (!equipo) continue;
+    hist.push({ equipo, desde: fechaTh(d), hasta: /present/i.test(a || '') ? null : fechaTh(a), nota: (h[3] || '').trim() || null });
+  }
+  return { roles, team: tm ? tm[1].replace(/\[\[|\]\]/g, '').trim() : '', hist: hist.reverse().slice(0, 20) };
+}
 async function rolesLp(wiki, titulos) {
   const lista = [...new Set(titulos.filter(Boolean))].slice(0, 40), res = new Map();
   if (!lista.length) return res;
@@ -208,9 +282,8 @@ async function rolesLp(wiki, titulos) {
   for (const x of j.query?.redirects || []) alias.set(x.from, x.to);
   for (const p of j.query?.pages || []) {
     const c = p.revisions?.[0]?.slots?.main?.content || '';
-    const m = c.match(/\|\s*roles?\s*=\s*([^\n|]*)/i);
-    const roles = m ? m[1].split(/[,;/]/).map((r) => r.trim().toLowerCase()).filter((r) => /^[a-z][a-z -]{1,20}$/.test(r)).slice(0, 3) : [];
-    if (roles.length) res.set(p.title, roles);
+    const i = leerInfoJugadorLp(c);
+    if (i.roles.length || i.hist.length || i.team) res.set(p.title, i);
   }
   const buscar = (t) => { let x = t; for (let i = 0; i < 3 && alias.has(x); i++) x = alias.get(x); return res.get(x) || res.get(t.replace(/_/g, ' ')) || null; };
   return new Map(lista.map((t) => [t, buscar(t)]).filter(([, r]) => r));
@@ -243,6 +316,12 @@ function fechaVlr(txt) {   // "joined in January 2024" -> "2024-01"
   const m = String(txt || '').toLowerCase().match(/(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/);
   return m ? `${m[2]}-${String(mesesIng.indexOf(m[1]) + 1).padStart(2, '0')}` : (String(txt || '').match(/\d{4}/) || [null])[0];
 }
+export function fechasVlr(txt) {
+  const t = String(txt || '').toLowerCase(), re = /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/g, f = [...t.matchAll(re)].map((m) => `${m[2]}-${String(mesesIng.indexOf(m[1]) + 1).padStart(2, '0')}`);
+  if (/^\s*joined/.test(t)) return { desde: f[0] || null, hasta: null };
+  if (/^\s*left/.test(t)) return { desde: null, hasta: f[0] || null };
+  return { desde: f[0] || null, hasta: f[1] || null };
+}
 async function vlrAnteriores(equipoVlr, nicks) {
   const res = new Map();
   const lista = [...(equipoVlr.players || []), ...(equipoVlr.staff || [])];
@@ -252,7 +331,7 @@ async function vlrAnteriores(equipoVlr, nicks) {
       const d = (await web(`${VLR}/players/${p.id}`)).data;
       const agentes = (d?.agents || []).filter((a) => a.name).slice(0, 4).map((a) => ({ a: String(a.name).toLowerCase(), pj: a.mapsPlayed ?? null, pct: a.pickRate ?? null }));
       const foto = d?.info?.img && !/\/ph\/sil\.png/.test(d.info.img) ? d.info.img : null;
-      res.set(nick, { agentes, foto_vlr: foto, vlr_url: d?.info?.url || p.url || null, pais_vlr: d?.info?.flag ? String(d.info.flag).toUpperCase() : null, desde_vlr: fechaVlr(d?.team?.joined), anteriores: (d?.pastTeams || []).filter((x) => x.name).slice(0, 6).map((x) => ({ equipo: x.name, hasta: fechaVlr(x.info), nota: x.info || null })) });
+      res.set(nick, { agentes, foto_vlr: foto, vlr_url: d?.info?.url || p.url || null, pais_vlr: d?.info?.flag ? String(d.info.flag).toUpperCase() : null, desde_vlr: fechaVlr(d?.team?.joined), anteriores: (d?.pastTeams || []).filter((x) => x.name).slice(0, 14).map((x) => { const f = fechasVlr(x.info); return { equipo: x.name, desde: f.desde, hasta: f.hasta, nota: x.info || null }; }) });
     } catch {}
   }
   return res;
@@ -318,8 +397,12 @@ export async function fichaEsports(c, ps) {
 
   if (lpOk && c.game !== 'valorant') {   // CS2: roles (IGL, AWPer, rifler, entry, support, lurker) desde la ficha de cada jugador
     try {
-      const roles = await rolesLp(wiki, extra.jugadores.filter((j) => j.estado !== 'Inactive').map((j) => j._t));
-      for (const j of extra.jugadores) { const r = j._t && roles.get(j._t); if (r) j.roles = r; }
+      const info = await rolesLp(wiki, extra.jugadores.filter((j) => j.estado !== 'Inactive').map((j) => j._t));
+      for (const j of extra.jugadores) {
+        const r = j._t && info.get(j._t); if (!r) continue;
+        if (r.roles.length) j.roles = r.roles;
+        if (r.hist.length) j.anteriores = r.hist;
+      }
     } catch (e) { extra.aviso_roles = String(e.message || e).slice(0, 120); }
   }
   for (const j of extra.jugadores) delete j._t;
@@ -327,6 +410,9 @@ export async function fichaEsports(c, ps) {
     try {
       const r = await lp(wiki, { action: 'parse', page: `${titulo}/Results`, prop: 'text', redirects: 1, disablelimitreport: 1, disabletoc: 1 }, true);
       extra.titulos = resumirTitulos(leerPaginaLp(r.parse.text, wiki).palmares);
+      const T = extra.titulos;
+      if (T && T.premios_total && !extra.ganancias) extra.ganancias = { total: T.premios_total, moneda: 'USD', por_ano: T.por_ano, nota: 'Suma de los premios de torneos; incluye lo que ganaron los jugadores mientras representaban al equipo' };
+      else if (T && extra.ganancias && !extra.ganancias.por_ano && T.por_ano.length) extra.ganancias.por_ano = T.por_ano;
     } catch (e) { extra.aviso_results = String(e.message || e).slice(0, 120); }
   }
 
@@ -507,6 +593,78 @@ export async function fichaUfc(c) {
   return extra;
 }
 
+// ---------- jugadores de esports: ganancias torneo a torneo (db/050, teams.pj) ----------
+// Aparte de la ficha del equipo porque se rehace a otro ritmo y la ficha se reescribe entera cada vez.
+//   Valorant: la pagina del jugador en vlr.gg (una peticion normal, rapida): cada evento con fase, puesto, premio y equipo, y el total.
+//   CS2: la pagina Jugador/Results de Liquipedia (un action=parse, 1 cada 32 s): premio del equipo repartido entre 5, aproximado.
+// Un jugador no se rehace antes de 7 dias (1 dia tras un fallo); la clave del jugador es su nick en minusculas.
+const JVIDA = 7 * DAY, JFALLO = DAY;
+const titulares = (p) => (p || []).filter((x) => x && x[0] && (!x[1] || x[1] === 'Loan')).slice(0, 7);
+const pendienteJ = (t, ahora) => !t || ahora - t > JVIDA;
+const entradaFallo = (ahora, motivo) => ({ t: ahora - JVIDA + JFALLO, fallo: String(motivo || '').slice(0, 80) });
+
+export async function jugadoresValorant(c, nicks, ahora = Date.now()) {
+  const out = {};
+  const ev = await vlrEquipo(c.nombre, c.acr);
+  if (!ev) { for (const n of nicks) out[n.toLowerCase()] = entradaFallo(ahora, 'equipo sin pagina en vlr.gg'); return out; }
+  for (const nick of nicks) {
+    const clave = nick.toLowerCase(), vp = (ev.players || []).find((x) => normFuerte(x.user) === normFuerte(nick));
+    if (!vp) { out[clave] = entradaFallo(ahora, 'jugador sin pagina en vlr.gg'); continue; }
+    try {
+      const html = await web(`https://www.vlr.gg/player/${vp.id}`, {}, false);
+      const g = leerGananciasVlr(html);
+      out[clave] = g ? { t: Date.now(), g } : entradaFallo(ahora, 'sin ganancias en vlr.gg');
+    } catch (e) { out[clave] = entradaFallo(ahora, e.message); }
+  }
+  return out;
+}
+
+// CS2: primero una consulta barata para varios (confirma que el titulo de Liquipedia es de este jugador y de este equipo), y despues el parse de cada uno
+export async function jugadoresCs(c, nicks, { quedaTiempo = () => true, max = CFG.maxJugCs, ahora = Date.now() } = {}) {
+  const out = {}, wiki = 'counterstrike';
+  const info = await rolesLp(wiki, nicks);
+  const mismo = (i) => i && (norm(i.team) === norm(c.nombre) || (i.hist || []).some((h) => !h.hasta && norm(h.equipo) === norm(c.nombre)) || (i.hist || []).some((h) => norm(h.equipo) === norm(c.nombre)));
+  let hechos = 0;
+  for (const nick of nicks) {
+    const clave = nick.toLowerCase(), i = info.get(nick) || [...info.entries()].find(([t]) => normFuerte(t) === normFuerte(nick))?.[1];
+    if (!i) { out[clave] = entradaFallo(ahora, 'sin pagina en Liquipedia'); continue; }
+    if (!mismo(i)) { out[clave] = entradaFallo(ahora, 'la pagina no es de este equipo'); continue; }
+    if (hechos >= max || !quedaTiempo()) continue;
+    hechos++;
+    try {
+      const r = await lp(wiki, { action: 'parse', page: `${nick}/Results`, prop: 'text', redirects: 1, disablelimitreport: 1, disabletoc: 1 }, true);
+      const g = resumirGananciasJugador(leerResultadosJugador(r.parse.text));
+      out[clave] = g ? { t: Date.now(), g } : entradaFallo(ahora, 'sin resultados en Liquipedia');
+    } catch (e) { out[clave] = entradaFallo(ahora, e.message); }
+  }
+  return out;
+}
+
+export async function jugadoresEsports({ cands, rpc, secret, dry = false, limite, log = console.log } = {}) {
+  const hechos = { equipos: 0, jugadores: 0 };
+  if (!rpc || !secret) return hechos;
+  const ahora = Date.now(), ids = cands.filter((c) => c.tipo === 'esports').map((c) => c.clave);
+  if (!ids.length) return hechos;
+  let estado = {}; try { estado = (await rpc('sync_jugadores_get', { p_secret: secret, p_ids: ids })) || {}; } catch (e) { log('jugadores: no pude leer lo guardado', e.message); return hechos; }
+  let cs = 0;
+  for (const c of cands.filter((x) => x.tipo === 'esports')) {
+    const e = estado[c.clave]; if (!e) continue;   // sin ficha del equipo todavia: no se sabe quienes son sus titulares
+    const nicks = titulares(e.p).map((x) => x[0]).filter((n) => pendienteJ(e.t?.[n.toLowerCase()], ahora));
+    if (!nicks.length) continue;
+    if (Date.now() > limite - (c.game === 'valorant' ? 10e3 : CFG.gapParse)) break;
+    try {
+      const jug = c.game === 'valorant' ? await jugadoresValorant(c, nicks, ahora)
+        : await jugadoresCs(c, nicks, { quedaTiempo: () => Date.now() < limite - CFG.gapParse, max: Math.max(0, CFG.maxJugCs - cs), ahora });
+      if (c.game !== 'valorant') cs += Object.values(jug).filter((x) => x.g).length;
+      const n = Object.keys(jug).length; if (!n) continue;
+      hechos.equipos++; hechos.jugadores += n;
+      if (!dry) await rpc('sync_jugadores_put', { p_secret: secret, p_rows: [{ id: c.clave, jug }] });
+      if (process.env.EQUIPOS_VER) log(JSON.stringify({ [c.clave]: jug }));
+    } catch (er) { log('jugadores', c.clave, 'fallo:', String(er.message || er).slice(0, 120)); }
+  }
+  return hechos;
+}
+
 // ---------- reparto entre pasadas ----------
 export function candidatos(rows, apuestas = {}, ahora = Date.now()) {
   const mapa = new Map();
@@ -551,7 +709,7 @@ export async function equiposExtra({ rows, rpc, secret, dry = false, ps = proces
     else { hechos.ok++; }
     if (!rpc || !secret || dry) return;
     let fila = error ? { id: c.clave, fallo: true } : { id: c.clave, extra };
-    if (!error && JSON.stringify(extra).length > CFG.tamMax) { extra.exjugadores = (extra.exjugadores || []).slice(0, 20); extra.exstaff = (extra.exstaff || []).slice(0, 5); extra.palmares = extra.palmares.slice(0, 8); if (extra.titulos) extra.titulos.lista = extra.titulos.lista.slice(0, 40); fila = { id: c.clave, extra }; }
+    if (!error && JSON.stringify(extra).length > CFG.tamMax) { extra.exjugadores = (extra.exjugadores || []).slice(0, 20); extra.exstaff = (extra.exstaff || []).slice(0, 5); extra.palmares = extra.palmares.slice(0, 8); if (extra.titulos) { extra.titulos.lista = extra.titulos.lista.slice(0, 40); extra.titulos.podios = (extra.titulos.podios || []).slice(0, 20); extra.titulos.premios = (extra.titulos.premios || []).slice(0, 50); } fila = { id: c.clave, extra }; }
     try { await rpc('sync_equipos_extra_put', { p_secret: secret, p_rows: [fila] }); } catch (e) { log('equipos extra: no pude guardar', c.clave, e.message); }
   };
   const correr = async (cs) => {
@@ -565,6 +723,8 @@ export async function equiposExtra({ rows, rpc, secret, dry = false, ps = proces
     }
   };
   await Promise.all([correr(lista.esports), correr(lista.otros)]);
-  log(`fichas ampliadas: ${cands.length} equipos con partido · ${pend.length} por hacer · ${hechos.ok} hechas · ${hechos.fallo} con fallo · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  let jug = { equipos: 0, jugadores: 0 };
+  try { jug = await jugadoresEsports({ cands, rpc, secret, dry, limite, log }); } catch (e) { log('jugadores de esports:', e.message || e); }
+  log(`fichas ampliadas: ${cands.length} equipos con partido · ${pend.length} por hacer · ${hechos.ok} hechas · ${hechos.fallo} con fallo · ${jug.jugadores} jugadores de ${jug.equipos} equipos · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
   return hechos;
 }
