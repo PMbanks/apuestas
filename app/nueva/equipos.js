@@ -246,7 +246,7 @@
   // de que equipo es un logo: se busca su direccion en los partidos de la app (y en los rivales de las fichas ya abiertas)
   function deLogo(im) {
     const src = im.getAttribute('src'); if (!src || /^data:/.test(src)) return null;
-    for (const m of g(() => M, [])) { if (m.s === 'b') continue; if (m.la === src) return g(() => eqDeMatch(m, 'a'), null); if (m.lb === src) return g(() => eqDeMatch(m, 'b'), null) }
+    for (const m of g(() => M, [])) { if (m.s === 'b' || m.s === 'r') continue; if (m.la === src) return g(() => eqDeMatch(m, 'a'), null); if (m.lb === src) return g(() => eqDeMatch(m, 'b'), null) }
     for (const [, c] of g(() => EQD, new Map())) for (const h of (c && c.d && c.d.t && c.d.t.hist) || []) if (h.logo === src && h.vsId) return { s: c.d.s, n: h.vs, logo: src, tid: h.vsId };
     return null;
   }

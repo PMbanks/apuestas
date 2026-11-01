@@ -64,7 +64,7 @@
 .lq-exp{display:flex;align-items:baseline;gap:8px;margin-top:6px;min-height:24px}
 .lq-exp b{font:500 24px/1 var(--mono);letter-spacing:-.05em;color:var(--acc)}
 .lq-exp em{font:12px var(--mono);font-style:normal;color:var(--dim)}
-.lq-heat{display:grid;grid-template-columns:minmax(0,170px) repeat(6,minmax(0,1fr));gap:4px;margin-top:30px}
+.lq-heat{display:grid;grid-template-columns:minmax(0,170px) repeat(7,minmax(0,1fr));gap:4px;margin-top:30px}
 .lq-hh0{display:block}
 .lq-hh{display:flex;align-items:center;justify-content:center;gap:7px;height:36px;font:600 12px var(--sans);color:var(--mute)}
 .lq-hh em{font-style:normal}
@@ -163,7 +163,7 @@
   .lq-exs{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .lq-ex:first-child{grid-column:1/-1}
   .lq-ex{padding:14px}
-  .lq-heat{grid-template-columns:minmax(0,86px) repeat(6,minmax(0,1fr));gap:3px;margin-top:24px}
+  .lq-heat{grid-template-columns:minmax(0,86px) repeat(7,minmax(0,1fr));gap:3px;margin-top:24px}
   .lq-hh em{display:none}
   .lq-hh{height:30px}
   .lq-hn2{gap:6px;font-size:12px}.lq-hn2 .av{width:20px;height:20px;font-size:7px}

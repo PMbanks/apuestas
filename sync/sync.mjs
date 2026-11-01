@@ -7,6 +7,7 @@
 import { avisos } from './discord.mjs';
 import { equiposExtra } from './equipos-extra.mjs';
 import { nba, liveNba } from './nba.mjs';                                               // NBA (db/039_nba.sql)
+import { f1, anulaF1 } from './f1.mjs';                                                // Formula 1 (db/052_f1.sql)
 
 const SB = process.env.SUPABASE_URL, ANON = process.env.SUPABASE_ANON_KEY, SECRET = process.env.SYNC_SECRET, PS = process.env.PANDASCORE_KEY;
 const DRY = !!process.env.DRY;
@@ -577,12 +578,14 @@ async function main() {
   const t0 = Date.now();
   if (process.env.SOLO_DISCORD) { if (process.env.DISCORD_WEBHOOK && SB && ANON && SECRET) await avisos({ rpc, secret: SECRET, hook: process.env.DISCORD_WEBHOOK }); return; }
   const ctxNba = { getJson, sube, american, fromProbs, tvEspn, rpc, secret: SB && ANON ? SECRET : null, dry: DRY, now: NOW };
-  const [f, u, v, c, b] = await Promise.all([soccer(), ufc(), esports('valorant'), esports('csgo'), nba(ctxNba).catch((e) => { console.log('nba:', e.message || e); return [] })]);
+  // F1 (Jolpica) a la vez que lo demas y con un tope de 90 s: si Jolpica no responde, esta pasada sigue sin la F1 y no se toca nada de ella
+  const f1Seguro = () => { let t; return Promise.race([f1({ now: NOW, sube }), new Promise((res) => { t = setTimeout(() => { console.log('f1: Jolpica tarda demasiado, sigo sin la F1'); res({ rows: [] }) }, 90e3) })]).catch((e) => { console.log('f1:', e.message || e); return { rows: [] } }).finally(() => clearTimeout(t)) };
+  const [f, u, v, c, b, rf1] = await Promise.all([soccer(), ufc(), esports('valorant'), esports('csgo'), nba(ctxNba).catch((e) => { console.log('nba:', e.message || e); return [] }), f1Seguro()]);
   await fichasEsports([...v, ...c]);
   await bracketsEsports([...v, ...c]);
-  const rows = [...f, ...u, ...v, ...c, ...b];
+  const rows = [...f, ...u, ...v, ...c, ...b, ...rf1.rows];
   await carasUfc(rows);
-  console.log(`futbol ${f.length} · ufc ${u.length} · valorant ${v.length} · cs2 ${c.length} · nba ${b.length} · con cuotas reales ${rows.filter((r) => r.odds_src === 'draftkings').length}`);
+  console.log(`futbol ${f.length} · ufc ${u.length} · valorant ${v.length} · cs2 ${c.length} · nba ${b.length} · f1 ${rf1.rows.length} · con cuotas reales ${rows.filter((r) => r.odds_src === 'draftkings').length}`);
   if (DRY) {
     if (process.env.DRY_OUT) (await import('node:fs')).writeFileSync(process.env.DRY_OUT, JSON.stringify(rows));
     const show = rows.filter((r) => r.status === 'scheduled').sort((a, b) => a.starts_at.localeCompare(b.starts_at)).slice(0, 8);
@@ -599,11 +602,18 @@ async function main() {
       console.log(` NBA ${r.home} vs ${r.away} (${r.odds_1} ${r.odds_2} ${r.odds_src}): ${ks.filter((k) => k[0] !== 'J').map((k) => `${k} ${r.odds_mk[k]}`).join(' · ')} · ${jug.length / 2} lineas de jugadores${r.details.pjm ? ' (modelo)' : ''}${jug[0] ? ` p. ej. ${r.details.pj?.[jug[0].split(':')[1]]} ${jug[0]} ${r.odds_mk[jug[0]]}` : ''}`);
     }
     for (const r of b.filter((x) => x.status === 'final').slice(0, 3)) console.log(` NBA final ${r.home} ${r.score} ${r.away}: hoja ${r.details.bxok ? 'entera' : 'sin hoja'} · ${Object.keys(r.details.bx || {}).length} jugadores`);
+    // db/052: la F1 (cuotas del modelo y, si hay, el resultado oficial)
+    for (const r of rf1.rows.filter((x) => x.status !== 'final').slice(0, 6)) console.log(` F1 ${r.id} ${r.status} ${r.home} / ${r.away}: ${Object.entries(r.odds_mk || {}).slice(0, 5).map(([k, v]) => `${k} ${v}`).join(' · ')}${r.odds_1 ? ` · duelo ${r.odds_1} / ${r.odds_2}` : ''}`);
+    for (const r of rf1.rows.filter((x) => x.status === 'final').slice(0, 4)) console.log(` F1 final ${r.id} ${r.score}: ${(r.details.res?.o || []).slice(0, 3).join(', ')}`);
     return;
   }
   if (!SB || !ANON || !SECRET) throw new Error('Faltan SUPABASE_URL, SUPABASE_ANON_KEY y SYNC_SECRET');
   let saved = 0;
-  for (let i = 0; i < rows.length; i += 100) saved += await rpc('sync_push', { p_secret: SECRET, p_rows: rows.slice(i, i + 100) });
+  const sinF1 = rows.filter((r) => r.sport !== 'r');
+  for (let i = 0; i < sinF1.length; i += 100) saved += await rpc('sync_push', { p_secret: SECRET, p_rows: sinF1.slice(i, i + 100) });
+  // la F1 va aparte: si db/052 aun no esta cargada la base rechaza el deporte r, y eso no debe tirar el resto de la pasada
+  for (let i = 0; i < rf1.rows.length; i += 100) saved += await rpc('sync_push', { p_secret: SECRET, p_rows: rf1.rows.slice(i, i + 100) }).catch((e) => { if (!i) console.log('f1: no se ha podido guardar (falta cargar db/052_f1.sql?):', String(e.message || e).slice(0, 160)); return 0 });
+  await anulaF1({ rpc, secret: SECRET }, rf1).then((n) => n && console.log(`f1: ${n} sesiones anuladas (el Gran Premio ya no esta en el calendario)`)).catch((e) => console.log('f1 anular:', e.message || e));
   let res = { pagadas: 0 }, total = { revelados: 0, pagadas: 0, pagas: 0 };
   do { res = await rpc('sync_close', { p_secret: SECRET }); for (const k in total) total[k] += res[k] || 0 } while (res.pagadas >= 60);
   console.log(`guardados ${saved} · reveladas ${total.revelados} · apuestas pagadas ${total.pagadas} · pagas ${total.pagas} · ${((Date.now() - t0) / 1000).toFixed(1)} s`);
