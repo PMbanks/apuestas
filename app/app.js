@@ -780,7 +780,13 @@ document.addEventListener('click', (e) => { const b = e.target.closest('[data-lv
 const jugados = () => M.filter((m) => m.status === 'final' && (S.f === 'all' || m.s === S.f) && inLeague(m)).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
 // PM, 30-10: "que se puedan ver latest games, osea juegos ya jugados": la lista estaba al final de Partidos y no se veia.
 // Ahora hay un boton arriba, al lado de los filtros, que deja solo los ya jugados (todos, sin "Ver mas").
-const jugChip = () => { const n = jugados().length; return n ? `<button class="f jug-chip ${S.soloJug ? 'on' : ''}" data-act="soloJug" aria-pressed="${!!S.soloJug}">Ya jugados<i>${n}</i></button>` : '' };
+// PM, 01-11 (modelo B de modelos/m1101/jugados): Ya jugados sale de la fila de deportes y va en el titulo "Próximos ▾",
+// que despliega Próximos, En directo (lleva a Directo) y Ya jugados. Estilos en menu.css
+const IC_CK = '<svg class="pm-ck" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const jugMenu = (np) => { const nj = jugados().length, nl = M.filter((m) => m.live).length, j = !!S.soloJug;
+  const it = (on, act, ic, b, sm, n, cls = '') => `<button class="pm-it ${on ? 'on' : ''} ${cls}" ${act} role="menuitem"><span class="pm-ic"><svg viewBox="0 0 24 24">${ic}</svg></span><span class="pm-tx"><b>${b}</b><small>${sm}</small></span><em>${n}</em>${IC_CK}</button>`;
+  return `<div class="pm-hd ${S.pmenu ? 'abre' : ''}"><button class="pm-tt" data-act="pmenu" aria-haspopup="menu" aria-expanded="${!!S.pmenu}"><span>${j ? 'Ya jugados' : 'Próximos'}</span><svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg></button>${j ? '<span class="pm-res">Resultados</span>' : ''}<span class="pm-n">${j ? `${nj} ${nj === 1 ? 'resultado' : 'resultados'}` : `${np} ${np === 1 ? 'partido' : 'partidos'}`}</span>
+    <div class="pm-menu" role="menu">${it(!j, j ? 'data-act="soloJug"' : '', SCREENS.partidos[2], 'Próximos', 'Lo que se juega a partir de ahora', np)}${nl ? it(false, 'data-scr="directo"', SCREENS.directo[2], 'En directo', 'Partidos que se están jugando', nl, 'vivo') : ''}${it(j, j ? '' : `data-act="soloJug"${nj ? '' : ' disabled'}`, SCREENS.apuestas[2], 'Ya jugados', 'Resultados de los últimos dos días', nj)}</div></div>` };
 function jugadosHtml() {
   const l = jugados(); if (!l.length) return '';
   const n = S.soloJug ? l.length : Math.min(l.length, S.jugN || 8), gan = (m, k) => { const [x, y] = String(m.score || '').split(' ')[0].split(':').map(Number); if (!(x >= 0 && y >= 0) || x === y) return ''; return (x > y) === (k === 'home') ? 'w' : 'l' };
@@ -796,15 +802,16 @@ function partidos() {
   if (S.brk && byId(S.foc)?.tour) return `<div class="pad brk-full">${bracketSheet(byId(S.foc)).replace('class="det sheet', 'class="brk-page').replace(' open"', '"')}</div>`;
   const feat = featured();
   const lives = M.filter((m) => m.live).sort((a, b) => whoOn(b.id).length - whoOn(a.id).length).slice(0, 14);
-  let h = `<div class="p-wrap"><section class="p-board" data-keep="pb">
+  let h = `<div class="p-wrap"><section class="p-board ${S.soloJug ? 'solo-jug' : ''}" data-keep="pb">
     ${lives.length ? vivosHtml(lives) : ''}
     ${feat.length ? `<div class="feat">${feat.map((m) => `<button class="ft ${S.foc === m.id ? 'on' : ''}" data-foc="${m.id}">
       <span class="lab"><img src="${esc(L[m.lg][1])}" alt=""><b>${WD(m.at)} ${HM(m.at)}</b> · ${isDaily(m) ? 'Apuesta del día' : esc(m.tag || L[m.lg][0])}</span>
       <span class="ft-v">${logo(m, 'a')}<i>vs</i>${logo(m, 'b')}</span><span class="ft-n">${esc(m.a)} · ${esc(m.b)}</span>
       <span class="ft-o">${picksOf(m).map((p) => `<span>${p} <b>${po(m, p) ? O(po(m, p)) : '·'}</b></span>`).join('')}</span></button>`).join('')}</div>` : ''}
-    <nav class="fil">${filt()}${jugChip()}</nav>${leagues()}${S.soloJug ? '' : '<p class="cmb-hint"><i>+</i><span>Toca 2 o más cuotas y en el boleto elige <b>Combinada</b>: las cuotas se multiplican y cobras si aciertas todas.</span></p>'}`;
+    ${jugMenu(list.length)}<nav class="fil">${filt()}</nav>${leagues()}${S.soloJug ? '' : '<p class="cmb-hint"><i>+</i><span>Toca 2 o más cuotas y en el boleto elige <b>Combinada</b>: las cuotas se multiplican y cobras si aciertas todas.</span></p>'}`;
   if (!list.length && !S.soloJug) h += `<p class="hint" style="padding:30px 0">No hay partidos con este filtro en los próximos días.</p>`;
   const jugH = jugadosHtml();
+  if (S.soloJug && !jugH) h += `<p class="hint" style="padding:30px 0">No hay partidos jugados con este filtro.</p>`;
   let ri = 0;
   for (const ms of S.soloJug ? [] : groups(list)) {
     h += `<div class="day"><b>${DD(ms[0].at)}</b><span>${dayLab(ms[0].at)}</span><i>${ms.length} ${ms.length > 1 ? 'partidos' : 'partido'}</i></div>`;
@@ -893,6 +900,7 @@ function mbCard(b, i) {
   </article>`;
 }
 function mbFila(b, i) {
+  if (window.GM_RES) { const h = GM_RES.apuesta(b, { i }); if (h) return h }   // PM 01-11: franja de color, escudo de fondo y cuadrados (resultado.js)
   const m = byId(b.m); if (!m) return '';
   const t = Date.parse(b.set || b.at), v = neto(b);
   const cr = (s, p) => `<span class="bor-cr ${b.p === p ? 'on' : ''}">${logo(m, s)}</span>`;
@@ -1041,7 +1049,8 @@ async function cargaAbp() {
   ABP = error ? { key, srv: false } : { key, srv: true, total: data?.total || 0, rows: (data?.rows || []).map(abMap).filter((b) => b.k) };
   if (S.scr === 'colegas') render();
 }
-function abTicket(b) {
+function abTicket(b, i) {
+  if (window.GM_RES) { const h = GM_RES.apuesta(b, { i, quien: true }); if (h) return h }   // como en Mis apuestas (resultado.js)
   const m = byId(b.m); if (!m) return '';
   const est = abEst(b), t = Date.parse(b.set || b.at), v = b.st === 'won' ? b.pay - b.stake : 0;
   const cr = (sd, p) => `<span class="bor-cr ${b.p === p ? 'on' : ''}">${logo(m, sd)}</span>`;
@@ -1073,6 +1082,7 @@ function todasHtml() {
     ${pags > 1 ? `<nav class="pags"><button data-abpg="${pg - 1}" ${pg ? '' : 'disabled'} aria-label="Anterior">‹</button>${nums.map((i) => (i === '…' ? '<span class="pags-g">…</span>' : `<button data-abpg="${i}" class="${i === pg ? 'on' : ''}">${i + 1}</button>`)).join('')}<button data-abpg="${pg + 1}" ${pg < pags - 1 ? '' : 'disabled'} aria-label="Siguiente">›</button></nav>` : ''}`;
 }
 function colegas() {
+  if (window.GM_TODOS) return GM_TODOS.html();   // PM 01-11: modelo B, una fila por amigo (todos.js); lo de abajo queda por si no carga
   const rank = [...F].sort((a, b) => b.s - a.s), admin = me().admin;
   const abiertas = ALL.filter((b) => b.st === 'open' && byId(b.m));
   const partidos = [...new Set(abiertas.map((b) => b.m))].map(byId).sort((a, b) => (b.live - a.live) || Date.parse(a.at) - Date.parse(b.at));
@@ -1171,27 +1181,18 @@ const table = (rank) => `<div class="tbl"><div class="tr h"><span></span><span>A
   ${rank.map((f, i) => `<div class="tr ${f.me ? 'me' : ''}"><span class="p">${i + 1}</span><span class="who2" data-prof="${f.id}" style="cursor:pointer">${av(f.id, 'xl')}${esc(f.n)}</span>
     <span class="big">${N(f.s)}${coin()}</span>${net(f)}<span>${f.ac} <span class="dim">${f.acn}</span></span><span>${f.bets}</span>
     <span class="${f.racha.startsWith('▲') ? 'net up' : 'net'}">${f.racha}</span><span>${N(f.best)}${coin()}</span><span class="dim">${f.fuerte}</span></div>`).join('')}</div>`;
-function boteHtml() {
-  if (!BOTE) return '';
-  const desde = Date.parse((BOTE.desde || '') + 'T00:00:00+01:00'), ents = Object.entries(BOTE.players || {}).map(([u, v]) => [F.find((f) => f.uid === u)?.id, v]).filter(([k]) => k).sort((a, b) => b[1] - a[1]);
-  const last = (BOTE.last || []).map((x) => F.find((f) => f.uid === x.player)).filter(Boolean);
-  const cab = `<div class="sec-h"><h2>Bote de la semana</h2><i>cada lunes ${N(BOTE.amount || 100)} cada uno · se lo lleva el que más gane</i></div>`;
-  if (!ents.length) return `<section class="bote">${cab}<p class="hint">${NOW < desde ? `Empieza el lunes ${DD(desde)} ${MO(desde)}: ese día cada uno pone ${N(BOTE.amount || 100)} y el que más gane en la semana se lleva todo.` : 'Este lunes nadie tenía para entrar.'}</p></section>`;
-  return `<section class="bote">${cab}<div class="bote-pot"><span class="num">${N(BOTE.pot)}${coin()}</span><span>en el bote · se reparte en ${CD(PAY)}</span></div>
-    ${ents.map(([k, v], i) => `<div class="bote-r ${i === 0 && v > 0 ? 'lider' : ''}">${av(k, 'sm')}<b>${esc(fr(k).n)}</b><span class="${v >= 0 ? 'up' : 'dn'}">${v >= 0 ? '▲' : '▼'} ${N(Math.abs(v))}${coin()}</span>${i === 0 && v > 0 ? '<em>se lo lleva</em>' : ''}</div>`).join('')}
-    ${last.length ? `<p class="hint">La semana pasada se lo llevó ${last.map((f) => esc(f.n)).join(' y ')}.</p>` : ''}</section>`;
-}
 // quien sabe mas de cada deporte: aciertos de lo resuelto
 function sabeHtml() {
   const filas = DEP.map((k) => { const r = F.map((f) => ({ f, w: f.sp[k][0], t: f.sp[k][1] })).filter((x) => x.t).sort((a, b) => b.w / b.t - a.w / a.t || b.t - a.t); return [k, r] }).filter(([, r]) => r.length);
   return `<section class="sabe"><div class="sec-h"><h2>Quién sabe más</h2><i>aciertos por deporte</i></div>${filas.length ? filas.map(([k, r]) => `<div class="sabe-r"><span class="sd"><img src="${SP[k][1]}" alt="">${SP[k][0]}</span><span class="sw">${r.map((x, i) => `<span class="${i === 0 ? 'top' : ''}">${av(x.f.id, 'sm')}${esc(x.f.n)} <em>${x.w} de ${x.t}</em></span>`).join('')}</span></div>`).join('') : '<p class="hint">Sale cuando se resuelvan las primeras apuestas.</p>'}</section>`;
 }
 function liga() {
+  if (window.GM_APOST && GM_APOST.tab() === 'apost') return GM_APOST.html();   // pestana Apostadores con el bote (apostadores.js, 01-11)
   const rank = [...F].sort((a, b) => b.s - a.s), mx = Math.max(1, rank[0]?.s || 1), meI = rank.findIndex((f) => f.me);
   const open = ALL.filter((b) => b.st === 'open').reduce((a, b) => a + b.stake, 0), set = ALL.filter((b) => b.st === 'won' || b.st === 'lost'), won = set.filter((b) => b.st === 'won').length;
   const gapUp = meI > 0 ? rank[meI - 1].s - me().s : 0, gapDn = meI >= 0 && meI < rank.length - 1 ? me().s - rank[meI + 1].s : 0;
   const order = rank.length >= 3 ? [1, 0, ...rank.map((_, i) => i).slice(2)] : rank.map((_, i) => i), nWeeks = Math.max(1, me().h.length - 1);
-  return `<div class="lc">
+  return `<div class="lc">${window.GM_APOST ? GM_APOST.tabs() : ''}
     <header class="lc-h"><span class="lab">Temporada · desde el ${esc(SEASON ? fmt(SEASON + 'T12:00:00Z', { day: 'numeric', month: 'short' }) : '')} · ${F.length} jugadores</span><h2 class="wk"><small>SEMANA</small>${String(nWeeks).padStart(2, '0')}</h2>
       <p class="l-pay">Paga de <b>+${N(WEEKLY)}</b> a cada uno en ${CD(PAY)}</p>${CAMPEON ? `<p class="l-rey">${av(CAMPEON.k, 'sm')}<b>${esc(fr(CAMPEON.k).n)}</b> es el campeón de ${esc(CAMPEON.mes)} (▲ ${N(CAMPEON.v)}) y lleva la corona todo el mes</p>` : ''}</header>
     <div class="podium" style="--pdn:${rank.length}">${order.map((i) => { const f = rank[i]; return `<div class="pd ${f.me ? 'me' : ''} ${i >= 3 ? 'rest' : ''}" data-prof="${f.id}" style="cursor:pointer">${av(f.id, 'xl')}<span class="nm">${esc(f.n)}</span><b class="num">${N(f.s)}${coin()}</b>${net(f)}
@@ -1199,7 +1200,6 @@ function liga() {
     ${rank.length > 3 ? `<div class="pd-rest">${rank.slice(3).map((f, j) => `<button class="pr-r ${f.me ? 'me' : ''}" data-prof="${f.id}"><span class="pr-p">${j + 4}${en() ? 'th' : 'º'}</span>${av(f.id)}<span class="pr-n">${esc(f.n)}</span><span class="pr-v"><b class="num">${N(f.s)}${coin()}</b>${net(f)}</span></button>`).join('')}</div>` : ''}
     <p class="gap" data-notr>${en() ? `${gapUp > 0 ? `You need <b>${N(gapUp)}</b> to catch ${esc(rank[meI - 1].n)}` : meI > 0 ? `Level with ${esc(rank[meI - 1].n)}` : 'You are first'}${gapDn > 0 ? ` · you lead ${esc(rank[meI + 1].n)} by <b>${N(gapDn)}</b>` : ''}`
       : `${gapUp > 0 ? `Te faltan <b>${N(gapUp)}</b> para alcanzar a ${esc(rank[meI - 1].n)}` : meI > 0 ? `Empatado con ${esc(rank[meI - 1].n)}` : 'Vas primero'}${gapDn > 0 ? ` · le sacas <b>${N(gapDn)}</b> a ${esc(rank[meI + 1].n)}` : ''}`}</p>
-    ${boteHtml()}
     ${sabeHtml()}
     <div class="kpis">
       <div class="kpi"><span class="lab">En juego ahora</span><b>${N(open)}${coin()}</b><span>entre todos</span></div>
@@ -1443,13 +1443,12 @@ function ruedaHtml() {
 }
 // lo que hay para reclamar: cuantas cosas esperan
 function rwPend() {
-  const wk = new Date(WEEK0 + DAY / 2).toISOString().slice(0, 10), di = Math.floor((NOW - WEEK0) / DAY);
+  const wk = new Date(WEEK0 + DAY / 2).toISOString().slice(0, 10);
   const rueda = !(WHEEL || []).some((w) => w.player === me().uid && w.week === wk);
-  const dentroBote = !!BOTE?.players?.[me().uid], boteAbierto = BOTE && (!BOTE.desde || wk >= BOTE.desde) && di <= 2;
   const tiempo = (TIEMPO?.tiers || []).filter((t) => !t.claimed && TIEMPO.minutes >= t.min).length;
-  return { diario: !!CLAIM && !CLAIM.today, rueda, rescate: puedeRescate(), bote: boteAbierto && !dentroBote, dentroBote, boteAbierto, tiempo };
+  return { diario: !!CLAIM && !CLAIM.today, rueda, rescate: puedeRescate(), tiempo };
 }
-function rwBoton() { const p = rwPend(), n = [p.diario, p.rueda, p.rescate, p.bote].filter(Boolean).length + p.tiempo;
+function rwBoton() { const p = rwPend(), n = [p.diario, p.rueda, p.rescate].filter(Boolean).length + p.tiempo;
   return `<button class="claim ${n ? '' : 'nada'} ${S.rew ? 'on' : ''}" data-act="rw" aria-label="Recompensas">${IC_GIFT}<span>Recompensas</span>${n ? `<b>${n}</b>` : ''}</button>` }
 const IC_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 // PM, 30-10: premios por estar en la app (db/019): 30 min, 1 h y 2 h al dia. La app manda un latido por minuto a la vista
@@ -1488,7 +1487,7 @@ function pintaRw() {
     <div class="rw-l">
       ${tiempoHtml()}
       <div class="rw-r2"><span class="rw-t d"><span class="cn"></span></span><p><b>Premio diario</b><span>${N(CLAIM?.amount || 50)} V-Bucks cada día que lo reclames</span></p>${p.diario ? `<button class="go-s" data-act="claim">Reclamar</button>` : hecho('Hecho hoy')}</div>
-      <div class="rw-r2"><span class="rw-t b">${IC_TICKET}</span><p><b>Bote de la semana</b><span>${BOTE?.pot ? `<i class="rw-pot">${N(BOTE.pot)}${coin()}</i> en el bote` : `${N(BOTE?.amount || 100)} cada uno, de lunes a miércoles`} · se lo lleva quien más gane</span>${dentro.length ? `<span class="rw-av">${dentro.map((f) => av(f.id, 'sm')).join('')}<small>${dentro.length} dentro</small></span>` : ''}</p>${p.bote ? `<button class="go-s" data-act="bote">Entrar</button>` : p.dentroBote ? hecho('Estás dentro') : `<em>${BOTE?.desde && new Date(WEEK0 + DAY / 2).toISOString().slice(0, 10) < BOTE.desde ? 'Empieza el lunes' : 'Cerrado hasta el lunes'}</em>`}</div>
+      <div class="rw-r2"><span class="rw-t b">${IC_TICKET}</span><p><b>Bote de la semana</b><span>${BOTE?.pot ? `<i class="rw-pot">${N(BOTE.pot)}${coin()}</i> en el bote` : `Cada lunes, ${N(BOTE?.amount || 100)} de cada uno`} · se lo lleva quien más gane</span>${dentro.length ? `<span class="rw-av">${dentro.map((f) => av(f.id, 'sm')).join('')}<small>${dentro.length} dentro</small></span>` : ''}</p><button class="go-s res" data-apo-ir>Ver el bote</button></div>
       ${p.rescate ? `<div class="rw-r2"><span class="rw-t p">${IC_GIFT}</span><p><b>Rescate</b><span>Te has quedado a cero: ${N(CLAIM.rescue)} para seguir, una vez por semana</span></p><button class="go-s" data-act="rescue">Pedir</button></div>` : ''}
     </div>
   </aside>`;
@@ -1815,15 +1814,16 @@ function render() {
   const msg = document.querySelector('[data-msg]'), borrador = msg ? { v: msg.value, f: document.activeElement === msg, a: msg.selectionStart } : null;
   const cajas = [...document.querySelectorAll('#view input[id^="poll-"]')].map((e) => [e.id, e.value, document.activeElement === e]);
   const keep = {}; document.querySelectorAll('[data-keep]').forEach((e) => (keep[e.dataset.keep] = e.scrollTop));
-  const un = S.scr === 'chat' ? 0 : unread();
-  document.getElementById('nav').innerHTML = Object.entries(SCREENS).filter(([k]) => k !== 'directo' && k !== 'novedades' && k !== 'ajustes').map(([k, [n, , ic]]) => `<button class="nv ${S.scr === k ? 'on' : ''}" data-scr="${k}"><svg viewBox="0 0 24 24">${ic}</svg><span class="nl">${n}</span><span class="ns">${n.replace('Mis apuestas', 'Apuestas').replace('Apuestas de todos', 'Todos').replace('Novedades', 'Nuevo')}</span>${k === 'chat' && un ? `<i>${un}</i>` : ''}${k === 'novedades' && S.scr !== 'novedades' && novSinVer() ? '<i class="nv-pt"></i>' : ''}</button>`).join('');
+  // PM, 01-11 (menu A): Chat y Monedero salen del menu (burbuja abajo e icono junto a Ajustes, ver menu.js). En movil la barra
+  // lleva Inicio, Partidos, Apuestas, Todos y Más; Liga, Cajas, Juegos y Mercado (nv-x) van en la hoja de Más
+  document.getElementById('nav').innerHTML = Object.entries(SCREENS).filter(([k]) => !['directo', 'novedades', 'ajustes', 'chat', 'monedero'].includes(k)).map(([k, [n, , ic]]) => `<button class="nv ${S.scr === k ? 'on' : ''} ${['liga', 'cajas', 'juegos', 'mercado'].includes(k) ? 'nv-x' : ''} ${k === 'mercado' && MERCADO_MANT ? 'nv-mant' : ''}" data-scr="${k}"><svg viewBox="0 0 24 24">${ic}</svg><span class="nl">${n}</span><span class="ns">${n.replace('Mis apuestas', 'Apuestas').replace('Apuestas de todos', 'Todos')}</span>${k === 'mercado' && MERCADO_MANT ? '<small>mantenimiento</small>' : ''}</button>`).join('');
   const rank = [...F].sort((a, b) => b.s - a.s);
   document.getElementById('me').innerHTML = `${av(MEK, 'xl')}<b>${esc(me().n)}</b><em>${N(me().s)} · ${rank.indexOf(me()) + 1}º de ${F.length}</em>`;
   document.getElementById('me').dataset.prof = MEK;
   document.getElementById('lang').innerHTML = `<button type="button" class="rail-aj ${S.scr === 'ajustes' ? 'on' : ''}" data-scr="ajustes"><svg viewBox="0 0 24 24">${SCREENS.ajustes[2]}</svg>Ajustes</button>`;
   const [t, sub] = S.scr === 'perfil' ? ['Perfil', ''] : SCREENS[S.scr];
   pintaRw(); pintaNv(); pintaVivoYo(); pintaEq();
-  document.getElementById('top').innerHTML = `<h1>${t}</h1>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}<span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>${M.some((x) => x.live) ? `<button class="dv-btn ${S.scr === 'directo' ? 'on' : ''}" data-scr="directo"><i></i>Directo <b>${M.filter((x) => x.live).length}</b></button>` : ''}${nvBoton()}${rwBoton()}<span class="onl ${S.onl ? 'abre' : ''}" data-onl>${onlineHtml()}</span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span><button class="aj-btn ${S.scr === 'ajustes' ? 'on' : ''}" data-scr="ajustes" aria-label="Ajustes" title="Ajustes"><svg viewBox="0 0 24 24">${SCREENS.ajustes[2]}</svg></button>`;
+  document.getElementById('top').innerHTML = `<h1>${t}</h1>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}<span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>${M.some((x) => x.live) ? `<button class="dv-btn ${S.scr === 'directo' ? 'on' : ''}" data-scr="directo"><i></i>Directo <b>${M.filter((x) => x.live).length}</b></button>` : ''}${nvBoton()}${rwBoton()}<span class="onl ${S.onl ? 'abre' : ''}" data-onl>${onlineHtml()}</span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span><button class="mo-btn ${S.scr === 'monedero' ? 'on' : ''}" data-scr="monedero" aria-label="Monedero" title="Monedero"><svg viewBox="0 0 24 24">${SCREENS.monedero[2]}</svg></button><button class="aj-btn ${S.scr === 'ajustes' ? 'on' : ''}" data-scr="ajustes" aria-label="Ajustes" title="Ajustes"><svg viewBox="0 0 24 24">${SCREENS.ajustes[2]}</svg></button>`;
   photoCss();
   if (window.GM_MERCADO) GM_MERCADO.aplicaCosmeticos(mkCtx());
   const vw = document.getElementById('view'), cambia = vw.dataset.vista !== S.scr;
@@ -1933,6 +1933,7 @@ document.addEventListener('click', (e) => { const b = e.target.closest('[data-la
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lga]'); if (!b) return; const n = document.querySelector('[data-lgs]'); n?.scrollBy({ left: +b.dataset.lga * n.clientWidth * 0.8, behavior: 'smooth' }) });
 document.addEventListener('click', async (e) => {
   if (S.onl && !e.target.closest('.onl')) { S.onl = false; pintaOnline() }
+  if (S.pmenu && !e.target.closest('[data-act=pmenu]')) { S.pmenu = false; document.querySelector('.pm-hd.abre')?.classList.remove('abre') }
   const t = e.target.closest('[data-pft],[data-jugmas],[data-abf],[data-abpg],[data-eqv],[data-eqtab],[data-eqpg],[data-vivo],[data-fav],[data-nov],[data-ct],[data-ft],[data-tclaim],[data-bsp],[data-bp],[data-side],[data-bm],[data-dv],[data-dtv],[data-mt],[data-mp],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
   const d = t.dataset;
   if (d.side && t.matches('[data-side]')) { S.shTodos = false; S.side = d.side; document.querySelector('.det')?.scrollTo?.(0, 0); return render() }
@@ -1977,7 +1978,8 @@ document.addEventListener('click', async (e) => {
   if (d.pft) { S.pft = d.pft; return render() }
   if (d.act === 'sonido') { if (window.GM_SONIDOS) GM_SONIDOS.alterna(); return render() }
   if (d.act === 'mon') { if (window.GM_MONEDA) GM_MONEDA.set(d.mon); return render() }
-  if (d.act === 'soloJug') { S.soloJug = !S.soloJug; document.getElementById('view').scrollTop = 0; const pb = document.querySelector('[data-keep=pb]'); if (pb) pb.scrollTop = 0; return render() }
+  if (d.act === 'pmenu') { S.pmenu = !S.pmenu; render(); if (S.pmenu && window.GM_MENU) GM_MENU.pmVer(); return }
+  if (d.act === 'soloJug') { S.soloJug = !S.soloJug; render(); document.querySelector('.pm-hd')?.scrollIntoView({ block: 'start' }); return }
   if (d.act === 'nvp') { S.nvp = !S.nvp; if (S.nvp) { S.rew = false; if (!NOVS) cargaNov(); novAbre() } return render() }
   if (d.act === 'anim') { if (window.GM_ANIM) GM_ANIM.set(!GM_ANIM.on()); toast(window.GM_ANIM && GM_ANIM.on() ? 'Animaciones encendidas' : 'Animaciones apagadas'); return render() }
   if (d.act === 'sh-todos') { S.shTodos = !S.shTodos; return render() }
@@ -1992,7 +1994,6 @@ document.addEventListener('click', async (e) => {
   if (d.act === 'rw') { S.rew = !S.rew; if (S.rew) S.nvp = false; return render() }
   if (d.tclaim) { const { data, error } = await db.rpc('claim_time_reward', { p_min: +d.tclaim }); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} por tu tiempo en la app`); return refresh() }
   if (d.act === 'rw-cajas') { S.rew = false; S.scr = 'cajas'; document.getElementById('view').scrollTop = 0; return render() }
-  if (d.act === 'bote') { const { error } = await db.rpc('join_bote'); if (error) return toast(errMsg(error)); toast('Estás dentro del bote de esta semana'); return refresh() }
   if (d.act === 'claim') { const { data, error } = await db.rpc('claim_daily'); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} del premio diario`); return refresh() }
   if (d.act === 'rescue') { const { data, error } = await db.rpc('claim_rescue'); if (error) return toast(errMsg(error)); toast(`Rescate: +${N(data)}${coin()}`); return refresh() }
   if (d.act === 'poll') { S.pollForm = !S.pollForm; render(); if (S.pollForm) document.getElementById('poll-q')?.focus(); return }

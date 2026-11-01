@@ -1,0 +1,186 @@
+/* ===== Menu A "Cinco botones y Más" (PM, 01-11; modelos/m1101/menu/a.html). Lo pinta menu.js =====
+   Monedero junto a Ajustes arriba, Chat en burbuja abajo, en movil cinco botones abajo y lo demas en la hoja de Más */
+
+/* cabecera: Monedero y Ajustes, dos circulos iguales a la derecha del saldo */
+.top .mo-btn,.top .aj-btn{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;color:var(--mute);background:rgba(255,255,255,.06);transition:color .15s,background .15s}
+.top .mo-btn{margin-left:4px}
+.top .aj-btn{margin-left:-8px}
+.top .mo-btn:hover,.top .mo-btn.on,.top .aj-btn:hover,.top .aj-btn.on{color:var(--ink);background:rgba(255,255,255,.12)}
+.top .mo-btn.on svg,.top .aj-btn.on svg{stroke:var(--acc)}
+.top .mo-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.top .aj-btn svg{width:20px;height:20px}
+
+/* menu lateral: Mercado en mantenimiento, apagado y con su etiqueta */
+.nv.nv-mant{color:var(--dim)}
+.nv small{margin-left:auto;font:500 10px var(--mono);letter-spacing:.04em;color:var(--dim);white-space:nowrap}
+#nav .nv-mas{display:none}
+
+/* burbuja del chat: abajo a la derecha; en PC con lo ultimo que te han escrito al lado */
+#chatb{position:fixed;right:28px;bottom:28px;z-index:50;display:flex;align-items:center;gap:12px;pointer-events:none;transition:bottom .25s var(--ease),opacity .2s}
+#chatb>*{pointer-events:auto}
+.chb-b{position:relative;flex:none;display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:var(--acc);color:#16110a;box-shadow:0 14px 34px rgba(0,0,0,.5),0 0 0 6px rgba(242,193,78,.12);transition:transform .15s var(--ease),filter .15s}
+.chb-b:hover{transform:translateY(-2px);filter:brightness(1.05)}
+.chb-b svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.chb-b b{position:absolute;top:-4px;right:-4px;display:grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:#ef5b5b;color:#fff;font:600 12px/1 var(--mono);box-shadow:0 0 0 3px var(--bg)}
+.chb-t{display:flex;align-items:center;gap:10px;max-width:290px;padding:10px 14px 10px 10px;border-radius:16px 16px 4px 16px;background:#2d333e;box-shadow:0 12px 30px rgba(0,0,0,.4);text-align:left;animation:chbEntra .3s var(--ease);transition:background .15s}
+.chb-t:hover{background:#343b47}
+.chb-t .av{width:30px;height:30px;font-size:11px}
+.chb-t>span{display:grid;min-width:0}
+.chb-t b{font:600 12px var(--sans);color:var(--ink)}
+.chb-t small{font:13px/1.35 var(--sans);color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@keyframes chbEntra{from{opacity:0;transform:translateX(10px)}}
+html.sin-anim .chb-t{animation:none}
+/* con el boleto abajo a la derecha (boleto.js), la burbuja sube encima; con el boleto abierto, se quita */
+@media (min-width:861px){
+  body.blt-hay #chatb{bottom:106px}
+  body:has(#blt.abierto) #chatb{opacity:0;pointer-events:none}
+  body:has(#blt.abierto) #chatb>*{pointer-events:none}
+  /* que el final de cada pantalla se pueda subir por encima de la burbuja */
+  body.chb-on .p-board,body.chb-on .det{padding-bottom:110px}
+  body.chb-on.blt-hay .p-board,body.chb-on.blt-hay .det{padding-bottom:190px}
+  body.chb-on .cv-dock{bottom:108px}
+  body.chb-on.blt-hay .cv-dock{bottom:186px}
+}
+body.chb-on #view:not([data-vista=partidos])::after{content:"";display:block;height:92px}
+
+/* la tira "N en directo" (solo movil) y la hoja de Más (solo movil) */
+#livebar,#mas-h{display:none}
+
+@media (max-width:860px){
+  /* cabecera: titulo, saldo, Monedero y Ajustes; lo demas se va a Más y a la tira de directo */
+  .top .dv-btn,.top .nvb,.top .claim,.top .gnd-b{display:none}
+  .top h1{display:block;flex:0 1 auto;min-width:0;margin-right:auto;overflow:hidden;text-overflow:ellipsis;font-size:22px}
+  .top .bal{margin-left:0}
+  .top .mo-btn,.top .aj-btn{width:38px;height:38px}
+  .top .mo-btn{margin-left:2px}
+  .top .aj-btn{margin-left:-6px}
+
+  /* filas: cabecera, tira de directo, pantalla, barra de abajo */
+  .app{grid-template-rows:56px auto minmax(0,1fr) auto}
+  .app>.top{grid-row:1}
+  #livebar{grid-row:2;grid-column:1}
+  .app>.scr{grid-row:3;grid-column:1}
+  .app>.rail{grid-row:4}
+  #livebar:not([hidden]){display:flex;align-items:center;gap:10px;min-width:0;height:42px;margin:10px 16px 2px;padding:0 10px 0 14px;border-radius:14px;background:rgba(239,91,91,.12);font:600 13px var(--sans);color:#f7a0a0;text-align:left;transition:background .15s}
+  #livebar:active{background:rgba(239,91,91,.2)}
+  #livebar i{flex:none;width:8px;height:8px;border-radius:50%;background:#ef5b5b;box-shadow:0 0 0 4px rgba(239,91,91,.2)}
+  #livebar b{flex:none;font-weight:600;white-space:nowrap}
+  #livebar span{flex:1 1 auto;min-width:0;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 12px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--mute)}
+  #livebar em{font-style:normal}
+  #livebar svg{flex:none;width:18px;height:18px;fill:none;stroke:var(--mute);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+  /* barra de abajo: Inicio, Partidos, Apuestas, Todos y Más, cada uno con su sitio */
+  #nav .nv-x{display:none}
+  #nav .nv-mas{display:flex}
+  #nav .nv{flex:1 1 0;min-width:0;gap:5px;font-size:11px;letter-spacing:0}
+  #nav .nv svg{width:24px;height:24px}
+  #nav .nv small{display:none}
+  body.mas-abierta #nav .nv.on:not(.nv-mas){color:var(--mute)}
+  body.mas-abierta #nav .nv.on:not(.nv-mas) svg{stroke:currentColor}
+  body.mas-abierta #nav .nv.on:not(.nv-mas)::before{display:none}
+
+  /* la hoja de Más sale de detras de la barra de abajo (que sigue a la vista) */
+  #mas-h{display:block;position:fixed;left:0;right:0;top:0;bottom:var(--rail-h,64px);z-index:56;overflow:hidden;pointer-events:none}
+  .mas-fondo{position:absolute;inset:0;background:rgba(8,10,14,.62);opacity:0;transition:opacity .25s}
+  .mas-s{position:absolute;left:0;right:0;bottom:0;max-height:calc(100% - 40px);overflow:auto;overscroll-behavior:contain;padding:10px 16px 18px;border-radius:26px 26px 0 0;background:#252a33;box-shadow:0 -20px 50px rgba(0,0,0,.4);transform:translateY(105%);visibility:hidden;transition:transform .3s var(--ease),visibility 0s .3s}
+  #mas-h.abre .mas-fondo{opacity:1;pointer-events:auto}
+  #mas-h.abre .mas-s{transform:none;visibility:visible;pointer-events:auto;transition:transform .3s var(--ease),visibility 0s}
+  html.sin-anim .mas-s,html.sin-anim .mas-fondo{transition:none}
+  .mas-grab{width:40px;height:4px;margin:0 auto 16px;border-radius:2px;background:rgba(255,255,255,.18)}
+  .mas-c .lab{display:block;margin:0 2px 10px;letter-spacing:.16em;color:var(--dim)}
+  .mas-c .lab~.lab{margin-top:20px}
+  .mas-ts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .mas-t{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;padding:14px 4px 12px;border-radius:16px;background:rgba(255,255,255,.06);font:600 12px var(--sans);color:var(--soft);transition:background .15s}
+  .mas-t:active{background:rgba(255,255,255,.1)}
+  .mas-t span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mas-t svg{width:26px;height:26px;fill:none;stroke:var(--acc);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .mas-t.on{background:rgba(242,193,78,.14);color:var(--ink)}
+  .mas-t.mas-mant{color:var(--dim)}.mas-t.mas-mant svg{stroke:var(--dim)}
+  .mas-t small{position:absolute;top:7px;right:9px;width:6px;height:6px;border-radius:50%;background:var(--dim)}
+  .mas-l{margin-top:2px}
+  .mas-r{display:flex;align-items:center;gap:14px;width:100%;min-height:54px;padding:0 4px;font:600 15px var(--sans);color:var(--soft)}
+  .mas-r+.mas-r{border-top:1px solid var(--hair)}
+  .mas-ri{display:grid;flex:none;color:var(--mute)}.mas-ri svg{width:22px;height:22px}
+  .mas-rn{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mas-bd{flex:none;display:inline-grid;place-items:center;min-width:22px;height:20px;padding:0 7px;border-radius:999px;background:var(--acc);color:#16110a;font:600 11px/1 var(--mono)}
+  .mas-bd.az{background:#8fa3ff;color:#0b1030}
+  .mas-bd.ve{background:rgba(43,212,125,.18);color:var(--win);font:700 11px/1 var(--sans)}
+  .mas-ch{flex:none;width:18px;height:18px;fill:none;stroke:var(--dim);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+  /* burbuja: encima de la barra de abajo (y de lo que lleve dentro: boleto, tus apuestas en vivo) */
+  #chatb{right:16px;bottom:calc(var(--rail-h,64px) + 14px)}
+  .chb-t{display:none}
+  .chb-b{width:56px;height:56px;background:#2d333e;color:var(--ink);box-shadow:0 10px 28px rgba(0,0,0,.5)}
+  .chb-b svg{width:25px;height:25px;stroke-width:1.7}
+  .chb-b b{top:-3px;right:-3px;min-width:22px;height:22px;background:var(--acc);color:#16110a;font-size:11px}
+  body.mas-abierta #chatb{opacity:0;pointer-events:none}
+  body.mas-abierta #chatb>*{pointer-events:none}
+  body.chb-on .p-board{padding-bottom:96px}
+  body.chb-on .cv-dock{bottom:calc(var(--rail-h,64px) + 84px)}
+  body.chb-on #view:not([data-vista=partidos])::after{height:80px}
+}
+@media (max-width:440px){
+  .top .mo-btn,.top .aj-btn{width:34px;height:34px}
+  .top .mo-btn svg,.top .aj-btn svg{width:19px;height:19px}
+  .top .mo-btn{margin-left:0}
+  .top .aj-btn{margin-left:-2px}
+  .top h1{font-size:20px}
+}
+
+/* ===== Ya jugados B (PM, 01-11; modelos/m1101/jugados/b.html): sale de la fila de deportes y va en el titulo
+   "Próximos ▾" de Partidos, que despliega Próximos, En directo y Ya jugados. Lo pinta jugMenu() de app.js ===== */
+.pm-hd{position:relative;z-index:20;display:flex;align-items:center;gap:14px;margin:26px 0 4px}
+.pm-tt{display:flex;align-items:center;gap:10px;height:56px;padding:0 6px 0 2px;font:800 38px/1 var(--disp);letter-spacing:-.04em;color:var(--ink);white-space:nowrap}
+.pm-tt svg{flex:none;width:30px;height:30px;fill:none;stroke:var(--acc);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .25s var(--ease)}
+.pm-tt:hover svg{transform:translateY(2px)}
+.pm-hd.abre .pm-tt svg{transform:rotate(180deg)}
+.pm-res{flex:none;padding:6px 11px;border-radius:999px;background:rgba(242,193,78,.12);font:500 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--acc);white-space:nowrap}
+.pm-n{margin-left:auto;font:12px var(--mono);color:var(--dim);white-space:nowrap}
+.pm-menu{display:none;position:absolute;top:62px;left:0;width:390px;max-width:100%;padding:8px;border-radius:20px;background:#2d333e;box-shadow:0 26px 70px rgba(0,0,0,.6)}
+.pm-hd.abre .pm-menu{display:block}
+.pm-hd.anima .pm-menu{animation:pmEntra .2s var(--ease);transform-origin:top left}
+@keyframes pmEntra{from{opacity:0;transform:translateY(-8px) scale(.98)}}
+html.sin-anim .pm-hd.anima .pm-menu,html.sin-anim .pm-tt svg{animation:none;transition:none}
+.pm-it{display:flex;align-items:center;gap:14px;width:100%;min-height:62px;padding:8px 14px;border-radius:14px;text-align:left;transition:background .15s}
+@media (hover:hover){.pm-it:hover{background:rgba(255,255,255,.05)}}
+.pm-it:disabled{opacity:.45}
+.pm-ic{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:12px;background:rgba(255,255,255,.06);color:var(--mute)}
+.pm-ic svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.pm-tx{flex:1 1 auto;min-width:0}
+.pm-tx b{display:block;font:700 16px var(--sans);color:var(--ink)}
+.pm-tx small{display:block;margin-top:3px;font:12.5px/1.3 var(--sans);color:var(--mute)}
+.pm-it em{flex:none;font:500 13px var(--mono);font-style:normal;color:var(--dim)}
+.pm-it.vivo .pm-ic{background:rgba(239,91,91,.16);color:#ef5b5b}.pm-it.vivo em{color:#ef5b5b}
+.pm-it.on{background:rgba(242,193,78,.1)}.pm-it.on .pm-ic{background:rgba(242,193,78,.18);color:var(--acc)}.pm-it.on b{color:var(--acc)}
+.pm-it.on em{display:none}
+.pm-ck{display:none;flex:none;width:20px;height:20px;fill:none;stroke:var(--acc);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.pm-it.on .pm-ck{display:block}
+@media (max-width:860px){
+  .pm-hd{margin:18px 0 0;gap:12px}
+  .pm-tt{height:48px;font-size:32px}
+  .pm-tt svg{width:26px;height:26px}
+  .pm-n{display:none}
+  .pm-menu{top:54px;width:100%}
+  /* deportes y ligas: cada fila en una sola linea que se desliza, de borde a borde */
+  .p-board .fil{flex-wrap:nowrap;gap:22px;margin:0 -16px;padding:0 16px;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent)}
+  .p-board .fil::-webkit-scrollbar{display:none}
+  .p-board .fil .f{flex:none}
+  .p-board .lgw{margin:0 -16px}
+  .p-board .lgw .lgs2{padding-left:16px;padding-right:16px}
+  .p-board .lga{display:none!important}
+}
+/* en Ya jugados el titulo ya lo dice: fuera la cabecera repetida de la lista */
+.p-board.solo-jug .jug{margin-top:12px}
+.p-board.solo-jug .jug>.day{display:none}
+@media (max-width:860px){.jug>.day b{font-size:26px;white-space:nowrap}.jug>.day span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}}
+/* con el menu del titulo abierto, la burbuja no lo tapa */
+body:has(.pm-hd.abre) #chatb{opacity:0;pointer-events:none}
+body:has(.pm-hd.abre) #chatb>*{pointer-events:none}
+.nv.nv-mant.on{color:var(--ink)}
+/* movil estrecho: "Already played" y su etiqueta caben en una linea */
+.pm-tt{min-width:0;flex:0 1 auto}.pm-tt span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:440px){.pm-tt{font-size:28px;gap:8px}.pm-tt svg{width:24px;height:24px}.pm-res{padding:5px 9px;font-size:10.5px;letter-spacing:.1em}}
+/* movil tactil: un boton tocado se queda "encima" (hover pegado) y parecia el elegido; solo cuenta el elegido */
+@media (hover:none){#nav .nv:not(.on):hover{color:var(--mute)}}
+/* Monedero (se abre ahora con el icono de arriba): en movil las cuatro cifras se pisaban (estilo en linea de 4 columnas) */
+@media (max-width:560px){#view .stats[style*="repeat(4"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}}

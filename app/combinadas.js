@@ -83,9 +83,12 @@
   function filaTodos(c) {
     const f = quien(c.player), legs = (c.combo_legs || []).slice().sort((a, b) => Date.parse(a.matches?.starts_at || 0) - Date.parse(b.matches?.starts_at || 0));
     const fin = c.status === 'won' ? `<em class="up">+${N(c.payout)}${coin()}</em>` : c.status === 'lost' ? '<em class="dn">perdida</em>' : c.status === 'void' ? '<em>devuelta</em>' : c.status === 'cashout' ? `<em>cancelada · ${N(c.payout)}${coin()}</em>` : `<em>→ ${N(c.stake * c.odds)}${coin()}</em>`;
+    // PM 01-11: lo resuelto con el color de la franja de resultado.js (pastilla .rsl-chip), si esta cargado
+    const dif = (c.payout || 0) - c.stake, chip = (k, v) => `<span class="rsl-chip" data-r="${k}">${v > 0 ? '▲ ' : v < 0 ? '▼ ' : ''}${N(Math.abs(v))}${coin()}</span>`;
+    const fin2 = !window.GM_RES || c.status === 'open' ? fin : c.status === 'won' ? chip('won', dif) : c.status === 'lost' ? chip('lost', -c.stake) : c.status === 'void' ? `<span class="rsl-chip" data-r="void">${N(c.payout || c.stake)}${coin()}</span>` : chip('cash', dif);
     return `<div class="cmt ${c.status}" style="--c:var(--f-${f ? f.id : 'pm'})">${ava(f)}<div class="cmt-b"><p><b>${esc(f ? f.n : '?')}</b> <span>Combinada de ${legs.length} · cuota ${O(c.odds)}</span></p>
       <p class="cmt-ls">${legs.map((l) => { const [k, ic] = estadoPata(l); return `<span class="cmt-l ${k}"><i>${ic || '·'}</i>${esc(nombre(l.matches || {}, l.pick))}</span>` }).join('')}</p></div>
-      <span class="cmt-v"><b>${N(c.stake)}${coin()}</b>${fin}</span></div>`;
+      <span class="cmt-v"><b>${N(c.stake)}${coin()}</b>${fin2}</span></div>`;
   }
   function pintaTodos(slot) {
     const recientes = (C.todas || []).filter((c) => c.status === 'open' || Date.parse(c.settled_at || 0) > Date.now() - 2 * 864e5);
@@ -128,7 +131,7 @@
     firma = f;
     slot.innerHTML = !C.list.length ? '' : `<div class="sec-h mb-h"><h2>Combinadas</h2><i>${abiertas.length}</i></div>
       ${abiertas.length ? `<div class="cmb-cs">${abiertas.map(tarjeta).join('')}</div>` : '<p class="hint">Ninguna en juego. En Partidos, mete 2 o más cuotas en el boleto y elige Combinada.</p>'}
-      ${cerradas.length ? `<div class="cmb-cs cerr">${cerradas.map(tarjeta).join('')}</div>` : ''}${C.err ? `<p class="hint">${esc(C.err)}</p>` : ''}`;
+      ${cerradas.length ? (window.GM_RES ? `<div class="rsl-g">${cerradas.map((c, i) => GM_RES.combinada(c, { i }) || tarjeta(c)).join('')}</div>` : `<div class="cmb-cs cerr">${cerradas.map(tarjeta).join('')}</div>`) : ''}${C.err ? `<p class="hint">${esc(C.err)}</p>` : ''}`;
     traduce(slot);
   }
 

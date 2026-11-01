@@ -2,6 +2,50 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "apostadores-bote-0111",
+   "fecha": "2026-11-01",
+   "hora": "13:17",
+   "titulo": "Apostadores y bote automático",
+   "texto": "En la Liga, pestaña Apostadores: quién gana más apostando en partidos por semana, mes o siempre, la mejor cuota acertada y los aciertos. Cada lunes se ponen 100 cada uno en el bote solos, con animación, y se lo lleva el que más gane apostando.",
+   "titulo_en": "Bettors and automatic pot",
+   "texto_en": "In the League, Bettors tab: who wins most betting on matches by week, month or all time, best odds hit and hit rate. Every Monday 100 from each goes into the pot by itself, and the top winner takes it.",
+   "img": "novedades/apostadores-bote.webp",
+   "ir": "liga"
+  },
+  {
+   "id": "menu-0111",
+   "fecha": "2026-11-01",
+   "hora": "13:17",
+   "titulo": "Menú nuevo",
+   "texto": "En el móvil, abajo van Inicio, Partidos, Apuestas, Todos y Más. El Monedero está arriba junto a Ajustes y el Chat es una burbuja. En Partidos, Ya jugados está en el título Próximos.",
+   "titulo_en": "New menu",
+   "texto_en": "On the phone the bottom bar has Home, Matches, Bets, Everyone and More. The Wallet sits next to Settings and Chat is a bubble. In Matches, Played is under the Upcoming title.",
+   "img": "novedades/menu-nuevo.webp",
+   "ir": "partidos"
+  },
+  {
+   "id": "todos-0111",
+   "fecha": "2026-11-01",
+   "hora": "13:17",
+   "titulo": "Apuestas de todos, nueva",
+   "texto": "Una fila por amigo: saldo, lo que tiene en juego con su Me sumo, sus retos y su último resultado. Los partidos en vivo con apuestas van arriba.",
+   "titulo_en": "Everyone’s bets, redone",
+   "texto_en": "One row per friend: balance, what they have in play with Me too, their challenges and last result. Live matches with bets go on top.",
+   "img": "novedades/todos-amigos.webp",
+   "ir": "colegas"
+  },
+  {
+   "id": "ganada-perdida-0111",
+   "fecha": "2026-11-01",
+   "hora": "13:17",
+   "titulo": "Ganada o perdida, bien a la vista",
+   "texto": "Las apuestas resueltas llevan arriba una franja verde o roja con lo ganado o perdido, el escudo de fondo y abajo la cuota, lo apostado y lo cobrado.",
+   "titulo_en": "Won or lost at a glance",
+   "texto_en": "Settled bets show a green or red band on top with what you won or lost, the crest behind and odds, stake and payout below.",
+   "img": "novedades/ganada-perdida.webp",
+   "ir": "apuestas"
+  },
+  {
    "id": "inicio-0111",
    "fecha": "2026-11-01",
    "hora": "12:43",
