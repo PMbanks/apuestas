@@ -15,7 +15,7 @@
 .bjm-arc text{font:600 11px var(--mono);letter-spacing:.3em;text-transform:uppercase;fill:rgba(242,193,78,.42)}
 .bjm-felt.bjm-apretada .bjm-arc text{display:none}
 .bjm-felt.bjm-movil .bjm-arc{left:0;width:100%}
-.bjm-felt.bjm-movil .bjm-arc text{font-size:16px;letter-spacing:.14em}
+.bjm-felt.bjm-movil .bjm-arc text{font-size:15px;letter-spacing:.05em}
 
 /* el mazo */
 .bjm-shoe{position:absolute;right:26px;top:22px;width:calc(var(--dw) * .74);height:calc(var(--dw) * 1.04);z-index:1}
