@@ -38,7 +38,7 @@ begin
   update bjm_ronda set estado = 'fin', banca = v_b, turno = null, plazo = null, fin_at = jg_ahora() where id = p_ronda;
   -- PM 02-11: "siempre tendras 1 seat en la mesa y podras meter mas seats, pero cada ronda te devolvera a 1 seat": al acabar la ronda
   -- cada jugador conserva solo su primer asiento (el de menor numero); los extras quedan libres para la siguiente mano
-  delete from bjm_asiento s where s.asiento > (select min(a2.asiento) from bjm_asiento a2 where a2.player = s.player);
+  delete from bjm_asiento ba where ba.asiento > (select min(a2.asiento) from bjm_asiento a2 where a2.player = ba.player);
   perform bump();                                                     -- saldos nuevos: que la app de todos se ponga al dia
 end $$;
 
