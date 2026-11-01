@@ -297,7 +297,7 @@
     const tb = grupos.map((gr) => { const es = gr.standings.entries;
       return `<div class="tbl2 nb-tb"><span class="lab">${esc(gr.header || gr.name || T('Clasificación', 'Standings'))}</span><div class="tr2 h"><span class="p"></span><span class="nm"></span><span>${T('G', 'W')}</span><span>${T('P', 'L')}</span><span class="b">%</span></div>${es.map((e, i) => [e, i + 1]).filter(([e, i]) => i <= 4 || ids.has(String(e.id))).map(([e, i]) => `<div class="tr2 ${ids.has(String(e.id)) ? 'me' : ''}"><span class="p">${i}</span><span class="nm" data-notr>${esc(e.team?.displayName || e.team || '')}</span><span>${esc(v(e, 'wins'))}</span><span>${esc(v(e, 'losses'))}</span><span class="b">${esc(v(e, 'winPercent'))}</span></div>`).join('')}</div>` }).join('');
     box.querySelectorAll('.tbl2, .nb-tbs, .nb-bajas').forEach((x) => x.remove());
-    if (tb) { const ver = box.querySelector('.ver'); const w = document.createElement('div'); w.className = 'nb-tbs'; w.innerHTML = tb; if (ver) ver.before(w); else box.appendChild(w) }
+    if (tb && !box.querySelector(".fp-tab")) { const ver = box.querySelector('.ver'); const w = document.createElement('div'); w.className = 'nb-tbs'; w.innerHTML = tb; if (ver) ver.before(w); else box.appendChild(w) }
     const bajas = (d.injuries || []).flatMap((t) => (t.injuries || []).map((b) => ({ eq: t.team?.id, n: b.athlete?.displayName, s: b.status }))).filter((b) => b.n);
     if (bajas.length) {
       const w = document.createElement('div'); w.className = 'nb-bajas';
