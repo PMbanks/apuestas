@@ -17,6 +17,9 @@
 })();
 (function () {
   const D = {
+    // Filas de Partidos (01-11, quien.js): la previa de una cara del centro de la fila
+    'Apuesta suelta': 'Single bet', 'le reta': 'challenges them', 'aún no ha contestado': 'has not answered yet',
+    'Toca la foto para ver su perfil': 'Tap the photo to see their profile', 'Nada abierto en este partido': 'Nothing open on this game',
     // Ficha completa del equipo NBA (01-11, nba.js): plantilla, clasificación, estadísticas y calendario de toda la temporada
     'victoria seguida': 'win in a row',
     'victorias seguidas': 'wins in a row',

@@ -796,6 +796,18 @@ function featured() {
 // vivo.js da por equipo los mapas ganados y las rondas del mapa en juego (m.vivo, con "a" siempre el local) y la linea
 // "Mapa 2 de 3 · Haven" (o el minuto en futbol); aqui solo se pintan. Sin vivo.js o sin datos, queda lo de antes.
 const vN = (m, s) => (m.live && window.GM_VIVO ? GM_VIVO.n(m, s) : ''), vL = (m) => (m.live && window.GM_VIVO ? GM_VIVO.linea(m) : '');
+// PM 01-11 (filas de Partidos): el marcador de cada equipo va en una casilla fija y centrada (mapas en grande, rondas en pequeno); el futbol sin datos de vivo.js usa el "2:0" de m.score
+const vNf = (m, s) => {
+  const n = vN(m, s); if (n || !m.live) return n;
+  const q = /^(\d+):(\d+)/.exec(String(m.score || '')); if (!q) return '';
+  const x = +q[s === 'a' ? 1 : 2], y = +q[s === 'a' ? 2 : 1];
+  return `<span class="vn gl${x > y ? ' ml' : ''}" data-eq="${s}"><em>${x}</em></span>`;
+};
+// PM 01-11: el tiempo va a la derecha de los equipos. En vivo: VIVO y el minuto (futbol) o el cuarto y el reloj (NBA); si no: la hora y la cuenta atras
+const tiempoFila = (m) => {
+  if (m.live) { const v = m.vivo, mi = v && (v.k === 'f' || v.k === 'b') ? (v.k === 'b' && v.partes?.length ? v.partes.join(' ') : v.minuto) : ''; return `<em>VIVO</em>${mi ? `<small class="mn">${esc(mi)}</small>` : ''}` }
+  return `${HM(m.at)}${Date.parse(m.at) <= NOW ? '<small class="pe">por empezar</small>' : `<small>${CD(m.at)}</small>`}`;
+};
 function vivoCard(m) {
   const sc = String(m.score || '0:0'), [g, ...resto] = sc.split(/\s+/), det = resto.join(' ').replace(/^[·(]\s*|\)$/g, ''), ws = whoOn(m.id), tot = ws.reduce((a, w) => a + w.stake, 0);
   const lado = (s) => `<span class="lvc-t ${s}">${logo(m, s)}<b>${esc(s === 'a' ? m.a : m.b)}</b>${vN(m, s)}</span>`;
@@ -871,10 +883,11 @@ function partidos() {
     h += `<div class="day"><b>${DD(ms[0].at)}</b><span>${dayLab(ms[0].at)}</span><i>${ms.length} ${ms.length > 1 ? 'partidos' : 'partido'}</i></div>`;
     for (const m of ms) {
       const open = isOpen(m), qn = window.GM_QUIEN ? GM_QUIEN.fila(m) : { cls: '', who: '', movil: '' };
-      h += `<div class="row ${S.foc === m.id ? 'on' : ''} ${m.live && m.vivo ? 'cv' : ''} ${m.live ? 'envivo' : ''} ${qn.cls}" data-foc="${m.id}" style="--i:${Math.min(ri++, 14)}">
-        <span class="t">${m.live ? '<em>VIVO</em>' : HM(m.at)}${m.live ? (m.vivo ? '' : `<small class="sc">${esc(String(m.score || '').split(' ')[0])}</small>`) : Date.parse(m.at) <= NOW ? '<small class="pe">por empezar</small>' : `<small>${CD(m.at)}</small>`}</span>
+      h += `<div class="row fc ${S.foc === m.id ? 'on' : ''} ${m.live && m.vivo?.k === 'e' ? 'cv' : ''} ${m.live ? 'envivo' : ''} ${qn.cls}" data-foc="${m.id}" style="--i:${Math.min(ri++, 14)}">
         <span class="llw" title="${esc(L[m.lg][0])} · ${SP[m.s][0]}"><img class="ll" src="${esc(L[m.lg][1])}" alt="" loading="lazy">${m.s === 'c' || m.s === 'v' ? `<img class="lls" src="${SP[m.s][1]}" alt="">` : ''}</span>
-        <span class="tms"><span class="tm">${logo(m, 'a')}<span>${esc(m.a)}</span>${esFav(favK(m.s, m.a)) || esFav('pa:' + m.id) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${dailyTag(m)}${vN(m, 'a')}</span><span class="tm">${logo(m, 'b')}<span>${esc(m.b)}</span>${esFav(favK(m.s, m.b)) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${vN(m, 'b')}</span>${vL(m)}${qn.movil}</span>
+        <span class="tms"><span class="tm">${logo(m, 'a')}<span>${esc(m.a)}</span>${esFav(favK(m.s, m.a)) || esFav('pa:' + m.id) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${dailyTag(m)}${vNf(m, 'a')}</span><span class="tm">${logo(m, 'b')}<span>${esc(m.b)}</span>${esFav(favK(m.s, m.b)) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${vNf(m, 'b')}</span>${m.vivo?.k === 'e' ? vL(m) : ''}</span>
+        <span class="t">${tiempoFila(m)}</span>
+        ${qn.movil}
         <span class="who">${window.GM_QUIEN ? qn.who : [...new Set(whoOn(m.id).map((x) => x.f))].map((k) => av(k, 'sm')).join('')}</span>
         ${['1', 'X', '2'].map((p) => oddBtn(m, p, open)).join('')}
       </div>`;
