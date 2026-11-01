@@ -9,7 +9,7 @@
 (function () {
   const JUEGOS = [['moneda', 'Cara o cruz'], ['crash', 'Crash'], ['blackjack', 'Blackjack']];   // PM, 30-10: ruleta y plinko fuera (su codigo sigue aqui, sin pestana)
   const CON_RANKING = ['moneda', 'crash', 'blackjack'];                                   // juegos con ranking (db/017b)
-  const FN = { moneda: 'moneda_estado', crash: 'crash_estado', ruleta: 'ruleta_estado', blackjack: 'bj_estado', plinko: 'plinko_estado' };
+  const FN = { moneda: 'moneda_estado', crash: 'crash_estado', ruleta: 'ruleta_estado', blackjack: null, plinko: 'plinko_estado' };
   const SUIT = ['♠', '♥', '♦', '♣'], RANK = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   const ORDEN = [0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7];       // casillas de la ruleta, en el sentido del reloj desde arriba
   const SPIN = 6;                                                          // segundos de giro (la base paga a los 7)
@@ -19,11 +19,10 @@
   let ctx = null, root = null;
   const S = {
     juego: (() => { const j = lee('jg-juego'); return JUEGOS.some((x) => x[0] === j) ? j : 'crash' })(), stake: Math.max(1, parseInt(lee('jg-stake'), 10) || 100), saldo: 0,
-    lado: 'cara', para: null, riesgo: 'medio', color: 'rojo', auto: '', busy: 0, err: null, ocupa: false, rk: { modo: lee('jg-rk-m') === 'mayor' ? 'mayor' : 'neto', periodo: lee('jg-rk-p') === 'semana' ? 'semana' : 'siempre', riv: null, sig: '', n: 0, recarga: false, d: {} }, aviso: '', pd: 0, bjRest: null,
+    lado: 'cara', para: null, riesgo: 'medio', color: 'rojo', auto: '', busy: 0, err: null, ocupa: false, rk: { modo: lee('jg-rk-m') === 'mayor' ? 'mayor' : 'neto', periodo: lee('jg-rk-p') === 'semana' ? 'semana' : 'siempre', riv: null, sig: '', n: 0, recarga: false, d: {} }, aviso: '', pd: 0,
     mo: { vistos: parseInt(lee('jg-mo-visto'), 10) || null, lado: 'cara', msg: '' },
     cr: { ultima: null },
     ru: { ang: 0, spin: null, hecho: null, msg: '' },
-    bj: { init: false, id: null, nj: 0, nb: 0 },
     pl: { msg: '', ball: null },
   };
   const D = { moneda: null, crash: null, ruleta: null, blackjack: null, plinko: null, res: null };
@@ -79,10 +78,9 @@
     const j = S.juego, n = ++cargaId;
     ultima = Date.now();
     try {
-      const [d, res, rest, rank] = await Promise.all([rpc(FN[j]), rpc('jg_resumen'), j === 'blackjack' ? bjLimite() : null, CON_RANKING.includes(j) ? rpc('jg_ranking', { p_juego: j, p_periodo: S.rk.periodo }).catch(() => null) : null]);
+      const [d, res, rank] = await Promise.all([FN[j] ? rpc(FN[j]) : {}, rpc('jg_resumen'), CON_RANKING.includes(j) ? rpc('jg_ranking', { p_juego: j, p_periodo: S.rk.periodo }).catch(() => null) : null]);
       if (n !== cargaId) return;
       D[j] = d; D.res = res; S.err = null;
-      if (j === 'blackjack') { if (S.busy) S.bjRestPend = rest; else S.bjRest = rest }
       if (CON_RANKING.includes(j) && !S.busy) S.rk.d[j] = rank || S.rk.d[j] || null;                          // el ranking enseña resultados: no se toca mientras una animacion los esconde
       aplica(j);
     } catch (e) { if (n !== cargaId) return; S.err = msgErr(e) }
@@ -97,7 +95,7 @@
   }
   function firma() {
     const d = D[S.juego] || {}, r = D.res || {};
-    const base = [S.juego, S.err, r.crash && r.crash.id, r.ruleta && r.ruleta.estado, r.moneda, r.bj, S.bjRest, S.lado, S.para, S.riesgo, S.color, S.mo.lado, S.mo.msg, S.ru.msg, S.pl.msg];
+    const base = [S.juego, S.err, r.crash && r.crash.id, r.ruleta && r.ruleta.estado, r.moneda, r.bj, S.lado, S.para, S.riesgo, S.color, S.mo.lado, S.mo.msg, S.ru.msg, S.pl.msg];
     return JSON.stringify([base, d, S.juego === 'crash' ? crFase() : S.juego === 'ruleta' ? ruFase() : 0], (k, v) => (k === 'now' ? undefined : v));
   }
   // lo propio de cada juego al llegar datos nuevos
@@ -109,11 +107,6 @@
       if (max > S.mo.vistos) { S.mo.vistos = max; guarda('jg-mo-visto', max) }
       if (nuevo && nuevo.creador === ctx.me && ahora() - ms(nuevo.cerrado) < 60000) moLanza(nuevo.salio, nuevo.ganador === ctx.me ? `Salió ${nuevo.salio}. ${nom(nuevo.rival)} aceptó y ganas ${N(nuevo.stake * 2)}` : `Salió ${nuevo.salio}. ${nom(nuevo.rival)} aceptó y pierdes ${N(nuevo.stake)}`, nuevo.ganador === ctx.me, false);
     } else if (j === 'ruleta') ruAplica();
-    else if (j === 'blackjack') {
-      const m = D.blackjack.mano;
-      if (!S.bj.init) S.bj = { init: true, id: m && m.id, nj: m ? m.jugador.length : 0, nb: m ? bjNb(m) : 0 };
-      if (!S.bjClamp && S.bjRest != null) { S.bjClamp = true; if (S.bjRest > 0 && S.stake > S.bjRest) S.stake = S.bjRest }
-    }
   }
 
   /* ---------- armazon ---------- */
@@ -163,7 +156,6 @@
     if (S.busy > 0) S.busy--;
     if (S.busy) return;
     if (S.saldoPend != null) { S.saldo = S.saldoPend; S.saldoPend = null }
-    if (S.bjRestPend !== undefined) { S.bjRest = S.bjRestPend; S.bjRestPend = undefined; pend = true }
     if (pend) pinta();
     if (S.rk.recarga) { S.rk.recarga = false; cargaRank() }
     root && root.querySelectorAll('[data-saldo]').forEach((e) => (e.textContent = N(S.saldo)));
@@ -314,6 +306,7 @@
   }
   A.tab = ({ v }) => {
     if (S.juego === v) return;
+    if (S.juego === 'blackjack' && window.GM_BJMESA) GM_BJMESA.para();
     S.juego = v; guarda('jg-juego', v); paraLoops(); sigs.v = null;
     pinta(); cargar();
   };
@@ -325,7 +318,6 @@
   A.rkR.libre = true;
   A.q = ({ v }) => {
     let sal = Math.max(0, S.saldo || ctx.saldo || 0);
-    if (S.juego === 'blackjack' && S.bjRest != null) sal = Math.min(sal, Math.max(0, S.bjRest));
     S.stake = v === 'mitad' ? Math.max(1, Math.floor(S.stake / 2)) : v === 'doble' ? Math.min(100000, S.stake * 2) : v === 'todo' ? Math.max(1, Math.min(100000, sal)) : +v;
     guarda('jg-stake', S.stake);
     const i = root.querySelector('[data-in]'); if (i) i.value = N(S.stake);
@@ -342,34 +334,13 @@
   function stakeOk() {
     if (!(S.stake >= 1)) { falla({ message: 'Pon una cantidad' }); return false }
     if (S.stake > queda()) { falla({ message: `No tienes tanto: te quedan ${N(queda())}` }); return false }
-    if (S.juego === 'blackjack' && S.bjRest != null) {
-      if (S.bjRest <= 0) { falla({ message: 'Hoy ya has perdido 500 en el blackjack. Vuelve mañana' }); return false }
-      if (S.stake > S.bjRest) { falla({ message: `Hoy solo puedes arriesgar ${N(S.bjRest)} más en el blackjack` }); return false }
-    }
     return true;
   }
-  // lo que queda por arriesgar hoy en el blackjack (la base deja perder 500 al dia desde db/027, hora de Madrid): 500 mas lo neto de hoy
-  function madridInicio() {
-    const t = Date.now(), h = (z) => new Date(new Date(t).toLocaleString('en-US', { timeZone: z })), off = h('Europe/Madrid') - h('UTC'), m = new Date(t + off);
-    return Date.UTC(m.getUTCFullYear(), m.getUTCMonth(), m.getUTCDate()) - off;
-  }
-  async function bjLimite() {
-    try {
-      if (!ctx.db.from) return null;
-      const { data, error } = await ctx.db.from('ledger').select('amount').eq('kind', 'blackjack').gte('created_at', new Date(madridInicio()).toISOString());
-      return error || !data ? null : 100 + data.reduce((a, x) => a + x.amount, 0);
-    } catch { return null }
-  }
-  function bjLim() {
-    const r = S.bjRest;
-    if (r == null) return '';
-    return r <= 0 ? '<p class="jg-lim lose">Hoy ya has perdido 500. Vuelve mañana</p>' : `<p class="jg-lim">Hoy te quedan <b class="num">${N(r)}</b> por arriesgar</p>`;
-  }
   function apuesta() {
-    const bj = S.juego === 'blackjack', chips = bj ? [5, 10, 25, 50] : [100, 500, 1000];
+    const chips = [100, 500, 1000];
     return `<div class="jg-stake"><div class="jg-lab"><span class="lab">Apuesta</span><span class="jg-sal"><span class="num" data-saldo>${N(S.saldo)}</span>${coin()}</span></div>
       <label class="jg-amt"><input data-in inputmode="numeric" autocomplete="off" value="${N(S.stake)}" aria-label="Apuesta">${coin()}</label>
-      <div class="jg-q">${chips.map((c) => `<button data-jg="q" data-v="${c}">${N(c)}</button>`).join('')}<button data-jg="q" data-v="mitad">1/2</button><button data-jg="q" data-v="doble">×2</button><button data-jg="q" data-v="todo" data-q-todo>${bj ? 'Máx' : 'Todo'}</button></div>${bj ? bjLim() : ''}</div>`;
+      <div class="jg-q">${chips.map((c) => `<button data-jg="q" data-v="${c}">${N(c)}</button>`).join('')}<button data-jg="q" data-v="mitad">1/2</button><button data-jg="q" data-v="doble">×2</button><button data-jg="q" data-v="todo" data-q-todo>Todo</button></div></div>`;
   }
   const fila = (cuando, a, b, c, d, attrs) => `<div class="jg-r ${cuando || ''}" ${attrs || ''}>${a}<span class="jg-r-n">${b}</span>${c || ''}${d || ''}</div>`;
 
@@ -876,167 +847,13 @@
   };
 
   /* =====================================================================
-     BLACKJACK
+     BLACKJACK: una sola mesa compartida (PM, 01-11). La pinta y la juega bjmesa.js (db/040); aqui solo se le deja su hueco.
      ===================================================================== */
-  // cartas de verdad: indices en las esquinas, puntos en su sitio, figuras con marco y un dorso con dibujo. Se pueden girar (volteo de la tapada).
-  const PIPS = { 2: [[50, 22], [50, 78]], 3: [[50, 22], [50, 50], [50, 78]], 4: [[36, 24], [64, 24], [36, 76], [64, 76]], 5: [[36, 24], [64, 24], [50, 50], [36, 76], [64, 76]], 6: [[36, 24], [64, 24], [36, 50], [64, 50], [36, 76], [64, 76]],
-    7: [[36, 24], [64, 24], [50, 37], [36, 50], [64, 50], [36, 76], [64, 76]], 8: [[36, 24], [64, 24], [50, 37], [36, 50], [64, 50], [50, 63], [36, 76], [64, 76]],
-    9: [[36, 22], [64, 22], [36, 41], [64, 41], [50, 50], [36, 59], [64, 59], [36, 78], [64, 78]], 10: [[36, 22], [64, 22], [50, 31], [36, 41], [64, 41], [36, 59], [64, 59], [50, 69], [36, 78], [64, 78]] };
-  function frente(c) {
-    const s = Math.floor(c / 13), r = c % 13, P = SUIT[s], R = RANK[r];
-    const centro = r === 0 ? `<span class="jg-pp big" style="left:50%;top:50%">${P}</span>`
-      : r >= 10 ? `<span class="jg-fc"><em>${R}</em><u>${P}</u></span>`
-      : PIPS[r + 1].map(([x, y]) => `<span class="jg-pp ${y > 50 ? 'rv' : ''}" style="left:${x}%;top:${y}%">${P}</span>`).join('');
-    const ix = `<span class="jg-ix"><b>${R}</b><i>${P}</i></span>`;
-    return ix + centro + ix.replace('jg-ix', 'jg-ix rv');
-  }
-  const carta = (c, down) => {
-    const s = down ? 0 : Math.floor(c / 13);
-    return `<span class="jg-card ${s === 1 || s === 2 ? 'rd' : ''}"><span class="jg-ci"${down ? ' style="transform:rotateY(180deg)"' : ''}><span class="jg-cfr">${down ? '' : frente(c)}</span><span class="jg-cbk"></span></span></span>`;
-  };
-  const bjNb = (m) => m.banca.length + (m.estado === 'curso' ? 1 : 0);
-  const FICHAS = [[100, 'c100'], [50, 'c50'], [25, 'c25'], [10, 'c10'], [5, 'c5'], [1, 'c1']];
-  function fichasN(n) { let k = 0; for (const [v] of FICHAS) while (n >= v && k < 8) { n -= v; k++ } return k }
-  function fichasHtml(n) { let o = '', k = 0; for (const [v, c] of FICHAS) while (n >= v && k < 8) { o += `<i class="jg-ch ${c}" style="--k:${k}"></i>`; n -= v; k++ } return o }
-  function vBj() {
-    const m = D.blackjack && D.blackjack.mano, curso = m && m.estado === 'curso';
-    const gan = m && m.estado === 'fin' ? m.pago - m.apostado : 0;
-    let res = m ? '' : 'Haz tu apuesta';
-    if (m && m.estado === 'fin') {
-      res = m.resultado === 'blackjack' ? `Blackjack · ▲ ${N(gan)}` : m.resultado === 'gana' ? `Ganas ▲ ${N(gan)}` : m.resultado === 'empate' ? 'Empate · te devuelvo la apuesta' : m.valor > 21 ? `Te pasas · ▼ ${N(m.apostado)}` : `Pierdes ▼ ${N(m.apostado)}`;
-    }
-    const cls = m && m.estado === 'fin' ? (m.resultado === 'gana' || m.resultado === 'blackjack' ? 'win' : m.resultado === 'empate' ? '' : 'lose') : (m ? '' : 'dim');
-    return `<section class="jg-g jg-gbj">
-      <div class="jg-stage jg-bj">
-        <div class="jg-felt" data-felt>
-          <div class="jg-dk" data-deck><i></i><i></i><i></i><i></i></div>
-          <div class="jg-zb">
-            <div class="jg-hl"><span class="lab">Banca</span><b class="num" data-bv>${m ? (m.valor_banca || '') : ''}</b></div>
-            <div class="jg-hand" data-bj-b>${m ? m.banca.map((c) => carta(c)).join('') + (curso ? carta(null, true) : '') : ''}</div>
-          </div>
-          <div class="jg-mid">
-            <div class="jg-pot" data-pot>${curso ? `<span class="jg-fs">${fichasHtml(m.apostado)}</span><b class="num jg-pa">${N(m.apostado)}</b>` : ''}</div>
-            <p class="jg-res ${cls}" data-bj-res>${esc(res)}</p>
-          </div>
-          <div class="jg-zb">
-            <div class="jg-hand" data-bj-j>${m ? m.jugador.map((c) => carta(c)).join('') : ''}</div>
-            <div class="jg-hl"><span class="lab">Tú</span><b class="num">${m ? m.valor : ''}</b>${m && m.doblada ? '<em>doblada</em>' : ''}</div>
-          </div>
-          <p class="jg-arco">Blackjack paga 3 a 2</p>
-        </div>
-      </div>
-      <div class="jg-side">
-        ${curso ? `<span class="lab">En juego</span><div class="jg-pott num">${N(m.apostado)}${coin()}</div>
-          <button class="go" data-jg="pedir" data-id="${m.id}">Pedir</button>
-          <div class="jg-two"><button class="go ghost" data-jg="plantar" data-id="${m.id}">Plantarse</button>${m.puede_doblar ? `<button class="go ghost" data-jg="doblar" data-id="${m.id}" ${S.saldo < m.stake || (S.bjRest != null && S.bjRest < m.stake) ? 'disabled' : ''}>Doblar</button>` : ''}</div>${bjLim()}${aviso()}`
-        : `${apuesta()}<button class="go" data-jg="repartir" data-go ${S.bjRest != null && S.bjRest <= 0 ? 'disabled' : ''}>${m ? 'Otra mano' : 'Repartir'} por <span data-go-n>${N(S.stake)}</span></button>${aviso()}`}
-        <p class="jg-rule">Blackjack paga 3 a 2. La banca se planta en 17.</p>
-      </div></section>`;
-  }
-  // confeti contenido: un lienzo encima del anfitrion que solo vive lo que dura el chorro
-  function confeti(host, o = {}) {
-    if (quieto() || !host) return;
-    const cv = document.createElement('canvas'); cv.className = 'jg-fx'; host.appendChild(cv);
-    const w = host.clientWidth, h = host.clientHeight, dpr = Math.min(2, window.devicePixelRatio || 1);
-    cv.width = w * dpr; cv.height = h * dpr;
-    const g = cv.getContext('2d'); g.scale(dpr, dpr);
-    const cols = o.cols || ['#f2c14e', '#ffdc85', '#2bd47d', '#f4f2ec'], ox = o.x == null ? w / 2 : o.x, oy = o.y == null ? h * 0.42 : o.y;
-    const P = Array.from({ length: o.n || 50 }, () => { const a = rnd(-Math.PI * 0.95, -Math.PI * 0.05), v = rnd(180, 520); return { x: ox, y: oy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: rnd(2.5, 5.5), rot: rnd(0, 6), vr: rnd(-9, 9), c: cols[(Math.random() * cols.length) | 0], life: rnd(0.9, 1.7), w: rnd(0.5, 1) } });
-    const t0 = performance.now(); let last = t0;
-    const paso = (now) => {
-      const dt = Math.min(0.04, (now - last) / 1000), el = (now - t0) / 1000; last = now; g.clearRect(0, 0, w, h); let vivo = 0;
-      for (const p of P) {
-        p.vy += 900 * dt; p.vx *= 0.992; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
-        const k = 1 - el / p.life; if (k <= 0) continue; vivo++;
-        g.save(); g.globalAlpha = Math.min(1, k * 1.6); g.translate(p.x, p.y); g.rotate(p.rot); g.fillStyle = p.c; g.fillRect(-p.r, -p.r * p.w, p.r * 2, p.r * 2 * p.w); g.restore();
-      }
-      if (vivo && cv.isConnected) requestAnimationFrame(paso); else cv.remove();
-    };
-    requestAnimationFrame(paso);
-  }
-  // anima solo lo nuevo de esta mano: las cartas vuelan desde el mazo, la tapada se voltea, las fichas entran y salen, y al ganar hay brillo y confeti
+  const vBj = () => `<section class="jg-g jg-gbjm"><div class="jg-stage"><div data-bjm-hueco></div></div></section>`;
   function bjPost() {
-    const m = D.blackjack && D.blackjack.mano; if (!m) return;
-    const felt = root.querySelector('[data-felt]'), deck = root.querySelector('[data-deck]'); if (!felt || !deck) return;
-    const fr = felt.getBoundingClientRect(), dk = deck.getBoundingClientRect();
-    const js = [...root.querySelectorAll('[data-bj-j] .jg-card')], bs = [...root.querySelectorAll('[data-bj-b] .jg-card')];
-    const cx = (el) => { const r = el.getBoundingClientRect(); return r.left - fr.left + r.width / 2 };
-    const prev = S.bj.id === m.id ? S.bj : { id: m.id, nj: 0, nb: 0, back: false, xj: [], xb: [], ap: 0 };
-    const nuevo = { init: true, id: m.id, nj: js.length, nb: bs.length, back: m.estado === 'curso', xj: js.map(cx), xb: bs.map(cx), ap: m.apostado };
-    const inicio = prev.nj === 0 && prev.nb === 0, final = m.estado === 'fin' && (inicio || prev.back);
-    const resEl = root.querySelector('[data-bj-res]'), pot = root.querySelector('[data-pot]');
-    const hayAnim = (js.length > prev.nj || bs.length > prev.nb || final || (m.apostado > prev.ap && prev.ap)) && !quieto();
-    if (!hayAnim) { S.bj = nuevo; return }
-    let d = 0;
-    const EASE = 'cubic-bezier(.2,.8,.25,1)';
-    const vuela = (el, delay, flip) => {
-      const r = el.getBoundingClientRect(), dx = dk.left + dk.width / 2 - (r.left + r.width / 2), dy = dk.top + dk.height / 2 - (r.top + r.height / 2);
-      el.animate([{ transform: `translate(${dx}px,${dy}px) rotate(-14deg) scale(.8)` }, { transform: 'none' }], { duration: 440, delay, easing: EASE, fill: 'backwards' });
-      if (flip) el.querySelector('.jg-ci').animate([{ transform: 'rotateY(180deg)' }, { transform: 'rotateY(180deg)', offset: 0.4 }, { transform: 'rotateY(0deg)' }], { duration: 440, delay, easing: 'ease-out', fill: 'backwards' });
-    };
-    const volteo = (el, delay) => {
-      el.querySelector('.jg-ci').animate([{ transform: 'rotateY(180deg)' }, { transform: 'rotateY(0deg)' }], { duration: 520, delay, easing: 'ease-in-out', fill: 'backwards' });
-      el.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-16px) scale(1.06)', offset: 0.5 }, { transform: 'translateY(0)' }], { duration: 520, delay, easing: 'ease-in-out' });
-    };
-    if (!inicio) {                                                                  // las ya puestas se hacen sitio (la fila va centrada)
-      const mueve = (els, xs, nx, n) => els.forEach((el, i) => { if (i < n && xs[i] != null && Math.abs(xs[i] - nx[i]) > 1) el.animate([{ transform: `translateX(${xs[i] - nx[i]}px)` }, { transform: 'none' }], { duration: 300, easing: EASE }) });
-      mueve(js, prev.xj, nuevo.xj, prev.nj); mueve(bs, prev.xb, nuevo.xb, prev.nb);
-    }
-    const dealer = m.estado === 'fin' && prev.back && prev.id === m.id;             // la banca juega: voltea su carta y pide
-    if (inicio) {                                                                   // reparto: tu carta, la suya, la tuya, la suya (tapada si se sigue jugando)
-      for (let i = 0; i < Math.max(js.length, bs.length); i++) {
-        if (js[i]) { vuela(js[i], d, true); d += 300 }
-        if (bs[i]) { vuela(bs[i], d, !(m.estado === 'curso' && i === 1)); d += 300 }
-      }
-      if (fichasN(m.apostado) && !final && pot) pot.querySelectorAll('.jg-ch').forEach((c, k) => c.animate([{ transform: 'translateY(200px) scale(.8)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 400, delay: k * 70, easing: EASE, fill: 'backwards' }));
-    } else {
-      for (let i = prev.nj; i < js.length; i++) { vuela(js[i], d, true); d += 400 }
-      if (dealer) {
-        if (bs.length > 1) { volteo(bs[1], d); d += 620 }
-        for (let i = 2; i < bs.length; i++) { vuela(bs[i], d, true); d += 560 }
-      }
-      if (m.apostado > prev.ap && prev.ap && pot) pot.querySelectorAll('.jg-ch').forEach((c, k) => { if (k >= fichasN(prev.ap)) c.animate([{ transform: 'translateY(200px) scale(.8)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 400, delay: k * 60, easing: EASE, fill: 'backwards' }) });
-    }
-    if (final && pot) {                                                             // las fichas se van: al jugador si gana o empata, a la banca si pierde
-      const gana = m.resultado === 'gana' || m.resultado === 'blackjack', empate = m.resultado === 'empate', tf = d + 200;
-      const tmp = document.createElement('div'); tmp.className = 'jg-tmp';
-      tmp.innerHTML = `<span class="jg-fs">${fichasHtml(m.apostado)}</span>${gana ? `<span class="jg-fs jg-fs2">${fichasHtml(m.pago - m.apostado)}</span>` : ''}`;
-      pot.appendChild(tmp);
-      const dir = gana || empate ? 230 : -230;
-      [...tmp.querySelectorAll('.jg-ch')].forEach((c, k) => {
-        const premio = c.parentElement.classList.contains('jg-fs2');
-        if (premio) c.animate([{ transform: 'translateY(-200px) scale(.8)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 420, delay: tf + k * 60, easing: EASE, fill: 'backwards' });
-        c.animate([{ transform: 'none', opacity: 1 }, { transform: `translateY(${dir}px) scale(.85)`, opacity: 0 }], { duration: 560, delay: tf + (premio ? 620 : 380) + k * 40, easing: 'cubic-bezier(.5,0,.8,.4)', fill: 'both' });
-      });
-      d = tf + (gana ? 1600 : 950);
-      setTimeout(() => tmp.remove(), d + 100);
-      if (gana) {
-        const big = m.resultado === 'blackjack';
-        setTimeout(() => { if (felt.isConnected) { confeti(felt, { n: big ? 110 : 55, cols: big ? ['#f2c14e', '#ffdc85', '#fff'] : undefined }); felt.animate([{ filter: 'brightness(1)' }, { filter: 'brightness(1.3)' }, { filter: 'brightness(1)' }], { duration: 900 }) } }, tf + 380);
-      }
-    }
-    if (resEl && m.estado === 'fin') resEl.animate([{ opacity: 0, transform: 'scale(.7)' }, { opacity: 1, transform: 'scale(1.12)', offset: 0.6 }, { opacity: 1, transform: 'none' }], { duration: 520, delay: Math.max(0, d - 700), easing: EASE, fill: 'backwards' });
-    // hasta que la banca acaba, el valor de la banca y el saldo de la cabecera no se mueven
-    const vb = root.querySelector('[data-bv]'); if (vb && (dealer || final)) { const real = m.valor_banca; vb.textContent = ''; setTimeout(() => { const v2 = root && root.querySelector('[data-bv]'); if (v2) v2.textContent = real }, Math.max(0, d - 900)) }
-    S.bj = nuevo;
-    S.busy++; setTimeout(libera, d + 450);
+    const h = root.querySelector("[data-bjm-hueco]");
+    if (h && window.GM_BJMESA) GM_BJMESA.montar(h, ctx, { rank: () => cargaRank() });
   }
-  async function bjAccion(fn, args) {
-    const r = await rpc(fn, args);
-    D.blackjack = { mano: r.mano, saldo: r.saldo };
-    S.saldoPend = r.saldo;                                                       // el saldo y lo que queda hoy se ven cuando acaban las cartas
-    S.bjRestPend = await bjLimite();
-    sigs.v = null; pinta();
-    if (!S.busy) { S.saldo = S.saldoPend; S.saldoPend = null; S.bjRest = S.bjRestPend; S.bjRestPend = undefined; pinta(); if (ctx.refresh) ctx.refresh() }
-  }
-  A.repartir = async () => {
-    if (!stakeOk()) return;
-    S.bj = { init: true, id: null, nj: 0, nb: 0 };
-    await bjAccion('bj_repartir', { p_stake: S.stake });
-  };
-  A.pedir = ({ id }) => bjAccion('bj_pedir', { p_id: +id });
-  A.plantar = ({ id }) => bjAccion('bj_plantarse', { p_id: +id });
-  A.doblar = ({ id }) => bjAccion('bj_doblar', { p_id: +id });
 
   /* =====================================================================
      PLINKO
@@ -1129,7 +946,7 @@
       else { post(); reanuda(); clearTimeout(tCarga); tCarga = setTimeout(cargar, 1250 - (Date.now() - ultima)) }      // pulso pegado al anterior: no se pierde, se pide un poco despues
     },
     // true mientras una animacion esconde un resultado: la app no debe repintar el saldo todavia (llamara a refresh() sola al acabar)
-    ocupado: () => S.busy > 0,
+    ocupado: () => S.busy > 0 || !!(window.GM_BJMESA && S.juego === 'blackjack' && GM_BJMESA.ocupado()),
     estado: () => ({ juego: S.juego, ocupado: S.busy > 0 }),
   };
 })();
