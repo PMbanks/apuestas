@@ -179,3 +179,6 @@ html.sin-anim .rc,html.sin-anim .rc::after,html.sin-anim .rc-vs,html.sin-anim .r
   .rc-mas{width:30px;height:30px;font-size:11px}
   .rc-lado.grp .rc-n{font-size:14px}
 }
+
+/* PM 01-11: tiempo del partido en la tarjeta del reto */
+.rc-st .rc-t{margin-left:8px;padding-left:8px;border-left:1px solid rgba(255,255,255,.22);font:600 11px/1 var(--mono);letter-spacing:.02em;text-transform:none;white-space:nowrap;max-width:22ch;overflow:hidden;text-overflow:ellipsis}

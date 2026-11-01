@@ -195,7 +195,7 @@
         opts: [['si', 'Sí, habrá gol', c.si], ['no', 'No, sin goles', c.no]],
         nota: 'Cuenta desde 3 minutos después de apostar, durante 10 minutos, porque ESPN va con retraso respecto al directo. La cuota depende del minuto y del marcador y se queda fija al apostar.', off };
     }
-    if (/valorant/i.test(sp) && nombres.length === 2) {
+    if (false && /valorant/i.test(sp) && nombres.length === 2) {   // PM 01-11: las predicciones rapidas se quitan de Valorant y CS2; solo futbol, baloncesto y UFC
       const m = P.d.live.find((x) => x.sport === 'v' && x.home === nombres[0] && x.away === nombres[1]);
       if (!m) return { names, kind: 'ronda', off: 'Las predicciones rápidas de este partido todavía no están disponibles.' };
       const d = await vlr(nombres[0], nombres[1]);

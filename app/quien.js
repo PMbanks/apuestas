@@ -106,7 +106,11 @@
     const mapeado = hay && sA != null && sB != null && A.p !== B.p;
     const centro = hay ? (mapeado ? `<span class="rc-sc"><b>${sA}</b><i>:</i><b>${sB}</b></span>` : `<span class="rc-sc"><b>${d.sa}</b><i>:</i><b>${d.sb}</b></span><small class="rc-sc-n" data-notr>${esc(m.a)} · ${esc(m.b)}</small>`) + '<span class="rc-vs s">vs</span>' : '<span class="rc-vs">VS</span>';
     const t = Date.parse(m.at) || 0;
-    const estado = m.live ? `<span class="rc-st live"><i></i><span>En vivo</span></span>`
+    // PM 01-11: "en la pantalla del challenge que salga el tiempo por el que van": el minuto (futbol), el cuarto y el reloj (NBA), el mapa (esports) o, si no hay, cuanto lleva
+    const lin = m.live ? g(() => (window.GM_VIVO ? GM_VIVO.lineaTxt(m) : ''), '') : '';
+    const lleva = m.live && !lin ? Math.max(0, Math.floor((Date.now() - t) / 60000)) : 0;
+    const tiempo = lin || (lleva > 0 && lleva < 600 ? 'Lleva ' + (lleva >= 60 ? Math.floor(lleva / 60) + ' h ' + String(lleva % 60).padStart(2, '0') + ' min' : lleva + ' min') : '');
+    const estado = m.live ? `<span class="rc-st live"><i></i><span>En vivo</span>${tiempo ? `<span class="rc-t">${esc(tiempo)}</span>` : ''}</span>`
       : c.st === 'pending' ? `<span class="rc-st">${c.to ? 'Esperando respuesta' : 'Abierto a todos'}</span>`
       : `<span class="rc-st"><span>Empieza en</span> <b>${g(() => CD(t), '')}</b></span>`;
     const nv = nvmDe(c), bote = g(() => R.bote(c), c.stake * 2), varios = g(() => R.nEntradas(c) > 2, false), dentroYo = g(() => R.dentro(c), false);
