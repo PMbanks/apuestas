@@ -253,38 +253,258 @@
 
   /* ---------- ficha de cada equipo (Ver ficha) y lo de ESPN en la ficha del partido ---------- */
   const resumen = (m) => g(() => ESPN.get(m.id)?.d, null);     // lo que ya pidio app.js (espnData) para la ficha
-  async function resumenPide(m) {
-    const ya = resumen(m); if (ya) return ya;
-    try { const r = await fetch(`${BASE}/summary?event=${m.espn.event}`); return r.ok ? await r.json() : null } catch { return null }
-  }
-  const PLANT = new Map();
-  const plantilla = (tid) => { if (!PLANT.has(tid)) PLANT.set(tid, fetch(`${BASE}/teams/${tid}/roster`).then((r) => (r.ok ? r.json() : null)).catch(() => null)); return PLANT.get(tid) };
   const resB = (r) => `<b class="rs ${r === 'W' ? 'g' : 'p'}">${r === 'W' ? T('G', 'W') : T('P', 'L')}</b>`;
-  async function fichaEquipo(box, m, side) {
-    const tid = m.espn?.ids?.[side]; if (!tid) return;
-    const [d, ro] = await Promise.all([resumenPide(m), plantilla(tid)]);
-    const now = document.getElementById('sheet-box'); if (!now || now.dataset.m !== m.id || now.dataset.side !== side) return;
-    const nm = side === 'a' ? m.a : m.b, l5 = (d?.lastFiveGames || []).find((t) => String(t.team?.id) === String(tid))?.events || [];
-    const rec = (m.tape || []).map((r) => r[side === 'a' ? 0 : 2]);
-    const bio = [[T('Récord', 'Record'), rec[0]], [side === 'a' ? T('En casa', 'At home') : T('Fuera', 'Away'), rec[1]]].filter((x) => x[1]);
-    let h = bio.length ? `<div class="bio">${bio.map(([k, v]) => `<div><span class="lab">${k}</span><b>${esc(String(v))}</b></div>`).join('')}</div>` : '';
-    if (l5.length) {
-      h += `<div class="shs"><span class="lab">${T('Forma', 'Form')}</span><span class="fm big">${l5.slice(0, 5).reverse().map((e) => resB(e.gameResult)).join('')}</span></div>`;
-      h += `<div class="shs"><span class="lab">${T('Últimos partidos', 'Last games')}</span>${l5.map((e) => `<div class="shr"><img class="tl" src="${esc(e.opponent?.logo || '')}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><span class="nm">${e.atVs === '@' ? '@ ' : ''}${esc(e.opponent?.displayName || '')}</span><span class="dt">${esc(g(() => dmy(Date.parse(e.gameDate)), ''))}</span><span class="mk">${esc(String(e.score || '').replace(/-/g, ':'))}</span>${resB(e.gameResult)}</div>`).join('')}</div>`;
-    }
-    const prox = g(() => board().filter((x) => x.s === 'b' && x.id !== m.id && (x.a === nm || x.b === nm)).sort((p, q) => Date.parse(p.at) - Date.parse(q.at)).slice(0, 4), []);
-    if (prox.length) h += `<div class="shs"><span class="lab">${T('Próximos', 'Next')}</span>${prox.map((x) => `<div class="shr"><img class="tl" src="${esc(x.a === nm ? x.lb : x.la)}" alt="" loading="lazy"><span class="nm">${x.a === nm ? '' : '@ '}${esc(x.a === nm ? x.b : x.a)}</span><span class="dt">${esc(g(() => dmy(Date.parse(x.at)), ''))}</span><span class="mk">${esc(g(() => HM(Date.parse(x.at)), ''))}</span><span></span></div>`).join('')}</div>`;
-    const bajas = ((d?.injuries || []).find((t) => String(t.team?.id) === String(tid))?.injuries || []);
-    if (bajas.length) h += `<div class="shs"><span class="lab">${T('Bajas', 'Injuries')}</span>${bajas.map((b) => `<div class="shr nb-baja"><span class="nm" data-notr>${esc(b.athlete?.displayName || '')}</span><span class="dt">${esc(estadoBaja(b.status))}</span></div>`).join('')}</div>`;
-    const at = ro?.athletes || [];
-    if (at.length) {
-      const grupos = [['G', T('Bases y escoltas', 'Guards')], ['F', T('Aleros', 'Forwards')], ['C', T('Pívots', 'Centers')]];
-      h += `<div class="shs"><span class="lab">${T('Plantilla', 'Roster')}</span><div class="sq">${grupos.map(([k, n]) => { const x = at.filter((p) => String(p.position?.abbreviation || '').replace(/^.*-/, '')[0] === k);
-        return x.length ? `<div><small>${n}</small>${x.map((p) => `<span><b>${esc(p.jersey || '')}</b><span data-notr>${esc(p.displayName)}</span></span>`).join('')}</div>` : '' }).join('')}</div></div>`;
-    }
-    now.innerHTML = h || `<p class="hint">${T('ESPN no tiene más datos de este equipo.', 'ESPN has no more data on this team.')}</p>`;
-    now.dataset.nb = m.id + side;
+
+  /* ---------- ficha completa del equipo (PM, 01-11: "solo salen los ultimos 5 partidos, eso no me mola") ----------
+     Todo viene de ESPN, gratis y sin clave, y se pide desde el navegador en cuanto se abre la ficha (los cinco sitios dejan CORS):
+       standings?level=3 (conferencia, division, record, racha, puntos a favor y en contra de los 30)
+       teams/{id}/schedule (toda la temporada), teams/{id}/roster (plantilla, fotos, lesiones),
+       core .../teams/{id}/statistics (estadisticas del equipo con su puesto) y core .../athletes/{id}/statistics/0 (medias de cada jugador).
+     Memoria en esta sesion y en sessionStorage (con try/catch), nada pasa por el sincronizador ni por la base. */
+  const API = 'https://site.api.espn.com/apis', CORE = 'https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba';
+  const jget = (u) => fetch(u).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  const MEM = new Map();                                        // clave -> { t, d, p }
+  function pide(k, ttl, f) {
+    const c = MEM.get(k); if (c && Date.now() - c.t < ttl) return c.p;
+    const e = { t: Date.now(), d: undefined, p: null }; MEM.set(k, e);
+    let v; try { const s = JSON.parse(sessionStorage.getItem('gm-nba1:' + k) || 'null'); if (s && s.d != null && Date.now() - s.t < ttl) { v = s.d; e.t = s.t } } catch {}
+    e.p = (v != null ? Promise.resolve(v) : f().catch(() => null)).then((d) => {
+      if (d == null) { MEM.delete(k); return null }
+      e.d = d; if (v == null) try { sessionStorage.setItem('gm-nba1:' + k, JSON.stringify({ t: e.t, d })) } catch {}
+      return d;
+    });
+    return e.p;
   }
+  const dato = (k) => { const c = MEM.get(k); return c ? c.d : undefined };   // lo que ya llego (undefined = aun no)
+  const TTL = 3 * 60e3;
+  let ANIO = null;                                              // anio de la temporada (2027 = 2026 27), lo da el calendario
+  const anio = () => ANIO || (new Date().getMonth() >= 7 ? new Date().getFullYear() + 1 : new Date().getFullYear());
+  const DIV = { Atlantic: ['Atlántico', 'Atlantic'], Central: ['Central', 'Central'], Southeast: ['Sureste', 'Southeast'], Northwest: ['Noroeste', 'Northwest'], Pacific: ['Pacífico', 'Pacific'], Southwest: ['Suroeste', 'Southwest'] };
+  const sv = (e, k) => (e.stats || []).find((s) => s.name === k)?.displayValue;
+  async function dClasif() {
+    const j = await jget(`${API}/v2/sports/basketball/nba/standings?level=3`); if (!j?.children?.length) return null;
+    const eq = {}, conf = {}, div = {};
+    for (const c of j.children) {
+      const cn = /west/i.test(c.name || '') ? 'W' : 'E'; conf[cn] = conf[cn] || [];
+      for (const d of c.children || [c]) {
+        div[d.name] = div[d.name] || [];
+        for (const e of d.standings?.entries || []) {
+          const t = e.team || {}, num = (k) => { const v = parseFloat(sv(e, k)); return isFinite(v) ? v : null };
+          eq[t.id] = { id: String(t.id), n: t.displayName || '', c: t.shortDisplayName || t.name || t.displayName || '', lg: t.logos?.[0]?.href || '', w: num('wins'), l: num('losses'), pct: sv(e, 'winPercent') || '',
+            sd: num('playoffSeed'), st: sv(e, 'streak') || '', l10: sv(e, 'Last Ten Games') || '', pf: num('avgPointsFor'), pa: num('avgPointsAgainst'), df: num('differential'), casa: sv(e, 'Home') || '', fu: sv(e, 'Road') || '', cf: cn, dv: d.name };
+          conf[cn].push(String(t.id)); div[d.name].push(String(t.id));
+        }
+      }
+    }
+    const ord2 = (a, b) => (eq[a].sd ?? 99) - (eq[b].sd ?? 99) || (eq[b].w ?? 0) - (eq[a].w ?? 0);
+    for (const k in conf) conf[k].sort(ord2); for (const k in div) div[k].sort(ord2);
+    return Object.keys(eq).length > 5 ? { eq, conf, div } : null;
+  }
+  async function dSched(tid) {
+    const j = await jget(`${API}/site/v2/sports/basketball/nba/teams/${tid}/schedule`); if (!j?.events?.length) return null;
+    const seen = new Set(), ev = [];
+    for (const e of j.events) {
+      const c = e.competitions?.[0]; if (!c || seen.has(e.id)) continue; seen.add(e.id);
+      const yo = (c.competitors || []).find((x) => String(x.team?.id) === String(tid)), el = (c.competitors || []).find((x) => x !== yo); if (!yo || !el) continue;
+      const ty = c.status?.type || {}, sc = (x) => x?.score?.displayValue ?? x?.score ?? '';
+      ev.push({ id: e.id, t: Date.parse(e.date), h: yo.homeAway === 'home', rid: String(el.team?.id), rn: el.team?.displayName || '', rl: el.team?.logos?.[0]?.href || el.team?.logo || '',
+        done: !!ty.completed, live: ty.state === 'in', w: !!yo.winner, a: sc(yo), b: sc(el), ot: /OT/.test(ty.detail || ''), pp: /POSTPONED|CANCELED|SUSPENDED/i.test(ty.name || ''), dt: ty.shortDetail || '' });
+    }
+    ev.sort((x, y) => x.t - y.t);
+    if (j.season?.year) ANIO = j.season.year;
+    return ev.length ? { y: j.season?.year || null, s: j.season?.displayName || '', ev } : null;
+  }
+  async function dRoster(tid) {
+    const j = await jget(`${API}/site/v2/sports/basketball/nba/teams/${tid}/roster`); if (!j?.athletes?.length) return null;
+    const co = (j.coach || []).map((c) => `${c.firstName || ''} ${c.lastName || ''}`.trim())[0] || '';
+    return { co, at: j.athletes.map((a) => ({ id: String(a.id), n: a.displayName || a.fullName || '', j: a.jersey || '', p: String(a.position?.abbreviation || '')[0] || '', h: a.height || 0, hd: a.displayHeight || '', ed: a.age || 0, im: a.headshot?.href || '', bj: a.injuries?.[0]?.status || '' })) };
+  }
+  const NEQ = ['avgPoints', 'fieldGoalPct', 'threePointFieldGoalPct', 'freeThrowPct', 'avgThreePointFieldGoalsMade', 'avgRebounds', 'avgAssists', 'avgSteals', 'avgBlocks', 'avgTurnovers', 'gamesPlayed'];
+  async function dEq(tid) {
+    const j = await jget(`${CORE}/seasons/${anio()}/types/2/teams/${tid}/statistics`); const cs = j?.splits?.categories; if (!cs) return null;
+    const o = {}; for (const c of cs) for (const s of c.stats || []) if (NEQ.includes(s.name) && o[s.name] == null) o[s.name] = { v: s.value, r: s.rank ?? null };
+    return o;
+  }
+  async function dJug(id) {
+    let j; try { const r = await fetch(`${CORE}/seasons/${anio()}/types/2/athletes/${id}/statistics/0`); if (r.status === 404) return { gp: 0 }; if (!r.ok) return null; j = await r.json() } catch { return null }
+    const o = {}; for (const c of j?.splits?.categories || []) for (const s of c.stats || []) o[s.name] = s.value;
+    return { gp: o.gamesPlayed ?? 0, mn: o.avgMinutes ?? null, pt: o.avgPoints ?? null, rb: o.avgRebounds ?? null, as: o.avgAssists ?? null, fg: o.fieldGoalPct ?? null };
+  }
+
+  /* ---------- textos y formatos ---------- */
+  const f1 = (x) => (x == null || !isFinite(x) ? '·' : dec((+x).toFixed(1)));
+  const ord = (n) => (en() ? n + (([11, 12, 13].includes(n % 100) ? 'th' : { 1: 'st', 2: 'nd', 3: 'rd' }[n % 10]) || 'th') : n + 'º');
+  const sgn = (x) => (x == null || !isFinite(x) ? '·' : (x > 0 ? '+' : x < 0 ? MENOS : '') + dec(Math.abs(x).toFixed(1)));
+  const gp2 = (s) => String(s ?? '').replace(/\s*-\s*/g, ' · ');          // "4-2" -> "4 · 2"
+  const racha = (s) => { const x = /^([WL])(\d+)$/.exec(String(s || '')); return x ? { w: x[1] === 'W', n: +x[2] } : null };
+  const tz = () => g(() => TZ, undefined);
+  const fd = (t) => new Intl.DateTimeFormat(en() ? 'en-GB' : 'es-ES', { timeZone: tz(), weekday: 'short', day: 'numeric', month: 'short' }).format(t).replace(/[.,]/g, '');
+  const fdd = (t) => { const o = { timeZone: tz() }, l = en() ? 'en-GB' : 'es-ES', c = (x) => new Intl.DateTimeFormat(l, { ...o, ...x }).format(t).replace(/[.,]/g, ''); return `<i>${esc(c({ weekday: 'short' }))}</i>${esc(c({ day: 'numeric', month: 'short' }))}` };
+  const fh = (t) => new Intl.DateTimeFormat(en() ? 'en-GB' : 'es-ES', { timeZone: tz(), hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(t);
+  const POS = { G: ['Base o escolta', 'Guard'], F: ['Alero', 'Forward'], C: ['Pívot', 'Center'] };
+  const CONF = { E: ['Este', 'East', 'Conferencia Este', 'Eastern Conference'], W: ['Oeste', 'West', 'Conferencia Oeste', 'Western Conference'] };
+  const dn = (d) => (DIV[d] ? DIV[d][en() ? 1 : 0] : d);
+  const ini = (n) => String(n || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+  const FT = { key: null, tab: 'resumen', sort: 'pt', cal: 'todos', over: null, hp0: false, tid0: null, m: null, side: null, seq: 0, ircal: false, arriba: false };
+  const TABS = [['resumen', 'Resumen', 'Summary'], ['plantilla', 'Plantilla', 'Roster'], ['clasificacion', 'Clasificación', 'Standings'], ['estadisticas', 'Estadísticas', 'Team stats'], ['calendario', 'Calendario', 'Schedule']];
+
+  /* ---------- trozos de la ficha ---------- */
+  function filaPartido(e, nuevo) {
+    const sc = e.done ? `<span class="m ${e.w ? 'g' : 'p'}"><b>${esc(e.a)}</b><i>:</i>${esc(e.b)}${e.ot ? `<small>${T('prórroga', 'OT')}</small>` : ''}</span>` : e.live ? `<span class="m v"><b>${esc(e.a)}</b><i>:</i>${esc(e.b)}<small>${T('en directo', 'live')}</small></span>` : e.pp ? `<span class="m">${T('Aplazado', 'Postponed')}</span>` : `<span class="m h">${esc(fh(e.t))}</span>`;
+    const ins = e.done ? resB(e.w ? 'W' : 'L') : '<span class="rs"></span>';
+    return `<div class="nbf-g ${e.done ? '' : 'pr'} ${nuevo ? 'nx' : ''}"><span class="d">${fdd(e.t)}</span>${e.rl ? `<img class="lo" src="${esc(e.rl)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : '<span class="lo"></span>'}<span class="n"><b data-notr>${esc(e.rn)}</b><small>${e.h ? T('Local', 'Home') : T('Visitante', 'Away')}</small></span>${sc}${ins}</div>`;
+  }
+  function kpis(eq, sc) {
+    const hechos = sc ? sc.ev.filter((e) => e.done) : [], gg = hechos.filter((e) => e.w).length;
+    const w = eq ? eq.w : sc ? gg : null, l = eq ? eq.l : sc ? hechos.length - gg : null, r = racha(eq?.st);
+    const c = (lab, val, sub, cls = '') => `<div class="nbf-k"><span class="lab">${lab}</span><b class="${cls}">${val}</b><small>${sub}</small></div>`;
+    const gpL = T('G · P', 'W · L');
+    return `<div class="nbf-ks">${c(T('Récord', 'Record'), w == null ? '·' : `${w} · ${l}`, gpL)}
+      ${c(T('Conferencia', 'Conference'), eq?.sd ? ord(eq.sd) : '·', eq ? T(`del ${CONF[eq.cf][0]}`, `in the ${CONF[eq.cf][1]}`) : '')}
+      ${c(T('División', 'Division'), eq && g(() => FT.cl.div[eq.dv].indexOf(eq.id) + 1, 0) ? ord(FT.cl.div[eq.dv].indexOf(eq.id) + 1) : '·', eq ? dn(eq.dv) : '')}
+      ${c(T('Racha', 'Streak'), r ? r.n : '·', r ? (r.w ? (r.n === 1 ? T('victoria seguida', 'win in a row') : T('victorias seguidas', 'wins in a row')) : (r.n === 1 ? T('derrota seguida', 'loss in a row') : T('derrotas seguidas', 'losses in a row'))) : '', r ? (r.w ? 'g' : 'p') : '')}
+      ${c(T('En casa', 'Home'), eq?.casa ? gp2(eq.casa) : '·', gpL)}
+      ${c(T('Fuera', 'Away'), eq?.fu ? gp2(eq.fu) : '·', gpL)}</div>`;
+  }
+  const nada = (t) => `<p class="hint nbf-nada">${t || T('ESPN todavía no tiene estos datos.', 'ESPN does not have this data yet.')}</p>`;
+
+  function tabResumen(tid, sc) {
+    if (!sc) return nada();
+    const hechos = sc.ev.filter((e) => e.done), ult = hechos.slice(-10), pend = sc.ev.filter((e) => !e.done);
+    const gg = ult.filter((e) => e.w).length;
+    const q = Array.from({ length: 10 }, (_, i) => { const e = ult[i - (10 - ult.length)]; return e ? `<b class="nbf-q ${e.w ? 'g' : 'p'}">${e.w ? T('G', 'W') : T('P', 'L')}</b>` : '<b class="nbf-q v"></b>' }).join('');
+    let h = `<section class="nbf-s"><span class="lab">${T('Forma, últimos 10 partidos', 'Form, last 10 games')}</span>
+      <div class="nbf-f">${q}</div><p class="nbf-fp">${hechos.length ? `${gg} ${gg === 1 ? T('ganado', 'won') : T('ganados', 'won')} · ${ult.length - gg} ${ult.length - gg === 1 ? T('perdido', 'lost') : T('perdidos', 'lost')}. ${T('El último partido está a la derecha.', 'The latest game is on the right.')}` : T('Todavía no ha jugado ningún partido.', 'No games played yet.')}</p></section>`;
+    if (hechos.length) h += `<section class="nbf-s"><span class="lab">${T('Últimos 5 resultados', 'Last 5 results')}</span><div class="nbf-l">${hechos.slice(-5).reverse().map((e) => filaPartido(e)).join('')}</div></section>`;
+    if (pend.length) h += `<section class="nbf-s"><span class="lab">${T('Próximos partidos', 'Next games')}</span><div class="nbf-l">${pend.slice(0, 3).map((e, i) => filaPartido(e, !i)).join('')}</div><button class="nbf-mas" data-nbt="calendario">${T('Ver el calendario completo', 'See the full schedule')} ›</button></section>`;
+    const ro = dato('r:' + tid), bj = (ro?.at || []).filter((a) => a.bj);
+    if (bj.length) h += `<section class="nbf-s"><span class="lab">${T('Lesionados', 'Injured')}</span><div class="nbf-l">${bj.map((a) => `<div class="nbf-bj"><b data-notr>${esc(a.n)}</b><span>${esc(estadoBaja(a.bj))}</span></div>`).join('')}</div></section>`;
+    return h;
+  }
+  function tabPlantilla(tid) {
+    const ro = dato('r:' + tid); if (!ro) return nada();
+    const L = ro.at.map((a) => ({ a, s: dato('j:' + a.id) || {} }));
+    const k = FT.sort, v = (x) => (x.s[k] == null || !(x.s.gp > 0) ? -1 : +x.s[k]);
+    L.sort((x, y) => v(y) - v(x) || x.a.n.localeCompare(y.a.n));
+    const cab = (kk, n) => `<button class="${kk === k ? 'on' : ''}" data-nbs="${kk}" aria-label="${esc(n)}">${n}</button>`;
+    const fila = ({ a, s }) => {
+      const tiene = s.gp > 0, m = a.h ? `${dec((a.h * 2.54 / 100).toFixed(2))} m` : '';
+      const sub = [a.j ? '#' + a.j : '', POS[a.p] ? POS[a.p][en() ? 1 : 0] : ''].filter(Boolean).join(' · '), ext = en() ? [a.hd, a.ed ? a.ed + ' yrs' : ''] : [m, a.ed ? a.ed + ' años' : ''];
+      return `<div class="nbf-p ${a.bj ? 'bj' : ''}"><span class="ph"><b>${esc(ini(a.n))}</b>${a.im ? `<img src="${esc(a.im)}" alt="" loading="lazy" onload="this.previousElementSibling.style.visibility='hidden'" onerror="this.remove()">` : ''}</span>
+        <span class="n"><b data-notr>${esc(a.n)}</b><small>${esc(sub)}<em> · ${esc(ext.filter(Boolean).join(' · '))}</em></small>${a.bj ? `<i>${T('Lesionado', 'Injured')} · ${esc(estadoBaja(a.bj))}</i>` : ''}</span>
+        <span class="x">${tiene ? s.gp : '·'}</span><span class="${k === 'pt' ? 'on' : ''}">${tiene ? f1(s.pt) : '·'}</span><span class="${k === 'rb' ? 'on' : ''}">${tiene ? f1(s.rb) : '·'}</span><span class="${k === 'as' ? 'on' : ''}">${tiene ? f1(s.as) : '·'}</span><span class="${k === 'mn' ? 'on' : ''}">${tiene ? f1(s.mn) : '·'}</span></div>`;
+    };
+    const hay = L.some((x) => x.s.gp > 0);
+    return `<section class="nbf-s"><span class="lab">${T('Plantilla completa', 'Full roster')} · ${ro.at.length}</span>${ro.co ? `<p class="nbf-co">${T('Entrenador', 'Head coach')}: <b data-notr>${esc(ro.co)}</b></p>` : ''}
+      <p class="nbf-fp">${hay ? T('Medias por partido de esta temporada. Toca una columna para ordenar.', 'Per game averages this season. Tap a column to sort.') : T('Todavía no hay estadísticas de esta temporada.', 'There are no stats for this season yet.')}</p>
+      <div class="nbf-pl"><div class="nbf-p h"><span></span><span class="n">${T('Jugador', 'Player')}</span><span class="x">${T('PJ', 'GP')}</span>${cab('pt', 'PTS')}${cab('rb', 'REB')}${cab('as', 'AST')}${cab('mn', 'MIN')}</div>${L.map(fila).join('')}</div></section>`;
+  }
+  function tablaEq(ids, cl, tid, bandas) {
+    const filas = ids.map((id, i) => {
+      const e = cl.eq[id], r = racha(e.st), dif = e.df;
+      const banda = bandas ? (e.sd <= 6 ? 'b1' : e.sd <= 10 ? 'b2' : 'b3') : '', cab = bandas && (e.sd === 1 || e.sd === 7 || e.sd === 11) ? `<div class="nbf-bd ${banda}"><span>${e.sd === 1 ? 'Playoffs' : e.sd === 7 ? T('Play in', 'Play in') : T('Fuera de playoffs', 'Missing the playoffs')}</span></div>` : '';
+      return cab + `<button class="nbf-t ${id === tid ? 'me' : ''} ${banda}" data-nbteam="${id}"><span class="p">${bandas ? e.sd || i + 1 : i + 1}</span><img src="${esc(e.lg)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><span class="n" data-notr>${esc(e.c)}</span><span>${e.w ?? '·'}</span><span>${e.l ?? '·'}</span><span class="x">${esc(dec(e.pct.replace(/^0(?=\.)/, '')))}</span><span class="x">${sgn(dif)}</span><span class="x ${r ? (r.w ? 'g' : 'p') : ''}">${r ? (r.w ? T('G', 'W') : T('P', 'L')) + r.n : '·'}</span><span class="x">${esc(gp2(e.l10) || '·')}</span></button>`;
+    }).join('');
+    return `<div class="nbf-tb"><div class="nbf-t h"><span>#</span><span></span><span class="n">${T('Equipo', 'Team')}</span><span>${T('G', 'W')}</span><span>${T('P', 'L')}</span><span class="x">%</span><span class="x">${T('DIF', 'DIFF')}</span><span class="x">${T('Racha', 'Strk')}</span><span class="x">${T('Últ. 10', 'L10')}</span></div>${filas}</div>`;
+  }
+  function tabClasif(tid) {
+    const cl = dato('cl'), eq = cl?.eq?.[tid]; if (!eq) return nada();
+    return `<section class="nbf-s"><span class="lab">${CONF[eq.cf][en() ? 3 : 2]} · ${cl.conf[eq.cf].length}</span>${tablaEq(cl.conf[eq.cf], cl, tid, true)}<p class="nbf-fp">${T('Los seis primeros van a playoffs, del séptimo al décimo juegan el play in. Toca un equipo para ver su ficha.', 'The top six go to the playoffs, seventh to tenth play the play in. Tap a team to open its page.')}</p></section>
+      <section class="nbf-s"><span class="lab">${T('División', 'Division')} ${esc(dn(eq.dv))} · ${cl.div[eq.dv].length}</span>${tablaEq(cl.div[eq.dv], cl, tid, false)}</section>`;
+  }
+  function tabStats(tid) {
+    const cl = dato('cl'), eq = cl?.eq?.[tid], es = dato('e:' + tid); if (!es && !eq) return nada();
+    const rk = (k, alza) => { if (!eq || eq[k] == null) return null; const t = Object.values(cl.eq).filter((x) => x[k] != null); return t.filter((x) => (alza ? x[k] > eq[k] : x[k] < eq[k])).length + 1 };
+    const e = (k) => es?.[k]?.v, r = (k) => es?.[k]?.r;
+    const F = [
+      [T('Puntos a favor', 'Points scored'), eq ? f1(eq.pf) : '·', rk('pf', true)], [T('Puntos en contra', 'Points allowed'), eq ? f1(eq.pa) : '·', rk('pa', false)], [T('Diferencia por partido', 'Margin per game'), eq ? sgn(eq.df) : '·', rk('df', true)],
+      [T('Tiros de campo', 'Field goals'), e('fieldGoalPct') != null ? f1(e('fieldGoalPct')) + ' %' : '·', r('fieldGoalPct')], [T('Triples, acierto', 'Three point %'), e('threePointFieldGoalPct') != null ? f1(e('threePointFieldGoalPct')) + ' %' : '·', r('threePointFieldGoalPct')],
+      [T('Triples anotados por partido', 'Threes made per game'), f1(e('avgThreePointFieldGoalsMade')), null], [T('Tiros libres', 'Free throws'), e('freeThrowPct') != null ? f1(e('freeThrowPct')) + ' %' : '·', r('freeThrowPct')],
+      [T('Rebotes', 'Rebounds'), f1(e('avgRebounds')), null], [T('Asistencias', 'Assists'), f1(e('avgAssists')), null], [T('Robos', 'Steals'), f1(e('avgSteals')), null], [T('Tapones', 'Blocks'), f1(e('avgBlocks')), null], [T('Pérdidas de balón', 'Turnovers'), f1(e('avgTurnovers')), null]];
+    return `<section class="nbf-s"><span class="lab">${T('Estadísticas del equipo', 'Team stats')}${e('gamesPlayed') ? ` · ${e('gamesPlayed')} ${T('partidos', 'games')}` : ''}</span><p class="nbf-fp">${T('Medias por partido de esta temporada.', 'Per game averages this season.')}</p>
+      <div class="nbf-es">${F.map(([n, v, p]) => `<div class="nbf-e"><span>${n}</span><b>${v}</b><i>${p ? `${ord(p)} ${T('de', 'of')} ${Object.keys(cl?.eq || {}).length || 30}` : ''}</i></div>`).join('')}</div>
+      <p class="nbf-fp">${T('El puesto en la liga sale donde la fuente lo da.', 'The league rank shows where the source provides it.')}</p></section>`;
+  }
+  const POR = 10;
+  function tabCal(tid, sc) {
+    if (!sc) return nada();
+    const todos = sc.ev, hechos = todos.filter((e) => e.done), pend = todos.filter((e) => !e.done);
+    const lista = FT.cal === 'jugados' ? hechos.slice().reverse() : FT.cal === 'proximos' ? pend : todos;
+    const pags = Math.max(1, Math.ceil(lista.length / POR));
+    if (!FT.hp0) { FT.hp0 = true; const ix = FT.cal === 'todos' ? lista.findIndex((e) => !e.done) : 0; S.hp = ix > 0 ? Math.floor(ix / POR) : FT.cal === 'todos' && ix < 0 ? pags - 1 : 0 }
+    const pg = Math.max(0, Math.min(+S.hp || 0, pags - 1)), de = pg * POR, tr = lista.slice(de, de + POR), prim = pend[0];
+    const chip = (k, n, c) => `<button class="${FT.cal === k ? 'on' : ''}" data-nbc="${k}">${n} <small>${c}</small></button>`;
+    return `<section class="nbf-s" id="nbf-cal"><span class="lab">${T('Temporada', 'Season')} ${esc(sc.s)} · ${todos.length} ${T('partidos', 'games')}</span>
+      <div class="nbf-ch">${chip('todos', T('Todos', 'All'), todos.length)}${chip('jugados', T('Jugados', 'Played'), hechos.length)}${chip('proximos', T('Próximos', 'Upcoming'), pend.length)}</div>
+      <div class="nbf-l">${tr.length ? tr.map((e) => filaPartido(e, e === prim && FT.cal !== 'jugados')).join('') : nada(T('No hay partidos en esta lista.', 'No games in this list.'))}</div>
+      ${pags > 1 ? `<nav class="pags"><button data-hp="${pg - 1}" ${pg ? '' : 'disabled'} aria-label="${T('Anterior', 'Previous')}">‹</button><span class="pags-n" data-notr>${pg + 1} / ${pags}</span><button data-hp="${pg + 1}" ${pg < pags - 1 ? '' : 'disabled'} aria-label="${T('Siguiente', 'Next')}">›</button></nav>` : ''}
+      ${lista.length ? `<p class="nbf-fp nbf-c">${T('Partidos', 'Games')} ${de + 1} ${T('a', 'to')} ${de + tr.length} ${T('de', 'of')} ${lista.length}</p>` : ''}</section>`;
+  }
+
+  /* ---------- armado y carga ---------- */
+  function esqueleto(tid) { return cuerpo(tid, `<p class="hint nbf-nada">${T('Cargando la ficha…', 'Loading…')}</p>`) }
+  function cuerpo(tid, contenido) {
+    const m = FT.m, cl = dato('cl'), sc = dato('s:' + tid); FT.cl = cl;
+    const volver = FT.over ? `<button class="nbf-back" data-nbback>‹ ${T('Volver a', 'Back to')} <span data-notr>${esc(FT.side === 'a' ? m.a : m.b)}</span></button>` : '';
+    return `${volver}${kpis(cl?.eq?.[tid], sc)}<nav class="nb-tabs nbf-tabs">${TABS.map(([k, a, b]) => `<button class="nb-tab ${k === FT.tab ? 'on' : ''}" data-nbt="${k}">${T(a, b)}</button>`).join('')}</nav><div class="nbf-cu">${contenido}</div>
+      <p class="nbf-fu">ESPN · ${T('se actualiza cada vez que abres la ficha', 'refreshed every time you open this page')}</p>`;
+  }
+  function listo(tid, tab) {
+    if (dato('cl') === undefined || dato('s:' + tid) === undefined) return false;
+    if (tab === 'plantilla') { const r = dato('r:' + tid); return r !== undefined && r.at.every((a) => dato('j:' + a.id) !== undefined) }
+    if (tab === 'resumen') return dato('r:' + tid) !== undefined;
+    if (tab === 'estadisticas') return dato('e:' + tid) !== undefined;
+    return true;
+  }
+  async function carga(tid, tab) {
+    await Promise.all([pide('cl', TTL, dClasif), pide('s:' + tid, TTL, () => dSched(tid))]);
+    if (tab === 'plantilla') { const r = await pide('r:' + tid, TTL, () => dRoster(tid)); await Promise.all((r?.at || []).map((a) => pide('j:' + a.id, TTL, () => dJug(a.id)))) }
+    else if (tab === 'resumen') await pide('r:' + tid, TTL, () => dRoster(tid));
+    else if (tab === 'estadisticas') await pide('e:' + tid, TTL, () => dEq(tid));
+  }
+  function pintaFicha(box, tid) {
+    const sc = dato('s:' + tid), t = FT.tab;
+    const c = t === 'plantilla' ? tabPlantilla(tid) : t === 'clasificacion' ? tabClasif(tid) : t === 'estadisticas' ? tabStats(tid) : t === 'calendario' ? tabCal(tid, sc) : tabResumen(tid, sc);
+    box.innerHTML = cuerpo(tid, c);
+    // arriba: el nombre y el escudo de la cabecera siguen al equipo que se mira
+    const hd = box.parentElement && box.parentElement.querySelector('.sh-hd'), eq = dato('cl')?.eq?.[tid], m = FT.m;
+    if (hd) {
+      const h2 = hd.querySelector('h2'), im = hd.querySelector('img'), fav = hd.querySelector('.fav-b');
+      const nm = FT.over ? eq?.n || h2?.textContent : FT.side === 'a' ? m.a : m.b, lg = FT.over ? eq?.lg : FT.side === 'a' ? m.la : m.lb;
+      if (h2 && nm && h2.textContent !== nm) h2.textContent = nm; if (im && lg && im.getAttribute('src') !== lg) im.src = lg; if (fav) fav.style.visibility = FT.over ? 'hidden' : '';
+    }
+    const on = box.querySelector('.nbf-tabs .on'); if (on) g(() => { const nv = on.parentElement, l = on.offsetLeft - nv.offsetLeft; if (l < nv.scrollLeft) nv.scrollLeft = Math.max(0, l - 8); else if (l + on.offsetWidth > nv.scrollLeft + nv.clientWidth) nv.scrollLeft = l + on.offsetWidth - nv.clientWidth + 8 });
+    if (FT.arriba) { FT.arriba = false; g(() => { const v = document.getElementById('view'); if (v) v.scrollTop = 0; document.querySelector('.det')?.scrollTo?.(0, 0) }) }
+    else if (FT.ircal) { FT.ircal = false; g(() => document.getElementById('nbf-cal')?.scrollIntoView({ block: 'start' })) }
+    box.dataset.nb = FT.key;
+  }
+  async function ficha(box) {
+    const tid = String(FT.over?.tid || FT.tid0), tab = FT.tab, mi = ++FT.seq, vivo = () => mi === FT.seq && box.isConnected && box.dataset.nbk === FT.key;
+    if (!listo(tid, tab)) {
+      box.innerHTML = esqueleto(tid);
+      await carga(tid, tab).catch(() => {});
+      if (!vivo()) return;
+    }
+    pintaFicha(box, tid);
+  }
+  async function fichaEquipo(box, m, side) {
+    const k = m.id + side, tid = m.espn?.ids?.[side]; if (!tid) return;
+    if (FT.key !== k) Object.assign(FT, { key: k, tab: 'resumen', sort: 'pt', cal: 'todos', over: null, hp0: false });
+    Object.assign(FT, { m, side, tid0: String(tid) });
+    box.dataset.nbk = k;
+    await ficha(box);
+  }
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest && e.target.closest('#sheet-box [data-nbt],#sheet-box [data-nbs],#sheet-box [data-nbc],#sheet-box [data-nbteam],#sheet-box [data-nbback],#sheet-box [data-hp]'); if (!t) return;
+    const d = t.dataset;
+    if (d.hp != null && !d.nbt) { FT.ircal = true; return }                 // las paginas del calendario las mueve app.js (S.hp) y se repinta sola
+    if (d.nbt) { FT.tab = d.nbt; FT.hp0 = false; FT.ircal = d.nbt === 'calendario' }
+    else if (d.nbs) FT.sort = d.nbs;
+    else if (d.nbc) { FT.cal = d.nbc; FT.hp0 = false }
+    else if (d.nbteam) { FT.over = String(d.nbteam) === FT.tid0 ? null : { tid: String(d.nbteam) }; FT.tab = 'resumen'; FT.hp0 = false; FT.arriba = true }
+    else if (d.nbback != null) { FT.over = null; FT.tab = 'resumen'; FT.hp0 = false; FT.arriba = true }
+    e.preventDefault(); const box = document.getElementById('sheet-box'); if (box && box.dataset.nbk === FT.key) ficha(box);
+  });
   const estadoBaja = (s) => ({ Out: T('No juega', 'Out'), 'Day-To-Day': T('Duda', 'Day to day'), Questionable: T('Duda', 'Questionable'), Doubtful: T('Casi seguro que no', 'Doubtful'), Probable: T('Probable', 'Probable') }[s] || String(s || '').replace(/-/g, ' '));
   // la clasificacion de la conferencia de cada uno (la de app.js pide puntos y partidos jugados, que en la NBA no vienen) y las bajas
   function mejoraEspn() {
@@ -316,7 +536,9 @@
     const sb = document.getElementById('sheet-box');
     if (sb && !sb.dataset.nbp) { const m = g(() => byId(sb.dataset.m), null);
       if (m && m.s === 'b') { sb.dataset.nbp = '1'; sb.innerHTML = `<p class="hint">${T('Cargando la ficha…', 'Loading…')}</p>`; fichaEquipo(sb, m, sb.dataset.side) } }
-    else if (sb && sb.dataset.nbp && !sb.dataset.nb && /No se ha podido|could not/i.test(sb.textContent)) sb.innerHTML = `<p class="hint">${T('Cargando la ficha…', 'Loading…')}</p>`;
+    // app.js escribe "No se ha podido cargar la ficha" cuando termina su propia carga (la NBA no la tiene): se vuelve a pintar la ficha
+    else if (sb && sb.dataset.nbp && sb.dataset.nbk && sb.dataset.nbk === FT.key && !sb.querySelector('.nbf-ks') && /No se ha podido|could not/i.test(sb.textContent)) ficha(sb);
+    if (!sb && FT.key) { FT.key = null; FT.over = null }
     if (pend) return; pend = true;
     queueMicrotask(() => { pend = false; try { if (g(() => loaded, false)) { pinta(); mejoraEspn(); nombres() } } catch (e) { if (!pinta.av) { pinta.av = 1; console.warn('nba.js', e) } } });
   }).observe(document.getElementById('app') || document.documentElement, { childList: true, subtree: true });
