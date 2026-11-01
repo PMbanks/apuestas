@@ -14,18 +14,10 @@
   // clave, nombre (el ingles esta en i18n.js), 1 si esta animada
   const G = [
     ['a01-stonks', 'Stonks'],
-    ['a02-doge', 'Doge'],
-    ['a03-cheems', 'Cheems'],
-    ['a04-jordan-llora', 'Jordan llorando'],
-    ['a05-gigachad', 'Gigachad'],
     ['a06-todo-bien', 'Esto es fine'],
-    ['a07-gato-grunon', 'Gato gruñón'],
-    ['a08-mala-suerte', 'Mala suerte Brian'],
     ['a09-bebe-exito', 'Bebé del éxito'],
     ['a10-trollface', 'Trollface'],
     ['a11-chungus', 'Big Chungus'],
-    ['a12-pavo-real', 'Pavo real'],
-    ['a13-mono-gafas', 'Mono con gafas'],
     ['a14-nyan', 'Nyan Cat'],
     ['a15-desastre', 'Todo arde y sonríe'],
     ['a16-rana-casino', 'Rana apostando', 1],
