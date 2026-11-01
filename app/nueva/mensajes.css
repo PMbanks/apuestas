@@ -1,0 +1,17 @@
+/* Chat rapido (mensajes.js): el mensaje propio sale al instante con su estado, y el "mensaje nuevo" si lees mas arriba */
+.msg.cp.envia>div>p,.msg.cp.envia>div>.pic,.msg.cp.envia>div>.voz{opacity:.6;transition:opacity .2s}
+.msg.cp .cp-est{display:flex;align-items:center;gap:12px;margin-top:6px;font:500 12px var(--mono);color:var(--mute)}
+.msg.cp .cp-est button{font:600 12px var(--sans);color:var(--acc);padding:2px 0}
+.msg.cp .cp-est button+button{color:var(--mute)}
+.msg.cp .cp-est button:hover{text-decoration:underline}
+.msg.cp .cp-ko{color:#ef7b86}
+.cp-spin{width:11px;height:11px;border-radius:50%;border:2px solid rgba(255,255,255,.2);border-top-color:var(--acc);animation:cpGira .8s linear infinite}
+@keyframes cpGira{to{transform:rotate(360deg)}}
+html.sin-anim .cp-spin{animation:none}
+.chat{position:relative}
+.cp-nuevo{position:absolute;left:50%;bottom:74px;transform:translateX(-50%);z-index:3;padding:8px 16px;border-radius:999px;background:var(--acc);color:#16110a;font:600 12px var(--sans);box-shadow:0 8px 22px rgba(0,0,0,.5);animation:cpEntra .25s var(--ease)}
+@keyframes cpEntra{from{opacity:0;transform:translate(-50%,8px)}}
+html.sin-anim .cp-nuevo{animation:none}
+/* movil y tablet: la columna del chat media 475 en pantallas de 390 (1fr deja crecer la columna al contenido) y los mensajes salian cortados por la izquierda */
+@media (max-width:1180px){.c-wrap,.c-wrap.solo{grid-template-columns:minmax(0,1fr)}.c-main{min-width:0}}
+@media (max-width:560px){.ch-in{gap:2px}.ch-in .ic{width:35px}.ch-in .send{width:40px;height:40px}}

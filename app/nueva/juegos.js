@@ -105,7 +105,7 @@
       if (S.mo.vistos == null) { S.mo.vistos = max; guarda('jg-mo-visto', max); return }
       const nuevo = rec.filter((x) => x.id > S.mo.vistos && (x.creador === ctx.me || x.rival === ctx.me)).sort((a, b) => a.id - b.id).pop();
       if (max > S.mo.vistos) { S.mo.vistos = max; guarda('jg-mo-visto', max) }
-      if (nuevo && nuevo.creador === ctx.me && ahora() - ms(nuevo.cerrado) < 60000) moLanza(nuevo.salio, nuevo.ganador === ctx.me ? `Salió ${nuevo.salio}. ${nom(nuevo.rival)} aceptó y ganas ${N(nuevo.stake * 2)}` : `Salió ${nuevo.salio}. ${nom(nuevo.rival)} aceptó y pierdes ${N(nuevo.stake)}`, nuevo.ganador === ctx.me, false);
+      if (nuevo && nuevo.creador === ctx.me && ahora() - ms(nuevo.cerrado) < 60000) { const gane = nuevo.ganador === ctx.me; moLanza(nuevo.salio, { gane, monto: gane ? nuevo.stake * 2 : nuevo.stake, rival: nuevo.rival, acepto: false }, false) }
     } else if (j === 'ruleta') ruAplica();
   }
 
@@ -327,6 +327,8 @@
   // pone al dia lo que lleva la cantidad escrita sin repintar (para no perder el foco)
   function botones() {
     root.querySelectorAll('[data-go-n]').forEach((e) => (e.textContent = N(S.stake)));
+    root.querySelectorAll('[data-sum-a]').forEach((e) => (e.textContent = N(S.stake)));
+    root.querySelectorAll('[data-sum-b]').forEach((e) => (e.textContent = N(S.stake * 2)));
     root.querySelectorAll('[data-q-todo]').forEach((e) => e.classList.toggle('on', S.stake >= S.saldo && S.saldo > 0));
     if (S.juego === 'crash') crBoton();
   }
@@ -336,9 +338,9 @@
     if (S.stake > queda()) { falla({ message: `No tienes tanto: te quedan ${N(queda())}` }); return false }
     return true;
   }
-  function apuesta() {
+  function apuesta(titulo) {
     const chips = [100, 500, 1000];
-    return `<div class="jg-stake"><div class="jg-lab"><span class="lab">Apuesta</span><span class="jg-sal"><span class="num" data-saldo>${N(S.saldo)}</span>${coin()}</span></div>
+    return `<div class="jg-stake"><div class="jg-lab"><span class="lab">${titulo || 'Apuesta'}</span><span class="jg-sal"><span class="num" data-saldo>${N(S.saldo)}</span>${coin()}</span></div>
       <label class="jg-amt"><input data-in inputmode="numeric" autocomplete="off" value="${N(S.stake)}" aria-label="Apuesta">${coin()}</label>
       <div class="jg-q">${chips.map((c) => `<button data-jg="q" data-v="${c}">${N(c)}</button>`).join('')}<button data-jg="q" data-v="mitad">1/2</button><button data-jg="q" data-v="doble">×2</button><button data-jg="q" data-v="todo" data-q-todo>Todo</button></div></div>`;
   }
@@ -355,38 +357,71 @@
   }
   // postura de la moneda en reposo (ligeramente de lado para que se vea el canto) y en cada instante del lanzamiento
   const moPose = (rx, o = {}) => `translateY(${o.y || 0}px) scale(${o.s || 1}) rotateZ(${o.z || 0}deg) rotateY(${o.ry == null ? -20 : o.ry}deg) rotateX(${rx}deg)`;
+  const lado2 = (l) => (l === 'cara' ? 'Cara' : 'Cruz');
+  const otroLado = (l) => (l === 'cara' ? 'cruz' : 'cara');
+  const imgLado = (l, cls) => `<img class="${cls || 'jg-mini'}" src="../img/${l === 'cara' ? 'moneda-corona' : 'vbucks'}.webp" alt="" draggable="false">`;
+  // el resultado: grande, bajo la moneda. res = { gane, monto, rival, acepto } (monto = lo que te llevas o lo que pierdes)
+  function resHtml(salio, res) {
+    if (!res) return '';
+    return `<span class="jg-mr-c">${imgLado(salio, 'jg-mr-i')}</span><span class="jg-mr-b"><strong class="jg-mr-t"><span>Salió</span> <b>${lado2(salio)}</b></strong>` +
+      `<span class="jg-mr-s ${res.gane ? 'win' : 'lose'}"><span>${res.gane ? 'Te llevas' : 'Pierdes'}</span> <b class="num">${N(res.monto)}</b>${coin()}</span>` +
+      `<small><span>${res.acepto ? 'Contra' : 'Aceptó'}</span> <b>${esc(nom(res.rival))}</b></small></span>`;
+  }
+  function pintaRes(salio, res, clase) {
+    const el = root && root.querySelector('[data-mores]'); if (!el) return;
+    el.className = 'jg-mr ' + (clase || ''); el.innerHTML = resHtml(salio, res); if (res) tr(el);
+  }
   function vMoneda() {
     const d = D.moneda || { abiertos: [], recientes: [] };
     const otros = ctx.jugadores.filter((j) => j.uuid !== ctx.me);
     const mios = d.abiertos.filter((a) => a.creador === ctx.me), ajenos = d.abiertos.filter((a) => a.creador !== ctx.me);
     const quien = `<button class="jg-who ${S.para == null ? 'on' : ''}" data-jg="para" data-v=""><span class="jg-any">?</span><em>Cualquiera</em></button>` +
       otros.map((j) => `<button class="jg-who ${S.para === j.uuid ? 'on' : ''}" data-jg="para" data-v="${esc(j.uuid)}">${av(j.uuid, 'xl')}<em>${esc(j.n)}</em></button>`).join('');
+    const sal = queda();
+    // un reto abierto de otro: quien es, que lado lleva (tu lado es el contrario) y un boton que dice cuanto pones y cuanto ganas
+    const filaAjena = (a) => `<div class="jg-ret ${a.stake > sal ? 'corto' : ''}">${av(a.creador, 'xl')}<div class="jg-ret-t"><span class="jg-ret-n"><b>${esc(nom(a.creador))}</b> <span>${a.para ? 'te reta' : 'reta a cualquiera'}</span></span>` +
+      `<small><span>Va a</span> <b>${lado2(a.lado)}</b> <i>·</i> <span>tú vas a</span> <b>${lado2(otroLado(a.lado))}</b></small></div>` +
+      `<button class="jg-acep" data-jg="aceptar" data-id="${a.id}"><strong>Aceptar</strong><small>${a.stake > sal ? `<span>Te faltan ${N(a.stake - sal)}</span>` : `<span>Pones</span> <b class="num">${N(a.stake)}</b> <i>·</i> <span>ganas</span> <b class="num">${N(a.stake * 2)}</b>`}</small></button></div>`;
+    const filaMia = (a) => `<div class="jg-ret mio">${av(a.creador, 'xl')}<div class="jg-ret-t"><span class="jg-ret-n"><span>Esperando a</span> <b>${a.para ? esc(nom(a.para)) : 'Cualquiera'}</b></span>` +
+      `<small><span>Tú vas a</span> <b>${lado2(a.lado)}</b> <i>·</i> <span>has puesto</span> <b class="num">${N(a.stake)}</b></small></div>` +
+      `<button class="jg-acep ghost" data-jg="retirarReto" data-id="${a.id}"><strong>Quitar reto</strong><small><span>Te devuelvo</span> <b class="num">${N(a.stake)}</b></small></button></div>`;
+    const abiertos = `<span class="lab jg-sec">Retos abiertos${ajenos.length ? ` <b class="jg-cnt">${ajenos.length}</b>` : ''}</span>` +
+      (ajenos.length ? ajenos.slice(0, 4).map(filaAjena).join('') : '<p class="jg-vacio">Ahora no hay ningún reto abierto. Crea uno y espera a que alguien lo acepte.</p>') +
+      (mios.length ? `<span class="lab jg-sec">Tus retos esperando</span>${mios.slice(0, 4).map(filaMia).join('')}<p class="jg-nota">Si nadie acepta en 24 horas, te devuelvo lo que pusiste.</p>` : '');
+    const ultimos = d.recientes.length ? `<span class="lab jg-sec">Últimos</span>${d.recientes.slice(0, 4).map((a) => { const perd = a.ganador === a.creador ? a.rival : a.creador;
+      return fila('', av(a.ganador), `<b>${esc(nom(a.ganador))}</b> <span>${a.ganador === ctx.me ? 'le ganas a' : 'le gana a'}</span> <b>${esc(perd === ctx.me ? 'ti' : nom(perd))}</b><em>${lado2(a.salio)}</em>`, `<b class="num win">+${N(a.stake)}</b>`) }).join('')}` : '';
     return `<section class="jg-g">
       <div class="jg-stage jg-mo">
+        <p class="jg-how">Pones una cantidad y eliges cara o cruz. Quien acepte pone lo mismo, se lanza la moneda y el que acierte se lleva todo.</p>
         <div class="jg-coin-w"><div class="jg-sh" data-sh></div><div class="jg-coin" data-coin>${carasHtml()}</div></div>
-        <p class="jg-msg ${S.mo.cls || ''}" data-msg>${esc(S.mo.msg)}</p>
-        <div class="jg-mo-l"><div class="jg-mo-a">${ajenos.length ? `<span class="lab jg-sec">Abiertos</span>${ajenos.slice(0, 3).map((a) => fila('', av(a.creador), `${esc(nom(a.creador))}<em>${a.para ? 'te reta, ' : ''}va a ${esc(a.lado)}</em>`, `<b class="num">${N(a.stake)}</b>`, `<button class="jg-b" data-jg="aceptar" data-id="${a.id}">Aceptar</button>`)).join('')}` : ''}${mios.length ? `<span class="lab jg-sec">Tus retos</span>${mios.slice(0, 3).map((a) => fila('', av(a.creador), `${a.para ? esc(nom(a.para)) : 'Cualquiera'}<em>${esc(a.lado)}</em>`, `<b class="num">${N(a.stake)}</b>`, `<button class="jg-b" data-jg="retirarReto" data-id="${a.id}">Retirar</button>`)).join('')}` : ''}</div><div class="jg-mo-b">${d.recientes.length ? `<span class="lab jg-sec">Últimos</span>${d.recientes.slice(0, 4).map((a) => { const perd = a.ganador === a.creador ? a.rival : a.creador; return fila('', av(a.ganador), `${esc(nom(a.ganador))}<em>le gana${a.ganador === ctx.me ? 's' : ''} a ${esc(perd === ctx.me ? 'ti' : nom(perd))} · ${esc(a.salio)}</em>`, `<b class="num win">+${N(a.stake)}</b>`) }).join('')}` : ''}</div></div>
+        <div class="jg-mr ${S.mo.res ? (S.mo.res.gane ? 'win' : 'lose') : ''}" data-mores aria-live="polite">${resHtml(S.mo.lado, S.mo.res)}</div>
+        <div class="jg-mo-l"><div class="jg-mo-a">${abiertos}</div><div class="jg-mo-b">${ultimos}</div></div>
       </div>
       <div class="jg-side">
-        <span class="lab">Contra</span><div class="jg-whos">${quien}</div>
-        <span class="lab jg-gap">Tu lado</span>
-        <div class="chips"><button class="chip ${S.lado === 'cara' ? 'on' : ''}" data-jg="lado" data-v="cara">Cara</button><button class="chip ${S.lado === 'cruz' ? 'on' : ''}" data-jg="lado" data-v="cruz">Cruz</button></div>
-        <div class="jg-gap">${apuesta()}</div>
-        <button class="go" data-jg="retar" data-go>Retar por <span data-go-n>${N(S.stake)}</span></button>${aviso()}
+        <h3 class="jg-h">Crear un reto</h3>
+        <div class="jg-paso"><b class="jg-n">1</b><span class="lab">Cuánto pones</span></div>
+        <div class="jg-gap2">${apuesta('Tienes')}</div>
+        <div class="jg-paso"><b class="jg-n">2</b><span class="lab">Tu lado</span></div>
+        <div class="jg-lados"><button class="jg-lado ${S.lado === 'cara' ? 'on' : ''}" data-jg="lado" data-v="cara">${imgLado('cara')}<span>Cara</span></button><button class="jg-lado ${S.lado === 'cruz' ? 'on' : ''}" data-jg="lado" data-v="cruz">${imgLado('cruz')}<span>Cruz</span></button></div>
+        <div class="jg-paso"><b class="jg-n">3</b><span class="lab">Contra quién</span></div>
+        <div class="jg-whos">${quien}</div>
+        <div class="jg-fin"><p class="jg-sum"><span>Pones</span> <b class="num" data-sum-a>${N(S.stake)}</b>${coin()} <i>·</i> <span>${S.lado === 'cara' ? 'si sale cara te llevas' : 'si sale cruz te llevas'}</span> <b class="num" data-sum-b>${N(S.stake * 2)}</b>${coin()}</p>
+        <button class="go" data-jg="retar" data-go><span>Retar por</span> <span data-go-n>${N(S.stake)}</span></button>${aviso()}</div>
       </div></section>`;
   }
   // yaBusy: quien llama ya ha sumado un "ocupado" antes de pedir el resultado (asi el saldo no se mueve antes de tiempo)
-  async function moLanza(salio, msg, gane, yaBusy) {
-    S.mo.msg = '';
-    if (S.juego !== 'moneda' || !refs.coin || quieto()) { S.mo.lado = salio; S.mo.msg = msg; S.mo.cls = gane ? 'win' : 'lose'; if (yaBusy) libera(); return }
+  async function moLanza(salio, res, yaBusy) {
+    S.mo.msg = ''; S.mo.res = null;
+    if (S.juego !== 'moneda' || !refs.coin || quieto()) { S.mo.lado = salio; S.mo.res = res; S.mo.msg = `${salio}|${res.gane}|${res.monto}`; S.mo.cls = res.gane ? 'win' : 'lose'; if (S.juego === 'moneda') { const c = root && root.querySelector('[data-coin]'); if (c) c.style.transform = moPose(salio === 'cara' ? 0 : 180); pintaRes(salio, res, res.gane ? 'win' : 'lose') } if (yaBusy) libera(); return }
     if (!yaBusy) S.busy++;
     const c = refs.coin, fin = salio === 'cara' ? 0 : 180, st = S.mo.lado === 'cara' ? 0 : 180, fe = st + 360 * 6 + (st === fin ? 0 : 180), sh = root.querySelector('[data-sh]');
-    const msgEl = root.querySelector('[data-msg]'); if (msgEl) { setT(msgEl, ''); msgEl.className = 'jg-msg' }
+    pintaRes(salio, null, '');
+    const alto = Math.max(80, Math.min(160, parseFloat(getComputedStyle(c.parentElement).marginTop) + 40 || 160));   // el salto no sube mas de lo que hay encima
     let a, b;
     try {
       a = c.animate([
         { transform: moPose(st), easing: 'cubic-bezier(.15,.65,.35,1)' },
-        { transform: moPose(st + (fe - st) * 0.55, { y: -160, s: 1.2, z: 12, ry: -6 }), offset: 0.46, easing: 'cubic-bezier(.55,0,.9,.55)' },
+        { transform: moPose(st + (fe - st) * 0.55, { y: -alto, s: 1.2, z: 12, ry: -6 }), offset: 0.46, easing: 'cubic-bezier(.55,0,.9,.55)' },
         { transform: moPose(fe - 10, { y: 0, s: 1, z: -2 }), offset: 0.8, easing: 'cubic-bezier(.2,.7,.3,1)' },
         { transform: moPose(fe + 4, { y: -22, s: 1.02, z: 1 }), offset: 0.89, easing: 'cubic-bezier(.5,0,.9,.6)' },
         { transform: moPose(fe) },
@@ -394,9 +429,9 @@
       if (sh) b = sh.animate([{ transform: 'scale(1)', opacity: 0.7 }, { transform: 'scale(.5)', opacity: 0.25, offset: 0.46 }, { transform: 'scale(1)', opacity: 0.7, offset: 0.8 }, { transform: 'scale(.9)', opacity: 0.6, offset: 0.89 }, { transform: 'scale(1)', opacity: 0.7 }], { duration: 2300 });
       await a.finished;
     } catch {}
-    S.mo.lado = salio; S.mo.msg = msg; S.mo.cls = gane ? 'win' : 'lose';
+    S.mo.lado = salio; S.mo.res = res; S.mo.msg = `${salio}|${res.gane}|${res.monto}`; S.mo.cls = res.gane ? 'win' : 'lose';
     c.style.transform = moPose(fin); try { a && a.cancel(); b && b.cancel() } catch {}
-    const m2 = root && root.querySelector('[data-msg]'); if (m2) { setT(m2, msg); m2.className = 'jg-msg ' + (gane ? 'win' : 'lose') }
+    pintaRes(salio, res, res.gane ? 'win' : 'lose');
     libera();
   }
   A.para = ({ v }) => { S.para = v || null; pintaSi(true) };
@@ -406,17 +441,18 @@
   A.retar = async () => {
     if (!stakeOk()) return;
     const r = await rpc('moneda_crear', { p_stake: S.stake, p_para: S.para, p_lado: S.lado });
-    S.mo.msg = ''; toast(`Reto lanzado por <b>${N(S.stake)}</b>`);
+    S.mo.msg = ''; S.mo.res = null; toast(`Reto lanzado por <b>${N(S.stake)}</b>`);
     await cargar(); if (ctx.refresh) ctx.refresh();
   };
   A.aceptar = async ({ id }) => {
     const a = (D.moneda.abiertos || []).find((x) => x.id === +id);
     if (a && a.stake > queda()) return toast(`No tienes tanto: te quedan <b>${N(queda())}</b>`);
+    try { root.querySelector('.jg-coin-w').scrollIntoView({ block: 'center', behavior: quieto() ? 'auto' : 'smooth' }) } catch {}   // que la moneda se vea al tirarla
     S.busy++;
     let r; try { r = await rpc('moneda_aceptar', { p_id: +id }) } catch (e) { S.busy--; throw e }
     S.mo.vistos = Math.max(S.mo.vistos || 0, +id); guarda('jg-mo-visto', S.mo.vistos);
     S.busy--; sigs.v = null; pinta(); S.busy++;
-    await moLanza(r.salio, r.gane ? `Salió ${r.salio}. Ganas ${N(r.premio)}` : `Salió ${r.salio}. Pierdes ${N(r.premio / 2)}`, r.gane, true);
+    await moLanza(r.salio, { gane: r.gane, monto: r.gane ? r.premio : r.premio / 2, rival: r.rival, acepto: true }, true);
     cargar();
   };
   A.retirarReto = async ({ id }) => {
