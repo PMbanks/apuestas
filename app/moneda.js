@@ -15,7 +15,14 @@
     usd: [['dólares', 'dollars'], ['Dólares', 'Dollars'], BASE + 'monedas/usd.svg'],
     sol: [['Solana', 'Solana'], ['Solana', 'Solana'], BASE + 'monedas/sol.svg'],
     robux: [['Robux', 'Robux'], ['Robux', 'Robux'], BASE + 'monedas/robux.svg'],
-    gambling: [['Gambling', 'Gambling'], ['Gambling', 'Gambling'], BASE + 'monedas/gambling.webp'],   // la ficha GA del logo (PM 01-11): V-Bucks se queda como la de Fortnite
+    gambling: [['Gambling', 'Gambling'], ['Gambling', 'Gambling'], BASE + 'monedas/gambling.webp'],
+    // PM 02-11: "gemas de clash of clans, bitcoin, euros, yenes, esmeraldas de minecraft, valorant points"
+    gemas: [['gemas', 'gems'], ['Gemas de Clash', 'Clash gems'], BASE + 'monedas/gemas.svg'],
+    btc: [['Bitcoin', 'Bitcoin'], ['Bitcoin', 'Bitcoin'], BASE + 'monedas/btc.svg'],
+    eur: [['euros', 'euros'], ['Euros', 'Euros'], BASE + 'monedas/eur.svg'],
+    jpy: [['yenes', 'yen'], ['Yenes', 'Yen'], BASE + 'monedas/jpy.svg'],
+    esmeraldas: [['esmeraldas', 'emeralds'], ['Esmeraldas de Minecraft', 'Minecraft emeralds'], BASE + 'monedas/esmeraldas.svg'],
+    vp: [['Valorant Points', 'Valorant Points'], ['Valorant Points', 'Valorant Points'], BASE + 'monedas/vp.svg'],   // la ficha GA del logo (PM 01-11): V-Bucks se queda como la de Fortnite
   };
   let cur = 'vbucks';
   try { const v = localStorage.getItem('gm-moneda'); if (M[v]) cur = v; } catch (e) {}

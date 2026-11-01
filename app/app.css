@@ -2162,6 +2162,12 @@ html[data-moneda="usd"] .cn{background-image:url(img/monedas/usd.svg)}
 html[data-moneda="sol"] .cn{background-image:url(img/monedas/sol.svg)}
 html[data-moneda="robux"] .cn{background-image:url(img/monedas/robux.svg)}
 html[data-moneda="gambling"] .cn{background-image:url(img/monedas/gambling.webp)}
+html[data-moneda="gemas"] .cn{background-image:url(img/monedas/gemas.svg)}
+html[data-moneda="btc"] .cn{background-image:url(img/monedas/btc.svg)}
+html[data-moneda="eur"] .cn{background-image:url(img/monedas/eur.svg)}
+html[data-moneda="jpy"] .cn{background-image:url(img/monedas/jpy.svg)}
+html[data-moneda="esmeraldas"] .cn{background-image:url(img/monedas/esmeraldas.svg)}
+html[data-moneda="vp"] .cn{background-image:url(img/monedas/vp.svg)}
 /* Ajustes (30-10): el engranaje de arriba ocupa el sitio del silencio; en el carril, en lugar de ES EN */
 .top .aj-btn{flex:none;display:grid;place-items:center;width:36px;height:36px;margin-left:12px;border-radius:50%;color:var(--mute);transition:color .15s,background .15s}
 .top .aj-btn:hover,.top .aj-btn.on{color:var(--ink);background:rgba(255,255,255,.06)}
