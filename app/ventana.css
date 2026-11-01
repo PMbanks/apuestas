@@ -1,0 +1,109 @@
+/* ===== La ventana del partido (PM, 01-11) =====
+   ventana.js la abre al tocar una apuesta, encima de la pantalla en la que estas. PC: panel centrado. Movil: hoja a pantalla
+   completa con la flecha arriba. Lo que llega tarde (estadisticas) va siempre debajo de lo que ya esta, con su hueco reservado,
+   para que lo de arriba no se mueva. Reutiliza los estilos del directo (.vv, de vivo.js) y de la ficha (.espn, .shs, .bio). */
+.vnt{--rojo:#ef5b5b;--live:#ff8f98;position:fixed;inset:0;z-index:75;display:grid;place-items:center;padding:24px}
+.vnt-fondo{position:absolute;inset:0;background:rgba(5,7,10,.66);animation:vntf .18s ease-out}
+.vnt-hoja{position:relative;display:flex;flex-direction:column;width:min(820px,100%);height:min(900px,calc(100vh - 48px));border-radius:28px;outline:0;overflow:hidden;
+  background:radial-gradient(120% 34% at 50% 0%,rgba(242,193,78,.1),transparent 62%),var(--bg2);box-shadow:0 34px 90px rgba(0,0,0,.65);animation:vnth .24s var(--ease)}
+.vnt.sale .vnt-hoja{animation:vnts .14s ease-in forwards}.vnt.sale .vnt-fondo{animation:vntg .14s ease-in forwards}
+@keyframes vntf{from{opacity:0}}@keyframes vntg{to{opacity:0}}
+@keyframes vnth{from{opacity:0;transform:translateY(14px) scale(.985)}}@keyframes vnts{to{opacity:0;transform:translateY(8px)}}
+.sin-anim .vnt *{animation:none!important}
+
+.vnt-bar{display:flex;align-items:center;gap:12px;flex:none;min-height:60px;padding:12px 16px 8px 22px}
+.vnt-lg{display:flex;align-items:center;gap:10px;flex:1;min-width:0;font:600 11px/1.2 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.vnt-lg img{flex:none;width:22px;height:22px;object-fit:contain}
+.vnt-lg span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vnt-ver{display:inline-flex;align-items:center;gap:2px;flex:none;height:38px;padding:0 10px 0 16px;border-radius:999px;background:rgba(255,255,255,.07);font:600 13px var(--sans);color:var(--soft);white-space:nowrap;transition:background .15s,color .15s}
+.vnt-ver:hover{background:rgba(255,255,255,.12);color:var(--ink)}
+.vnt-ver svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.vnt-x,.vnt-back{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:50%;color:var(--soft);transition:background .15s}
+.vnt-x:hover,.vnt-back:hover{background:rgba(255,255,255,.08)}
+.vnt-x svg,.vnt-back svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.vnt-back{display:none;margin-left:-8px}
+
+.vnt-cuerpo{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 28px 34px;scrollbar-width:thin;scrollbar-color:#2a2e36 transparent}
+
+/* el marcador de arriba (clases del directo: .vv-*) */
+.vnt-hero{padding-top:6px}
+.vnt-hero .vv-sr{min-width:96px}
+.vnt-hero .vv-sr strong{font-size:clamp(46px,11cqw,84px)}
+.vnt-hero .vv-lg{width:clamp(56px,13cqw,92px);height:clamp(56px,13cqw,92px)}
+.vnt-cara{border-radius:50%;object-fit:cover;object-position:50% 12%;background:#16191e}
+.vnt-res{font:700 22px/1.1 var(--disp);color:var(--soft);text-align:center}
+.vnt-sede{text-align:center;font:12px var(--mono);color:var(--dim)}
+.vnt-hero .vv-fin b{font:600 12px var(--mono);color:var(--acc2)}
+
+/* la apuesta */
+.vnt-sec{display:grid;gap:12px;margin-top:30px}
+.vnt-sec>.lab{display:block}
+.vnt-sec>.lab b{font-weight:600;color:var(--soft)}
+.vnt-b{--k:var(--acc);display:grid;gap:16px;padding:18px 20px 18px;border-radius:20px;background:rgba(255,255,255,.045)}
+.vnt-b.mio{background:linear-gradient(110deg,rgba(var(--kb,242,193,78),.14),rgba(255,255,255,.04) 70%)}
+.vnt-b.live{--k:var(--live);--kb:239,91,91}.vnt-b.won{--k:var(--win);--kb:43,212,125}.vnt-b.lost{--k:var(--rojo);--kb:239,91,91}.vnt-b.void,.vnt-b.cash{--k:var(--mute);--kb:153,160,170}.vnt-b.cash{--k:#8fa3ff;--kb:143,163,255}
+.vnt-b header{display:flex;align-items:center;gap:12px;min-width:0}
+.vnt-pk{display:flex;align-items:center;gap:6px;flex:1;min-width:0;font:800 22px/1.15 var(--disp);letter-spacing:-.02em}
+.vnt-pk span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vnt-pk .lock{flex:none;width:15px;height:15px;margin:0}
+.vnt-qn{font:600 13px var(--sans);color:var(--soft)}
+.vnt-st{display:inline-flex;align-items:center;gap:8px;flex:none;font:700 12px/1 var(--disp);letter-spacing:.08em;text-transform:uppercase;color:var(--k)}
+.vnt-st b{font:600 13px var(--mono);letter-spacing:0;text-transform:none}
+.vnt-bn{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.vnt-bn>div{display:grid;gap:7px;min-width:0}
+.vnt-bn b{font:600 20px/1 var(--mono);letter-spacing:-.03em;color:var(--ink);white-space:nowrap}
+.vnt-bn .hi b{color:var(--k)}
+.vnt-bn .cn{--s:.78em}
+/* las de los amigos, en una linea */
+.vnt-fs{display:grid;gap:2px}
+.vnt-f{--k:var(--acc);display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:6px 12px;min-height:50px;padding:6px 4px}
+.vnt-f+.vnt-f{border-top:0;box-shadow:0 -1px 0 rgba(255,255,255,.05)}
+.vnt-f:not(:has(.av)){grid-template-columns:minmax(0,1fr) auto auto}
+.vnt-f .av+.vnt-qn{display:none}
+.vnt-f.live{--k:var(--live)}.vnt-f.won{--k:var(--win)}.vnt-f.lost{--k:var(--rojo)}.vnt-f.void,.vnt-f.cash{--k:var(--mute)}
+.vnt-fp{display:flex;align-items:baseline;gap:8px;min-width:0;font:600 14px var(--sans);color:var(--ink)}
+.vnt-fp>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vnt-fp .lock{flex:none;width:11px;height:11px;margin:0 5px 0 0;align-self:center}
+.vnt-fp em{flex:none;font:500 12px var(--mono);font-style:normal;color:var(--acc2)}
+.vnt-fn{font:500 13px var(--mono);color:var(--mute);white-space:nowrap}
+.vnt-fn i{font-style:normal;color:var(--dim)}
+.vnt-f .vnt-st{font-size:11px;min-width:72px;justify-content:flex-end}
+
+/* las estadisticas */
+.vnt-st-s{gap:20px}
+.vnt .vnt-vv{padding:0;gap:22px}
+.vnt-espn{margin:0;gap:26px}
+.vnt-nada{margin-top:30px;font:13px/1.5 var(--sans);color:var(--dim)}
+.vnt-eqs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:30px}
+.vnt-eq{min-width:0}
+.vnt-eq h4{display:flex;align-items:center;gap:10px;margin-bottom:14px;font:700 16px var(--disp);letter-spacing:-.01em}
+.vnt-eq h4 img,.vnt-eq h4 .noimg{flex:none;width:28px;height:28px;object-fit:contain}
+.vnt-eq h4 .face{border-radius:50%;object-fit:cover;object-position:50% 12%}
+.vnt-eq .shs{margin-top:20px}.vnt-eq .shs:first-child{margin-top:0}
+.vnt-eq .bio{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.vnt-eq .pls{grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:14px}
+.vnt-eq .hint{font:13px/1.5 var(--sans);color:var(--dim)}
+.vnt-sk{display:grid;gap:14px;min-height:260px;align-content:start}
+.vnt-sk i{display:block;height:58px;border-radius:16px;background:rgba(255,255,255,.05);animation:vntp 1.4s ease-in-out infinite}
+.vnt-sk i:nth-child(2){animation-delay:.15s;height:92px}.vnt-sk i:nth-child(3){animation-delay:.3s}.vnt-sk i:nth-child(4){animation-delay:.45s;height:72px}
+@keyframes vntp{50%{opacity:.45}}
+
+@media (max-width:760px){
+  .vnt{padding:0;place-items:stretch}
+  .vnt-hoja{width:100%;height:100%;border-radius:0;animation:vntm .26s var(--ease)}
+  @keyframes vntm{from{opacity:0;transform:translateY(24px)}}
+  .vnt-bar{min-height:58px;padding:calc(env(safe-area-inset-top,0px) + 8px) 14px 8px 14px;gap:8px}
+  .vnt-back{display:grid}.vnt-x{display:none}
+  .vnt-ver{height:36px;padding:0 6px 0 13px;font-size:12.5px}
+  .vnt-cuerpo{padding:0 18px calc(env(safe-area-inset-bottom,0px) + 40px)}
+  .vnt-pk{font-size:19px}
+  .vnt-bn b{font-size:17px}
+  .vnt-eqs{grid-template-columns:minmax(0,1fr);gap:26px}
+  .vnt-f{grid-template-columns:auto minmax(0,1fr) auto;row-gap:2px}
+  .vnt-f:not(:has(.av)){grid-template-columns:minmax(0,1fr) auto}
+  .vnt-f .vnt-st{grid-column:2/-1;grid-row:2;justify-content:flex-start;min-width:0}
+  .vnt-f:not(:has(.av)) .vnt-st{grid-column:1/-1}
+}
+/* mercado.css pinta cualquier .mk como pantalla entera (relleno de 110 px); en las filas de resultados es solo el marcador */
+.vnt .shr .mk{padding:0;max-width:none;margin:0}
+.vnt .shr:has(.noimg){grid-template-columns:24px minmax(0,1fr) auto auto 22px}

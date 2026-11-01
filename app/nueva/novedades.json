@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "ventana-partido-0111",
+   "fecha": "2026-11-01",
+   "hora": "17:25",
+   "titulo": "La ventana del partido",
+   "texto": "Toca una apuesta y se abre una ventana del partido: marcador en directo, tu apuesta con lo que cobras, los amigos que van en ese partido y las estadísticas de equipos y jugadores, sin salir de donde estabas.",
+   "titulo_en": "Match window",
+   "texto_en": "Tap a bet and a match window opens: live score, your bet with what you collect, the friends on that match, and team and player stats, without leaving the screen you were on.",
+   "img": "novedades/ventana-partido.webp",
+   "ir": "apuestas"
+  },
+  {
    "id": "retos-abiertos-0111",
    "fecha": "2026-11-01",
    "hora": "17:20",
