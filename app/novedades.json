@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "quien-dentro-0111",
+   "fecha": "2026-11-01",
+   "hora": "18:55",
+   "titulo": "Quién está dentro",
+   "texto": "En Directo y en Partidos salen primero los partidos donde apostáis o retáis, con vuestras caras, y al abrir uno ves quién está dentro y qué ha elegido. Los retos tienen su tarjeta de duelo también en Inicio y Mis apuestas, y las combinadas marcan con un tick verde cada partido acertado.",
+   "titulo_en": "Who is in",
+   "texto_en": "Live and Matches show first the games you are betting or challenging on, with your faces, and opening one shows who is in and what they picked. Challenges have their own duel card, also on Home and My bets, and parlays mark every winning leg with a green tick.",
+   "img": "novedades/retos-duelo.webp",
+   "ir": "apuestas"
+  },
+  {
    "id": "chat-moneda-0111",
    "fecha": "2026-11-01",
    "hora": "18:40",

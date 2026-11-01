@@ -34,7 +34,7 @@
   const IC_RELOJ = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
   const IC_CMB = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8.5h11a1.5 1.5 0 0 1 1.5 1.5v1.2a1.6 1.6 0 0 0 0 3.1V16a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 16v-1.7a1.6 1.6 0 0 0 0-3.1V10A1.5 1.5 0 0 1 5 8.5z"/><path d="M7.5 6h11A1.5 1.5 0 0 1 20 7.5v7"/></svg>';
   const IC_TICKET = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5V10a2 2 0 0 0 0 4v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5V14a2 2 0 0 0 0-4z"/><path d="M14.5 6.5v11" stroke-dasharray="1.5 2"/></svg>';
-  const PATA = { ok: '<path d="M2.5 6.3l2.3 2.3L9.5 3.8"/>', ko: '<path d="M3.5 3.5l5 5M8.5 3.5l-5 5"/>', nul: '<path d="M3.5 6h5"/>' };
+  const PATA = { ok: '<path d="M2.5 6.3l2.3 2.3L9.5 3.8"/>', ko: '<path d="M3.5 3.5l5 5M8.5 3.5l-5 5"/>', nul: '<path d="M3.5 6h5"/>', pend: '<circle cx="6" cy="6" r="3.6"/>' };
   const cuadro = (lab, val, cls = '') => `<div class="${cls}"><span class="lab">${lab}</span><b>${val}</b></div>`;
   const fecha = (t) => `${WD(t)} ${DD(t)} ${MO(t)} · ${HM(t)}`;
   // cuando empieza, corto para la franja: hoy 17:15, mañana 08:00, lun 08:00 o lun 9 nov · 08:00
@@ -66,19 +66,22 @@
   // cada reto 1 contra 1 vivo es una tarjeta mas de En juego (antes era una linea al final que en el movil no se veia)
   function reto(c, i) {
     const m = byId(c.m); if (!m) return '';
+    if (window.GM_QUIEN) return GM_QUIEN.cartaReto(c, { i, ir: true });   // la tarjeta de duelo es la misma en Inicio, Mis apuestas y Directo (quien.js)
     const live = !!m.live, d = live ? vyDatos(m) : null, yo = c.from === MEK, riv = yo ? c.to : c.from;
     const mio = yo ? c.fp : c.tp, suyo = yo ? c.tp : c.fp, nom = (k) => (k ? esc(fr(k).n) : 'Cualquiera');
     const eq = (s) => { const p = s === 'a' ? '1' : '2', sc = s === 'a' ? d && d.sa : d && d.sb, quien = mio === p ? 'Tú' : suyo === p ? nom(riv) : '';
       return `<div class="mt-eq ${mio === p ? 'mio' : ''}"><span class="mt-cr">${logo(m, s)}</span><span class="mt-nm"><b>${esc(s === 'a' ? m.a : m.b)}</b>${quien ? `<em>${quien}</em>` : ''}</span>${live && sc != null ? `<span class="mt-pts"><b>${sc}</b></span>` : ''}</div>` };
     const empate = mio === 'X' || suyo === 'X' ? `<p class="mt-pk"><i>★</i><b>Empate: ${mio === 'X' ? 'Tú' : nom(riv)}</b></p>` : '';
-    const estado = c.st === 'pending' ? (c.ab ? 'Esperando a que entre alguien' : `Esperando a que ${nom(riv)} acepte`) : `Contra ${nom(riv)}`;
+    const estado = c.st === 'pending' ? (c.ab ? 'Esperando a que entre alguien' : `Esperando a que ${nom(riv)} acepte`) : '';
+    const rivAv = riv ? av(riv, 'xl') : '<span class="av xl rt-any"><svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 6.2a3 3 0 0 1 0 5.6M17.5 14a5 5 0 0 1 3 5"/></svg></span>';
     const head = live ? `<span class="mt-st"><i class="mt-pt"></i><span>En vivo</span></span>` : banda(m, `<span class="mt-when">${empieza(t2(m.at))}</span>`);
     return `<article class="mt mt-r ${live ? 'live' : ''}" data-goto="${esc(m.id)}" style="--i:${i};--sc:${SPC[m.s] || 'var(--acc)'}">
       <header class="mt-band">${head}<span class="mt-bar"><i style="width:${live ? 100 : 40}%"></i></span></header>
-      <div class="mt-meta"><span class="mt-rt-ic">${riv ? av(riv, 'sm') : ''}</span><span class="lab ell">Reto 1 contra 1 · ${estado}</span></div>
+      <div class="mt-rv"><span class="mt-rf">${av(MEK, 'xl')}<b>Tú</b></span><span class="qn-seal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/></svg><span>Reto 1 contra 1</span></span><span class="mt-rf">${rivAv}<b>${nom(riv)}</b></span></div>
+      ${estado ? `<p class="mt-rs">${estado}</p>` : ''}
       <div class="mt-m">${eq('a')}${eq('b')}</div>${empate}
       <div class="mt-n">${cuadro('Pones', N(c.stake) + coin())}${cuadro('En juego', N(c.stake * 2) + coin())}${cuadro('Te llevas', N(c.stake * 2) + coin(), 'hi')}</div>
-      <p class="mt-rt-no">Los retos no se cancelan: se paga al acabar el partido.</p>
+      <p class="mt-rt-no"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>Sin cancelar · se paga al final</span></p>
     </article>`;
   }
   function suelta(b, i) {

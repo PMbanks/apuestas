@@ -202,7 +202,7 @@ const form = (s) => `<span class="fm">${[...s].map((c) => `<b class="${c === 'G'
 const board = () => M.filter((m) => (m.status === 'scheduled' || m.live) && (m.live || Date.parse(m.at) > NOW - 4 * 3600e3) && Date.parse(m.at) < NOW + (m.s === 'u' ? 72 : 8) * DAY);
 const inLeague = (m) => S.lg === 'fav' ? sigo(m) : S.lg === 'all' ? true : S.lg === 'top' ? m.live || m.s === 'v' || m.s === 'b' || (m.s === 'c' ? 'sa'.includes(m.tier || 'x') : m.s === 'u' ? !!m.tag : TOP.has(m.lg)) || whoOn(m.id).length > 0 : m.lg === S.lg;
 const filtered = () => board().filter((m) => (S.f === 'all' || m.s === S.f) && inLeague(m)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
-const groups = (list) => { const g = new Map(); for (const m of list) { const k = DK(m.at); if (!g.has(k)) g.set(k, []); g.get(k).push(m) } return [...g.values()] };
+const groups = (list) => { const g = new Map(); for (const m of list) { const k = DK(m.at); if (!g.has(k)) g.set(k, []); g.get(k).push(m) } return [...g.values()].map((ms) => (window.GM_QUIEN ? GM_QUIEN.dia(ms) : ms)) };
 const dayLab = (t) => (today(t) ? `HOY · ${WD(t)}` : `${WD(t)} · ${MO(t)}`);
 const stakeNow = () => Math.max(0, Math.min(S.stake, me().s));
 const chips = () => [50, 100, 250, 500, 'all'].map((v) => { const on = v === 'all' ? S.stake >= me().s : S.stake === v; return `<button class="chip ${on ? 'on' : ''}" data-stake="${v}">${v === 'all' ? 'Todo' : N(v)}</button>` }).join('');
@@ -627,7 +627,7 @@ const embedDe = (v) => { if (!v?.e) return null; let u = v.e; const j = u.includ
   if (/player\.twitch\.tv/.test(u)) u += `${j}parent=pmbanks.github.io&parent=localhost&parent=127.0.0.1&muted=true`;
   else if (/youtube\.com\/embed/.test(u)) u += `${j}autoplay=1&mute=1`;
   return u };
-const LIVE_ORD = (a, b) => whoOn(b.id).length - whoOn(a.id).length || Date.parse(a.at) - Date.parse(b.at);
+const LIVE_ORD = (a, b) => (window.GM_QUIEN ? GM_QUIEN.ord(a, b) : whoOn(b.id).length - whoOn(a.id).length) || Date.parse(a.at) - Date.parse(b.at);
 function dvSel() {
   const vs = M.filter((m) => m.live).sort(LIVE_ORD), m = vs.find((x) => x.id === S.dv) || vs[0]; if (!m) return { vs, m: null, tvs: [], tv: null };
   const tvs = (m.tv || []).filter((v) => v.e), pri = (v) => (/^(es|en)$/.test(v.l) ? 2 : 0) + (v.main ? 1 : 0);
@@ -640,11 +640,11 @@ function dvInfo(m, cta = '') {
   const mapas = g.length ? `<div class="dv-maps">${g.map((x) => `<span class="${x.st === 'running' ? 'run' : x.st === 'finished' ? 'fin' : ''}"><small>Mapa ${x.n}</small><b>${x.st === 'running' ? 'en juego' : x.st === 'finished' ? (x.w === m.tid?.a ? esc(m.a) : x.w === m.tid?.b ? esc(m.b) : 'acabado') : 'pendiente'}</b></span>`).join('')}</div>` : '';
   return `<div class="dv-info" data-dv-info data-espn="${m.espn ? esc(m.espn.sport + '|' + m.espn.league + '|' + m.espn.event) : ''}">
     <div class="dv-sc"><div>${logo(m, 'a')}<b>${esc(m.a)}</b></div><strong>${esc(String(m.score || '0:0').split(/\s+/)[0])}<small>${esc(String(m.score || '').split(/\s+/).slice(1).join(' ').replace(/^[·(]\s*|\)$/g, '')) || (m.s === 'v' || m.s === 'c' ? 'mapas ganados' : 'en vivo')}</small></strong><div>${logo(m, 'b')}<b>${esc(m.b)}</b></div></div>
-    ${cta}
+    ${window.GM_QUIEN ? GM_QUIEN.bloque(m) : ''}${cta}
     <p class="dv-meta"><span class="dv-sp"><img src="${SP[m.s][1]}" alt="">${SP[m.s][0]}</span><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt="">${esc(L[m.lg]?.[0] || '')}${m.stage ? ' · ' + esc(corto(m.stage)) : ''}${m.bo ? ' · BO' + m.bo : ''}</p>
     ${mapas}
     ${viendo(m.id).length ? `<div class="dv-watch">${IC_OJO}<span>Viendo este directo</span>${viendo(m.id).map((k) => `<span class="dv-w">${av(k, 'sm')}${esc(fr(k).n)}</span>`).join('')}</div>` : ''}
-    <div class="dv-bets"><span class="lab">Apuestas en este partido</span>${w.length ? w.map((x) => `<div class="dv-b" style="--c:var(--f-${x.f})">${av(x.f, 'sm')}<b>${esc(fr(x.f).n)}</b><span>${x.p ? esc(pn(m, x.p)) + ' · ' + O(x.o) : 'oculta'}</span><em>${N(x.stake)} → ${x.p ? N(x.stake * x.o) : '?'}${coin()}</em></div>`).join('') : '<p class="hint">Nadie ha apostado a este partido.</p>'}</div>
+    ${window.GM_QUIEN ? '' : `<div class="dv-bets"><span class="lab">Apuestas en este partido</span>${w.length ? w.map((x) => `<div class="dv-b" style="--c:var(--f-${x.f})">${av(x.f, 'sm')}<b>${esc(fr(x.f).n)}</b><span>${x.p ? esc(pn(m, x.p)) + ' · ' + O(x.o) : 'oculta'}</span><em>${N(x.stake)} → ${x.p ? N(x.stake * x.o) : '?'}${coin()}</em></div>`).join('') : '<p class="hint">Nadie ha apostado a este partido.</p>'}</div>`}
     <button class="go-s res" data-goto="${m.id}">Ver la ficha y las estadísticas</button>
     <p class="hint">El marcador se actualiza cada pocos minutos; lo de verdad va en el vídeo.</p>
   </div>`;
@@ -662,7 +662,7 @@ function directo() {
       <nav class="dv-tvs">${tvs.length > 1 ? tvs.map((v, i) => `<button class="chip ${v === tv ? 'on' : ''}" data-dtv="${i}">${esc(v.n)} · ${esc(LANG[v.l] || v.l || '')}</button>`).join('') : ''}<button class="chip q dv-oc" data-act="dv-ver">Ocultar el stream</button></nav>` : ''}
       ${dvInfo(m, cta)}
     </div>
-    <aside class="dv-list"><span class="lab">En directo · ${vs.length}</span>${vs.map((x) => `<button class="dv-it ${x === m ? 'on' : ''}" data-dv="${x.id}"><img class="tl" src="${esc(L[x.lg]?.[1] || '')}" alt=""><span><b>${esc(x.a)} <i>${esc(x.score || '0:0')}</i> ${esc(x.b)}</b><small><img class="dv-spi" src="${SP[x.s][1]}" alt="">${SP[x.s][0]} · ${esc(L[x.lg]?.[0] || '')}</small>${viendo(x.id).length ? `<small class="dv-ven">${IC_OJO}${viendo(x.id).map((k) => esc(fr(k).n)).join(', ')}</small>` : ''}</span>${whoOn(x.id).length ? `<em>${whoOn(x.id).map((w) => av(w.f, 'sm')).join('')}</em>` : ''}</button>`).join('')}</aside>
+    <aside class="dv-list"><span class="lab">En directo · ${vs.length}</span>${vs.map((x) => `<button class="dv-it ${x === m ? 'on' : ''}" data-dv="${x.id}"><img class="tl" src="${esc(L[x.lg]?.[1] || '')}" alt=""><span><b>${esc(x.a)} <i>${esc(x.score || '0:0')}</i> ${esc(x.b)}</b><small><img class="dv-spi" src="${SP[x.s][1]}" alt="">${SP[x.s][0]} · ${esc(L[x.lg]?.[0] || '')}</small>${viendo(x.id).length ? `<small class="dv-ven">${IC_OJO}${viendo(x.id).map((k) => esc(fr(k).n)).join(', ')}</small>` : ''}</span>${window.GM_QUIEN ? (GM_QUIEN.hay(x.id) ? `<em>${GM_QUIEN.caras(x.id)}</em>` : '') + GM_QUIEN.retoLinea(x.id) : whoOn(x.id).length ? `<em>${whoOn(x.id).map((w) => av(w.f, 'sm')).join('')}</em>` : ''}</button>`).join('')}</aside>
   </div>`;
 }
 
@@ -790,7 +790,7 @@ function vivoCard(m) {
   return `<button class="lvc" data-vivo="${m.id}" style="--sc:${SPC[m.s]}">
     <span class="lvc-h"><i class="lvc-dot"></i><em>EN VIVO</em><img class="lvc-sp" src="${SP[m.s][1]}" alt=""><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt="" loading="lazy"><span class="lvc-lg">${esc(corto(L[m.lg]?.[0] || ''))}</span></span>
     <span class="lvc-m">${lado('a')}<span class="lvc-sc">${m.vivo ? vL(m) || '<strong>·</strong>' : `<strong>${esc(g)}</strong>${det ? `<small>${esc(det)}</small>` : m.s === 'v' || m.s === 'c' ? '<small>mapas</small>' : ''}`}</span>${lado('b')}</span>
-    <span class="lvc-w">${ws.length ? `<span class="lvc-avs">${ws.slice(0, 5).map((w) => av(w.f, 'sm')).join('')}</span><span>${ws.length} ${ws.length === 1 ? 'apuesta' : 'apuestas'} · ${N(tot)}${coin()} en juego</span>` : '<span class="lvc-nadie">Nadie ha apostado</span>'}<span class="lvc-ir">Ver partido ›</span></span>
+    <span class="lvc-w">${window.GM_QUIEN && GM_QUIEN.hay(m.id) ? GM_QUIEN.vivoPie(m) : ws.length ? `<span class="lvc-avs">${ws.slice(0, 5).map((w) => av(w.f, 'sm')).join('')}</span><span>${ws.length} ${ws.length === 1 ? 'apuesta' : 'apuestas'} · ${N(tot)}${coin()} en juego</span>` : '<span class="lvc-nadie">Nadie ha apostado</span>'}<span class="lvc-ir">Ver partido ›</span></span>
   </button>`;
 }
 const vivosHtml = (ls) => `<section class="lv2 ${ls.length > 1 ? 'mas' : ''}"><div class="lv2-h"><span class="lab"><i class="dot"></i>En directo · ${ls.length}</span>${ls.length > 1 ? '<span class="lv2-fl"><button data-lvx="-1" aria-label="Anterior"><svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg></button><button data-lvx="1" aria-label="Siguiente"><svg viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg></button></span>' : ''}</div><div class="lv2-row" data-lv>${ls.map(vivoCard).join('')}</div></section>`;
@@ -841,7 +841,7 @@ function partidos() {
   if (!S.foc || !byId(S.foc) || !(board().some((m) => m.id === S.foc) || byId(S.foc).status === 'final')) S.foc = (featured()[0] || list[0] || {}).id;
   if (S.brk && byId(S.foc)?.tour) return `<div class="pad brk-full">${bracketSheet(byId(S.foc)).replace('class="det sheet', 'class="brk-page').replace(' open"', '"')}</div>`;
   const feat = featured();
-  const lives = M.filter((m) => m.live).sort((a, b) => whoOn(b.id).length - whoOn(a.id).length).slice(0, 14);
+  const lives = M.filter((m) => m.live).sort((a, b) => (window.GM_QUIEN ? GM_QUIEN.ord(a, b) : whoOn(b.id).length - whoOn(a.id).length)).slice(0, 14);
   let h = `<div class="p-wrap"><section class="p-board ${S.soloJug ? 'solo-jug' : ''}" data-keep="pb">
     ${lives.length ? vivosHtml(lives) : ''}
     ${feat.length ? `<div class="feat">${feat.map((m) => `<button class="ft ${S.foc === m.id ? 'on' : ''}" data-foc="${m.id}">
@@ -856,12 +856,12 @@ function partidos() {
   for (const ms of S.soloJug ? [] : groups(list)) {
     h += `<div class="day"><b>${DD(ms[0].at)}</b><span>${dayLab(ms[0].at)}</span><i>${ms.length} ${ms.length > 1 ? 'partidos' : 'partido'}</i></div>`;
     for (const m of ms) {
-      const open = isOpen(m);
-      h += `<div class="row ${S.foc === m.id ? 'on' : ''} ${m.live && m.vivo ? 'cv' : ''} ${m.live ? 'envivo' : ''}" data-foc="${m.id}" style="--i:${Math.min(ri++, 14)}">
+      const open = isOpen(m), qn = window.GM_QUIEN ? GM_QUIEN.fila(m) : { cls: '', who: '', movil: '' };
+      h += `<div class="row ${S.foc === m.id ? 'on' : ''} ${m.live && m.vivo ? 'cv' : ''} ${m.live ? 'envivo' : ''} ${qn.cls}" data-foc="${m.id}" style="--i:${Math.min(ri++, 14)}">
         <span class="t">${m.live ? '<em>VIVO</em>' : HM(m.at)}${m.live ? (m.vivo ? '' : `<small class="sc">${esc(String(m.score || '').split(' ')[0])}</small>`) : Date.parse(m.at) <= NOW ? '<small class="pe">por empezar</small>' : `<small>${CD(m.at)}</small>`}</span>
         <span class="llw" title="${esc(L[m.lg][0])} · ${SP[m.s][0]}"><img class="ll" src="${esc(L[m.lg][1])}" alt="" loading="lazy">${m.s === 'c' || m.s === 'v' ? `<img class="lls" src="${SP[m.s][1]}" alt="">` : ''}</span>
-        <span class="tms"><span class="tm">${logo(m, 'a')}<span>${esc(m.a)}</span>${esFav(favK(m.s, m.a)) || esFav('pa:' + m.id) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${dailyTag(m)}${vN(m, 'a')}</span><span class="tm">${logo(m, 'b')}<span>${esc(m.b)}</span>${esFav(favK(m.s, m.b)) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${vN(m, 'b')}</span>${vL(m)}</span>
-        <span class="who">${[...new Set(whoOn(m.id).map((x) => x.f))].map((k) => av(k, 'sm')).join('')}</span>
+        <span class="tms"><span class="tm">${logo(m, 'a')}<span>${esc(m.a)}</span>${esFav(favK(m.s, m.a)) || esFav('pa:' + m.id) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${dailyTag(m)}${vN(m, 'a')}</span><span class="tm">${logo(m, 'b')}<span>${esc(m.b)}</span>${esFav(favK(m.s, m.b)) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${vN(m, 'b')}</span>${vL(m)}${qn.movil}</span>
+        <span class="who">${window.GM_QUIEN ? qn.who : [...new Set(whoOn(m.id).map((x) => x.f))].map((k) => av(k, 'sm')).join('')}</span>
         ${['1', 'X', '2'].map((p) => oddBtn(m, p, open)).join('')}
       </div>`;
     }
