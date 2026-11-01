@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "ratio-0111",
+   "fecha": "2026-11-01",
+   "hora": "21:05",
+   "titulo": "Ranking de ratio",
+   "texto": "Debajo de la foto de cada perfil ves en qué puesto está esa persona en ratio: lo que devuelve de media cada apuesta resuelta. Un acierto a x7 pesa mucho más que uno a x1,23. Toca la pastilla y verás a los 9. Hacen falta 5 apuestas resueltas, y se actualiza solo.",
+   "titulo_en": "Ratio ranking",
+   "texto_en": "Under each profile photo you can see where that player stands in ratio: what each settled bet returns on average. A win at x7 weighs far more than one at x1.23. Tap the pill to see all 9. You need 5 settled bets, and it updates by itself.",
+   "img": "novedades/ratio.webp",
+   "ir": "liga"
+  },
+  {
    "id": "tarjeta-perdida-0111",
    "fecha": "2026-11-01",
    "hora": "20:45",
