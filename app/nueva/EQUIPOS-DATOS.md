@@ -76,3 +76,17 @@ Con Wikipedia (futbol): "Datos de Wikipedia" enlazando a su `url` (CC BY-SA 4.0)
 ## Para el que sincroniza
 - Cada ficha cuesta a Liquipedia 1 `action=parse` (32 s de espera) + 1 consulta; 3 equipos de esports como mucho por pasada, 8 de futbol, 4 de UFC. Al arrancar, con la base vacia, tarda unas horas en tener todo: es normal que muchos equipos no tengan `extra` al principio.
 - Contacto en el User-Agent: por defecto la URL del repo; se cambia con la variable `EQUIPOS_CONTACTO` en el workflow (Liquipedia pide un contacto; un correo es lo mejor).
+
+## Formato 2 (ver: 2) y detalle de jugadores (01-11)
+Campos nuevos de extra para Valorant y CS2 (db/045 guarda la version; los pinta equipos.js):
+- jugadores[].estado: null (titular), 'Loan', 'Substitute', 'Stand-in', 'Inactive'; capitan, inactivo_desde, roles (CS2: igl, awp, rifle, entry, support, lurk), agentes (Valorant: [{a, pj, pct}] de vlr.gg, ultimos 60 dias), anteriores [{equipo, desde, hasta, nota}] (CS2 de Liquipedia, Valorant de vlr.gg).
+- exjugadores (hasta 70), staff, exstaff (cuerpo tecnico y organizacion, con fechas de entrada y salida).
+- titulos: { total, otros, segundos, terceros, jugados, por_tier, desde, lista:[{f,t,k,p,r,m,l}] (torneos ganados), podios:[{f,t,k,n,p,l}] (2º y 3º de torneos S, A y B),
+  premios:[[fecha, torneo, puesto, premio, nivel]] (todo lo que cobro el equipo), premios_total, premios_n, por_ano:[{ano, usd}] }. l = ruta del logo del torneo en liquipedia.net/commons/images/ (la app lo enlaza, no lo copia).
+- Los premios de Liquipedia son del EQUIPO (los jugadores se reparten ese dinero): total y por ano de ganancias del equipo salen de ahi si el grafico de Liquipedia no existe.
+
+Detalle de jugadores: columna teams.pj (db/050), un objeto por jugador con su nick en minusculas como clave:
+    pj = { "coconut": { t: ms, g: { total, aprox, n, jugados, lista: [[fecha o ano, torneo, puesto, premio, equipo, fase?]] } } }   (o { t, fallo: "motivo" } si la fuente fallo)
+- Valorant: pagina del jugador en vlr.gg (Event Placements): premio por evento del propio jugador, total exacto (aprox: false).
+- CS2: pagina Jugador/Results de Liquipedia (1 action=parse por jugador): el premio de cada fila es del equipo y se reparte entre 5 (aprox: true).
+- Se rehace cada 7 dias (1 dia tras un fallo), 3 jugadores de CS2 por pasada; los de Valorant no cuentan (no usan la API de Liquipedia).
