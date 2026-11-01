@@ -190,8 +190,8 @@
     if (!fuerza && Date.now() - ultima < 1500) return;
     cargando = (async () => {
       try {
-        // Lujo en mantenimiento (PM 30-10): solo las cajas de skins de CS2 se ven y se abren
-        if (!D.cases) D.cases = ((await rpc('cs_cases')) || []).filter((c) => catDe(c) === 'skins');
+        // PM 01-11 "si, abrelas": Lujo abierta otra vez con las 16 cajas nuevas (db/046). Cosmeticos sigue fuera (Mercado en mantenimiento)
+        if (!D.cases) D.cases = ((await rpc('cs_cases')) || []).filter((c) => catDe(c) !== 'cosmeticos');
         const st = await rpc('cs_state', { p_player: S.quien || ctx.me });
         await asegura([...st.inv, ...st.feed].map((i) => i.item));
         D.st = st; D.err = null;
