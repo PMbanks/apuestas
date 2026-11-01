@@ -22,15 +22,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      # Avisos al movil (web push): la unica libreria que usa el sincronizador. Si la instalacion falla no pasa nada,
+      # sync.mjs no la necesita y push.mjs avisa en el registro y no hace nada.
+      - name: Instalar web-push
+        continue-on-error: true
+        run: npm install --prefix sync --no-audit --no-fund --no-progress
       - name: Pasar cada 5 minutos durante 5 h 40 min
         run: |
           fin=$(( $(date +%s) + 340 * 60 ))
+          # avisos al movil: un proceso aparte, en este mismo job, que mira la cola cada 20 s y no hace nada sin las claves VAPID
+          node sync/push.mjs &
+          push_pid=$!
           while [ $(date +%s) -lt $fin ]; do
             t0=$(date +%s)
             node sync/sync.mjs || echo "pasada con error, sigo"
             espera=$(( 300 - ( $(date +%s) - t0 ) ))
             [ $espera -gt 0 ] && sleep $espera
           done
+          kill $push_pid 2>/dev/null || true
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -40,6 +49,11 @@ jobs:
           PRED_WATCH_S: 240
           # opcional: sin este secreto no se manda nada a Discord (ver DISCORD-WEBHOOK.md)
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          # avisos al movil (db/060_push.sql, sync/push.mjs). Sin VAPID_PUBLIC y VAPID_PRIVATE no se manda nada.
+          # La clave publica no es secreta: vale como variable del repo (vars) o como secreto.
+          VAPID_PUBLIC: ${{ vars.VAPID_PUBLIC || secrets.VAPID_PUBLIC }}
+          VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
+          VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT || secrets.VAPID_SUBJECT }}
       - name: Relanzarse
         if: success() || failure()
         run: gh workflow run sync.yml -R ${{ github.repository }} --ref main
