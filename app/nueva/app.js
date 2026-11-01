@@ -1708,6 +1708,7 @@ function ajustes() {
       <div class="aj-ops" data-nomon>${mons.map(([k, n, img]) => `<button class="aj-m ${mo === k ? 'on' : ''}" data-act="mon" data-mon="${k}" aria-pressed="${mo === k}"><img src="${img}" alt=""><b data-notr>${n}</b></button>`).join('')}</div></section>
     ${window.GM_OCULTAS ? GM_OCULTAS.seccion() : ''}
     ${window.GM_ALARMAS ? GM_ALARMAS.seccion() : ''}
+    ${window.GM_ACTIVIDAD ? GM_ACTIVIDAD.seccion() : ''}
     <section class="aj-s"><h3 class="lab">Idioma</h3><div class="aj-ops">${[['es', 'Español'], ['en', 'English']].map(([l, n]) => `<button type="button" class="aj-m ${lg === l ? 'on' : ''}" data-lang="${l}"><b data-notr>${n}</b></button>`).join('')}</div></section>
     <section class="aj-s"><h3 class="lab">Avisos</h3>${avisos}</section>
     <section class="aj-s"><h3 class="lab">Cuenta</h3><div class="aj-ops"><button class="aj-a" data-act="pass">Cambiar contraseña</button><button class="aj-a q" data-act="logout">Cerrar sesión</button></div>
