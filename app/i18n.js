@@ -476,6 +476,13 @@
     'De 50 a 600 V-Bucks o una caja de CS2 para abrirla tú. Una tirada cada 3 días.': 'From 50 to 600 V-Bucks or a CS2 box to open yourself. One spin every 3 days.',
     'Estás en negativo (': 'You are below zero (', '): no puedes apostar hasta volver a tener saldo. La paga del lunes llega sola.': '): you cannot bet until you have a balance again. The Monday payday comes in by itself.',
     'No te queda saldo para apostar. La paga del lunes llega sola.': 'You have no balance left to bet. The Monday payday comes in by itself.',
+    // Ficha de partido pro (01-11, fichapro.js)
+    'Árbitro': 'Referee', 'Asistencia': 'Attendance', 'Hora local': 'Local time', 'Goles y tarjetas': 'Goals and cards', 'Titulares y cambios': 'Starters and subs', 'Suplentes': 'Substitutes',
+    'Quinteto inicial': 'Starting five', 'Puntos, rebotes y asistencias': 'Points, rebounds and assists', 'Banquillo': 'Bench', 'Jugadores a seguir': 'Players to watch', 'Medias por partido de esta temporada': 'Per game averages this season',
+    'Estadísticas': 'Stats', 'Últimos 5 partidos': 'Last 5 games', 'Últimos duelos': 'Latest meetings', 'Empates': 'Draws', 'Goleadores del equipo': 'Team top scorers', 'Esta temporada': 'This season',
+    'Ver toda la clasificación': 'See the full table', 'Ver menos': 'See less', 'Descenso': 'Relegation', 'Ascenso': 'Promotion', 'Clasifica': 'Qualifies', 'Promoción de descenso': 'Relegation play-off', 'Playoff de ascenso': 'Promotion play-off', 'Playoff': 'Play-off',
+    'Las alineaciones salen sobre una hora antes': 'Line-ups come out about an hour before', 'Cuando los equipos las den, aquí verás los once colocados en el campo, con su dorsal, los suplentes y los cambios.': 'Once the teams announce them, you will see the eleven on the pitch here, with shirt numbers, substitutes and changes.',
+    'No juega': 'Did not play', 'Rebotes': 'Rebounds', 'Asistencias': 'Assists', 'por partido': 'per game', 'PJ': 'GP', 'PTS': 'PTS', 'REB': 'REB', 'AST': 'AST',
   };
   // Nombres de cajas y objetos que vienen de la base en espanol (cajas de lujo y de cosmeticos). Van con data-notr en cajas.js, asi que
   // el diccionario D no los toca: se traducen aparte (NOMB exactos, RN por patron) y tambien dentro de frases del chat y del monedero.

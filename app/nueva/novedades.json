@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "ficha-pro-0111",
+   "fecha": "2026-11-01",
+   "hora": "22:45",
+   "titulo": "Ficha de partido renovada",
+   "texto": "Las alineaciones salen dibujadas en el campo con dorsal, goles, tarjetas y cambios. La clasificación trae bandas de Champions, Europa y descenso, escudos, forma y tus dos equipos resaltados. Y ahora tienes estadio, goles minuto a minuto, estadísticas, forma y cara a cara.",
+   "titulo_en": "Match page redesigned",
+   "texto_en": "Line-ups are drawn on the pitch with shirt numbers, goals, cards and substitutions. The table shows Champions League, Europa League and relegation bands, crests, form and both teams highlighted. Plus venue, goals minute by minute, match stats, form and head to head.",
+   "img": "novedades/ficha-pro.webp",
+   "ir": "partidos"
+  },
+  {
    "id": "ingles-repaso-0111",
    "fecha": "2026-11-01",
    "hora": "22:10",
