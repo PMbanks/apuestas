@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "retos-abiertos-0111",
+   "fecha": "2026-11-01",
+   "hora": "17:20",
+   "titulo": "Retos a cualquiera",
+   "texto": "Lanza un reto sin elegir amigo: entra el primero y te avisamos. Los retos que te llegan salen arriba con aviso, y antes de apostar te lo preguntamos dos veces porque un reto no se puede cancelar. En Ajustes, Qué ves: oculta las ligas o los juegos que no quieras (o mantén pulsado el escudo de una liga en Partidos).",
+   "titulo_en": "Challenges for anyone",
+   "texto_en": "Open a challenge without picking a friend: the first to join takes it and we tell you. Challenges sent to you show up at the top with an alert, and we ask twice before you bet because a challenge cannot be cancelled. In Settings, What you see: hide the leagues or games you do not want (or press and hold a league badge in Matches).",
+   "img": "novedades/retos-abiertos.webp",
+   "ir": "partidos"
+  },
+  {
    "id": "nba-0111",
    "fecha": "2026-11-01",
    "hora": "17:00",

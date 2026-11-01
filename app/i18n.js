@@ -371,11 +371,29 @@
     'Todas las apuestas': 'All bets', 'En vivo': 'Live', 'Devueltas': 'Refunded', 'Retiradas': 'Cashed out', 'RETIRADA': 'CASHED OUT', 'EN JUEGO': 'OPEN', 'Oculta hasta empezar': 'Hidden until kick-off', 'Nada con estos filtros.': 'Nothing with these filters.', 'Todavía nadie ha apostado.': 'Nobody has bet yet.',
     // ranking de Juegos: tira de caras y duelo (modelo F, 01-11)
     'Ranking ·': 'Leaderboard ·', 'Tu posición': 'Your position', 'Delante': 'Ahead', 'detrás': 'behind', 'Detrás': 'Behind', 'Vais igualados': 'You are level',
+    // retos: reto abierto, tarjeta de reto pendiente y doble confirmacion (retos.js) y ocultar ligas y juegos (ocultas.js), 01-11
+    'Retar a un amigo o a cualquiera': 'Challenge a friend or anyone', 'Elige a quién retas y el resultado.': 'Pick who to challenge and a result.',
+    'Un reto no se puede cancelar después.': 'A challenge cannot be cancelled afterwards.', 'Un reto no se puede cancelar': 'A challenge cannot be cancelled',
+    'Entro con': 'I join with', 'reta a cualquiera': 'challenges anyone', 'Reta a cualquiera': 'Challenges anyone', 'Reta a cualquiera con': 'Challenges anyone with', 'Retas a cualquiera': 'You challenge anyone',
+    'Abierto a todos': 'Open to everyone', 'Reto abierto': 'Open challenge', 'Reto para ti': 'Challenge for you', 'Retos para ti': 'Challenges for you', 'Retos que esperan': 'Challenges waiting',
+    'Pone': 'Puts in', 'y va con': 'and backs', 'Luego': 'Later', 'Paso 1 de 2': 'Step 1 of 2', 'Paso 2 de 2': 'Step 2 of 2',
+    '¿Seguro que quieres apostar aquí?': 'Are you sure you want to bet here?', 'Partido': 'Match', 'Tú vas con': 'You back', 'Rival': 'Opponent', 'Pones': 'You put in', 'Sí, seguir': 'Yes, continue',
+    'Cuando entres, lo que pones se queda dentro y no puedes echarte atrás.': 'Once you join, what you put in stays in and you cannot back out.',
+    'Cuando lo envíes, lo que pones se queda dentro y no puedes retirarlo.': 'Once you send it, what you put in stays in and you cannot take it back.',
+    'Gana el que acierte y se lleva lo de los dos. Si el partido se anula, se devuelve a los dos.': 'Whoever gets it right wins and takes both stakes. If the match is called off, both get their stake back.',
+    'Solo te lo devolvemos si nadie entra antes de que empiece el partido. Si entra alguien, gana el que acierte y se lleva lo de los dos.': 'You only get it back if nobody joins before the match starts. If someone joins, whoever gets it right takes both stakes.',
+    'Solo te lo devolvemos si tu amigo lo rechaza o no contesta antes de que empiece el partido. Si acepta, gana el que acierte y se lleva lo de los dos.': 'You only get it back if your friend turns it down or does not answer before the match starts. If they accept, whoever gets it right takes both stakes.',
+    'Entrar al reto': 'Join the challenge', 'Enviar reto': 'Send challenge', 'Reto abierto: puede entrar cualquiera': 'Open challenge: anyone can join', 'Has entrado en el reto': 'You joined the challenge',
+    'Pon al menos 1': 'Put in at least 1', 'entra en tu reto': 'joins your challenge', 'Reto enviado a': 'Challenge sent to',
+    'Qué ves': 'What you see', 'Se ve': 'Visible', 'Oculto': 'Hidden', 'Elegir ligas': 'Choose leagues', 'Ocultar la lista de ligas': 'Hide the list of leagues', 'Ocultar esta liga': 'Hide this league',
+    'Se vuelve a mostrar desde Ajustes.': 'You can show it again in Settings.',
+    'Lo que ocultes no sale en Partidos, Inicio ni Directo. Tus apuestas de ahí siguen en Mis apuestas. También puedes mantener pulsado el escudo de una liga en Partidos.': 'Whatever you hide does not show in Matches, Home or Live. Your bets there stay in My bets. You can also press and hold a league badge in Matches.',
     'Todavía no has jugado': 'You have not played yet', 'Todavía no has ganado ningún premio': 'You have not won a prize yet', '. Te falta eso para pasarle.': '. You need that much to pass them.',
   };
   const DIAS = { LUN: 'MON', 'MIÉ': 'WED', JUE: 'THU', VIE: 'FRI', 'SÁB': 'SAT', DOM: 'SUN', HOY: 'TODAY', ENE: 'JAN', ABR: 'APR', AGO: 'AUG', DIC: 'DEC' };
   const MESES = { ene: 'jan', feb: 'feb', mar: 'mar', abr: 'apr', may: 'may', jun: 'jun', jul: 'jul', ago: 'aug', sep: 'sep', sept: 'sep', oct: 'oct', nov: 'nov', dic: 'dec' };
   const R = [
+    [/^Pones ([\d.]+)\. El primero que entre se lo queda y hay ([\d.]+) en juego\. Si nadie entra antes de empezar, te lo devolvemos\.$/, 'You put in $1. The first to join takes it and $2 is at stake. If nobody joins before the match starts, you get it back.'], [/^Pones ([\d.]+)\. Si (.+) acepta, hay ([\d.]+) en juego\.$/, 'You put in $1. If $2 accepts, $3 is at stake.'],
     [/^(\d+) resueltas?$/, (m, n) => `${n} settled`], [/^(\d+) en vivo$/, '$1 live'],   // Mis apuestas (01-11)
     [/^(\d+) en directo$/, '$1 live'],   // menu A (01-11): la tira de directo de movil
     [/^(\d+) resultados?$/, (m, n) => `${n} result${n === '1' ? '' : 's'}`],   // Ya jugados B (01-11)
@@ -456,6 +474,7 @@
     [/ · el extra lo enciende PM/, ' · PM turns the bonus on'], [/^Con extra ×/, 'With bonus ×'],
     [/^Apostado ([\d.]+) a (.+)$/, 'Bet $1 on $2'], [/^Cancelada: te devuelvo ([\d.]+)$/, 'Cancelled: $1 back to you'], [/^Reto enviado a (.+)$/, 'Challenge sent to $1'],
     [/^Reto retirado: te devuelvo lo puesto$/, 'Challenge withdrawn: your stake is back'], [/^Enviar reto de ([\d.]+)$/, 'Send a $1 challenge'],
+    [/^(\d+) ligas? ocultas?$/, (m, n) => `${n} hidden ${n === '1' ? 'league' : 'leagues'}`], [/^Ocultar todo (.+)$/, (m, s) => 'Hide all ' + (s === 'Fútbol' ? 'Football' : s)],
     [/^Pones ([\d.]+)\. Si (.+) acepta, hay ([\d.]+) en juego\.$/, 'You put in $1. If $2 accepts, $3 is at stake.'], [/^Acepto (.+)$/, 'I take $1'],
     [/^Gana (.+)$/, '$1 wins'], [/ · reta a /g, ' · challenges '], [/^cuota$/, 'odds'], [/gana · cuota/g, 'win · odds'], [/empate · cuota/g, 'draw · odds'],
     [/^Paga del lunes /, 'Monday payday '], [/ · se acumula$/, ' · it adds up'], [/^Cancelada: /, 'Cancelled: '], [/^Anulado: /, 'Void: '],

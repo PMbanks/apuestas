@@ -1,0 +1,30 @@
+/* Ocultar ligas y juegos (ocultas.js, 01-11): seccion "Qué ves" de Ajustes y el menu de la pulsacion larga en Partidos. */
+.oc-dep{padding:6px 0 4px}
+.oc-dep+.oc-dep{border-top:1px solid var(--hair)}
+.oc-hd{display:flex;align-items:center;gap:14px}
+.oc-hd>img{flex:none;width:30px;height:30px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.45))}
+.oc-dep.off .oc-hd>img{opacity:.4;filter:grayscale(1)}
+.oc-hd .aj-f{flex:1;min-width:0}
+.oc-ver{display:inline-flex;align-items:center;gap:10px;margin:0 0 8px 44px;padding:4px 0;font:600 13px var(--sans);color:var(--acc)}
+.oc-ver i{font:500 11px var(--mono);font-style:normal;color:var(--mute)}
+.oc-lgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:2px 28px;margin:0 0 12px 44px}
+.oc-lg{display:flex;align-items:center;gap:12px;min-width:0;padding:9px 0;text-align:left;color:var(--ink);transition:color .15s,opacity .15s}
+.oc-lg img,.oc-lg .oc-nl{flex:none;width:24px;height:24px;object-fit:contain}
+.oc-lg>span:not(.oc-nl){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 14px var(--sans)}
+.oc-lg em{flex:none;font:500 10px var(--mono);font-style:normal;letter-spacing:.14em;text-transform:uppercase;color:var(--win)}
+.oc-lg.off{color:var(--dim)}
+.oc-lg.off img{opacity:.35;filter:grayscale(1)}
+.oc-lg.off em{color:var(--dim)}
+.oc-lg:disabled{opacity:.55}
+@media (max-width:860px){.oc-ver,.oc-lgs{margin-left:0}.oc-lgs{grid-template-columns:1fr}}
+
+/* menu de la pulsacion larga en el escudo de una liga */
+#oc-m{position:fixed;inset:0;z-index:150;opacity:0;transition:opacity .14s}
+#oc-m.on{opacity:1}
+.oc-mf{position:absolute;inset:0;background:rgba(5,7,10,.5)}
+.oc-mc{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:grid;gap:2px;padding:20px 22px 16px;border-radius:24px;background:var(--bg2);box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.oc-mc b{margin:4px 0 8px;font:700 20px/1.2 var(--disp)}
+.oc-mc button{padding:12px 0;font:600 15px var(--sans);color:var(--ink);text-align:left}
+.oc-mc button.q{color:var(--mute)}
+.oc-mc p{margin-top:6px;font:400 12px/1.4 var(--sans);color:var(--dim)}
+@media (min-width:861px){.oc-mc{position:fixed;left:0;bottom:auto;right:auto;width:280px}}

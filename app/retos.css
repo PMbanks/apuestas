@@ -1,0 +1,71 @@
+/* Retos (retos.js, 01-11): tarjeta de "te han retado", doble confirmacion, reto abierto y arreglo del salto al retar. */
+
+/* PM, 01-11: "cuando challengeo a alguien se bugea y las apuestas bajan". Al pulsar Retar, app.js repinta la ficha entera; el
+   navegador (scroll anchoring) recolocaba entonces el scroll de la ficha por su cuenta y todo saltaba cientos de pixeles hacia
+   abajo (y unos 30 mas al elegir amigo, por el cuadro de ESPN que se vacia y se vuelve a llenar). Sin anclaje, el boton se
+   queda donde estaba y el formulario se abre ahi mismo, empujando solo lo que tiene debajo. */
+.det{overflow-anchor:none}
+.d-retos{min-height:58px}
+.rform{display:block}
+.rf-no{margin-top:8px;color:var(--mute);font-weight:600}
+
+/* reto abierto: el "rival" es cualquiera */
+.rt-any{display:grid;place-items:center;background:rgba(255,255,255,.1);color:var(--ink)}
+.rt-any svg{width:72%;height:72%;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.rf-to .rt-any{width:28px;height:28px}
+.rf-to.rf-any.on .rt-any{background:var(--acc);color:#141008}
+.rt.ab .rt-who i{opacity:.7}
+.rt.ab.pending .st{color:var(--acc)}
+
+/* tarjeta de reto pendiente: encima de todo, no empuja nada */
+#rt-av{position:fixed;z-index:84;left:calc(232px + (100vw - 232px) / 2);transform:translateX(-50%);width:min(580px,calc(100vw - 232px - 32px));pointer-events:none}
+#rt-av>*{pointer-events:auto}
+.rtb-c{display:flex;align-items:flex-start;gap:16px;padding:16px 20px 14px;border-radius:20px;background:radial-gradient(120% 90% at 0% 0%,rgba(242,193,78,.16),transparent 60%),var(--bg2);box-shadow:0 22px 56px rgba(0,0,0,.55);animation:rtb-in .35s var(--ease)}
+.rtb-c .av{width:40px;height:40px;font-size:13px;margin-top:2px}
+.rtb-t{min-width:0;flex:1}
+.rtb-t p{margin-top:6px;font:600 17px/1.25 var(--sans)}
+.rtb-t p b{font-weight:800;color:var(--acc)}
+.rtb-t small{display:block;margin-top:6px;font:400 13px/1.5 var(--sans);color:var(--mute)}
+.rtb-t small b{color:var(--ink);font-weight:600}
+.rtb-t small .num{font-family:var(--mono);letter-spacing:-.02em}
+.rtb-b{display:flex;flex-wrap:wrap;align-items:center;gap:6px 22px;margin-top:10px}
+.rtb-b .chip{margin:0;color:var(--acc);font:600 14px var(--sans)}
+.rtb-b .chip.q{color:var(--mute)}
+@keyframes rtb-in{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+@media (max-width:860px){
+  #rt-av{left:12px;right:12px;width:auto;transform:none}
+  .rtb-c{padding:14px 16px 12px;gap:12px}
+  .rtb-c .av{width:34px;height:34px;font-size:12px}
+  .rtb-t p{font-size:16px}
+  .rtb-t small{font-size:12.5px}
+  .rtb-b{gap:2px 16px;margin-top:8px}
+  .rtb-b .chip{font-size:13px}
+}
+.nv i.rt-pt{position:absolute;top:7px;left:calc(50% + 8px)}
+@media (min-width:861px){.nv i.rt-pt{top:50%;left:auto;right:12px;transform:translateY(-50%)}}
+
+/* doble confirmacion */
+#rt-cf{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:16px;opacity:0;transition:opacity .16s}
+#rt-cf.on{opacity:1}
+.rt-cf-f{position:absolute;inset:0;background:rgba(5,7,10,.66)}
+.rt-cf-c{position:relative;width:min(460px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:26px 28px 24px;border-radius:26px;background:radial-gradient(120% 60% at 50% 0%,rgba(242,193,78,.13),transparent 60%),var(--bg2);box-shadow:0 30px 80px rgba(0,0,0,.6);transform:translateY(10px);transition:transform .2s var(--ease)}
+#rt-cf.on .rt-cf-c{transform:none}
+.rt-cf-c h2{margin-top:8px;font:800 24px/1.15 var(--disp);letter-spacing:-.01em}
+.rt-cf-c p{margin-top:14px;font:400 15px/1.5 var(--sans);color:var(--soft)}
+.rt-cf-s{margin-top:18px;display:grid;gap:2px}
+.rt-cf-r{display:flex;justify-content:space-between;align-items:baseline;gap:18px;padding:9px 0;border-top:1px solid var(--hair)}
+.rt-cf-r:first-child{border-top:0}
+.rt-cf-r>span{font:500 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.rt-cf-r b{font:600 15px var(--sans);text-align:right;min-width:0;overflow-wrap:anywhere}
+.rt-cf-r b.num{font:500 17px var(--mono);color:var(--acc)}
+.rt-cf-b{display:flex;flex-wrap:wrap;align-items:center;gap:6px 26px;margin-top:20px}
+.rt-cf-b .go{width:auto;flex:1 1 200px;margin:0;height:52px}
+.rt-cf-b .chip{margin:0;font:600 14px var(--sans)}
+body.rt-cf-on{overflow:hidden}
+@media (max-width:560px){
+  #rt-cf{place-items:end center;padding:0}
+  .rt-cf-c{width:100%;border-radius:26px 26px 0 0;padding:24px 22px calc(22px + env(safe-area-inset-bottom,0px))}
+  .rt-cf-b .go{flex-basis:100%}
+}
+@media (prefers-reduced-motion:reduce){.rtb-c{animation:none}}
+.sin-anim .rtb-c{animation:none}
