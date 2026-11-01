@@ -2377,3 +2377,6 @@ html[data-moneda="vp"] .cn{background-image:url(../img/monedas/vp.png)}
 
 /* PM 02-11: los retos entran en Todas las apuestas: una fila entera entre los boletos */
 .ab-ts .ab-rt{grid-column:1/-1}
+
+/* db/067: "N del mismo partido" junto a "Combinada de N"; en movil no cabe en la linea de arriba (se cortaba) y cada pata ya dice su partido */
+@media (max-width:560px){.lab.ell .mp-tag{display:none}}
