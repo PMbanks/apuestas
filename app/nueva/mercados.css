@@ -1,0 +1,42 @@
+/* Mas tipos de apuesta en la ficha (mercados.js, db/036): debajo del 1X2, con su mismo estilo (lineas finas, sin cajas) */
+.mq{margin-top:30px}
+.mq-top{padding-bottom:4px}
+.mq-top .lab{color:var(--soft)}
+.mq-g{margin-top:14px;border-top:1px solid var(--hair)}
+.mq-hd{display:grid;grid-template-columns:minmax(0,1fr) repeat(var(--c,0),minmax(64px,92px));align-items:end;column-gap:6px;padding:14px 0 6px}
+.mq-pr .mq-hd{grid-template-columns:1fr}
+.mq-ch{text-align:right;padding-right:10px;color:var(--dim)}
+.mq-r{display:grid;grid-template-columns:minmax(0,1fr) repeat(var(--c,2),minmax(64px,92px));align-items:center;column-gap:6px;border-top:1px solid var(--hair)}
+.mq-l{min-width:0;font:600 14px var(--sans);color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mq-ps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid var(--hair)}
+.mq-ps .mq-o+.mq-o{border-left:1px solid var(--hair);padding-left:14px}
+.mq-o{position:relative;display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0;min-height:48px;padding:10px 10px 10px 0;transition:color .15s}
+.mq-pr .mq-o{justify-content:space-between}
+.mq-o .mq-k{min-width:0;font:600 14px var(--sans);color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mq-o b{flex:none;font:500 20px/1 var(--mono);letter-spacing:-.04em;color:var(--ink);transition:color .15s}
+.mq-o:hover b{color:var(--acc)}
+.mq-o:hover .mq-k{color:var(--ink)}
+.mq-o.na{min-height:48px}
+/* ya tienes una apuesta abierta a esto: un punto dorado */
+.mq-o.mine b::before{content:"";display:inline-block;width:6px;height:6px;margin-right:7px;border-radius:50%;background:var(--acc);vertical-align:.32em}
+/* en el boleto (boleto.js le pone blt-on): dorado, como el 1X2 */
+.mq-o.blt-on b{color:var(--acc)}
+.mq-o.blt-on .mq-k{color:var(--ink)}
+.mq-o.blt-on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--acc)}
+.mq-ps .mq-o.blt-on+.mq-o::after,.mq-ps .mq-o+.mq-o.blt-on::after{left:0}
+.mq-src{margin-top:16px}
+@media (max-width:860px){
+  .mq{margin-top:26px}
+  .mq-hd,.mq-r{grid-template-columns:minmax(0,1fr) repeat(var(--c,2),minmax(58px,76px));column-gap:4px}
+  .mq-ps .mq-o+.mq-o{padding-left:12px}
+  .mq-o b{font-size:18px}
+  .mq-o .mq-k,.mq-l{font-size:13px}
+}
+/* Mis apuestas (app.js, boleto abierto): el nombre del mercado en el hueco del medio, como EMPATE pero en dos lineas */
+.bol-x.mq-bol{min-width:0;letter-spacing:0}
+.bol-x.mq-bol b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;max-width:100%;font:700 13px/1.3 var(--sans);text-align:center;overflow-wrap:anywhere}
+/* tarjetas de resultado (resultado.js): el nombre del mercado bajo el marcador, en dos lineas si hace falta */
+.rsl-sc em.rsl-mk{max-width:140px;white-space:normal;text-align:center;line-height:1.35;overflow-wrap:anywhere}
+@media (max-width:560px){.rsl-sc em.rsl-mk{max-width:104px}}
+.bol-vs:has(.mq-bol){grid-template-columns:minmax(0,1fr) 128px minmax(0,1fr)}
+@media (max-width:860px){.bol-vs:has(.mq-bol){grid-template-columns:minmax(0,1fr) 104px minmax(0,1fr)}}

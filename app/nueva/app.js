@@ -121,7 +121,7 @@ function build(st, rows, chat, ex) {
   H2H = {}; for (const f of F) H2H[f.id] = Object.fromEntries(F.filter((g) => g.id !== f.id).map((g) => [g.id, [0, 0]]));
   const byMatch = {}; for (const b of ALL) if (b.st === 'won' || b.st === 'lost') (byMatch[b.m] = byMatch[b.m] || []).push(b);
   for (const list of Object.values(byMatch)) for (const a of list) for (const b of list) {
-    if (a.k === b.k || a.p === b.p || !H2H[a.k]?.[b.k]) continue;
+    if (a.k === b.k || a.p === b.p || !H2H[a.k]?.[b.k] || (window.GM_MK && GM_MK.grupo(a.p) !== GM_MK.grupo(b.p))) continue;   // duelo: solo dentro del mismo mercado
     if (a.st === 'won') H2H[a.k][b.k][0]++; else if (b.st === 'won') H2H[a.k][b.k][1]++;
   }
   // premios de la temporada
@@ -172,9 +172,9 @@ const lgSigla = (n, sp) => { const ws = String(n || '?').replace(/[^\p{L}\p{N} ]
 const me = () => F.find((f) => f.me) || F[0];
 const fr = (k) => F.find((f) => f.id === k) || { id: k, n: '·', ini: '·', apodo: '', frase: '', favs: [], h: [0], wk: [], sp: { f: [0, 0], v: [0, 0], u: [0, 0] }, share: {}, last: '' };
 const byId = (id) => MI.get(id);
-const pn = (m, p) => (p === '1' ? m.a : p === 'X' ? 'Empate' : p === '2' ? m.b : '?');
+const pn = (m, p) => (p === '1' ? m.a : p === 'X' ? 'Empate' : p === '2' ? m.b : window.GM_MK ? GM_MK.nombre(m, p) : '?');   // mercados nuevos: mercados.js (db/036)
 const PI = { 1: 0, X: 1, 2: 2 };
-const po = (m, p) => m.o[PI[p]];
+const po = (m, p) => (p in PI ? m.o[PI[p]] : window.GM_MK ? GM_MK.cuota(m, p) : null);
 const isOpen = (m) => m.status === 'scheduled' && Date.parse(m.at) > NOW;
 const picksOf = (m) => (m.o[1] == null ? ['1', '2'] : ['1', 'X', '2']);
 const isSel = (m, p) => S.sel && S.sel.m === m.id && S.sel.p === p;
@@ -886,10 +886,10 @@ const codigo = (b) => 'Nº ' + String(b.id).padStart(6, '0');
 function mbCard(b, i) {
   const m = byId(b.m); if (!m) return '';
   const t0 = Date.parse(b.at), t1 = Date.parse(m.at), fill = m.live ? 100 : Math.max(3, Math.min(100, ((NOW - t0) / Math.max(1, t1 - t0)) * 100));
-  const lado = (s) => { const on = b.p === (s === 'a' ? '1' : '2');
+  const lado = (s) => { const on = b.p === (s === 'a' ? '1' : '2') || !!(window.GM_MK && GM_MK.es(b.p) && GM_MK.lado(b.p) === (s === 'a' ? '1' : '2'));
     return `<div class="bol-t ${on ? 'on' : ''}"><span class="bol-cr">${logo(m, s)}</span><b>${esc(s === 'a' ? m.a : m.b)}</b>${vN(m, s)}<em>${on ? '★ tu apuesta' : ''}</em></div>` };
   const [sg, ...sr] = String(m.score || '0:0').split(/\s+/), sdet = sr.join(' ').replace(/^[·(]\s*|\)$/g, '');
-  const mid = m.live ? `<span class="bol-sc">${m.vivo ? vL(m) || '·' : `${esc(sg)}<small>${sdet ? esc(sdet) : m.s === 'v' || m.s === 'c' ? 'mapas' : 'marcador'}</small>`}</span>` : b.p === 'X' ? '<span class="bol-x on">EMPATE<em>★ tu apuesta</em></span>' : '<span class="bol-x">VS</span>';
+  const mid = m.live ? `<span class="bol-sc">${m.vivo ? vL(m) || '·' : `${esc(sg)}<small>${sdet ? esc(sdet) : m.s === 'v' || m.s === 'c' ? 'mapas' : 'marcador'}</small>`}</span>` : b.p === 'X' ? '<span class="bol-x on">EMPATE<em>★ tu apuesta</em></span>' : window.GM_MK && GM_MK.es(b.p) ? `<span class="bol-x on mq-bol"><b data-notr>${esc(pn(m, b.p))}</b>${GM_MK.lado(b.p) ? '' : '<em>★ tu apuesta</em>'}</span>` : '<span class="bol-x">VS</span>';
   return `<article class="bol ${m.live ? 'live' : ''}" data-goto="${m.id}" style="--sc:${SPC[m.s]};--i:${i}">
     <header><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt="" loading="lazy"><span class="bol-lg">${esc(corto(L[m.lg]?.[0] || ''))}</span>${dailyTag(m)}<span class="bol-no">${codigo(b)}</span></header>
     ${m.live ? '<span class="bol-live"><i></i>EN VIVO</span>' : ''}
@@ -1278,7 +1278,8 @@ function feedItems() {
   // apuestas de todos y sus resultados (PM, 30-10: la moneda al lado de cada cantidad)
   for (const b of ALL) {
     const m = byId(b.m); if (!m || !b.k) continue;
-    const lado = b.p === '1' ? logo(m, 'a') : b.p === '2' ? logo(m, 'b') : `<span class="fd-x">${b.p ? 'X' : '?'}</span>`;
+    const mkp = !!(window.GM_MK && GM_MK.es(b.p)), ld = mkp ? GM_MK.lado(b.p) : b.p;   // mercados nuevos: su equipo o la liga
+    const lado = ld === '1' ? logo(m, 'a') : ld === '2' ? logo(m, 'b') : mkp ? img(L[m.lg]?.[1], 'tl') : `<span class="fd-x">${b.p ? 'X' : '?'}</span>`;
     out.push({ at: Date.parse(b.at), t: 'apuestas', html: `<div class="fd" data-goto="${m.id}">${av(b.k)}<div class="fd-b"><p><b>${esc(fr(b.k).n)}</b> <span>${b.p ? 'apuesta a' : 'ha apostado'}</span> ${b.p ? `<em>${esc(pn(m, b.p))}</em> <i class="fd-o">${O(b.o)}</i>` : '<i class="fd-o">se ve al empezar</i>'}<small>${esc(m.a)} vs ${esc(m.b)} · ${esc(corto(L[m.lg]?.[0] || ''))}</small></p></div>${amt(N(b.stake))}<span class="fd-vis">${lado}</span>${hora(Date.parse(b.at))}</div>` });
     if ((b.st === 'won' || b.st === 'lost') && b.set) out.push({ at: Date.parse(b.set), t: 'apuestas', html: `<div class="fd res ${b.st}" data-goto="${m.id}">${av(b.k)}<div class="fd-b"><p><b>${esc(fr(b.k).n)}</b> <span>${b.st === 'won' ? 'acierta con' : 'falla con'}</span> <em>${esc(pn(m, b.p))}</em> <i class="fd-o">${O(b.o)}</i><small>${esc(m.a)} ${esc(m.score || '')} ${esc(m.b)}</small></p></div>${amt(b.st === 'won' ? '▲ ' + N(b.pay - b.stake) : '▼ ' + N(b.stake), b.st)}<span class="fd-vis">${lado}</span>${hora(Date.parse(b.set))}</div>` });
   }
@@ -1787,11 +1788,12 @@ function vivoYoHtml() {
   const bs = ALL.filter((b) => b.k === MEK && b.st === 'open' && byId(b.m)?.live);
   if (!bs.length) return '';
   const cards = bs.map((b) => {
-    const m = byId(b.m), d = vyDatos(m), lid = vyLider(m, d), est = !lid ? '' : lid === b.p ? 'gana' : 'pierde';
+    const m = byId(b.m), d = vyDatos(m), lid = vyLider(m, d), mkp = !!(window.GM_MK && GM_MK.es(b.p));
+    const est = mkp ? GM_MK.va(m, b.p, [d.sa, d.sb]) : !lid ? '' : lid === b.p ? 'gana' : 'pierde';   // mercados nuevos (db/036): con el marcador
     const fila = (s, p) => `<span class="vy-eq ${b.p === p ? 'mio' : ''}">${logo(m, s)}<b>${esc(s === 'a' ? m.a : m.b)}</b><strong>${(s === 'a' ? d.sa : d.sb) ?? '·'}</strong>${d.ra != null && d.rb != null ? `<small>${s === 'a' ? d.ra : d.rb}</small>` : ''}</span>`;
     return `<button class="vy ${est}" data-vivo="${m.id}"><span class="vy-h"><i></i><em>EN VIVO</em><span>${esc(d.mapa || SP[m.s][0])}</span></span>
       ${fila('a', '1')}${fila('b', '2')}
-      ${b.p === 'X' ? '<span class="vy-x">Vas con el empate</span>' : ''}
+      ${b.p === 'X' ? '<span class="vy-x">Vas con el empate</span>' : mkp ? `<span class="vy-x" data-notr>${esc(pn(m, b.p))}</span>` : ''}
       <span class="vy-c"><span>Cobrarías <b>${N(b.stake * b.o)}${coin()}</b></span>${est ? `<em class="vy-e">${est === 'gana' ? '▲ Ganando' : '▼ Perdiendo'}</em>` : ''}</span></button>`;
   }).join('');
   return `<div class="vy-pista" data-vyp>${cards}</div>${bs.length > 1 ? `<div class="vy-nav"><button data-vyx="-1" aria-label="Anterior">‹</button><span>${bs.length} en vivo</span><button data-vyx="1" aria-label="Siguiente">›</button></div>` : ''}`;
