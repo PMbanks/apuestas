@@ -204,8 +204,10 @@ const filt = () => { const b = board().filter(inLeague), cnt = (k) => b.filter((
 const IC_TOP = '<svg viewBox="0 0 24 24"><path d="M12 3.2l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.5l6-.8z"/></svg>';
 const IC_ALL = '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></svg>';
 // PM, 30-10: "los menus de champions league, europa... no me gusta nada": una fila de escudos, el elegido con su nombre encendido
-const leagues = () => { const c = {}; for (const m of board()) if (S.f === 'all' || m.s === S.f) c[m.lg] = (c[m.lg] || 0) + 1;
-  const ks = Object.keys(c).sort((a, b) => (TOP.has(b) - TOP.has(a)) || c[b] - c[a]);
+// PM, 01-11: "la liga de Argentina no esta en la misma linea": cada deporte junto (en el orden de DEP), y dentro las principales primero
+const leagues = () => { const c = {}, dep = {}; for (const m of board()) if (S.f === 'all' || m.s === S.f) { c[m.lg] = (c[m.lg] || 0) + 1; dep[m.lg] = m.s }
+  const od = (k) => { const i = DEP.indexOf(dep[k]); return i < 0 ? 99 : i };
+  const ks = Object.keys(c).sort((a, b) => (od(a) - od(b)) || (TOP.has(b) - TOP.has(a)) || c[b] - c[a]);
   const it = (k, n, ico, cnt) => `<button class="lgc ${S.lg === k ? 'on' : ''}" data-lg="${esc(k)}" title="${esc(n)}${cnt != null ? ' · ' + cnt : ''}"><span class="lgc-i">${ico}${cnt != null ? `<i>${cnt}</i>` : ''}</span><span class="lgc-n">${esc(n)}</span></button>`;
   return `<div class="lgw"><button class="lga l" data-lga="-1" aria-label="Anteriores" hidden><svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg></button><button class="lga r" data-lga="1" aria-label="Más ligas" hidden><svg viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg></button><nav class="lgs2" data-lgs>${it('top', 'Principales', IC_TOP, null)}${misFavs().length ? it('fav', 'Siguiendo', IC_FAV, board().filter((m) => (S.f === 'all' || m.s === S.f) && sigo(m)).length) : ''}${it('all', 'Todas', IC_ALL, null)}${ks.map((k) => it(k, L[k]?.[0] || k, `<img class="tl" src="${esc(L[k]?.[1])}" alt="" loading="lazy">`, c[k])).join('')}</nav></div>` };
 let LGX = 0;

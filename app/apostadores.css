@@ -56,7 +56,10 @@
 .apo-pw.nadie{font:500 12.5px var(--mono);color:var(--dim);cursor:default}
 
 /* cabecera y conmutadores */
-.apo-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:18px 24px;margin-top:46px}
+/* PM, 01-11: "al cambiar de semana a mes a de siempre se mueve todo, que esten estaticos": los conmutadores van siempre
+   arriba en su fila y el titulo y la nota debajo con su alto guardado, asi nada de lo que cambia empuja los menus */
+.apo-head{display:flex;flex-direction:column;align-items:flex-start;gap:18px;margin-top:46px}
+.apo-head .apo-ctl{order:-1}
 .apo-head h1{font:800 40px/1.05 var(--disp);letter-spacing:-.025em}
 .apo-head h1 em{font-style:normal;color:var(--acc)}
 .apo-ctl{display:flex;flex-wrap:wrap;gap:12px}
@@ -65,7 +68,7 @@
 .apo-seg button:hover{color:var(--ink)}
 .apo-seg button.on{background:var(--acc);color:#1b1608}
 .apo-seg.b button.on{background:var(--ink);color:#14161b}
-.apo-nota{margin-top:12px;max-width:80ch;font:13px/1.5 var(--mono);color:var(--mute)}
+.apo-nota{margin-top:12px;max-width:80ch;min-height:3em;font:13px/1.5 var(--mono);color:var(--mute)}
 
 /* la tabla */
 .apo-grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:20px;align-items:start;margin-top:22px}
@@ -138,7 +141,7 @@
   .apo-pt{margin-top:0}
   .apo-pw{grid-column:2;margin-top:10px}
   .apo-head{margin-top:34px;gap:14px}
-  .apo-head h1{font-size:30px}
+  .apo-head h1{font-size:30px;min-height:2.1em}
   .apo-ctl{flex-direction:column;width:100%;gap:10px}
   .apo-seg{display:flex}
   .apo-seg button{flex:1;padding:12px 6px}

@@ -1,6 +1,7 @@
 // Resumen para la tarjeta del Dashboard de AMbicious. Va en un marco invisible dentro de AMbicious: lee la sesion que dejo
 // la pestana Bets (mismo navegador, mismo AMbicious) y le pasa al padre SOLO lo que pinta la tarjeta. Nunca toca la contrasena.
-// Solo contesta si el padre es AMbicious en este PC (localhost o 127.0.0.1).
+// Solo contesta si el padre es AMbicious en este PC (localhost o 127.0.0.1). Manda tambien la moneda que se ve (moneda: vbucks,
+// usd, sol o robux) para que la tarjeta ponga su logo y su nombre.
 'use strict';
 (async () => {
   const anc = (location.ancestorOrigins && location.ancestorOrigins[0]) || document.referrer || '';
@@ -26,7 +27,12 @@
       if (x) next = { home: x.m.home, away: x.m.away, at: Date.parse(x.m.starts_at), live: x.m.status === 'live', score: x.m.score || '',
         pick: x.b.pick === '1' ? x.m.home : x.b.pick === '2' ? x.m.away : 'Draw', odds: Number(x.b.odds), stake: x.b.stake, sport: x.m.sport };
     }
-    manda({ name: yo.name, saldo: yo.saldo, neto: yo.saldo - yo.recibido, rank, n: st.players.length, abiertas: abiertas.length,
+    // la moneda que se ve (Ajustes): la de la base (db/038, players.moneda); si no hay (o 038 sin cargar), la de este aparato
+    const MONS = ['vbucks', 'usd', 'sol', 'robux'];
+    let moneda = null;
+    try { const { data: pm } = await db.from('players').select('*').eq('id', st.me).maybeSingle(); if (pm && MONS.includes(pm.moneda)) moneda = pm.moneda; } catch (e) {}
+    if (!moneda) { try { const v = localStorage.getItem('gm-moneda'); if (MONS.includes(v)) moneda = v; } catch (e) {} }
+    manda({ name: yo.name, moneda: moneda || 'vbucks', saldo: yo.saldo, neto: yo.saldo - yo.recibido, rank, n: st.players.length, abiertas: abiertas.length,
       enJuego: abiertas.reduce((a, b) => a + b.stake, 0), next, weekly: st.weekly, t: Date.now() });
   } catch (e) { manda({ error: String((e && e.message) || e) }) }
 })();
