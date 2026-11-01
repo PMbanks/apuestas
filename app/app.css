@@ -2330,3 +2330,7 @@ html[data-moneda="robux"] .cn{background-image:url(img/monedas/robux.svg)}
 .pw-log{display:grid;gap:6px;margin:10px 0 0;padding:0;list-style:none}
 .pw-log li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:baseline;font-size:14px}
 .pw-log span{color:var(--soft)}.pw-log small{font:12px var(--mono);color:var(--dim)}
+.pw-r{grid-template-columns:auto minmax(64px,auto) minmax(0,1fr) auto}
+.pw-in{display:flex;gap:8px;min-width:0}
+.pw-in input{flex:1;min-width:0;padding:9px 12px;border-radius:10px;background:var(--bg2);font:500 14px var(--mono);color:var(--ink);border:0}
+@media (max-width:520px){.pw-r{grid-template-columns:auto minmax(0,1fr) auto}.pw-in{grid-column:1/-1;order:3}}

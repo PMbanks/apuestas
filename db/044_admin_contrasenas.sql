@@ -105,5 +105,17 @@ begin
   return query select p.name, l.at, l.quien from pass_log l join players p on p.id = l.player order by l.at desc limit 50;
 end $$;
 
-revoke all on function log_pass_cambio(text), admin_reset_pass(uuid), admin_alta(text), admin_pass_ver(), admin_pass_log() from public, anon;
-grant execute on function log_pass_cambio(text), admin_reset_pass(uuid), admin_alta(text), admin_pass_ver(), admin_pass_log() to authenticated;
+-- PM: "en settings dejame espacio para ponerlas por si alguna vez me lo preguntan y estoy fuera de casa". Solo apunta la
+-- contrasena que PM escribe (las de antes de hoy, que la base no puede sacar); no cambia la de verdad.
+create or replace function admin_pass_set(p_player uuid, p_pass text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null or not exists (select 1 from players where id = auth.uid() and is_admin) then raise exception 'Solo el admin'; end if;
+  if not exists (select 1 from players where id = p_player) then raise exception 'Ese jugador no existe'; end if;
+  if p_pass is null or btrim(p_pass) = '' then delete from pass_visible where player = p_player; return; end if;
+  insert into pass_visible(player, pass, at) values (p_player, left(btrim(p_pass), 72), now())
+  on conflict (player) do update set pass = excluded.pass, at = excluded.at;
+end $$;
+
+revoke all on function log_pass_cambio(text), admin_reset_pass(uuid), admin_alta(text), admin_pass_ver(), admin_pass_log(), admin_pass_set(uuid, text) from public, anon;
+grant execute on function log_pass_cambio(text), admin_reset_pass(uuid), admin_alta(text), admin_pass_ver(), admin_pass_log(), admin_pass_set(uuid, text) to authenticated;

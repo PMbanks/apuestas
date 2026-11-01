@@ -14,6 +14,7 @@
   let nueva = null;                                                      // la ultima contrasena puesta por el admin
   let seguro = null;                                                     // uid al que ya se le dio el primer toque
   let LOG = null;                                                        // admin_pass_log
+  let PASS = {};                                                         // admin_pass_ver: uid -> contrasena apuntada
 
   const ficha = (r, txt) => `<div class="alta-ok"><b>${esc(r.nombre)}</b> ${txt}
       <dl><dt>${T('Usuario', 'Username')}</dt><dd>${esc(r.usuario)}</dd><dt>${T('Contraseña', 'Password')}</dt><dd>${esc(r.contrasena)}</dd></dl>
@@ -28,8 +29,10 @@
   }
   function pwHtml() {
     return `<section class="aj-s aj-pw" data-notr><h3 class="lab">${T('Contraseñas de los amigos', 'Friends’ passwords')}</h3>
-      <p class="aj-n">${T('Si alguno pierde la suya, ponle una nueva aquí y pásasela. La que eligen ellos no se guarda ni se ve.', 'If someone loses theirs, set a new one here and send it. The ones they pick are never stored or shown.')}</p>
-      <div class="pw-l">${amigos().map((f) => `<div class="pw-r">${typeof av === 'function' ? av(f.id, 'sm') : ''}<b>${esc(f.n)}</b><button class="aj-a ${seguro === f.uid ? 'pw-seg' : ''}" data-rp="${esc(f.uid)}">${seguro === f.uid ? T('Toca otra vez: la suya deja de valer', 'Tap again: theirs stops working') : T('Nueva contraseña', 'New password')}</button></div>`).join('')}</div>
+      <p class="aj-n">${T('La de cada uno. Cuando alguien cambia la suya, sale aquí sola; las de antes apúntalas tú. Si alguno la pierde, ponle una nueva.', 'Each one’s password. When someone changes theirs it shows up here; write down the older ones yourself. If someone loses theirs, set a new one.')}</p>
+      <div class="pw-l">${amigos().map((f) => `<div class="pw-r">${typeof av === 'function' ? av(f.id, 'sm') : ''}<b>${esc(f.n)}</b>
+        <span class="pw-in"><input type="text" autocomplete="off" spellcheck="false" maxlength="72" data-pv="${esc(f.uid)}" value="${esc(PASS[f.uid] || '')}" placeholder="${T('Sin apuntar', 'Not saved')}"><button class="aj-a" data-ps="${esc(f.uid)}">${T('Guardar', 'Save')}</button></span>
+        <button class="aj-a q ${seguro === f.uid ? 'pw-seg' : ''}" data-rp="${esc(f.uid)}">${seguro === f.uid ? T('Toca otra vez: la suya deja de valer', 'Tap again: theirs stops working') : T('Nueva', 'New')}</button></div>`).join('')}</div>
       <div class="pw-res">${nueva ? ficha(nueva, T('tiene contraseña nueva. Pásale esto:', 'has a new password. Send them this:')) : ''}</div>
       <h3 class="lab pw-h">${T('Cambios', 'Changes')}</h3><div class="pw-logw">${logHtml()}</div></section>`;
   }
@@ -40,8 +43,12 @@
       <p class="alta-err" hidden></p><div class="alta-res">${ultimo ? res(ultimo) : ''}</div></section>`;
   }
   async function cargaLog() {
-    const { data, error } = await db.rpc('admin_pass_log');
+    const [{ data, error }, ver] = await Promise.all([db.rpc('admin_pass_log'), db.rpc('admin_pass_ver')]);
     LOG = error ? false : data || [];
+    if (!ver.error) { PASS = {}; for (const x of ver.data || []) if (x.pass) PASS[x.player] = x.pass }
+    if (!ver.error) {                                                    // rellena los huecos sin pisar lo que se esta escribiendo
+      for (const i of document.querySelectorAll('.aj-pw [data-pv]')) if (i !== document.activeElement) i.value = PASS[i.dataset.pv] || '';
+    }
     const w = document.querySelector('.aj-pw .pw-logw'); if (w) w.innerHTML = logHtml();
   }
   function repinta() { const s = document.querySelector('.aj-pw'); if (s) s.outerHTML = pwHtml() }
@@ -54,7 +61,17 @@
   new MutationObserver(pon).observe(document.documentElement, { childList: true, subtree: true });
 
   document.addEventListener('click', async (e) => {
-    const b = e.target.closest('[data-alta]'), cp = e.target.closest('[data-alta-copia]'), rp = e.target.closest('[data-rp]');
+    const b = e.target.closest('[data-alta]'), cp = e.target.closest('[data-alta-copia]'), rp = e.target.closest('[data-rp]'), ps = e.target.closest('[data-ps]');
+    if (ps) {
+      const uid = ps.dataset.ps, inp = document.querySelector(`.aj-pw [data-pv="${CSS.escape(uid)}"]`); if (!inp) return;
+      ps.disabled = true;
+      const { error } = await db.rpc('admin_pass_set', { p_player: uid, p_pass: inp.value });
+      ps.disabled = false;
+      ps.textContent = error ? (/function|schema cache/i.test(error.message) ? T('Falta db/044', 'db/044 missing') : T('No se guardó', 'Not saved')) : T('Guardada', 'Saved');
+      if (!error) PASS[uid] = inp.value.trim();
+      setTimeout(() => { ps.textContent = T('Guardar', 'Save') }, 2000);
+      return;
+    }
     if (cp) {
       const r = cp.dataset.altaCopia === 'n' ? nueva : ultimo; if (!r) return;
       const t = `${T('Usuario', 'Username')}: ${r.usuario}\n${T('Contraseña', 'Password')}: ${r.contrasena}\nhttps://pmbanks.github.io/apuestas/`;

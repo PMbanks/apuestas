@@ -1637,8 +1637,7 @@ function ajustes() {
     <section class="aj-s"><h3 class="lab">Idioma</h3><div class="aj-ops">${[['es', 'Español'], ['en', 'English']].map(([l, n]) => `<button type="button" class="aj-m ${lg === l ? 'on' : ''}" data-lang="${l}"><b data-notr>${n}</b></button>`).join('')}</div></section>
     <section class="aj-s"><h3 class="lab">Avisos</h3>${avisos}</section>
     <section class="aj-s"><h3 class="lab">Cuenta</h3><div class="aj-ops"><button class="aj-a" data-act="pass">Cambiar contraseña</button><button class="aj-a q" data-act="logout">Cerrar sesión</button></div>
-      <div class="pf-pass" ${S.pw ? '' : 'hidden'}><input type="password" id="newpass" autocomplete="new-password" placeholder="Contraseña nueva (6 o más)" minlength="6"><button class="go" data-act="setpass">Guardar</button></div>
-      ${S.pw && !me().admin ? '<p class="aj-n pw-aviso">PM puede ver esta contraseña para devolvértela si la pierdes. No uses la de tu correo ni la de nada más.</p>' : ''}</section>
+      <div class="pf-pass" ${S.pw ? '' : 'hidden'}><input type="password" id="newpass" autocomplete="new-password" placeholder="Contraseña nueva (6 o más)" minlength="6"><button class="go" data-act="setpass">Guardar</button></div></section>
   </div>`;
 }
 // PM, 31-10: "que se vea cuanto has ganado en boxes, cuanto en bets, en que bets". El monedero (ledger) solo lo ve su dueno;
@@ -2078,7 +2077,7 @@ document.addEventListener('click', async (e) => {
     if (v.length < 6) return toast('Mínimo 6 caracteres');
     const { error } = await db.auth.updateUser({ password: v });
     if (error) return toast(errMsg(error));
-    db.rpc('log_pass_cambio', { p_pass: v }).then(() => {}, () => {});   // db/044: PM la ve (lo pidio PM y se avisa en el formulario)
+    db.rpc('log_pass_cambio', { p_pass: v }).then(() => {}, () => {});   // db/044: PM la ve (lo pidio PM: sus amigos lo saben)
     S.pw = false; toast('Contraseña cambiada. Solo la sabes tú.');
   }
   else if (d.act === 'close') S.sheet = false;
