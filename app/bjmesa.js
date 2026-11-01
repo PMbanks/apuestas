@@ -133,6 +133,7 @@
   /* ---------- datos ---------- */
   async function carga() {
     if (!ctx || !visible()) return;
+    if (S.anim > 0 && Date.now() - (S.animT || 0) > 15000) { S.anim = 0; S.fx = null; S.refrescar = false; S.pend = null; if (D) pinta(D, true) }
     if (S.cargando) { S.otra = true; return }
     S.cargando = true; S.ultima = Date.now();
     const t0 = Date.now();
@@ -177,7 +178,7 @@
   // ancho de carta segun el sitio que hay: asientos ocupados anchos, libres estrechos
   function medidas(d) {
     const felt = el.querySelector('[data-felt]'), w = felt.clientWidth || 600, mv = movil();
-    const ocup = d ? d.asientos.length : 0, libres = NA - ocup;
+    const ocup = d ? new Set([...d.asientos.map((x) => x.asiento), ...(d.ronda && fase(d) !== 'espera' ? d.manos.map((x) => x.asiento) : [])]).size : 0, libres = NA - ocup;   // con las manos que siguen en la ronda de quien se levanto
     const filas = mv && ocup > 4 ? 2 : 1, porFila = filas === 2 ? Math.ceil(ocup / 2) : ocup;
     const slots = mv ? Math.max(1, porFila) : Math.max(1, ocup + libres * 0.42);
     const sw = (w - (mv ? 8 : 36)) / slots;
@@ -275,15 +276,18 @@
     const hayFin = !!(r && r.estado === 'fin' && rid);
     textos(d, f, manos, sinAnim ? null : finCartas, dur);
     if (dur > 0) {
-      S.anim++;
+      S.anim++; S.animT = Date.now();
       S.fx = volteo ? 'banca' : reparto ? 'reparto' : 'carta';
       if (hayFin) S.refrescar = true;
       setTimeout(() => {
-        S.anim--;
+        S.anim = Math.max(0, S.anim - 1);
         if (S.anim === 0) S.fx = null;
-        if (hayFin) resultados(d, manos, true, true);
-        centro(); pintaCtl();
-        if (S.refrescar && S.anim === 0) { S.refrescar = false; S.saldo = D ? D.saldo : S.saldo; pintaCtl(true); if (ctx.refresh) ctx.refresh(); S.rankRonda = d.ronda && d.ronda.id; if (hooks.rank) hooks.rank() }
+        // PM 01-11 ("se queda bugeado mi mano"): si algo de aqui falla, el bloqueo se suelta igual, si no la mesa se queda en "Repartiendo" para siempre
+        try { if (hayFin) resultados(d, manos, true, true); centro(); pintaCtl() } catch (e) { console.warn('bjmesa', e) }
+        if (S.refrescar && S.anim === 0) {
+          S.refrescar = false; S.saldo = D ? D.saldo : S.saldo;
+          try { pintaCtl(true); if (ctx.refresh) ctx.refresh(); S.rankRonda = d.ronda && d.ronda.id; if (hooks.rank) hooks.rank() } catch (e) { console.warn('bjmesa', e) }
+        }
         if (S.pend && S.anim === 0) { const p = S.pend; S.pend = null; recibe(p) }
       }, dur);
     } else {
@@ -334,26 +338,27 @@
   function asientos(d, manos, f, sinAnim) {
     const r = d.ronda, mv = movil(), ocup = d.asientos.map((a) => a.asiento);
     const vis = [];
-    for (let s = 1; s <= NA; s++) if (!mv || ocup.includes(s)) vis.push(s);
+    for (let s = 1; s <= NA; s++) if (!mv || ocup.includes(s) || manos.some((x) => x.asiento === s)) vis.push(s);
     for (let s = 1; s <= NA; s++) {
       const seat = el.querySelector(`.bjm-seat[data-s="${s}"]`), a = d.asientos.find((x) => x.asiento === s), m = manos.find((x) => x.asiento === s);
       const m0 = manos.find((x) => x.asiento === s), yo = (a && a.player === ctx.me) || (!a && m0 && m0.player === ctx.me), turno = r && r.estado === 'turnos' && r.turno === s && f === 'turnos';
       const k = vis.indexOf(s), mid = (vis.length - 1) / 2, dist = vis.length > 1 ? Math.abs(k - mid) / Math.max(1, mid) : 0;
       seat.style.setProperty('--y', (mv ? 0 : -Math.round(dist * dist * 34)) + 'px');
       seat.hidden = k < 0;
-      seat.classList.toggle('libre', !a); seat.classList.toggle('yo', !!yo); seat.classList.toggle('turno', !!turno);
+      const dueno = a ? a.player : (m0 ? m0.player : '');                                // sin asiento pero con mano viva: sigue siendo de quien la jugo
+      seat.classList.toggle('libre', !dueno); seat.classList.toggle('yo', !!yo); seat.classList.toggle('turno', !!turno);
       seat.classList.toggle('activa', !!(turno && yo));
       const nb = seat.querySelector('[data-nb]'), orden = ordenMio(d);
       setTxt(nb, yo && orden.length > 1 ? String(orden.indexOf(s) + 1) : '');
       seat.classList.toggle('con', !!m); seat.classList.toggle('fuera', !!(a && !m && f === 'turnos'));
       const who = seat.querySelector('.bjm-who');
-      who.disabled = !!a && !yo;
-      who.dataset.bjm = a ? (yo ? 'yo' : 'nada') : 'sit';
+      who.disabled = !!dueno && (!yo || !a);
+      who.dataset.bjm = a ? (yo ? 'yo' : 'nada') : dueno ? 'nada' : 'sit';
       const avEl = seat.querySelector('[data-av]'), nm = seat.querySelector('[data-n]');
-      const pk = a ? a.player : '';
-      if (avEl._p !== pk) { avEl._p = pk; avEl.innerHTML = a ? av(a.player) : '<span class="bjm-plus">+</span>' }
-      nm.toggleAttribute('data-notr', !!a && !yo);
-      setTxt(nm, a ? nom(a.player) : 'Libre');
+      const pk = dueno;
+      if (avEl._p !== pk) { avEl._p = pk; avEl.innerHTML = dueno ? av(dueno) : '<span class="bjm-plus">+</span>' }
+      nm.toggleAttribute('data-notr', !!dueno && !yo);
+      setTxt(nm, dueno ? nom(dueno) : 'Libre');
       // la apuesta en su circulo
       const ch = seat.querySelector('[data-ch]'), amt = seat.querySelector('[data-a]');
       const tot = m ? m.total : 0;
@@ -552,7 +557,7 @@
       const principal = todas
         ? (puedeOtra ? `<button class="go" data-bjm="otra" data-go ${ocupa}><span>Otra mano</span> <span class="num" data-bjm-n>${N(S.stake)}</span></button>` : '')
         : `<button class="go" data-bjm="apostar" data-go ${llena || S.ocupa ? 'disabled' : ''}>${llena ? '<span>La mesa está llena</span>' : `<span>Apostar</span> <span class="num" data-bjm-n>${N(S.stake)}</span>`}</button>`;
-      const nota = !todas && ordenMio(d).length > 1 ? `<p class="bjm-note">Va a tu mano ${numDe(d, libreMio)}</p>` : f === 'apuestas' && !mias.length ? '<p class="bjm-note">Entras en esta mano</p>' : '';
+      const nota = !todas && libreMio != null && ordenMio(d).length > 1 ? `<p class="bjm-note">Va a tu mano ${numDe(d, libreMio)}</p>` : f === 'apuestas' && !mias.length ? '<p class="bjm-note">Entras en esta mano</p>' : '';
       const otra = !todas && puedeOtra ? '<button class="go ghost bjm-otra" data-bjm="otra" ' + ocupa + '><span>Añadir otra mano</span></button>' : '';
       const tope = todas && !puedeOtra ? (mios.length >= max ? `<p class="bjm-note">Ya tienes ${max} manos</p>` : '<p class="bjm-note">La mesa está llena</p>') : '';
       der = `<div class="bjm-acc">${principal}${nota}${otra}${tope}</div>`;

@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "blackjack-estable-0111",
+   "fecha": "2026-11-01",
+   "hora": "23:05",
+   "titulo": "Blackjack más estable",
+   "texto": "Si te levantas con la mano a medias, tus cartas siguen en la mesa con tu cara y tu número, sin poner Libre. Se acabó el Va a tu mano 0 y la mesa ya no se queda parada en Repartiendo. Y si una ronda se queda más de 5 minutos sin que nadie la juegue, se anula y te devolvemos la apuesta.",
+   "titulo_en": "More stable blackjack",
+   "texto_en": "If you stand up mid-hand, your cards stay on the table with your face and number instead of saying Free. No more Goes to your hand 0, and the table no longer gets stuck on Dealing. And if a round sits for over 5 minutes with nobody playing it, it is cancelled and your bet is returned.",
+   "img": "novedades/blackjack-estable.webp",
+   "ir": "juegos"
+  },
+  {
    "id": "ficha-pro-0111",
    "fecha": "2026-11-01",
    "hora": "22:45",
