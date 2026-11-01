@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "ingles-repaso-0111",
+   "fecha": "2026-11-01",
+   "hora": "22:10",
+   "titulo": "Inglés repasado",
+   "texto": "Repasamos todo el inglés de la app: las cajas de Lujo y Cosméticos con todos sus objetos, el chat, el monedero, la Liga, los perfiles y los avisos. Ya no queda ningún texto a medias en español y los números salen con el formato inglés.",
+   "titulo_en": "English pass over the whole app",
+   "texto_en": "We went over all the English in the app: Luxury and Cosmetics boxes with every item, the chat, the wallet, the League, profiles and notices. No half-Spanish texts are left and numbers use English formatting.",
+   "img": "novedades/ingles-repaso.webp",
+   "ir": "cajas"
+  },
+  {
    "id": "retos-faciles-0111",
    "fecha": "2026-11-01",
    "hora": "21:40",

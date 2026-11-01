@@ -11,7 +11,7 @@
   function boton() {
     if (document.getElementById('gm-nueva')) return;
     const b = document.createElement('button');
-    b.id = 'gm-nueva'; b.type = 'button'; b.textContent = 'Versión nueva · Recargar';
+    b.id = 'gm-nueva'; b.type = 'button'; b.textContent = document.documentElement.lang === 'en' ? 'New version · Reload' : 'Versión nueva · Recargar';
     b.style.cssText = 'position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 86px);transform:translateX(-50%);z-index:9999;padding:11px 20px;border:0;border-radius:999px;background:#f2c14e;color:#141008;font:700 13px system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.45);cursor:pointer';
     b.onclick = () => location.reload();
     document.body.appendChild(b);
