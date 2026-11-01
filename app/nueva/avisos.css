@@ -1,0 +1,42 @@
+/* Avisos en tu movil e Instalar la app (avisos.js, 02-11): dos secciones de Ajustes, editoriales, sin cajas con borde. */
+.avs .aj-n{max-width:62ch}
+.avs-ios{margin:2px 0 20px;padding:2px 0 2px 16px;border-left:2px solid var(--acc);max-width:62ch;font:500 14px/1.55 var(--sans);color:var(--ink)}
+
+/* estado: un punto y una frase */
+.avs-st{display:flex;align-items:center;gap:11px;margin:4px 0 6px;font:600 16px/1.3 var(--sans);color:var(--ink)}
+.avs-st i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--dim)}
+.avs-st.on i{background:var(--win);box-shadow:0 0 0 4px rgba(43,212,125,.16)}
+.avs-st.bad i{background:var(--rojo,#e0646f);box-shadow:0 0 0 4px rgba(224,100,111,.16)}
+.avs-nota{margin:0 0 4px;font-size:13px}
+
+/* acciones: una principal y el resto en texto */
+.avs-ac{display:flex;flex-wrap:wrap;align-items:center;gap:6px 26px;margin:18px 0 4px}
+.avs-go{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 26px;border-radius:999px;background:linear-gradient(180deg,var(--acc2),var(--acc));color:#141008;font:700 14px var(--sans);text-align:center;transition:transform .15s var(--ease),filter .15s,opacity .15s}
+.avs-go:hover:not(:disabled){filter:brightness(1.06)}
+.avs-go:active:not(:disabled){transform:scale(.98)}
+.avs-go:disabled{opacity:.55}
+.avs-ac .aj-a:disabled{opacity:.5}
+
+/* un interruptor por tipo */
+.avs-ti{margin-top:26px}
+.avs-ti .lab{margin-bottom:6px}
+.avs-ti .aj-f.anim-t{border-top:1px solid var(--hair);padding:15px 0}
+.avs-ti .aj-f.anim-t:first-of-type{border-top:0}
+.avs-ti .aj-f.anim-t:focus-visible,.avs-go:focus-visible{outline:2px solid var(--acc);outline-offset:3px}
+
+/* instalar la app: los tres aparatos, el tuyo primero */
+.avs-pasos{display:grid;margin-top:22px}
+.avs-p{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:4px 28px;padding:15px 0;border-top:1px solid var(--hair)}
+.avs-p:first-child{border-top:0;padding-top:4px}
+.avs-pn{display:grid;align-content:start;gap:3px}
+.avs-pn b{font:600 15px var(--sans);color:var(--ink)}
+.avs-pn em{font:500 10px var(--mono);font-style:normal;letter-spacing:.14em;text-transform:uppercase;color:var(--acc)}
+.avs-pt{font:400 14px/1.55 var(--sans);color:var(--mute)}
+.avs-p.mio .avs-pt{color:var(--soft)}
+.avs-pasos.flash{animation:avs-flash 1.4s var(--ease)}
+@keyframes avs-flash{0%,60%{background:rgba(242,193,78,.12)}100%{background:transparent}}
+@media (max-width:560px){
+  .avs-p{grid-template-columns:1fr;gap:6px}
+  .avs-ac{gap:2px 22px}
+  .avs-go{flex:1 1 100%}
+}
