@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "tv-cajas-0111",
+   "fecha": "2026-11-02",
+   "hora": "01:40",
+   "titulo": "Dónde verlo y cajas",
+   "texto": "En Dónde verlo solo salen las emisiones en español y en inglés; los demás idiomas solo aparecen si no hay ninguna en esos dos. Y al abrir la ficha de una caja, la caja del centro de la tira es más pequeña y deja ver los objetos.",
+   "titulo_en": "Where to watch and boxes",
+   "texto_en": "Where to watch now only lists Spanish and English broadcasts; other languages only show if neither exists. And when you open a box page, the box in the middle of the reel is smaller and lets you see the items.",
+   "img": "novedades/caja-tira.webp",
+   "ir": "cajas"
+  },
+  {
    "id": "quien-dentro-arriba-0111",
    "fecha": "2026-11-02",
    "hora": "01:00",

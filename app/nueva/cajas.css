@@ -808,3 +808,11 @@ button.cj-it:hover .cj-it-img,.cj-it.on .cj-it-img{box-shadow:0 0 0 1px color-mi
   .cj-seg.cj-cat{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;border-radius:22px;margin-bottom:26px}
   .cj-seg.cj-cat button{justify-content:center;gap:5px;padding:0 4px;height:40px;font-size:12px;border-radius:18px}
 }
+
+/* PM 01-11: "cuando le das click a una caja aparece como el logo en la mitad super bugeado": la caja en medio de la tira tapaba las tarjetas y
+   saltaba al cargar. Mas pequena, con la imagen reservada y entrada suave */
+.cj-box{width:calc(var(--kh) * 1.12)}
+.cj-box img{animation:cjBoxIn .28s var(--ease,ease-out) both;aspect-ratio:4/3;object-fit:contain;max-height:100%}
+@keyframes cjBoxIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+@media (max-width:860px){.cj-box{width:calc(var(--kh) * 1.05)}}
+html.sin-anim .cj-box img{animation:none}

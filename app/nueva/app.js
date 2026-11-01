@@ -326,7 +326,8 @@ const mainTv = (m) => (m.tv || []).find((v) => v.u && v.main && /^(en|es)$/.test
 const tvHtml = (tv, m) => {
   const link = (v) => (v.u ? `<a class="tv" href="${esc(v.u)}" target="_blank" rel="noopener">${esc(v.n)}${v.l && !/^(en|es)$/.test(v.l) ? ' · ' + esc(LANG[v.l] || v.l) : ''} ↗</a>` : `<span class="tv">${esc(v.n)}</span>`);
   const col = (ls, t) => { const x = tv.filter((v) => ls.includes(v.l)); return x.length ? `<div><span class="lab">${t}</span>${x.map(link).join('')}</div>` : '' };
-  const otros = tv.filter((v) => !['en', 'es'].includes(v.l));
+  // PM 01-11: solo español e inglés; los demas idiomas solo salen si no hay ninguna emision en esos dos
+  const otros = tv.some((v) => ['en', 'es'].includes(v.l)) ? [] : tv.filter((v) => !['en', 'es'].includes(v.l));
   let cols = col(['en'], 'En inglés') + col(['es'], 'En español') + (otros.length ? `<div><span class="lab">Otros idiomas</span>${otros.map(link).join('')}</div>` : '');
   // esports sin emision apuntada: buscarlo en Twitch y YouTube
   if (!cols && m && (m.s === 'v' || m.s === 'c')) { const q = encodeURIComponent((L[m.lg]?.[0] || '') + ' ' + m.a + ' ' + m.b); cols = `<div><span class="lab">Buscarlo</span><a class="tv" href="https://www.twitch.tv/search?term=${encodeURIComponent(L[m.lg]?.[0] || m.a)}" target="_blank" rel="noopener">Twitch ↗</a><a class="tv" href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener">YouTube ↗</a></div>` }
