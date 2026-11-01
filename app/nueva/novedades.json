@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "predicciones-0111",
+   "fecha": "2026-11-01",
+   "hora": "19:50",
+   "titulo": "Predicción rápida más justa",
+   "texto": "La cuota cambia con el minuto y el marcador, así que el No ya no es casi seguro. Solo puedes tener una abierta por partido, hay 5 minutos de espera entre una y otra y no se puede predecir en los últimos minutos de cada parte.",
+   "titulo_en": "Fairer quick predictions",
+   "texto_en": "The odds now follow the minute and the score, so No is no longer a near sure thing. You can only have one open per match, there is a 5 minute wait between them and predictions close in the last minutes of each half.",
+   "img": "novedades/predicciones.webp",
+   "ir": "directo"
+  },
+  {
    "id": "blackjack-manos-0111",
    "fecha": "2026-11-01",
    "hora": "19:25",

@@ -150,6 +150,7 @@
     try {
       const antes = new Map(((P.d && P.d.mine) || []).map((x) => [x.id, x.status]));
       P.d = await rpc('ex_pred_estado'); P.t = Date.now();
+      P.until = {}; for (const m of P.d.live || []) if (m.seg > 0) P.until[m.id] = P.t + m.seg * 1000;           // cuando se puede la siguiente (db/049)
       // si el sincronizador ha resuelto una prediccion mia, se recarga la app (saldo y monedero) sin esperar al pulso
       if ((P.d.mine || []).some((x) => x.status !== 'open' && antes.get(x.id) === 'open')) { recarga(); avisa('Predicción rápida resuelta') }
     }
@@ -186,6 +187,9 @@
       else if (t.state !== 'in') off = 'El partido no está en juego.';
       else if (/HALFTIME/i.test(t.name || '') || /^(ht|half ?time|descanso)$/i.test(String(t.shortDetail || t.description || '').trim())) off = 'Descanso: vuelve cuando ruede el balón.';
       else if (per > 2) off = 'Prórroga: sin predicciones.';
+      else if (/SUSPEND|DELAY|INTERRUPT|STOPPAGE|PAUSE|WEATHER|ABANDON/i.test(`${t.name || ''} ${t.description || ''}`)) off = 'Partido parado: sin predicciones hasta que se reanude';
+      else if (per === 1 && parseInt(st.displayClock, 10) >= 40) off = 'Final de la primera parte: sin predicciones hasta la segunda';
+      else if (per === 2 && parseInt(st.displayClock, 10) >= 85) off = 'Final del partido: sin predicciones';
       else if (!c.ok) off = c.why || 'Sin datos frescos del directo';
       return { names, kind: 'gol', match: id, key: `gol|${id}`, titulo: '¿Habrá gol en los próximos 10 minutos?', minuto: st.displayClock || '',
         opts: [['si', 'Sí, habrá gol', c.si], ['no', 'No, sin goles', c.no]],
@@ -215,6 +219,15 @@
     }
     return { names, off: '' };
   }
+  const faltaPred = (match) => Math.max(0, Math.ceil(((((P.until || {})[match]) || 0) - Date.now()) / 1000));
+  const esperaTxt = (sec) => `${lang() === 'en-GB' ? 'Next one in ' : 'La siguiente en '}${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+  // cuenta atras de la espera: se pinta cada segundo sin rehacer la caja; al llegar a 0 se rehace (ya se puede apostar)
+  setInterval(() => {
+    const el = document.querySelector('[data-xq-cd]'); if (!el || !Q.q) return;
+    const f = faltaPred(Q.q.match);
+    if (f <= 0) { pintaPred(); return }
+    const t = esperaTxt(f); if (el.textContent !== t) el.textContent = t;
+  }, 1000);
   const ESTADO = { open: 'esperando', won: 'ganada', lost: 'perdida', void: 'devuelta' };
   function etiqueta(p) { return p.kind === 'gol' ? `Gol en 10 min · ${p.pick === 'si' ? 'Sí' : 'No'}` : `Ronda ${p.n} de ${String(p.ref || '').replace(/^./, (c) => c.toUpperCase())} · ${p.pick === '1' ? 'local' : 'visitante'}` }
   function htmlPred(q) {
@@ -225,18 +238,20 @@
     if (!chips.includes(PX.stake)) PX.stake = chips[chips.length - 1] || 1;
     const mias = (P.d.mine || []).filter((p) => p.match === q.match).slice(0, 5);
     const lista = mias.length ? `<div class="xq-mias"><span class="lab">Tus predicciones aquí</span>${mias.map((p) => `<div class="xq-m ${p.status}"><b>${esc(etiqueta(p))}</b><span>${N(p.stake)} → ${N(Math.round(p.stake * p.odds))}</span><em>${ESTADO[p.status]}${p.status === 'won' ? ` +${N(p.payout)}` : ''}</em>${p.ev ? `<small data-notr>${esc(p.ev)}</small>` : ''}</div>`).join('')}</div>` : '';
+    const lm0 = (P.d.live || []).find((x) => x.id === q.match) || {}, falta = faltaPred(q.match), bloq = lm0.abierta ? 'abierta' : falta > 0 ? 'espera' : '';
     let cuerpo;
     if (q.off) cuerpo = `<p class="xq-off">${esc(q.off)}</p>`;
     else {
       const opcs = q.opts.map(([k, t, o]) => `<button class="xq-o ${PX.pick === k ? 'on' : ''}" data-xp="pick" data-v="${k}"><span>${esc(t)}</span><b>${O(o)}</b></button>`).join('');
       cuerpo = `<div class="xq-opts">${opcs}</div>
         <div class="xq-ap"><span class="xq-chips">${chips.map((v) => `<button class="${PX.stake === v ? 'on' : ''}" data-xp="stake" data-v="${v}">${v}</button>`).join('')}</span>
-        <button class="go-s" data-xp="go" ${PX.pick && !PX.busy ? '' : 'disabled'}>Apostar ${PX.stake}</button></div>
-        ${PX.msg ? `<p class="xq-msg ${PX.msgOk ? 'ok' : ''}">${PX.msg}</p>` : ''}<p class="xq-nota">${esc(q.nota)}</p>`;
+        <button class="go-s" data-xp="go" ${PX.pick && !PX.busy && !bloq ? '' : 'disabled'}>Apostar ${PX.stake}</button></div>
+        ${bloq === 'abierta' ? '<p class="xq-espera">Tienes una predicción abierta en este partido: espera a que se resuelva</p>' : bloq === 'espera' ? '<p class="xq-espera"><span data-xq-cd data-notr></span></p>' : ''}
+        ${PX.msg ? `<p class="xq-msg ${PX.msgOk ? 'ok' : ''}">${PX.msg}</p>` : ''}<p class="xq-nota">${esc(q.nota)}</p><p class="xq-nota">${esc(`Una abierta por partido y ${Math.max(1, Math.round((P.d.espera || 300) / 60))} minutos entre una y otra.`)}</p>`;
     }
-    const inner = `<div class="xq-h">${BOLT}<b>Predicción rápida</b><small>${q.minuto ? esc(q.minuto) + ' · ' : ''}cuota fija al apostar · máximo ${N(max)}</small></div>
+    const inner = `<div class="xq-h">${BOLT}<b>Predicción rápida</b><small>${q.minuto ? esc(q.minuto) + ' · ' : ''}cuota del momento · máximo ${N(max)}</small></div>
       <p class="xq-q">${esc(q.titulo)}</p>${q.sub ? `<p class="xq-sub">${esc(q.sub)}</p>` : ''}${cuerpo}${lista}`;
-    return `<section class="xq" data-xq-box data-sig="${hash(inner)}">${inner}</section>`;
+    return `<section class="xq" data-xq-box data-sig="${hash(inner)}">${inner.replace('data-xq-cd data-notr></span>', () => `data-xq-cd data-notr>${esperaTxt(falta)}</span>`)}</section>`;
   }
   function pintaPred() {
     const info = infoEl(); if (!info) return;
@@ -266,6 +281,7 @@
   }
   async function apostarPred() {
     const q = Q.q; if (!q || q.off || !PX.pick || PX.busy) return;
+    const l0 = (P.d && P.d.live || []).find((x) => x.id === q.match) || {}; if (l0.abierta || faltaPred(q.match) > 0) return;
     PX.busy = true; PX.msg = ''; pintaPred();
     try {
       const visto = (q.opts.find((o) => o[0] === PX.pick) || [])[2];
@@ -274,7 +290,7 @@
       PX.msg = q.kind === 'gol' ? `Has apostado ${PX.stake} a ${O(r.odds)} · cuenta de ${cuandoHM(r.desde)} a ${cuandoHM(r.hasta)}` : `Has apostado ${PX.stake} a ${O(r.odds)} a la ronda ${q.n}`; PX.msgOk = true; PX.pick = null;
       avisa(`Predicción rápida: apostado <b>${N(PX.stake)}</b>`);
       await cargaPred(true); recarga();
-    } catch (e) { PX.msg = aviso(e); PX.msgOk = false; avisa(aviso(e)); cargaPred(true); if (e && (e.code === '42501' || /permission denied|insufficient/i.test(String(e.message || '')))) { P.cerrado = Date.now() + 120e3; PX.msg = 'Predicciones cerradas un momento'; PX.msgOk = false } }
+    } catch (e) { const em = String((e && e.message) || ''), tx = /^La cuota ha cambiado/.test(em) ? esc(em) : aviso(e); PX.msg = tx; PX.msgOk = false; avisa(tx); cargaPred(true); if (e && (e.code === '42501' || /permission denied|insufficient/i.test(String(e.message || '')))) { P.cerrado = Date.now() + 120e3; PX.msg = 'Predicciones cerradas un momento'; PX.msgOk = false } }
     PX.busy = false; pintaPred();
   }
   const cuandoHM = (t) => { try { return new Intl.DateTimeFormat(lang(), { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t)) } catch { return '' } };
@@ -555,6 +571,7 @@
 .xq-msg.ok{color:var(--win)}
 .xq-nota{font:11px/1.5 var(--mono);color:var(--dim)}
 .xq-off{font:13px/1.5 var(--mono);color:var(--mute)}
+.xq-espera{font:600 13px var(--mono);color:var(--acc)}
 .xq-mias{display:grid;margin-top:4px}
 .xq-mias .lab{margin-bottom:4px}
 .xq-m{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:baseline;gap:2px 14px;padding:9px 0;border-top:1px solid var(--hair);font:13px var(--mono);color:var(--soft)}
