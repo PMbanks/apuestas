@@ -2241,13 +2241,14 @@ html[data-moneda="robux"] .cn{background-image:url(../img/monedas/robux.svg)}
 @media (max-width:560px){.bol-n .xc-btn{width:100%;justify-content:center;margin:6px 0 0;padding:12px 16px;white-space:normal}}
 .bol-n{flex-wrap:wrap;row-gap:14px}
 /* Combinadas (30-10 noche, db/029): selector en el boleto y tarjetas en Mis apuestas */
-.blt-modo{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:2px 0 8px;padding:4px;border-radius:14px;background:rgba(255,255,255,.05)}
-.blt-modo button{display:grid;gap:3px;padding:9px 11px;border-radius:10px;text-align:left;color:var(--mute);transition:background .15s,color .15s}
-.blt-modo button b{font:700 14px var(--sans)}.blt-modo button small{font:500 11px/1.3 var(--sans);color:var(--dim)}
-.blt-modo button.on{background:rgba(242,193,78,.16);color:var(--ink)}.blt-modo button.on b{color:var(--acc)}
-.blt-cq{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:4px 0 6px}
-.blt-cq b{font:600 30px/1 var(--mono);letter-spacing:-.03em;color:var(--acc)}
-.blt.comb .blt-l .blt-in,.blt.comb .blt-l .blt-co{display:none}
+/* el selector Sueltas/Combinada y el resto del boleto: estilos en boleto.js */
+/* apuesta suelta desde la ficha (Me sumo): cada cosa en su bloque, con aire y una linea fina (PM 01-11) */
+.det .stk{margin-top:24px;padding-top:24px;border-top:1px solid var(--hair)}
+.det .stk b{min-width:0}
+.det .ret{margin-top:24px;padding:16px;border-radius:14px;background:rgba(255,255,255,.04)}
+.det .ret b{font-size:32px}
+.det .ret2{margin-top:8px}
+.det .stk+.ret+.ret2+.go{margin-top:24px}
 .cmb-cs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:18px}.cmb-cs+.cmb-cs{margin-top:18px}.cmb-cs.cerr{opacity:.85}
 .cmb{padding:18px 20px 16px;border-radius:20px;background:linear-gradient(165deg,#2a2d36,#22252d)}
 .cmb header{display:flex;align-items:baseline;gap:12px;margin-bottom:10px}

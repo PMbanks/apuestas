@@ -183,13 +183,21 @@
     const m = partido(it.m), c = cuota(it), at = m ? m.at : it.at, solo = B.items.length === 1;
     const mv = c.base != null && it.o0 != null && Math.abs(c.base - it.o0) > 0.001 ? (c.base > it.o0 ? '<i class="blt-mv sube">▲</i>' : '<i class="blt-mv baja">▼</i>') : '';
     const tope = c.pct && it.st > c.resta ? `<p class="blt-e tope"><span>Con cuota mejorada te quedan</span> <b>${N(c.resta)}${coin()}</b> <span>en este partido</span></p>` : '';
+    // tarjeta: 1) el partido (escudos, titulo, hora, quitar)  2) la eleccion y su cuota  3) el importe de esta y lo que cobrarias
     return `<div class="blt-l ${lado(it.p)} ${c.pct ? 'mej' : ''} ${it.ok ? 'ok' : it.err ? 'ko' : ''} ${solo ? 'solo' : ''}" data-k="${esc(clave(it))}">
-      <span class="blt-es">${escudo(m?.la || it.la, it.s, 'blt-ea')}${escudo(m?.lb || it.lb, it.s, 'blt-eb')}</span>
-      <span class="blt-q"><b>${esc(nombre(it, m))}</b><button type="button" class="blt-pt" data-blt="ir" data-m="${esc(it.m)}" title="Ir al partido"><span>${esc(cuando(at))}</span> · <span>${esc(m ? m.a : it.a)} vs ${esc(m ? m.b : it.b)}</span></button></span>
-      <span class="blt-o">${c.o == null ? '<em>·</em>' : `${mv}${c.pct ? `${BOLT}<s>${O(c.base)}</s>` : ''}<b>${O(c.o)}</b>`}</span>
-      <button type="button" class="blt-x" data-blt="quita" data-m="${esc(clave(it))}" aria-label="Quitar">${EQUIS}</button>
-      <label class="blt-in"><input type="text" inputmode="numeric" autocomplete="off" maxlength="7" data-blt-i="${esc(clave(it))}" value="${it.st || ''}" aria-label="Importe">${coin()}</label>
-      <span class="blt-co">${c.o == null ? '<span>Esa opción ya no tiene cuota</span>' : `<i>→</i> <b>${N(it.st * c.o)}</b>${coin()}`}</span>
+      <div class="blt-lt">
+        <span class="blt-es">${escudo(m?.la || it.la, it.s, 'blt-ea')}${escudo(m?.lb || it.lb, it.s, 'blt-eb')}</span>
+        <button type="button" class="blt-pt" data-blt="ir" data-m="${esc(it.m)}" title="Ir al partido"><b>${esc(m ? m.a : it.a)} vs ${esc(m ? m.b : it.b)}</b><span>${esc(cuando(at))}</span></button>
+        <button type="button" class="blt-x" data-blt="quita" data-m="${esc(clave(it))}" aria-label="Quitar">${EQUIS}</button>
+      </div>
+      <div class="blt-eleg">
+        <span class="blt-q"><span class="lab">Tu elección</span><b>${esc(nombre(it, m))}</b></span>
+        <span class="blt-o">${c.o == null ? '<em>·</em>' : `${mv}${c.pct ? `${BOLT}<s>${O(c.base)}</s>` : ''}<b>${O(c.o)}</b>`}</span>
+      </div>
+      ${c.o == null ? '<p class="blt-e">Esa opción ya no tiene cuota</p>' : `<div class="blt-fila">
+        <div class="blt-fi"><span class="lab">Importe</span><label class="blt-in"><input type="text" inputmode="numeric" autocomplete="off" maxlength="7" data-blt-i="${esc(clave(it))}" value="${it.st || ''}" aria-label="Importe">${coin()}</label></div>
+        <div class="blt-co"><span class="lab">Cobrarías</span><span class="blt-cv"><b>${N(it.st * c.o)}</b>${coin()}</span></div>
+      </div>`}
       ${it.err ? `<p class="blt-e">${esc(it.err)}</p>` : ''}${tope}
     </div>`;
   }
@@ -202,17 +210,17 @@
     const n = B.items.length, el = r.querySelector('.blt-comun');
     if (!n) { el.innerHTML = ''; return }
     const chip = (v, t, ti) => `<button type="button" class="chip ${chipOn(v) ? 'on' : ''}" data-blt="c" data-v="${v}"${ti ? ` title="${ti}"` : ''}>${t}</button>`;
-    const modo = n >= 2 ? `<div class="blt-modo" role="tablist"><button type="button" class="${comb() ? '' : 'on'}" data-blt="modo" data-v="sueltas"><b>Sueltas</b><small>cada una por su lado</small></button><button type="button" class="${comb() ? 'on' : ''}" data-blt="modo" data-v="comb"><b>Combinada</b><small>cuotas multiplicadas, aciertas todas</small></button></div>` : '';
+    const modo = n >= 2 ? `<div class="blt-sec"><span class="lab">Tipo de apuesta</span><div class="blt-modo" role="tablist"><button type="button" class="${comb() ? '' : 'on'}" data-blt="modo" data-v="sueltas"><b>Sueltas</b><small>cada una por su lado</small></button><button type="button" class="${comb() ? 'on' : ''}" data-blt="modo" data-v="comb"><b>Combinada</b><small>cuotas multiplicadas, aciertas todas</small></button></div></div>` : '';
     if (comb()) {
       const cc = (v, t, ti) => `<button type="button" class="chip ${B.cst === (v === 'mitad' ? Math.floor(saldo() / 2) : v === 'todo' ? saldo() : +v) ? 'on' : ''}" data-blt="c" data-v="${v}"${ti ? ` title="${ti}"` : ''}>${t}</button>`;
-      el.innerHTML = `${modo}<div class="blt-cq"><span class="lab">Cuota de la combinada</span><b>${O(cuotaComb())}</b></div><span class="lab">Importe de la combinada</span>
+      el.innerHTML = `${modo}<div class="blt-sec"><span class="lab">Importe de la combinada</span>
       <div class="blt-cf"><label class="blt-in grande"><input type="text" inputmode="numeric" autocomplete="off" maxlength="7" data-blt-c value="${B.cst || ''}" placeholder="50" aria-label="Importe">${coin()}</label>
-      <span class="blt-chips">${cc(10, '10')}${cc(50, '50')}${cc(100, '100')}${cc('mitad', '1/2', 'La mitad de tu saldo')}${cc('todo', 'Todo', 'Todo tu saldo')}</span></div>`;
+      <span class="blt-chips">${cc(10, '10')}${cc(50, '50')}${cc(100, '100')}${cc('mitad', '1/2', 'La mitad de tu saldo')}${cc('todo', 'Todo', 'Todo tu saldo')}</span></div></div>`;
       return;
     }
-    el.innerHTML = `${modo}<span class="lab">${n > 1 ? 'Mismo importe para todas' : 'Importe'}</span>
+    el.innerHTML = `${modo}<div class="blt-sec"><span class="lab">${n > 1 ? 'Mismo importe para todas' : 'Importe'}</span>
       <div class="blt-cf"><label class="blt-in grande"><input type="text" inputmode="numeric" autocomplete="off" maxlength="7" data-blt-c value="${B.items.every((it) => it.st === B.items[0].st) ? B.items[0].st || '' : ''}" placeholder="${N(B.comun)}" aria-label="Importe">${coin()}</label>
-      <span class="blt-chips">${chip(10, '10')}${chip(50, '50')}${chip(100, '100')}${chip('mitad', '1/2', 'La mitad de tu saldo, repartida')}${chip('todo', 'Todo', 'Todo tu saldo, repartido')}</span></div>`;
+      <span class="blt-chips">${chip(10, '10')}${chip(50, '50')}${chip(100, '100')}${chip('mitad', '1/2', 'La mitad de tu saldo, repartida')}${chip('todo', 'Todo', 'Todo tu saldo, repartido')}</span></div></div>`;
   }
   function pintaRes(r) {
     const el = r.querySelector('.blt-res'), x = B.res, f = B.fuera;
@@ -228,24 +236,24 @@
   }
   function pintaLista(r) {
     const el = r.querySelector('.blt-lista');
-    el.innerHTML = B.items.map(linea).join('');
+    el.innerHTML = B.items.length ? `${B.items.length > 1 ? '<span class="lab blt-rot">Tus elecciones</span>' : ''}${B.items.map(linea).join('')}` : '';
   }
   function pintaPie(r) {
     const el = r.querySelector('.blt-pie'), n = B.items.length;
     if (!n) { el.innerHTML = B.res ? '<button type="button" class="blt-listo" data-blt="cierra">Cerrar</button>' : ''; return }
+    // resumen en un bloque propio (cifras alineadas a la derecha), avisos en su hueco y el boton aparte, abajo
+    const fila = (t, v, cls) => `<div class="blt-tot ${cls || ''}"><span>${t}</span><b>${v}</b></div>`;
     if (comb()) {
       const pr = problemas(), q = cuotaComb(), txt = B.busy ? B.prog : B.sure ? '¿Seguro? Toca otra vez' : `Apostar combinada de ${n}`;
-      el.innerHTML = `<div class="blt-tot"><span>Importe</span><b>${N(B.cst)}${coin()}</b></div>
-        <div class="blt-tot gana"><span>Cobrarías si aciertas las ${n}</span><b>${N(B.cst * q)}${coin()}</b></div>
-        ${pr.join('')}
+      el.innerHTML = `<div class="blt-sum">${fila('Importe', `${N(B.cst)}${coin()}`)}${fila('Cuota total', O(q), 'cuota')}${fila(`Cobrarías si aciertas las ${n}`, `${N(B.cst * q)}${coin()}`, 'gana')}</div>
+        <div class="blt-avs">${pr.join('')}</div>
         <button type="button" class="go blt-go ${B.sure ? 'sure' : ''}" data-blt="apuesta" ${pr.length || B.busy ? 'disabled' : ''}>${esc(txt)}</button>`;
       return;
     }
-    const t = totales(), pr = problemas(), mal = pr.length > 0 || !B.items.every(valida);
+    const t = totales(), pr = problemas(), mal = pr.length > 0 || !B.items.every(valida), c1 = n === 1 ? cuota(B.items[0]).o : null;
     const txt = B.busy ? B.prog : B.sure ? '¿Seguro? Toca otra vez' : n === 1 ? `Apostar ${N(t.st)}` : `Apostar las ${n}`;
-    el.innerHTML = `<div class="blt-tot"><span>Total apostado</span><b>${N(t.st)}${coin()}</b></div>
-      <div class="blt-tot gana"><span>${n > 1 ? 'Cobrarías si aciertas todas' : 'Cobrarías si aciertas'}</span><b>${N(t.co)}${coin()}</b></div>
-      ${pr.join('')}
+    el.innerHTML = `<div class="blt-sum">${fila('Total apostado', `${N(t.st)}${coin()}`)}${c1 != null ? fila('Cuota', O(c1), 'cuota') : ''}${fila(n > 1 ? 'Cobrarías si aciertas todas' : 'Cobrarías si aciertas', `${N(t.co)}${coin()}`, 'gana')}</div>
+      <div class="blt-avs">${pr.join('')}</div>
       <button type="button" class="go blt-go ${B.sure ? 'sure' : ''}" data-blt="apuesta" ${mal || B.busy ? 'disabled' : ''}>${esc(txt)}</button>`;
   }
   function pintaCab(r) {
@@ -464,82 +472,114 @@
 .pk.blt-on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;background:var(--acc)}
 .pk.blt-on .k::before{content:"✓";display:inline-grid;place-items:center;width:14px;height:14px;margin-right:7px;border-radius:50%;background:var(--acc);color:#141008;font:800 9px/1 var(--sans);letter-spacing:0;vertical-align:1px}
 
-/* el boleto */
-.blt{font-family:var(--sans);color:var(--ink)}
+/* el boleto: secciones con aire, etiquetas en mayusculas y cifras alineadas (escala 4/8/12/16/24; PM 01-11: "separa todo bien") */
+.blt{--blt-p:24px;font-family:var(--sans);color:var(--ink)}
+.blt .lab{display:block;font:600 10px/1.3 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
 .blt-bolt{width:12px;height:12px;flex:none;fill:currentColor}
 .blt-chev{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s var(--ease)}
-.blt-n{display:grid;place-items:center;min-width:30px;height:30px;padding:0 8px;border-radius:999px;background:linear-gradient(180deg,var(--acc2),var(--acc));color:#141008;font:800 14px/1 var(--disp)}
+.blt-n{display:grid;place-items:center;min-width:32px;height:32px;padding:0 8px;border-radius:999px;background:linear-gradient(180deg,var(--acc2),var(--acc));color:#141008;font:800 14px/1 var(--disp)}
 .blt-n.ok{background:var(--win);color:#06150c}
 .blt-n.late{animation:bltLate .45s var(--ease)}
 @keyframes bltLate{40%{transform:scale(1.28)}}
 .blt-barra.late{animation:bltBrilla .9s ease-out}
 @keyframes bltBrilla{0%{box-shadow:0 0 0 0 rgba(242,193,78,.6),0 18px 50px rgba(0,0,0,.55)}100%{box-shadow:0 0 0 14px rgba(242,193,78,0),0 18px 50px rgba(0,0,0,.55)}}
-.blt-barra{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:14px;width:100%;text-align:left;color:var(--ink)}
-.blt-bt{display:grid;gap:2px;min-width:0}
+.blt-barra{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:12px;width:100%;text-align:left;color:var(--ink)}
+.blt-bt{display:grid;gap:4px;min-width:0}
 .blt-bt b{font:800 15px/1.1 var(--disp);letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .blt-bt small{display:flex;align-items:center;font:12px var(--mono);color:var(--mute)}
-.blt-bc{display:grid;justify-items:end;gap:2px}
+.blt-bc{display:grid;justify-items:end;gap:4px}
 .blt-bc small{font:10px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
 .blt-bc b{display:flex;align-items:center;font:500 18px/1 var(--mono);letter-spacing:-.04em;color:var(--acc)}
 .blt-barra .blt-chev{color:var(--mute)}
 .blt-hoja{display:none;flex-direction:column;min-height:0;background:var(--bg2);box-shadow:0 24px 60px rgba(0,0,0,.55),0 0 0 1px var(--hair);animation:bltEntra .22s var(--ease)}
 .blt.abierto .blt-hoja{display:flex}
 @keyframes bltEntra{from{transform:translateY(12px);opacity:0}}
-.blt-cab{display:flex;align-items:center;gap:12px;padding:16px 18px 12px 20px}
+
+/* cabecera: cuenta, titulo, vaciar, cerrar; con su linea debajo */
+.blt-cab{display:flex;align-items:center;gap:12px;flex:none;padding:16px calc(var(--blt-p) - 8px) 16px var(--blt-p);border-bottom:1px solid var(--hair)}
 .blt-t{font:800 20px/1 var(--disp);letter-spacing:-.02em}
-.blt-vac{margin-left:auto;padding:6px 2px;font:500 12px var(--mono);color:var(--mute);transition:color .15s}
-.blt-vac:hover{color:var(--ink)}
-.blt-vac.sure{color:#ff8a8a}
-.blt-cierra{display:grid;place-items:center;width:34px;height:34px;margin-right:-6px;border-radius:50%;color:var(--mute);transition:color .15s,background .15s}
-.blt-cab .blt-vac+.blt-cierra{margin-left:0}
+.blt-vac{margin-left:auto;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.06);font:500 12px/1 var(--mono);color:var(--mute);transition:color .15s,background .15s}
+.blt-vac:hover{color:var(--ink);background:rgba(255,255,255,.1)}
+.blt-vac.sure{color:#ff8a8a;background:rgba(255,138,138,.12)}
+.blt-cierra{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:50%;color:var(--mute);transition:color .15s,background .15s}
 .blt-cab>.blt-cierra:only-of-type{margin-left:auto}
 .blt-cierra:hover{color:var(--ink);background:rgba(255,255,255,.06)}
 .blt-cierra .blt-chev{transform:rotate(180deg)}
-.blt-cuerpo{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 20px;scrollbar-width:thin;scrollbar-color:#2a2e36 transparent}
-.blt-comun{display:grid;gap:8px;padding:4px 0 14px}
+
+/* cuerpo: secciones separadas por una linea fina */
+.blt-cuerpo{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 var(--blt-p);scrollbar-width:thin;scrollbar-color:#2a2e36 transparent}
+.blt-res:empty{display:none}
 .blt-comun:empty{display:none}
-.blt-cf{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-.blt-chips{display:flex;gap:16px}
-.blt-chips .chip{font-size:13px}
-.blt-in{display:inline-flex;align-items:center;gap:2px;height:34px;padding:0 10px 0 12px;border-radius:10px;background:rgba(255,255,255,.06);cursor:text;transition:background .15s}
+.blt-sec{display:grid;gap:12px;padding:16px 0;border-bottom:1px solid var(--hair)}
+.blt-modo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:4px;border-radius:14px;background:rgba(255,255,255,.05)}
+.blt-modo button{display:grid;align-content:start;gap:4px;min-width:0;padding:12px;border-radius:10px;text-align:left;color:var(--mute);transition:background .15s,color .15s}
+.blt-modo button b{font:700 14px/1.2 var(--sans)}
+.blt-modo button small{font:500 11px/1.35 var(--sans);color:var(--dim)}
+.blt-modo button.on{background:rgba(242,193,78,.16);color:var(--ink)}
+.blt-modo button.on b{color:var(--acc)}
+.blt-modo button.on small{color:var(--mute)}
+.blt-cf{display:grid;gap:12px}
+.blt-chips{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.blt .chip{display:grid;place-items:center;height:36px;padding:0;border-radius:10px;background:rgba(255,255,255,.06);font:500 13px/1 var(--mono);color:var(--soft);transition:background .15s,color .15s}
+.blt .chip:hover{background:rgba(255,255,255,.1);color:var(--ink)}
+.blt .chip.on{background:rgba(242,193,78,.16);color:var(--acc)}
+.blt .chip.on::after{display:none}
+.blt-in{display:inline-flex;align-items:center;gap:4px;height:40px;padding:0 12px;border-radius:12px;background:rgba(255,255,255,.06);cursor:text;transition:background .15s}
 .blt-in:focus-within{background:rgba(242,193,78,.12)}
-.blt-in input{width:64px;min-width:0;border:0;outline:0;background:none;font:500 15px var(--mono);letter-spacing:-.02em;color:var(--ink)}
+.blt-in input{width:72px;min-width:0;border:0;outline:0;background:none;font:500 16px var(--mono);letter-spacing:-.02em;color:var(--ink)}
 .blt-in input::placeholder{color:var(--dim)}
-.blt-in.grande input{width:76px;font-size:17px}
+.blt-in.grande{display:flex;gap:8px;height:56px;padding:0 16px;border-radius:14px}
+.blt-in.grande input{flex:1;width:100%;font-size:24px}
 .blt-in .cn{--s:15px}
-.blt-lista{display:grid}
-.blt-l{display:grid;grid-template-columns:40px minmax(0,1fr) auto 26px;grid-template-areas:"e q o x" "e i c c";align-items:center;gap:8px 12px;padding:14px 0;border-top:1px solid var(--hair);transition:opacity .25s,background .25s}
-.blt-l.solo{grid-template-areas:"e q o x" "e c c c"}
-.blt-l.solo .blt-in{display:none}
-.blt-es{grid-area:e;position:relative;align-self:start;width:40px;height:40px}
-.blt-es img,.blt-es .noimg{position:absolute;width:26px;height:26px;object-fit:contain}
+.blt-in.grande .cn{--s:22px}
+
+/* elecciones: cada una en su tarjeta (partido / eleccion y cuota / importe y lo que cobrarias) */
+.blt-lista{display:grid;gap:12px;padding:16px 0 24px}
+.blt-lista:empty{display:none}
+.blt-rot{margin-bottom:-4px}
+.blt-l{position:relative;display:grid;overflow:hidden;padding:0 16px;border-radius:16px;background:rgba(255,255,255,.035);transition:opacity .25s,background .25s}
+.blt-lt{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px 0}
+.blt-es{position:relative;width:36px;height:36px}
+.blt-es img,.blt-es .noimg{position:absolute;width:24px;height:24px;object-fit:contain}
 .blt-ea{left:0;top:0}.blt-eb{right:0;bottom:0}
 .blt-l.p1 .blt-ea,.blt-l.p2 .blt-eb{z-index:1}
 .blt-l.p1 .blt-eb,.blt-l.p2 .blt-ea{opacity:.45}
 .blt-es img.face{border-radius:50%;object-fit:cover}
-.blt-q{grid-area:q;display:grid;gap:3px;min-width:0}
-.blt-q b{font:600 15px/1.2 var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.blt-pt{display:block;min-width:0;font:11px/1.3 var(--mono);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .15s}
-.blt-pt:hover{color:var(--soft)}
-.blt-o{grid-area:o;display:flex;align-items:center;gap:6px;font:500 19px/1 var(--mono);letter-spacing:-.03em}
-.blt-o s{font-size:12px;color:var(--dim)}
-.blt-l.mej .blt-o{color:var(--acc)}
-.blt-mv{font-style:normal;font-size:9px}
-.blt-mv.sube{color:var(--win)}.blt-mv.baja{color:#ff8a8a}
-.blt-x{grid-area:x;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;color:var(--dim);transition:color .15s,background .15s}
+.blt-pt{display:grid;gap:4px;min-width:0;text-align:left}
+.blt-pt b{font:600 14px/1.25 var(--sans);color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .15s}
+.blt-pt span{font:11px/1.2 var(--mono);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blt-pt:hover b{color:var(--ink)}
+.blt-x{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;color:var(--dim);transition:color .15s,background .15s}
 .blt-x svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .blt-x:hover{color:var(--ink);background:rgba(255,255,255,.06)}
-.blt-l .blt-in{grid-area:i;justify-self:start}
-.blt-co{grid-area:c;justify-self:end;display:flex;align-items:center;gap:4px;font:13px var(--mono);color:var(--mute)}
-.blt-co i{font-style:normal;color:var(--dim)}
-.blt-co b{font-weight:500;font-size:15px;color:var(--ink)}
-.blt-e{grid-column:2/-1;font:12px/1.45 var(--mono);color:#ff8a8a}
+.blt-eleg{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 -16px;padding:12px 16px;background:rgba(242,193,78,.07)}
+.blt-q{display:grid;gap:4px;min-width:0}
+.blt-q b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;font:700 18px/1.2 var(--sans)}
+.blt-o{display:flex;align-items:center;flex:none;gap:8px;font:600 26px/1 var(--mono);letter-spacing:-.03em;color:var(--acc)}
+.blt-o s{font-size:12px;font-weight:500;color:var(--dim)}
+.blt-l.mej .blt-o{color:var(--acc2)}
+.blt-mv{font-style:normal;font-size:10px}
+.blt-mv.sube{color:var(--win)}.blt-mv.baja{color:#ff8a8a}
+.blt-fila{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:12px 0 16px}
+.blt-fi,.blt-co{display:grid;gap:8px;min-width:0}
+.blt-co{justify-items:end;text-align:right}
+.blt-cv{display:flex;align-items:center;height:40px;font:500 20px/1 var(--mono);letter-spacing:-.03em;color:var(--ink)}
+.blt-cv .cn{--s:16px}
+.blt-l.solo .blt-fila,.blt.comb .blt-fila{display:none}
+.blt-e{margin:0 -16px;padding:12px 16px;font:12px/1.45 var(--mono);color:#ff8a8a;border-top:1px solid var(--hair)}
 .blt-e.tope{color:var(--acc2)}
 .blt-e b{display:inline-flex;align-items:center;font-weight:500}
-.blt-l.ok{opacity:.55;background:linear-gradient(90deg,rgba(43,212,125,.12),transparent 70%)}
-.blt-l.ok .blt-co b{color:var(--win)}
+.blt-l.ok{opacity:.55;background:linear-gradient(90deg,rgba(43,212,125,.12),rgba(255,255,255,.035) 70%)}
+.blt-l.ok .blt-cv{color:var(--win)}
 .blt-l.ko .blt-in{background:rgba(255,138,138,.12)}
-.blt-r{display:grid;gap:6px;padding:4px 0 14px}
+.blt.comb .blt-lista{counter-reset:pata}
+.blt.comb .blt-l{counter-increment:pata}
+.blt.comb .blt-es::after{content:counter(pata);position:absolute;z-index:2;left:-4px;top:-4px;display:grid;place-items:center;min-width:16px;height:16px;border-radius:8px;background:var(--acc);color:#141008;font:800 10px/1 var(--mono)}
+
+/* resultado y avisos de arriba */
+.blt-r{display:grid;gap:8px;margin-top:16px;padding:16px;border-radius:16px;background:rgba(43,212,125,.08)}
+.blt-r.parte{background:rgba(242,193,78,.08)}
+.blt-r.nada{background:rgba(255,138,138,.08)}
 .blt-rt{font:800 17px/1.2 var(--disp);letter-spacing:-.01em;color:var(--win)}
 .blt-r.parte .blt-rt{color:var(--acc)}
 .blt-r.nada .blt-rt{color:#ff8a8a}
@@ -547,50 +587,70 @@
 .blt-rl i{font-style:normal;color:var(--win)}
 .blt-rl span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .blt-rl em{display:flex;align-items:center;font:13px var(--mono);font-style:normal;color:var(--mute)}
-.blt-rn{font:12px var(--mono);color:var(--dim)}
-.blt-fuera{padding:4px 0 10px;font:13px/1.45 var(--sans);color:var(--acc2)}
-.blt-pie{display:grid;gap:6px;padding:14px 20px 18px;box-shadow:0 -1px 0 var(--hair)}
+.blt-rn{font:12px/1.45 var(--mono);color:var(--dim)}
+.blt-fuera{margin-top:16px;padding:12px 16px;border-radius:12px;background:rgba(242,193,78,.08);font:13px/1.45 var(--sans);color:var(--acc2)}
+
+/* pie: resumen en su bloque, avisos y el boton Apostar aparte, abajo */
+.blt-pie{display:grid;flex:none;gap:12px;padding:16px var(--blt-p) 24px;border-top:1px solid var(--hair);background:var(--bg2)}
 .blt-pie:empty{display:none}
-.blt-tot{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font:12px var(--mono);color:var(--mute)}
-.blt-tot b{display:flex;align-items:center;font:500 17px/1 var(--mono);letter-spacing:-.03em;color:var(--ink)}
+.blt-sum{display:grid;gap:8px;padding:12px 16px;border-radius:14px;background:rgba(255,255,255,.04)}
+.blt-tot{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font:12px/1.35 var(--mono);color:var(--mute)}
+.blt-tot span{min-width:0}
+.blt-tot b{display:flex;align-items:center;flex:none;font:500 16px/1 var(--mono);letter-spacing:-.03em;color:var(--ink);font-variant-numeric:tabular-nums}
+.blt-tot.gana{align-items:center;margin-top:4px;padding-top:12px;border-top:1px solid var(--hair)}
+.blt-tot.gana span{color:var(--soft)}
 .blt-tot.gana b{font-size:26px;color:var(--acc)}
-.blt-tot.gana b .cn{--s:20px;margin-left:6px}
-.blt-av{display:flex;flex-wrap:wrap;align-items:center;gap:0 6px;font:12px/1.45 var(--mono);color:#ff8a8a}
+.blt-tot b .cn{--s:20px;margin-left:8px}
+.blt-tot.cuota b::after{content:"";display:block;width:28px}
+.blt-avs{display:grid;gap:8px}
+.blt-avs:empty{display:none}
+.blt-av{display:flex;flex-wrap:wrap;align-items:center;gap:0 4px;padding:8px 12px;border-radius:10px;background:rgba(255,138,138,.1);font:12px/1.45 var(--mono);color:#ff8a8a}
 .blt-av b{display:inline-flex;align-items:center;font-weight:500}
-.blt-go{height:52px;margin-top:8px}
+.blt-go{height:56px;margin-top:0}
 .blt-go.sure{background:var(--ink)}
 .blt-go:disabled{opacity:.45}
-.blt-listo{justify-self:center;padding:8px 18px;border-radius:999px;background:rgba(255,255,255,.07);font:600 13px var(--sans);color:var(--soft)}
+.blt-listo{justify-self:center;padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.07);font:600 13px var(--sans);color:var(--soft)}
 .blt-listo:hover{background:rgba(255,255,255,.11);color:var(--ink)}
 
 /* escritorio: abajo a la derecha */
 @media (min-width:861px){
-  #blt{position:fixed;right:28px;bottom:24px;z-index:59;width:min(400px,calc(100vw - 280px))}
+  #blt{position:fixed;right:28px;bottom:24px;z-index:59;width:min(420px,calc(100vw - 280px))}
   #blt.sobre{z-index:62}
-  .blt-barra{height:64px;padding:0 18px 0 14px;border-radius:18px;background:#252a34;box-shadow:0 18px 50px rgba(0,0,0,.55);transition:transform .15s var(--ease),background .15s}
+  .blt-barra{height:64px;padding:0 16px;border-radius:18px;background:#252a34;box-shadow:0 18px 50px rgba(0,0,0,.55);transition:transform .15s var(--ease),background .15s}
   .blt-barra:hover{background:#2b313c;transform:translateY(-2px)}
   .blt.abierto .blt-barra{display:none}
-  .blt-hoja{max-height:min(640px,calc(100vh - 110px));border-radius:20px}
+  .blt-hoja{max-height:min(840px,calc(100vh - 48px));border-radius:20px}
   .blt-fondo{display:none}
   body.blt-hay .det{padding-bottom:110px}
   body.blt-hay .p-board{padding-bottom:110px}
 }
-/* movil: barra dentro de la de abajo, encima de los iconos; abre una hoja */
+/* movil: barra dentro de la de abajo, encima de los iconos; abre una hoja que tapa la barra (el boton Apostar queda encima) */
 @media (max-width:860px){
+  .blt{--blt-p:16px}
   #blt{order:-2;flex:0 0 100%;padding:8px 4px 0}
-  .blt-barra{height:50px;padding:0 12px 0 8px;border-radius:14px;background:linear-gradient(90deg,rgba(242,193,78,.2),rgba(242,193,78,.06));gap:12px}
+  .blt-barra{height:52px;padding:0 12px 0 8px;border-radius:14px;background:linear-gradient(90deg,rgba(242,193,78,.2),rgba(242,193,78,.06))}
   .blt-barra .blt-bt b{font-size:14px}
   .blt-barra .blt-bc b{font-size:16px}
   .blt-n{min-width:28px;height:28px;font-size:13px}
-  #blt.sobre{position:fixed;left:0;right:0;bottom:0;z-index:62;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));background:var(--bg2);box-shadow:0 -10px 30px rgba(0,0,0,.4)}
+  #blt.sobre{position:fixed;left:0;right:0;bottom:0;z-index:62;padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));background:var(--bg2);box-shadow:0 -10px 30px rgba(0,0,0,.4)}
   body.blt-hay .det.open{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
   .blt-fondo{display:none;position:fixed;inset:0;z-index:70;background:rgba(5,7,10,.6)}
   .blt.abierto .blt-fondo{display:block}
-  .blt-hoja{position:fixed;left:0;right:0;bottom:0;z-index:71;max-height:88vh;border-radius:22px 22px 0 0;padding-bottom:env(safe-area-inset-bottom,0px);animation-name:bltSube}
+  .blt-hoja{position:fixed;left:0;right:0;bottom:0;z-index:71;max-height:88vh;max-height:88dvh;border-radius:22px 22px 0 0;padding-bottom:env(safe-area-inset-bottom,0px);animation-name:bltSube}
   .blt-hoja::before{content:"";align-self:center;flex:none;width:40px;height:4px;margin-top:8px;border-radius:2px;background:rgba(255,255,255,.18)}
-  .blt-cab{padding-top:10px}
+  .blt-cab{padding-top:12px}
   .blt-in input{font-size:16px}
-  .blt-chips{gap:14px}
+  .blt-in.grande input{font-size:24px}
+  .blt-pie{padding-bottom:16px}
+}
+/* pantallas bajitas (movil 360x700, portatiles): menos aire vertical, mismo orden */
+@media (max-height:760px){
+  .blt-sec{padding:12px 0}
+  .blt-lista{padding:12px 0 16px}
+  .blt-in.grande{height:48px}
+  .blt-pie{gap:8px;padding-top:12px;padding-bottom:16px}
+  .blt-sum{padding:8px 16px}
+  .blt-go{height:52px}
 }
 @keyframes bltSube{from{transform:translateY(40%);opacity:0}}
 html.sin-anim .blt-hoja,html.sin-anim .blt-n.late,html.sin-anim .blt-barra.late{animation:none}
