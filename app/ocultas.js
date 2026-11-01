@@ -1,6 +1,6 @@
 // Ocultar ligas y juegos (PM, 01-11: "que pueda ocultar ligas o juegos que uno no quiera ver o apostar nunca").
 // En Ajustes (seccion "Qué ves") y con pulsacion larga (o clic derecho) en el escudo de una liga de Partidos se oculta una liga
-// o un deporte entero (Fútbol, Valorant, CS2, UFC). Lo oculto no sale en Partidos, Inicio ni Directo y se vuelve a mostrar desde
+// o un deporte entero (Fútbol, NBA, Valorant, CS2, UFC, F1). Lo oculto no sale en Partidos, Inicio ni Directo y se vuelve a mostrar desde
 // Ajustes. Las apuestas y retos que ya tienes en una liga oculta siguen en Mis apuestas (app.js build(): esos partidos se quedan
 // en MI y en L, fuera de M).
 // Donde se guarda: players.ocultas (db/041, set_ocultas) y, mientras 041 no este cargado o falle la red, localStorage
@@ -12,7 +12,7 @@
   const en = () => !!(window.GM_LANG && GM_LANG.get() === 'en');
   const tr = (el) => { if (window.GM_LANG) GM_LANG.traduce(el) };
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const DEPS = ['f', 'v', 'c', 'u', 'r'];
+  const DEPS = ['f', 'b', 'v', 'c', 'u', 'r'];   // futbol, NBA, Valorant, CS2, UFC, F1 (PM 02-11: faltaba la NBA)
 
   let ST = { d: [], l: {} }, KEY = '';
   const LG = new Map();           // todas las ligas vistas en los partidos cargados: id -> { n, s, logo }
