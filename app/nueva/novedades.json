@@ -2,6 +2,28 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "nba-0111",
+   "fecha": "2026-11-01",
+   "hora": "17:00",
+   "titulo": "Llega la NBA",
+   "texto": "Apuesta al ganador, al hándicap y al total de puntos, y también a los jugadores: puntos, rebotes, asistencias, triples o los tres juntos. Cuotas de DraftKings, marcador en directo con cuarto y reloj, y si un jugador no juega te devolvemos lo apostado.",
+   "titulo_en": "The NBA is here",
+   "texto_en": "Bet on the winner, the spread and total points, and on players too: points, rebounds, assists, threes or all three combined. DraftKings odds, live score with quarter and clock, and if a player does not play you get your stake back.",
+   "img": "novedades/nba.webp",
+   "ir": "partidos"
+  },
+  {
+   "id": "en-directo-amarillo-0111",
+   "fecha": "2026-11-01",
+   "hora": "16:55",
+   "titulo": "Directo en amarillo",
+   "texto": "En Partidos, lo que se está jugando ahora sale con la fila entera en amarillo. En la ficha, la forma y los botones de Seguir quedan debajo de cada escudo, y el Historial del perfil va de 6 en 6 con flechas.",
+   "titulo_en": "Live in yellow",
+   "texto_en": "In Matches, what is being played right now has its whole row in yellow. In the match sheet, form and Follow sit under each crest, and the profile History goes 6 at a time with arrows.",
+   "img": "novedades/liga-quieta.webp",
+   "ir": "partidos"
+  },
+  {
    "id": "mis-apuestas-0111",
    "fecha": "2026-11-01",
    "hora": "16:35",

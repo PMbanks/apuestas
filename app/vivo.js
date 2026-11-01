@@ -313,6 +313,7 @@
   function lineaPartes(m) {
     const v = m?.vivo; if (!v || !m.live) return [];
     if (v.k === 'f') return v.minuto ? [/^\d/.test(v.minuto) ? 'Minuto ' + v.minuto : v.minuto] : [];
+    if (v.k === 'b') return (v.partes || []).filter(Boolean);                                     // NBA (nba.js): cuarto y reloj
     if (!v.mapa) return [];
     return [v.total ? `Mapa ${v.n} de ${v.total}` : `Mapa ${v.n}`, v.mapa];
   }
@@ -352,6 +353,12 @@
           const cuerpoF = pintaFutbol(d); if (cuerpoF) htmlPor.set(m.id, cuerpoF);
           pon1(m, `${v.a.mapas}:${v.b.mapas}`, v);
         }
+        for (const m of window.GM_NBA ? M.filter((x) => x.live && x.s === 'b').slice(0, 8) : []) {   // NBA (nba.js): ESPN, como el futbol
+          let r = null; try { r = await GM_NBA.vivo(m) } catch {}
+          if (!r) continue;
+          if (r.html) htmlPor.set(m.id, r.html);
+          pon1(m, r.txt, r.vivo);
+        }
         if (cambia && typeof render === 'function' && !document.activeElement?.matches('input,textarea')) render();
       }
     } catch {}
@@ -379,6 +386,7 @@
       const id = dvId(), m = typeof MI !== 'undefined' ? MI.get(id) : null, ek = info.dataset.espn || '';
       try {
         if (/^soccer\|/.test(ek)) { const c = pintaFutbol(await futbol(ek)); if (c) htmlPor.set(id, c) }
+        else if (m && m.s === 'b' && window.GM_NBA) { const r = await GM_NBA.vivo(m); if (r?.html) htmlPor.set(id, r.html); if (r && m.live) { fijados.set(id, { txt: r.txt, vivo: r.vivo, t: Date.now() }); aplica() } }
         else if (m && (m.s === 'v' || m.s === 'c')) {
           const s = await serieDe(m);
           if (s) { s._t = Date.now(); memoria.set(id, s); if (m.live) { fijados.set(id, { txt: resumen(s), vivo: estructura(s), t: Date.now() }); aplica() } }

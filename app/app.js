@@ -5,8 +5,9 @@ const CFG = window.APP_CONFIG || {};
 const db = supabase.createClient(CFG.url, CFG.anon, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'apuestas-auth' } });
 const TZ = 'Europe/Madrid', DAY = 864e5, DOMAIN = '@apuestas.app';
 const TOP = new Set(['esp.1', 'eng.1', 'ger.1', 'ita.1', 'fra.1', 'uefa.champions', 'uefa.europa', 'esp.copa_del_rey']);
-const SP = { f: ['Fútbol', 'img/futbol.svg'], v: ['Valorant', 'img/valorant.svg'], c: ['CS2', 'img/cs2.png'], u: ['UFC', 'img/ufc.png'] };
-const DEP = ['f', 'v', 'c', 'u'];
+const SP = { f: ['Fútbol', 'img/futbol.svg'], v: ['Valorant', 'img/valorant.svg'], c: ['CS2', 'img/cs2.png'], u: ['UFC', 'img/ufc.png'],
+  b: ['NBA', 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" fill="#f58426"/><g fill="none" stroke="#1d1309" stroke-width="3.4"><circle cx="32" cy="32" r="29"/><path d="M3 32h58M32 3v58M13 10c8 6 12 13 12 22s-4 16-12 22M51 10c-8 6-12 13-12 22s4 16 12 22"/></g></svg>')] };   // NBA (nba.js, db/039)
+const DEP = ['f', 'v', 'c', 'u', 'b'];
 const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', tiempo: 'Tiempo en la app', trato: 'Trato entre amigos', mercado: 'Mercado', jackpot: 'Jackpot', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', ruleta_semana: 'Ruleta de la semana', premio_semana: 'Premio de la semana', moneda: 'Cara o cruz', crash: 'Crash', ruleta: 'Ruleta', blackjack: 'Blackjack', plinko: 'Plinko', cashout: 'Cash out', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta' };
 let TIEMPO = null, CLAIM = null, BOTE = null, REACT = new Map(), POLLS = new Map(), CAMPEON = null;
 
@@ -193,7 +194,7 @@ const img = (src, cls = '') => (src ? `<img class="${cls}" src="${esc(src)}" alt
 const logo = (m, side) => img(side === 'a' ? m.la : m.lb, m.s === 'u' ? 'face' : 'tl');
 const form = (s) => `<span class="fm">${[...s].map((c) => `<b class="${c === 'G' ? 'g' : c === 'E' ? 'e' : ''}">${c}</b>`).join('')}</span>`;
 const board = () => M.filter((m) => (m.status === 'scheduled' || m.live) && (m.live || Date.parse(m.at) > NOW - 4 * 3600e3) && Date.parse(m.at) < NOW + (m.s === 'u' ? 72 : 8) * DAY);
-const inLeague = (m) => S.lg === 'fav' ? sigo(m) : S.lg === 'all' ? true : S.lg === 'top' ? m.live || m.s === 'v' || (m.s === 'c' ? 'sa'.includes(m.tier || 'x') : m.s === 'u' ? !!m.tag : TOP.has(m.lg)) || whoOn(m.id).length > 0 : m.lg === S.lg;
+const inLeague = (m) => S.lg === 'fav' ? sigo(m) : S.lg === 'all' ? true : S.lg === 'top' ? m.live || m.s === 'v' || m.s === 'b' || (m.s === 'c' ? 'sa'.includes(m.tier || 'x') : m.s === 'u' ? !!m.tag : TOP.has(m.lg)) || whoOn(m.id).length > 0 : m.lg === S.lg;
 const filtered = () => board().filter((m) => (S.f === 'all' || m.s === S.f) && inLeague(m)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
 const groups = (list) => { const g = new Map(); for (const m of list) { const k = DK(m.at); if (!g.has(k)) g.set(k, []); g.get(k).push(m) } return [...g.values()] };
 const dayLab = (t) => (today(t) ? `HOY · ${WD(t)}` : `${WD(t)} · ${MO(t)}`);
@@ -686,7 +687,7 @@ const LOGROS = [
   ['racha5', 'Imparable', '5 ganadas seguidas', (f) => f.streak >= 5],
   ['valiente', 'Valiente', 'Gana con cuota de 3 o más', (f, b) => b.some((x) => x.st === 'won' && x.o >= 3)],
   ['tirador', 'Francotirador', 'Gana con cuota de 5 o más', (f, b) => b.some((x) => x.st === 'won' && x.o >= 5)],
-  ['todo', 'Todoterreno', 'Apuesta en fútbol, Valorant y UFC', (f, b) => DEP.every((s) => b.some((x) => byId(x.m)?.s === s))],
+  ['todo', 'Todoterreno', 'Apuesta en fútbol, Valorant y UFC', (f, b) => DEP.filter((s) => s !== 'b').every((s) => b.some((x) => byId(x.m)?.s === s))],
   ['fiel', 'Fiel', '20 apuestas', (f, b) => b.length >= 20],
   ['ballena', 'Ballena', 'Apuesta 1.000 de una vez', (f, b) => b.some((x) => x.stake >= 1000)],
   ['verde', 'En verde', 'Ten más de lo que te han dado', (f) => f.s > f.recibido && f.bets > 0],
@@ -903,7 +904,7 @@ function ficha(m) {
 const perd = (b) => (b.cash ? b.stake - b.pay : b.stake);   // lo que se pierde de verdad (en un cash out con perdida, solo la diferencia)
 const neto = (b) => (b.st === 'won' ? b.pay - b.stake : b.st === 'lost' ? -perd(b) : 0);
 const signo = (v) => `${v > 0 ? '▲' : v < 0 ? '▼' : ''} ${N(Math.abs(v))}`.trim();
-const SPC = { f: '#2bd47d', v: '#ff4655', c: '#f5a524', u: '#e0464f' };
+const SPC = { f: '#2bd47d', v: '#ff4655', c: '#f5a524', u: '#e0464f', b: '#f58426' };
 const codigo = (b) => 'Nº ' + String(b.id).padStart(6, '0');
 function mbCard(b, i) {
   const m = byId(b.m); if (!m) return '';
@@ -1178,7 +1179,7 @@ function chSemanas() {
   return s + `<line x1="${x0}" x2="${x1}" y1="${y0}" y2="${y0}" stroke="var(--mute)"/></svg>`;
 }
 function chDeporte() {
-  const W = 520, H = 290, x0 = 110, x1 = 500, X = (v) => x0 + ((x1 - x0) * v) / 100;
+  const W = 520, H = 50 + DEP.length * 60, x0 = 110, x1 = 500, X = (v) => x0 + ((x1 - x0) * v) / 100;
   let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Aciertos por deporte">`;
   [0, 25, 50, 75, 100].forEach((v) => (s += `<line x1="${X(v)}" x2="${X(v)}" y1="14" y2="${H - 30}" stroke="var(--hair)"/><text x="${X(v)}" y="${H - 10}" class="tx-d" font-size="10" text-anchor="middle">${v}%</text>`));
   DEP.map((k) => [k, SP[k][0]]).forEach(([k, n], r) => { const y = 40 + r * 60;
