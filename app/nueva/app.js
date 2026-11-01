@@ -780,7 +780,13 @@ document.addEventListener('click', (e) => { const b = e.target.closest('[data-lv
 const jugados = () => M.filter((m) => m.status === 'final' && (S.f === 'all' || m.s === S.f) && inLeague(m)).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
 // PM, 30-10: "que se puedan ver latest games, osea juegos ya jugados": la lista estaba al final de Partidos y no se veia.
 // Ahora hay un boton arriba, al lado de los filtros, que deja solo los ya jugados (todos, sin "Ver mas").
-const jugChip = () => { const n = jugados().length; return n ? `<button class="f jug-chip ${S.soloJug ? 'on' : ''}" data-act="soloJug" aria-pressed="${!!S.soloJug}">Ya jugados<i>${n}</i></button>` : '' };
+// PM, 01-11 (modelo B de modelos/m1101/jugados): Ya jugados sale de la fila de deportes y va en el titulo "Próximos ▾",
+// que despliega Próximos, En directo (lleva a Directo) y Ya jugados. Estilos en menu.css
+const IC_CK = '<svg class="pm-ck" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const jugMenu = (np) => { const nj = jugados().length, nl = M.filter((m) => m.live).length, j = !!S.soloJug;
+  const it = (on, act, ic, b, sm, n, cls = '') => `<button class="pm-it ${on ? 'on' : ''} ${cls}" ${act} role="menuitem"><span class="pm-ic"><svg viewBox="0 0 24 24">${ic}</svg></span><span class="pm-tx"><b>${b}</b><small>${sm}</small></span><em>${n}</em>${IC_CK}</button>`;
+  return `<div class="pm-hd ${S.pmenu ? 'abre' : ''}"><button class="pm-tt" data-act="pmenu" aria-haspopup="menu" aria-expanded="${!!S.pmenu}"><span>${j ? 'Ya jugados' : 'Próximos'}</span><svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg></button>${j ? '<span class="pm-res">Resultados</span>' : ''}<span class="pm-n">${j ? `${nj} ${nj === 1 ? 'resultado' : 'resultados'}` : `${np} ${np === 1 ? 'partido' : 'partidos'}`}</span>
+    <div class="pm-menu" role="menu">${it(!j, j ? 'data-act="soloJug"' : '', SCREENS.partidos[2], 'Próximos', 'Lo que se juega a partir de ahora', np)}${nl ? it(false, 'data-scr="directo"', SCREENS.directo[2], 'En directo', 'Partidos que se están jugando', nl, 'vivo') : ''}${it(j, j ? '' : `data-act="soloJug"${nj ? '' : ' disabled'}`, SCREENS.apuestas[2], 'Ya jugados', 'Resultados de los últimos dos días', nj)}</div></div>` };
 function jugadosHtml() {
   const l = jugados(); if (!l.length) return '';
   const n = S.soloJug ? l.length : Math.min(l.length, S.jugN || 8), gan = (m, k) => { const [x, y] = String(m.score || '').split(' ')[0].split(':').map(Number); if (!(x >= 0 && y >= 0) || x === y) return ''; return (x > y) === (k === 'home') ? 'w' : 'l' };
@@ -796,15 +802,16 @@ function partidos() {
   if (S.brk && byId(S.foc)?.tour) return `<div class="pad brk-full">${bracketSheet(byId(S.foc)).replace('class="det sheet', 'class="brk-page').replace(' open"', '"')}</div>`;
   const feat = featured();
   const lives = M.filter((m) => m.live).sort((a, b) => whoOn(b.id).length - whoOn(a.id).length).slice(0, 14);
-  let h = `<div class="p-wrap"><section class="p-board" data-keep="pb">
+  let h = `<div class="p-wrap"><section class="p-board ${S.soloJug ? 'solo-jug' : ''}" data-keep="pb">
     ${lives.length ? vivosHtml(lives) : ''}
     ${feat.length ? `<div class="feat">${feat.map((m) => `<button class="ft ${S.foc === m.id ? 'on' : ''}" data-foc="${m.id}">
       <span class="lab"><img src="${esc(L[m.lg][1])}" alt=""><b>${WD(m.at)} ${HM(m.at)}</b> · ${isDaily(m) ? 'Apuesta del día' : esc(m.tag || L[m.lg][0])}</span>
       <span class="ft-v">${logo(m, 'a')}<i>vs</i>${logo(m, 'b')}</span><span class="ft-n">${esc(m.a)} · ${esc(m.b)}</span>
       <span class="ft-o">${picksOf(m).map((p) => `<span>${p} <b>${po(m, p) ? O(po(m, p)) : '·'}</b></span>`).join('')}</span></button>`).join('')}</div>` : ''}
-    <nav class="fil">${filt()}${jugChip()}</nav>${leagues()}${S.soloJug ? '' : '<p class="cmb-hint"><i>+</i><span>Toca 2 o más cuotas y en el boleto elige <b>Combinada</b>: las cuotas se multiplican y cobras si aciertas todas.</span></p>'}`;
+    ${jugMenu(list.length)}<nav class="fil">${filt()}</nav>${leagues()}${S.soloJug ? '' : '<p class="cmb-hint"><i>+</i><span>Toca 2 o más cuotas y en el boleto elige <b>Combinada</b>: las cuotas se multiplican y cobras si aciertas todas.</span></p>'}`;
   if (!list.length && !S.soloJug) h += `<p class="hint" style="padding:30px 0">No hay partidos con este filtro en los próximos días.</p>`;
   const jugH = jugadosHtml();
+  if (S.soloJug && !jugH) h += `<p class="hint" style="padding:30px 0">No hay partidos jugados con este filtro.</p>`;
   let ri = 0;
   for (const ms of S.soloJug ? [] : groups(list)) {
     h += `<div class="day"><b>${DD(ms[0].at)}</b><span>${dayLab(ms[0].at)}</span><i>${ms.length} ${ms.length > 1 ? 'partidos' : 'partido'}</i></div>`;
@@ -1804,15 +1811,16 @@ function render() {
   const msg = document.querySelector('[data-msg]'), borrador = msg ? { v: msg.value, f: document.activeElement === msg, a: msg.selectionStart } : null;
   const cajas = [...document.querySelectorAll('#view input[id^="poll-"]')].map((e) => [e.id, e.value, document.activeElement === e]);
   const keep = {}; document.querySelectorAll('[data-keep]').forEach((e) => (keep[e.dataset.keep] = e.scrollTop));
-  const un = S.scr === 'chat' ? 0 : unread();
-  document.getElementById('nav').innerHTML = Object.entries(SCREENS).filter(([k]) => k !== 'directo' && k !== 'novedades' && k !== 'ajustes').map(([k, [n, , ic]]) => `<button class="nv ${S.scr === k ? 'on' : ''}" data-scr="${k}"><svg viewBox="0 0 24 24">${ic}</svg><span class="nl">${n}</span><span class="ns">${n.replace('Mis apuestas', 'Apuestas').replace('Apuestas de todos', 'Todos').replace('Novedades', 'Nuevo')}</span>${k === 'chat' && un ? `<i>${un}</i>` : ''}${k === 'novedades' && S.scr !== 'novedades' && novSinVer() ? '<i class="nv-pt"></i>' : ''}</button>`).join('');
+  // PM, 01-11 (menu A): Chat y Monedero salen del menu (burbuja abajo e icono junto a Ajustes, ver menu.js). En movil la barra
+  // lleva Inicio, Partidos, Apuestas, Todos y Más; Liga, Cajas, Juegos y Mercado (nv-x) van en la hoja de Más
+  document.getElementById('nav').innerHTML = Object.entries(SCREENS).filter(([k]) => !['directo', 'novedades', 'ajustes', 'chat', 'monedero'].includes(k)).map(([k, [n, , ic]]) => `<button class="nv ${S.scr === k ? 'on' : ''} ${['liga', 'cajas', 'juegos', 'mercado'].includes(k) ? 'nv-x' : ''} ${k === 'mercado' && MERCADO_MANT ? 'nv-mant' : ''}" data-scr="${k}"><svg viewBox="0 0 24 24">${ic}</svg><span class="nl">${n}</span><span class="ns">${n.replace('Mis apuestas', 'Apuestas').replace('Apuestas de todos', 'Todos')}</span>${k === 'mercado' && MERCADO_MANT ? '<small>mantenimiento</small>' : ''}</button>`).join('');
   const rank = [...F].sort((a, b) => b.s - a.s);
   document.getElementById('me').innerHTML = `${av(MEK, 'xl')}<b>${esc(me().n)}</b><em>${N(me().s)} · ${rank.indexOf(me()) + 1}º de ${F.length}</em>`;
   document.getElementById('me').dataset.prof = MEK;
   document.getElementById('lang').innerHTML = `<button type="button" class="rail-aj ${S.scr === 'ajustes' ? 'on' : ''}" data-scr="ajustes"><svg viewBox="0 0 24 24">${SCREENS.ajustes[2]}</svg>Ajustes</button>`;
   const [t, sub] = S.scr === 'perfil' ? ['Perfil', ''] : SCREENS[S.scr];
   pintaRw(); pintaNv(); pintaVivoYo(); pintaEq();
-  document.getElementById('top').innerHTML = `<h1>${t}</h1>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}<span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>${M.some((x) => x.live) ? `<button class="dv-btn ${S.scr === 'directo' ? 'on' : ''}" data-scr="directo"><i></i>Directo <b>${M.filter((x) => x.live).length}</b></button>` : ''}${nvBoton()}${rwBoton()}<span class="onl ${S.onl ? 'abre' : ''}" data-onl>${onlineHtml()}</span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span><button class="aj-btn ${S.scr === 'ajustes' ? 'on' : ''}" data-scr="ajustes" aria-label="Ajustes" title="Ajustes"><svg viewBox="0 0 24 24">${SCREENS.ajustes[2]}</svg></button>`;
+  document.getElementById('top').innerHTML = `<h1>${t}</h1>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}<span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>${M.some((x) => x.live) ? `<button class="dv-btn ${S.scr === 'directo' ? 'on' : ''}" data-scr="directo"><i></i>Directo <b>${M.filter((x) => x.live).length}</b></button>` : ''}${nvBoton()}${rwBoton()}<span class="onl ${S.onl ? 'abre' : ''}" data-onl>${onlineHtml()}</span><span class="bal"><span class="num">${N(lastBal ?? me().s)}</span>${coin()}</span><button class="mo-btn ${S.scr === 'monedero' ? 'on' : ''}" data-scr="monedero" aria-label="Monedero" title="Monedero"><svg viewBox="0 0 24 24">${SCREENS.monedero[2]}</svg></button><button class="aj-btn ${S.scr === 'ajustes' ? 'on' : ''}" data-scr="ajustes" aria-label="Ajustes" title="Ajustes"><svg viewBox="0 0 24 24">${SCREENS.ajustes[2]}</svg></button>`;
   photoCss();
   if (window.GM_MERCADO) GM_MERCADO.aplicaCosmeticos(mkCtx());
   const vw = document.getElementById('view'), cambia = vw.dataset.vista !== S.scr;
@@ -1922,6 +1930,7 @@ document.addEventListener('click', (e) => { const b = e.target.closest('[data-la
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lga]'); if (!b) return; const n = document.querySelector('[data-lgs]'); n?.scrollBy({ left: +b.dataset.lga * n.clientWidth * 0.8, behavior: 'smooth' }) });
 document.addEventListener('click', async (e) => {
   if (S.onl && !e.target.closest('.onl')) { S.onl = false; pintaOnline() }
+  if (S.pmenu && !e.target.closest('[data-act=pmenu]')) { S.pmenu = false; document.querySelector('.pm-hd.abre')?.classList.remove('abre') }
   const t = e.target.closest('[data-pft],[data-jugmas],[data-abf],[data-abpg],[data-eqv],[data-eqtab],[data-eqpg],[data-vivo],[data-fav],[data-nov],[data-ct],[data-ft],[data-tclaim],[data-bsp],[data-bp],[data-side],[data-bm],[data-dv],[data-dtv],[data-mt],[data-mp],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
   const d = t.dataset;
   if (d.side && t.matches('[data-side]')) { S.shTodos = false; S.side = d.side; document.querySelector('.det')?.scrollTo?.(0, 0); return render() }
@@ -1966,7 +1975,8 @@ document.addEventListener('click', async (e) => {
   if (d.pft) { S.pft = d.pft; return render() }
   if (d.act === 'sonido') { if (window.GM_SONIDOS) GM_SONIDOS.alterna(); return render() }
   if (d.act === 'mon') { if (window.GM_MONEDA) GM_MONEDA.set(d.mon); return render() }
-  if (d.act === 'soloJug') { S.soloJug = !S.soloJug; document.getElementById('view').scrollTop = 0; const pb = document.querySelector('[data-keep=pb]'); if (pb) pb.scrollTop = 0; return render() }
+  if (d.act === 'pmenu') { S.pmenu = !S.pmenu; render(); if (S.pmenu && window.GM_MENU) GM_MENU.pmVer(); return }
+  if (d.act === 'soloJug') { S.soloJug = !S.soloJug; render(); document.querySelector('.pm-hd')?.scrollIntoView({ block: 'start' }); return }
   if (d.act === 'nvp') { S.nvp = !S.nvp; if (S.nvp) { S.rew = false; if (!NOVS) cargaNov(); novAbre() } return render() }
   if (d.act === 'anim') { if (window.GM_ANIM) GM_ANIM.set(!GM_ANIM.on()); toast(window.GM_ANIM && GM_ANIM.on() ? 'Animaciones encendidas' : 'Animaciones apagadas'); return render() }
   if (d.act === 'sh-todos') { S.shTodos = !S.shTodos; return render() }
