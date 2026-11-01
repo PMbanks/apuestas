@@ -58,17 +58,123 @@
     const l2 = rs.length ? `<span class="qn-lv"><b class="qn-tag"><span>Reto</span> ${nvmDe(c0)}</b>${carasG(A.ks, 'sm')}<span data-notr>${nomsG(A.ks)}</span><i>contra</i>${carasG(B.ks, 'sm')}<span ${B.ks.length ? 'data-notr' : ''}>${nomsG(B.ks)}</span></span>` : '';
     return `${l1 || (rs.length ? '' : '<span class="lvc-nadie">Nadie ha apostado</span>')}${l2}`;
   }
-  // marca de las filas de Partidos: las caras y, si hay reto, su sello; en movil sale una linea debajo de los equipos
+  // ---------- el centro de las filas de Partidos (PM 01-11) ----------
+  // Entre los equipos y las cuotas: si hay reto, el sello NvM con las caras de cada lado (1 v 1, 2 v 1...); y las caras de todos los
+  // que estan dentro (apuestas sueltas y retos). Cada cara es un boton: raton encima o un toque abre la previa de lo que ha apostado en
+  // ese partido, y otro click en la misma foto abre su perfil (la previa y su cierre estan mas abajo).
+  const sinTitulo = (h) => h.replace(/ title="[^"]*"/, '');
+  const fw = (k) => `<button type="button" class="qn-fw" data-qf="${esc(k)}" aria-label="${nom(k)}">${sinTitulo(cara(k, 'sm'))}</button>`;
+  // las caras de un lado: hasta dos, y si hay mas, una y un "+n"
+  const caraLado = (ks) => (ks.length > 2 ? fw(ks[0]) + `<span class="qn-n">+${ks.length - 1}</span>` : ks.map(fw).join(''));
+  const ladoHtml = (L) => `<span class="qn-ld">${L.ks.length ? caraLado(L.ks) : sinTitulo(rival({}, 'sm'))}</span>`;
+  const dueloHtml = (c) => { const [A, B] = ladosDe(c); return `<span class="qn-duelo">${ladoHtml(A)}<b class="qn-vs">${nvmDe(c)}</b>${ladoHtml(B)}</span>` };
+  function centro(m) {
+    const k = gente(m.id); if (!k.length) return '';
+    const rs = retosDe(m.id); let top = '', resto = k;
+    if (rs.length) { const [A, B] = ladosDe(rs[0]), en = A.ks.concat(B.ks); top = dueloHtml(rs[0]); resto = k.filter((x) => !en.includes(x)) }
+    const mx = top ? 3 : 4;
+    const caras = resto.length ? `<span class="qn-fs ${top ? 'peq' : ''}">${resto.slice(0, resto.length > mx ? mx - 1 : mx).map(fw).join('')}${resto.length > mx ? `<span class="qn-n">+${resto.length - mx + 1}</span>` : ''}</span>` : '';
+    return `<span class="qn-c ${top ? 'con-reto' : ''}">${top}${caras}</span>`;
+  }
+  // marca de las filas de Partidos: la clase (azul), el centro en escritorio (who) y en movil el mismo centro en una linea bajo los equipos
   function fila(m) {
     const k = gente(m.id); if (!k.length) return { cls: '', who: '', movil: '' };
-    const rs = retosDe(m.id), n = k.length;
-    const pill = rs.length ? `<b class="qn-tag" title="Reto">${nvmDe(rs[0])}</b>` : '';
+    const rs = retosDe(m.id), n = k.length, c = centro(m);
     return {
       cls: 'qn-hay' + (rs.length ? ' qn-reto' : ''),
-      who: `<span class="qn-fs">${caras(m.id, 'sm', 2)}</span>${pill}`,
-      movil: `<span class="qn-mv"><span class="qn-fs">${caras(m.id, 'sm', 3)}</span>${rs.length ? `<b class="qn-tag"><span>Reto</span> ${nvmDe(rs[0])}</b>` : `<span>${n} ${n === 1 ? 'amigo' : 'amigos'}</span>`}</span>`,
+      who: c,
+      movil: `<span class="qn-mv">${c}${rs.length ? '' : `<span class="qn-mt">${n} ${n === 1 ? 'amigo' : 'amigos'}</span>`}</span>`,
     };
   }
+
+  /* ---------- la previa de una cara (PM 01-11): que ha apostado o esta apostando esa persona en ese partido ---------- */
+  const lockSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+  const esMk = (p) => g(() => !!(window.GM_MK && GM_MK.es(p)), false);
+  const escudoDe = (m, p) => {
+    const mk = esMk(p), ld = mk ? g(() => GM_MK.lado(p), null) : p;
+    return ld === '1' ? g(() => logo(m, 'a'), '') : ld === '2' ? g(() => logo(m, 'b'), '') : ld === 'X' ? '<i class="qn-x">=</i>' : mk ? g(() => img(L[m.lg]?.[1], 'tl'), '') : '<i class="qn-x">?</i>';
+  };
+  const lineaApuesta = (m, b, solo) => {
+    if (!b.p) return `<div class="qn-pl oc"><span class="qn-pe">${lockSvg}</span><span class="qn-pt"><b>Apuesta oculta</b><small>${N(b.stake)}${coin()} <span>· se ve a las ${g(() => HM(m.at), '')}</span></small></span></div>`;
+    return `<div class="qn-pl"><span class="qn-pe">${escudoDe(m, b.p)}</span><span class="qn-pt"><b ${b.p === 'X' ? '' : 'data-notr'}>${esc(pn(m, b.p))}</b><small>${esMk(b.p) && !solo ? '<span>Mercado</span> <i>·</i> ' : ''}${N(b.stake)}${coin()} <i>→</i> ${N(b.stake * b.o)}${coin()}</small></span><span class="qn-po">${O(b.o)}</span></div>`;
+  };
+  const lineaReto = (m, c, k) => {
+    const pl = g(() => GM_RETOS.pl(c), []), yo = pl.find((x) => x.k === k);
+    const otros = pl.filter((x) => x.k !== k).map((x) => x.k), nv = nvmDe(c), bote = g(() => GM_RETOS.bote(c), c.stake * 2);
+    const sello = `<b class="qn-tag"><span>Reto</span> ${nv}</b>`;
+    if (!yo) return `<div class="qn-rt">${sello}<span class="qn-rl2"><b data-notr>${nom(c.from)}</b> <span>le reta</span></span></div><div class="qn-pl oc"><span class="qn-pt"><small><span>aún no ha contestado</span> <i>·</i> ${N(c.stake)}${coin()}</small></span></div>`;
+    const rivales = otros.length ? `<i>contra</i> <b data-notr>${nomsG(otros)}</b>` : `<i>contra</i> <span>Cualquiera</span>`;
+    return `<div class="qn-rt">${sello}<span class="qn-rl2">${rivales}</span></div>
+      <div class="qn-pl"><span class="qn-pe">${escudoDe(m, yo.p)}</span><span class="qn-pt"><b ${yo.p === 'X' ? '' : 'data-notr'}>${esc(pn(m, yo.p))}</b><small><span class="nw">${N(c.stake)}${coin()} <span>cada uno</span></span> <span class="nw">${N(bote)}${coin()} <span>en juego</span></span></small></span></div>`;
+  };
+  function previa(k, mid) {
+    const m = g(() => byId(mid)); if (!m) return '';
+    const bs = apuestasDe(mid).filter((b) => b.f === k);
+    const rs = retosDe(mid).filter((c) => g(() => GM_RETOS.pl(c), []).some((x) => x.k === k) || (c.to === k && c.st === 'pending'));
+    const sec = [];
+    if (bs.length) sec.push(`<div class="qn-sc"><span class="lab">${bs.every((b) => b.p && esMk(b.p)) ? 'Mercado' : 'Apuesta suelta'}</span>${bs.map((b) => lineaApuesta(m, b, bs.every((x) => x.p && esMk(x.p)))).join('')}</div>`);
+    for (const c of rs) sec.push(`<div class="qn-sc">${lineaReto(m, c, k)}</div>`);
+    if (!sec.length) sec.push('<div class="qn-sc"><p class="qn-nada">Nada abierto en este partido</p></div>');
+    return `<div class="qn-ph" data-prof="${esc(k)}">${sinTitulo(cara(k, 'xl'))}<span class="qn-pn"><b data-notr>${nom(k)}</b><span data-notr>${esc(g(() => m.a + ' vs ' + m.b, ''))}</span></span></div>
+      ${sec.join('')}<p class="qn-pf">Toca la foto para ver su perfil</p>`;
+  }
+  let pv = null, pk = null, tOp = 0, tCl = 0, vig = 0;
+  const midDe = (el) => { const r = el.closest('.row,[data-foc]'); return r ? r.dataset.foc : '' };
+  function cierra() {
+    clearTimeout(tOp); clearTimeout(tCl); clearInterval(vig);
+    if (pk && pk.el) pk.el.classList.remove('on');
+    if (pv) { pv.remove(); pv = null }
+    pk = null;
+  }
+  function pon() {
+    const el = pk.el, row = el.closest('.row'), rr = (row || el).getBoundingClientRect(), movil = innerWidth <= 860;
+    const o1 = row && row.querySelector('.o'), who = row && row.querySelector('.who');
+    const ph = pv.offsetHeight; let w = 272, x, y;
+    if (movil || !who || !who.offsetWidth) {
+      // movil: a la izquierda de las cuotas (no las tapa), justo debajo de la fila (o encima si abajo no cabe)
+      const tope = o1 ? o1.getBoundingClientRect().left - 8 : innerWidth - 10;
+      x = Math.max(10, rr.left); w = Math.max(190, Math.min(w, tope - x));
+      y = rr.bottom + 6; if (y + ph > innerHeight - 74) y = rr.top - ph - 6;
+    } else {
+      // escritorio: a la izquierda del centro de la fila, sobre los nombres: ninguna cuota queda tapada
+      const cw = who.getBoundingClientRect(); x = cw.left - 8 - w; if (x < 12) { w = Math.max(220, w + x - 12); x = 12 }
+      y = rr.top + rr.height / 2 - ph / 2;
+    }
+    y = Math.max(70, Math.min(y, innerHeight - ph - 12));
+    pv.style.width = w + 'px'; pv.style.left = Math.round(x) + 'px'; pv.style.top = Math.round(y) + 'px';
+  }
+  function abre(el) {
+    const k = el.dataset.qf, mid = midDe(el); if (!k || !mid) return;
+    if (pk && pk.k === k && pk.mid === mid && pv) { clearTimeout(tCl); return }
+    cierra();
+    pv = document.createElement('div'); pv.className = 'qn-pv'; pv.setAttribute('role', 'dialog'); pv.style.setProperty('--c', `var(--f-${k},#8a8f99)`);
+    pv.innerHTML = previa(k, mid); pv.style.visibility = 'hidden'; document.body.appendChild(pv);
+    try { if (window.GM_LANG) GM_LANG.traduce(pv) } catch {}
+    pk = { k, mid, el }; el.classList.add('on'); pon(); pv.style.visibility = '';
+    // si la fila se repinta sin esa cara (o te vas de la pantalla), la previa se va
+    vig = setInterval(() => { if (!document.querySelector(`.row[data-foc="${CSS.escape(mid)}"] .qn-fw[data-qf="${CSS.escape(k)}"]`)) cierra() }, 700);
+  }
+  const programa = () => { clearTimeout(tCl); tCl = setTimeout(cierra, 240) };
+  // el primer click (o toque) en una cara abre la previa; con la previa ya abierta, otro click en esa foto sigue su camino y abre el perfil
+  document.addEventListener('click', (e) => {
+    const t = e.target, w = t.closest && t.closest('.qn-fw');
+    if (w) {
+      if (pv && pk && pk.k === w.dataset.qf && pk.mid === midDe(w)) { cierra(); return }
+      e.stopPropagation(); e.preventDefault(); clearTimeout(tOp); abre(w); return;
+    }
+    if (pv) cierra();
+  }, true);
+  document.addEventListener('pointerover', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    const t = e.target; if (!t.closest) return;
+    const w = t.closest('.qn-fw');
+    if (w) { clearTimeout(tCl); clearTimeout(tOp); if (!(pk && pk.el === w)) tOp = setTimeout(() => abre(w), 120); return }
+    if (t.closest('.qn-pv')) { clearTimeout(tCl); return }
+    clearTimeout(tOp); if (pv) programa();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && pv) cierra() }, true);
+  addEventListener('scroll', (e) => { if (pv && !(e.target.closest && e.target.closest('.qn-pv'))) cierra() }, true);
+  addEventListener('resize', cierra);
 
   /* ---------- "Quien esta dentro": lo que se ve al abrir un partido en Directo ---------- */
   // La tarjeta del reto (la misma en Inicio, Mis apuestas y Directo): un duelo. Fondo con los colores de los dos jugadores, las dos
@@ -142,5 +248,5 @@
     </section>`;
   }
 
-  window.GM_QUIEN = { cartaReto, gente, hay, ord, dia, caras, retoLinea, vivoPie, fila, bloque, retosDe };
+  window.GM_QUIEN = { cartaReto, gente, hay, ord, dia, caras, retoLinea, vivoPie, fila, centro, previa, bloque, retosDe };
 })();
