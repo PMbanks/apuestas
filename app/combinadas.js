@@ -50,7 +50,7 @@
     try { window.dispatchEvent(new CustomEvent('gm:cmb-datos')) } catch {}
   }
   window.GM_CMB = { todas: () => C.todas || null, carga: (f) => carga(f) };
-  const nombre = (m, p) => (p === '1' ? m.home : p === '2' ? m.away : 'Empate');
+  const nombre = (m, p) => (p === '1' ? m.home : p === '2' ? m.away : p === 'X' ? 'Empate' : window.GM_MK ? GM_MK.nombre({ a: m.home, b: m.away }, p) : p);   // mercados nuevos (db/036)
   const empezado = (m) => m.status !== 'scheduled' || Date.parse(m.starts_at) <= Date.now();
   function estadoPata(l) {
     const m = l.matches || {};

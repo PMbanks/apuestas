@@ -67,10 +67,11 @@
     const x = /^(\d+)\s*[:\-]\s*(\d+)/.exec(String(m.score || '')); return x ? [+x[1], +x[2]] : null };
   const lider = (m) => { if (m.vivo && typeof m.vivo.lidera === 'string') return m.vivo.lidera; const s = marcador(m); return s ? (s[0] > s[1] ? 'a' : s[0] < s[1] ? 'b' : '') : null };
   // como va una apuesta en vivo: 'gana', 'pierde', 'empata' o '' si no se sabe
-  const comoVa = (m, p) => { if (!m.live) return ''; const l = lider(m); if (l == null) return ''; const yo = p === '1' ? 'a' : p === '2' ? 'b' : 'x';
+  const comoVa = (m, p) => { if (!m.live) return ''; if (window.GM_MK && GM_MK.es(p)) return GM_MK.va(m, p, marcador(m));   // mercados nuevos (db/036)
+    const l = lider(m); if (l == null) return ''; const yo = p === '1' ? 'a' : p === '2' ? 'b' : 'x';
     return yo === 'x' ? (l === '' ? 'gana' : 'pierde') : l === '' ? 'empata' : l === yo ? 'gana' : 'pierde' };
   const scoreCorto = (m) => String(m.score || '').split(/\s+/)[0];
-  const lado = (p) => (p === '1' ? 'a' : p === '2' ? 'b' : null);
+  const lado = (p) => (p === '1' ? 'a' : p === '2' ? 'b' : window.GM_MK && GM_MK.es(p) ? { 1: 'a', 2: 'b' }[GM_MK.lado(p)] || null : null);
   const ligaImg = (m) => `<img class="tl" src="${esc((L[m.lg] && L[m.lg][1]) || SP[m.s][1])}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`;
   const caraPick = (m, p) => (lado(p) ? logo(m, lado(p)) : ligaImg(m));
   const conA = (al) => `<span data-notr>${en() ? (al ? ' on the ' : ' on ') : (al ? ' al ' : ' a ')}</span>`;   // "200 a Real Madrid" / "200 on Real Madrid"
@@ -84,7 +85,7 @@
   const pata = (l) => { const m = l.matches || {};
     if (l.result === 'won') return 'ok'; if (l.result === 'lost') return 'ko'; if (l.result === 'void') return 'nul';
     if (m.status === 'live' || (m.status === 'scheduled' && t2(m.starts_at) <= Date.now())) return 'vivo'; return 'pend' };
-  const nombrePata = (l) => { const m = l.matches || {}; return l.pick === '1' ? m.home : l.pick === '2' ? m.away : 'Empate' };
+  const nombrePata = (l) => { const m = l.matches || {}; return l.pick === '1' ? m.home : l.pick === '2' ? m.away : l.pick === 'X' ? 'Empate' : pn({ a: m.home, b: m.away }, l.pick) };
   const carasC = (c) => { const ls = legsDe(c).slice(0, 2);
     return `<span class="ini-two">${ls.map((l) => { const m = byId(l.match_id); return m ? caraPick(m, l.pick) : `<img class="tl" src="${esc(SP[(l.matches || {}).sport || 'f'][1])}" alt="">` }).join('')}</span>` };
   const IC_CMB = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 8.5h11a1.5 1.5 0 0 1 1.5 1.5v1.2a1.6 1.6 0 0 0 0 3.1V16a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 16v-1.7a1.6 1.6 0 0 0 0-3.1V10A1.5 1.5 0 0 1 5 8.5z"/><path d="M7.5 6h11A1.5 1.5 0 0 1 20 7.5v7"/></svg>';

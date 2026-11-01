@@ -34,8 +34,9 @@
   const nombre = (k) => g(() => fr(k).n, k);
   const avatar = (k) => g(() => av(k, 'sm'), '');
   const cliente = () => g(() => db, null);
-  const lado = (p) => (p === '1' ? 'a' : p === '2' ? 'b' : p === 'X' ? 'x' : null);
-  const eleccion = (m, p) => (!m ? '' : p === '1' ? m.a : p === '2' ? m.b : p === 'X' ? 'Empate' : '');
+  const mkp = (p) => !!(window.GM_MK && GM_MK.es(p));   // mercados nuevos (db/036): su equipo (o ninguno) y su nombre
+  const lado = (p) => (p === '1' ? 'a' : p === '2' ? 'b' : p === 'X' ? 'x' : mkp(p) ? { 1: 'a', 2: 'b' }[GM_MK.lado(p)] || null : null);
+  const eleccion = (m, p) => (!m ? '' : p === '1' ? m.a : p === '2' ? m.b : p === 'X' ? 'Empate' : mkp(p) ? GM_MK.nombre(m, p) : '');
   const marcador = (m) => String(m?.score || '').split(' ')[0];
   const ligaDe = (m) => (m ? g(() => L[m.lg]?.[0], '') || '' : '');
   const zona = { timeZone: 'Europe/Madrid' };

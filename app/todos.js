@@ -16,7 +16,8 @@
   const marcador = (m) => { const v = m.vivo; if (v && v.a && v.b && v.a.mapas != null) return [v.a.mapas, v.b.mapas];
     const x = /^(\d+)\s*[:\-]\s*(\d+)/.exec(String(m.score || '')); return x ? [+x[1], +x[2]] : null };
   const lider = (m) => { if (m.vivo && typeof m.vivo.lidera === 'string') return m.vivo.lidera; const s = marcador(m); return s ? (s[0] > s[1] ? 'a' : s[0] < s[1] ? 'b' : '') : null };
-  const comoVa = (m, p) => { if (!m.live) return ''; const l = lider(m); if (l == null) return ''; const yo = p === '1' ? 'a' : p === '2' ? 'b' : 'x';
+  const comoVa = (m, p) => { if (!m.live) return ''; if (window.GM_MK && GM_MK.es(p)) return GM_MK.va(m, p, marcador(m));   // mercados nuevos (db/036)
+    const l = lider(m); if (l == null) return ''; const yo = p === '1' ? 'a' : p === '2' ? 'b' : 'x';
     return yo === 'x' ? (l === '' ? 'gana' : 'pierde') : l === '' ? 'empata' : l === yo ? 'gana' : 'pierde' };
   const empieza = (t) => { const now = Date.now();
     if (DK(t) === DK(now)) return 'hoy ' + HM(t);
@@ -27,7 +28,7 @@
   const partido = (m) => `<span data-notr>${esc(m.a)} vs ${esc(m.b)}</span><span> · </span>${cuando(m)}`;
   const nombre = (k) => (k === MEK ? 'Tú' : fr(k).n), sinTr = (k) => (k === MEK ? '' : 'data-notr');   // "Tú" si se traduce; los nombres no
   const ligaImg = (m) => `<img class="tl" src="${esc((L[m.lg] && L[m.lg][1]) || SP[m.s][1])}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`;
-  const caraPick = (m, p) => (p === '1' ? logo(m, 'a') : p === '2' ? logo(m, 'b') : ligaImg(m));
+  const caraPick = (m, p) => { const q = window.GM_MK && GM_MK.es(p) ? GM_MK.lado(p) : p; return q === '1' ? logo(m, 'a') : q === '2' ? logo(m, 'b') : ligaImg(m) };
   const VA = { gana: ['bien', 'va ganando'], pierde: ['mal', 'va perdiendo'], empata: ['q', 'va empatando'] };
   const PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
   const CHEV = '<svg class="td-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
@@ -37,7 +38,7 @@
   const combos = () => g(() => (window.GM_CMB && GM_CMB.todas()) || [], []);
   const legsDe = (c) => (c.combo_legs || []).slice().sort((a, b) => t2(a.matches && a.matches.starts_at) - t2(b.matches && b.matches.starts_at));
   const pataViva = (l) => { const m = l.matches || {}; return !l.result && (m.status === 'live' || (m.status === 'scheduled' && t2(m.starts_at) <= Date.now())) };
-  const nombrePata = (l) => { const m = l.matches || {}; return l.pick === '1' ? m.home : l.pick === '2' ? m.away : 'Empate' };
+  const nombrePata = (l) => { const m = l.matches || {}; return l.pick === '1' ? m.home : l.pick === '2' ? m.away : l.pick === 'X' ? 'Empate' : pn({ a: m.home, b: m.away }, l.pick) };
 
   /* ---------- reacciones a cada apuesta (las mismas de antes: data-rx y data-rxo los atiende app.js) ---------- */
   function rx(t) {

@@ -36,8 +36,10 @@
     const lado = (s, p) => `<div class="rsl-tm ${b.p === p ? 'pick' : ''}">${logo(m, s)}<span>${esc(s === 'a' ? m.a : m.b)}</span>${b.p === p ? `<em>${etiqueta}</em>` : ''}</div>`;
     const sc = String(m.score || '').split(/\s+/)[0], mm = /^(\d+)\s*[:\-]\s*(\d+)$/.exec(sc);
     const centro = mm && (!abierta || m.live) ? `<span class="rsl-num"><span class="${m.winner === '1' ? 'w' : ''}">${mm[1]}</span><i>:</i><span class="${m.winner === '2' ? 'w' : ''}">${mm[2]}</span></span>` : sc && !abierta ? `<span class="tx">${esc(sc)}</span>` : '<span class="vs">vs</span>';
-    const pk = b.p === 'X' ? `<em>★ Empate${mio ? '' : ` · <span data-notr>${esc(fr(b.k).n)}</span>`}</em>` : '';
-    const wm = b.p === '1' ? m.la : b.p === '2' ? m.lb : L[m.lg]?.[1];
+    const mkp = !!(window.GM_MK && GM_MK.es(b.p)), lp = mkp ? GM_MK.lado(b.p) : b.p;   // mercados nuevos (db/036): su nombre en el centro
+    const pk = b.p === 'X' ? `<em>★ Empate${mio ? '' : ` · <span data-notr>${esc(fr(b.k).n)}</span>`}</em>`
+      : mkp ? `<em class="rsl-mk">★ <span data-notr>${esc(pn(m, b.p))}</span>${mio ? '' : ` · <span data-notr>${esc(fr(b.k).n)}</span>`}</em>` : '';
+    const wm = lp === '1' ? m.la : lp === '2' ? m.lb : L[m.lg]?.[1];
     const quien = op.quien ? `${av(b.k, 'sm')}<b class="rsl-who" data-notr>${esc(fr(b.k).n)}</b>` : '';
     return `<article class="rsl" data-r="${k}" data-goto="${esc(m.id)}" style="--i:${op.i || 0}">
       ${fondo(wm, m.s === 'u' && b.p !== 'X' && !oculta)}
@@ -50,17 +52,19 @@
   }
 
   /* ---------- una combinada resuelta (formato de la tabla combos con combo_legs, como la carga combinadas.js) ---------- */
-  const nombrePata = (l) => { const m = l.matches || {}; return l.pick === '1' ? m.home : l.pick === '2' ? m.away : 'Empate' };
+  const nombrePata = (l) => { const m = l.matches || {}; return l.pick === '1' ? m.home : l.pick === '2' ? m.away : l.pick === 'X' ? 'Empate' : pn({ a: m.home, b: m.away }, l.pick) };
+  const ladoPata = (p) => (window.GM_MK && GM_MK.es(p) ? GM_MK.lado(p) : p);
   const estadoPata = (l) => { const m = l.matches || {};
     if (l.result === 'won') return 'ok'; if (l.result === 'lost') return 'ko'; if (l.result === 'void') return 'nul';
     return m.status === 'live' || (m.status === 'scheduled' && Date.parse(m.starts_at) <= Date.now()) ? 'vivo' : 'pend' };
   const PATA = { ok: '<path d="M2.5 6.3l2.3 2.3L9.5 3.8"/>', ko: '<path d="M3.5 3.5l5 5M8.5 3.5l-5 5"/>', nul: '<path d="M3.5 6h5"/>' };
   function caraPata(l) {
     const m = byId(l.match_id), s = (l.matches || {}).sport || 'f';
-    if (m && (l.pick === '1' || l.pick === '2')) return logo(m, l.pick === '1' ? 'a' : 'b');
+    const lp = ladoPata(l.pick);
+    if (m && (lp === '1' || lp === '2')) return logo(m, lp === '1' ? 'a' : 'b');
     return `<img class="tl" src="${esc((m && L[m.lg]?.[1]) || SP[s]?.[1] || '')}" alt="" loading="lazy">`;
   }
-  const urlPata = (l) => { const m = byId(l.match_id); return m ? (l.pick === '1' ? m.la : l.pick === '2' ? m.lb : L[m.lg]?.[1]) : null };
+  const urlPata = (l) => { const m = byId(l.match_id), lp = ladoPata(l.pick); return m ? (lp === '1' ? m.la : lp === '2' ? m.lb : L[m.lg]?.[1]) : null };
   function combinada(c, op) {
     op = op || {};
     const legs = (c.combo_legs || []).slice().sort((a, b) => Date.parse(a.matches?.starts_at || 0) - Date.parse(b.matches?.starts_at || 0));

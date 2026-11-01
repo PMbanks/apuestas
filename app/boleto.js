@@ -29,7 +29,13 @@
   const yo = () => { try { return MEK || '' } catch { return '' } };
   const pantalla = () => { try { return S.scr } catch { return '' } };
   const cuotaBase = (m, p) => { try { return po(m, p) } catch { return null } };
-  const nombre = (it, m) => (it.p === '1' ? (m ? m.a : it.a) : it.p === '2' ? (m ? m.b : it.b) : 'Empate');
+  const nombre = (it, m) => (it.p === '1' ? (m ? m.a : it.a) : it.p === '2' ? (m ? m.b : it.b) : it.p === 'X' ? 'Empate' : (() => { try { return pn(m || { a: it.a, b: it.b }, it.p) } catch { return it.p } })());
+  // mercados nuevos (db/036, mercados.js): una eleccion por mercado y partido (tocar otra del mismo mercado la cambia, como
+  // 1, X o 2); en una combinada, un solo pronostico por partido
+  const PICK_OK = /^(1|X|2|[OU][0-9]\.5|GG|NG|S[0-4]-[0-4]|H[12]\+[0-9]\.5|M[OU][0-9]\.5)$/;
+  const grupo = (p) => { try { return window.GM_MK ? GM_MK.grupo(p) : '1X2' } catch { return '1X2' } };
+  const clave = (it) => it.m + '|' + grupo(it.p);
+  const lado = (p) => { try { return p === 'X' ? 'x' : window.GM_MK && GM_MK.es(p) ? (GM_MK.lado(p) ? 'p' + GM_MK.lado(p) : 'mq') : 'p' + p } catch { return 'mq' } };
   const cuando = (t) => { try { return `${WD(t)} ${HM(t)}` } catch { return '' } };
   const avisa = (html) => { try { toast(html) } catch {} };
 
@@ -45,7 +51,7 @@
       const d = JSON.parse(localStorage.getItem(CLAVE) || 'null'); if (!d) return;
       const ahora = Date.now();
       B.k = d.k || ''; B.comun = Math.max(1, +d.comun || 50); B.modo = d.modo === 'comb' ? 'comb' : 'sueltas'; B.cst = Math.max(1, +d.cst || 50);
-      B.items = (Array.isArray(d.items) ? d.items : []).filter((x) => x && x.m && ['1', 'X', '2'].includes(x.p) && Date.parse(x.at) > ahora)
+      B.items = (Array.isArray(d.items) ? d.items : []).filter((x) => x && x.m && PICK_OK.test(x.p) && Date.parse(x.at) > ahora)
         .map((x) => ({ m: x.m, p: x.p, st: Math.max(0, Math.floor(+x.st || 0)), at: x.at, a: x.a, b: x.b, la: x.la, lb: x.lb, s: x.s, o0: x.o0 ?? null, err: '' }));
     } catch {}
   }
@@ -63,10 +69,11 @@
     catch (e) { XB.off = Date.now() + (/Could not find the function|PGRST202|schema cache/i.test(String(e?.message || '') + e?.code) ? 30 : 3) * 60e3; XB.t = Date.now() }
     XB.vivo = false; pinta(true);
   }
-  const boostDe = (mid, p) => XB.list.find((b) => b.match === mid && (!b.pick || b.pick === p) && Date.parse(b.at) > Date.now()) || null;
+  const boostDe = (mid, p) => ((p === '1' || p === 'X' || p === '2') && XB.list.find((b) => b.match === mid && (!b.pick || b.pick === p) && Date.parse(b.at) > Date.now())) || null;   // solo 1 X 2 (db/036)
   // la cuota que se pagaria: con la mejora, redondeada como la base: round(o * (100 + pct) / 100, 2)
   function cuota(it) {
-    const m = partido(it.m), o = m ? cuotaBase(m, it.p) : it.o0;
+    // mercados nuevos: hasta que mercados.js lee sus cuotas (al abrir la app), la de cuando se metio; la base manda al apostar
+    const m = partido(it.m), o = m ? (cuotaBase(m, it.p) ?? (grupo(it.p) !== '1X2' && !(window.GM_MK && GM_MK.cuotas(it.m)) ? it.o0 : null)) : it.o0;
     if (o == null) return { o: null };
     const bo = boostDe(it.m, it.p);
     if (!bo) return { o, base: o };
@@ -77,7 +84,7 @@
   /* ---------- meter y quitar ---------- */
   function toca(mid, p) {
     const m = partido(mid); if (!m || B.busy) return;
-    const i = B.items.findIndex((x) => x.m === mid), antes = B.items.length;
+    const i = B.items.findIndex((x) => x.m === mid && grupo(x.p) === grupo(p)), antes = B.items.length;
     if (i >= 0 && B.items[i].p === p) B.items.splice(i, 1);
     else if (i >= 0) Object.assign(B.items[i], { p, o0: cuotaBase(m, p), err: '' });
     else B.items.push({ m: mid, p, st: B.comun, at: m.at, a: m.a, b: m.b, la: m.la || null, lb: m.lb || null, s: m.s, o0: cuotaBase(m, p), err: '' });
@@ -87,7 +94,7 @@
     if (B.items.length > antes) late();
     if (B.items.length) cargaBoost();
   }
-  function quita(mid) { B.items = B.items.filter((x) => x.m !== mid); B.sure = 0; if (!B.items.length && !B.res) B.abierto = false; guarda(); marca(); pinta(true) }
+  function quita(k) { B.items = B.items.filter((x) => (String(k).includes('|') ? clave(x) !== k : x.m !== k)); B.sure = 0; if (!B.items.length && !B.res) B.abierto = false; guarda(); marca(); pinta(true) }
   function vacia() { B.items = []; B.sure = 0; B.vaciar = 0; B.res = null; B.abierto = false; guarda(); marca(); pinta(true) }
   // lo que ya ha empezado sale solo (al cargar, al repintar la app y cada 15 s)
   function caduca() {
@@ -99,7 +106,7 @@
       if (ya) fuera.push(x); return !ya;
     });
     if (!fuera.length) return;
-    B.fuera = fuera.map((x) => ({ a: x.a, b: x.b, t: ahora }));
+    B.fuera = [...new Map(fuera.map((x) => [x.m, x])).values()].map((x) => ({ a: x.a, b: x.b, t: ahora }));
     B.sure = 0; if (!B.items.length && !B.res) B.abierto = false;
     guarda(); marca(); pinta(true);
     avisa(`<b>${esc(fuera[0].a)} vs ${esc(fuera[0].b)}</b> ya ha empezado y sale del boleto`);
@@ -109,9 +116,9 @@
 
   // dorado en las cuotas que estan en el boleto (lista y ficha)
   function marca() {
-    const sel = new Map(B.items.map((x) => [x.m, x.p]));
+    const sel = new Set(B.items.map((x) => x.m + '|' + x.p));
     document.querySelectorAll('#view [data-pick]').forEach((b) => {
-      const [mid, p] = b.dataset.pick.split('|'), on = sel.get(mid) === p;
+      const on = sel.has(b.dataset.pick);
       if (b.classList.contains('blt-on') !== on) b.classList.toggle('blt-on', on);
     });
   }
@@ -160,6 +167,7 @@
     if (comb()) {
       if (B.items.some((it) => cuota(it).o == null)) out.push('<p class="blt-av">Quita las que ya no tienen cuota</p>');
       if (B.items.length > COMB_MAX) out.push(`<p class="blt-av">Una combinada lleva ${COMB_MAX} partidos como máximo</p>`);
+      if (new Set(B.items.map((it) => it.m)).size < B.items.length) out.push('<p class="blt-av">Una combinada lleva un solo pronóstico por partido</p>');
       if (B.cst < 1) out.push('<p class="blt-av">Pon un importe</p>');
       else if (B.cst > s) out.push(`<p class="blt-av"><span>Te faltan</span> <b>${N(B.cst - s)}${coin()}</b> <span>para apostarlo</span></p>`);
       if (B.cerr) out.push(`<p class="blt-av">${esc(B.cerr)}</p>`);
@@ -175,12 +183,12 @@
     const m = partido(it.m), c = cuota(it), at = m ? m.at : it.at, solo = B.items.length === 1;
     const mv = c.base != null && it.o0 != null && Math.abs(c.base - it.o0) > 0.001 ? (c.base > it.o0 ? '<i class="blt-mv sube">▲</i>' : '<i class="blt-mv baja">▼</i>') : '';
     const tope = c.pct && it.st > c.resta ? `<p class="blt-e tope"><span>Con cuota mejorada te quedan</span> <b>${N(c.resta)}${coin()}</b> <span>en este partido</span></p>` : '';
-    return `<div class="blt-l ${it.p === 'X' ? 'x' : 'p' + it.p} ${c.pct ? 'mej' : ''} ${it.ok ? 'ok' : it.err ? 'ko' : ''} ${solo ? 'solo' : ''}" data-k="${esc(it.m)}">
+    return `<div class="blt-l ${lado(it.p)} ${c.pct ? 'mej' : ''} ${it.ok ? 'ok' : it.err ? 'ko' : ''} ${solo ? 'solo' : ''}" data-k="${esc(clave(it))}">
       <span class="blt-es">${escudo(m?.la || it.la, it.s, 'blt-ea')}${escudo(m?.lb || it.lb, it.s, 'blt-eb')}</span>
       <span class="blt-q"><b>${esc(nombre(it, m))}</b><button type="button" class="blt-pt" data-blt="ir" data-m="${esc(it.m)}" title="Ir al partido"><span>${esc(cuando(at))}</span> · <span>${esc(m ? m.a : it.a)} vs ${esc(m ? m.b : it.b)}</span></button></span>
       <span class="blt-o">${c.o == null ? '<em>·</em>' : `${mv}${c.pct ? `${BOLT}<s>${O(c.base)}</s>` : ''}<b>${O(c.o)}</b>`}</span>
-      <button type="button" class="blt-x" data-blt="quita" data-m="${esc(it.m)}" aria-label="Quitar">${EQUIS}</button>
-      <label class="blt-in"><input type="text" inputmode="numeric" autocomplete="off" maxlength="7" data-blt-i="${esc(it.m)}" value="${it.st || ''}" aria-label="Importe">${coin()}</label>
+      <button type="button" class="blt-x" data-blt="quita" data-m="${esc(clave(it))}" aria-label="Quitar">${EQUIS}</button>
+      <label class="blt-in"><input type="text" inputmode="numeric" autocomplete="off" maxlength="7" data-blt-i="${esc(clave(it))}" value="${it.st || ''}" aria-label="Importe">${coin()}</label>
       <span class="blt-co">${c.o == null ? '<span>Esa opción ya no tiene cuota</span>' : `<i>→</i> <b>${N(it.st * c.o)}</b>${coin()}`}</span>
       ${it.err ? `<p class="blt-e">${esc(it.err)}</p>` : ''}${tope}
     </div>`;
@@ -279,7 +287,7 @@
   }
   function actualizaLineas(r) {
     for (const it of B.items) {
-      const l = r.querySelector(`.blt-l[data-k="${CSS.escape(it.m)}"]`); if (!l) continue;
+      const l = r.querySelector(`.blt-l[data-k="${CSS.escape(clave(it))}"]`); if (!l) continue;
       const c = cuota(it), co = l.querySelector('.blt-co b'); if (co && c.o) co.textContent = N(it.st * c.o);
       const inp = l.querySelector('input'); if (inp && document.activeElement !== inp && +inp.value !== it.st) inp.value = it.st || '';
       const av = l.querySelector('.blt-e.tope'), sobra = c.pct && it.st > c.resta;
@@ -301,7 +309,7 @@
   function escribe(e) {
     const t = e.target;
     if (t.matches('[data-blt-i]')) {
-      const it = B.items.find((x) => x.m === t.dataset.bltI); if (!it) return;
+      const it = B.items.find((x) => clave(x) === t.dataset.bltI); if (!it) return;
       const v = entero(t.value); if (String(v || '') !== t.value) t.value = v || '';
       it.st = v; it.err = '';
     } else if (t.matches('[data-blt-c]') && comb()) {
@@ -382,14 +390,14 @@
         if (error) throw error;
         x = { ok: true, odds: Number(data && data.odds) || cuota(it).o };
       } catch (err) { x = { ok: false, err: motivo(err) } }
-      res.push({ m: it.m, p: it.p, st: it.st, nom: nombre(it, m), ...x });
+      res.push({ m: it.m, p: it.p, k: clave(it), st: it.st, nom: nombre(it, m), ...x });
       if (x.ok) { it.ok = true; it.err = '' } else it.err = x.err;
       pinta(true);
-      const l = r.querySelector(`.blt-l[data-k="${CSS.escape(it.m)}"]`);
+      const l = r.querySelector(`.blt-l[data-k="${CSS.escape(clave(it))}"]`);
       if (x.ok && l) { try { vuela(l.querySelector('.blt-co .cn') || l) } catch {} }
     }
-    const dentro = new Set(res.filter((y) => y.ok).map((y) => y.m));
-    B.items = B.items.filter((it) => !dentro.has(it.m));
+    const dentro = new Set(res.filter((y) => y.ok).map((y) => y.k));
+    B.items = B.items.filter((it) => !dentro.has(clave(it)));
     B.busy = false; B.prog = ''; B.res = { at: Date.now(), list: res };
     guarda(); marca();
     const ok = dentro.size, t = res.length;
@@ -432,10 +440,11 @@
     queueMicrotask(() => { pendiente = false; try { rev() } catch (e) { if (!rev.avisado) { rev.avisado = 1; console.warn('boleto.js', e) } } });
   }).observe(app || document.documentElement, { childList: true, subtree: true });
   addEventListener('resize', () => { if (raiz && !raiz.hidden) pinta(true) });
+  addEventListener('gm:mk', () => { if (raiz && !raiz.hidden) { marca(); pinta(true) } });   // llegan las cuotas de los mercados nuevos (mercados.js)
   document.addEventListener('visibilitychange', () => { if (!document.hidden) caduca() });
 
   // para otros modulos y para las pruebas
-  window.GM_BOLETO = { mete: (mid, p) => { const it = B.items.find((x) => x.m === mid); if (!it || it.p !== p) toca(mid, p) }, quita, vacia, lista: () => B.items.map(({ m, p, st }) => ({ m, p, st })), abre: () => { if (B.items.length) { B.abierto = true; pinta(true) } } };
+  window.GM_BOLETO = { mete: (mid, p) => { const it = B.items.find((x) => x.m === mid && grupo(x.p) === grupo(p)); if (!it || it.p !== p) toca(mid, p) }, quita, vacia, lista: () => B.items.map(({ m, p, st }) => ({ m, p, st })), abre: () => { if (B.items.length) { B.abierto = true; pinta(true) } } };
 
   /* ---------- estilos ---------- */
   const css = document.createElement('style');

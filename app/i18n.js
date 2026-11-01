@@ -411,6 +411,11 @@
     [/^Hoy ya has perdido 500 en el blackjack\. Vuelve mañana$/, 'You have already lost 500 today in blackjack. Come back tomorrow'],
     [/^(\d+)º$/, '$1th'],
     [/×(\d+),(\d\d)/g, '×$1.$2'],   // decimales con punto (juegos.js ya los pinta con punto en ingles; esta regla solo es por si acaso): va el ultimo
+    // mas tipos de apuesta (db/036, 01-11): lo que escribe la base en el monedero y en el chat (la app ya los pinta en ingles)
+    [/Más de (\d+),5 goles/g, 'Over $1.5 goals'], [/Menos de (\d+),5 goles/g, 'Under $1.5 goals'], [/Más de (\d+),5 mapas/g, 'Over $1.5 maps'], [/Menos de (\d+),5 mapas/g, 'Under $1.5 maps'],
+    [/ \+(\d+),5 mapas/g, ' +$1.5 maps'], [/Ambos marcan: sí/g, 'Both teams score: yes'], [/Ambos marcan: no/g, 'Both teams score: no'],
+    [/ en (.+ vs .+) no tiene resultado de los 90 minutos$/, ' in $1 has no 90 minute result'], [/ en (.+ vs .+) no tiene una serie completa$/, ' in $1 was not a full series'],
+    [/^Una combinada lleva un solo pronóstico por partido$/, 'A parlay takes one pick per match'],
     // mercado (30-10)
     [/^Pides a (.+)$/, 'You ask $1 for'], [/^Lo que pides a (.+)$/, 'What you ask $1 for'], [/^(.+) te propone$/, '$1 offers you a trade'], [/^Le propones a (.+)$/, 'You offer $1 a trade'], [/^Tú a (.+)$/, 'You to $1'], [/^(.+) a ti$/, '$1 to you'],
     [/^Trato propuesto a (.+)$/, 'Trade offered to $1'], [/^A la venta por ([\d.]+)$/, 'For sale at $1'], [/^Comprado por ([\d.]+)$/, 'Bought for $1'],

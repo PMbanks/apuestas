@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "mas-apuestas-0111",
+   "fecha": "2026-11-01",
+   "hora": "14:13",
+   "titulo": "Más apuestas",
+   "texto": "En la ficha de cada partido, debajo del 1 X 2: más o menos de 1,5, 2,5 y 3,5 goles y ambos marcan en fútbol, y en CS2 y Valorant el resultado exacto de la serie, +1,5 mapas y mapas jugados. Goles y ambos marcan se pagan con los 90 minutos. Valen en combinadas, un pronóstico por partido.",
+   "titulo_en": "More bets",
+   "texto_en": "Under the 1 X 2 of each match: over or under 1.5, 2.5 and 3.5 goals and both teams to score in football, and in CS2 and Valorant the exact series score, +1.5 maps and total maps. Goals and both to score are paid on 90 minutes. They work in parlays, one pick per match.",
+   "img": "novedades/mas-apuestas.webp",
+   "ir": "partidos"
+  },
+  {
    "id": "retoques-0111",
    "fecha": "2026-11-01",
    "hora": "13:56",
