@@ -1,12 +1,12 @@
 -- Prueba de db/065_blackjack_un_asiento.sql, para el editor SQL de Supabase. Va despues de 040, 048, 054 y 065. Con los jugadores de verdad (hacen falta dos).
 -- Comprueba: (1) un jugador con tres asientos y tres manos juega la ronda hasta el final y se le pagan las manos bien; (2) al acabar la ronda sus
 -- asientos extra se liberan y solo le queda el primero (el de menor numero), y lo mismo con el otro jugador; (3) sus manos de esa ronda siguen
--- en la ronda ya acabada y el dinero cuadra (suma de apuestas y pagos en el ledger); (4) en la ronda siguiente puede volver a añadir asientos.
+-- en la ronda ya acabada y el saldo cuadra con apuestas y pagos; (4) en la ronda siguiente puede volver a añadir asientos.
 -- Al final lanza un error A PROPOSITO para que se deshaga todo: "PRUEBA SUPERADA". Sustituye a la parte de asientos persistentes de 048_prueba.sql.
 do $$
 declare
   jug uuid[] := array(select id from players order by created_at, id limit 2);
-  r jsonb; rd bjm_ronda; n int := 0; t0 int; t1 int;
+  r jsonb; rd bjm_ronda; n int := 0;
 begin
   if cardinality(jug) < 2 then raise exception 'FALLO: hacen falta al menos dos jugadores'; end if;
   delete from bjm_asiento; delete from bjm_ronda;
@@ -45,9 +45,8 @@ begin
 
   -- 3) sus manos siguen en la ronda acabada, todas cerradas, y el dinero cuadra
   if (select count(*) from bjm_mano where ronda = rd.id and resultado is not null) <> 4 then raise exception 'FALLO: faltan manos cerradas en la ronda'; end if;
-  t0 := (select coalesce(sum(amount), 0) from ledger where player = jug[1] and kind = 'blackjack')::int + (select coalesce(sum(amount), 0) from ledger where player = jug[2] and kind = 'blackjack')::int;
-  t1 := (select coalesce(sum(pago), 0) from bjm_mano where ronda = rd.id)::int - (select coalesce(sum(total), 0) from bjm_mano where ronda = rd.id)::int;
-  if t0 <> t1 then raise exception 'FALLO: el ledger de blackjack (%) no coincide con pagos menos apuestas (%)', t0, t1; end if;
+  -- las barajas son al azar: el saldo debe ser 1000 menos lo apostado mas lo pagado en las manos de esta ronda
+  if jg_saldo(jug[1]) <> 1000 + (select sum(pago - total) from bjm_mano where ronda = rd.id and player = jug[1]) or jg_saldo(jug[2]) <> 1000 + (select sum(pago - total) from bjm_mano where ronda = rd.id and player = jug[2]) then raise exception 'FALLO: saldos tras la ronda: % %', jg_saldo(jug[1]), jg_saldo(jug[2]); end if;
 
   -- 4) en la ronda siguiente puede volver a añadir asientos
   perform set_config('request.jwt.claims', format('{"sub":"%s","role":"authenticated"}', jug[1]), true);
