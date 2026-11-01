@@ -179,11 +179,21 @@
       <div class="ini-tk-f"><span class="k"><em><i>★</i>${esc(pn(m, b.p))}</em><span class="ini-k2">· ${N(b.stake)}${coin()}${aCuota(b.o)}</span></span><span class="p"><span>cobrarías</span><b>${N(b.stake * b.o)}${coin()}</b></span></div>
     </article>`;
   }
+  // PM 01-11: "en el parlay que se vea a que le he metido: ahora solo pone over 1.5 y KRU, no se ve quienes juegan ni horas ni nada":
+  // cada pata en su fila con lo elegido, quien juega (o el marcador en directo), la hora o el minuto y su cuota
+  function filaPata(l) {
+    const k = pata(l), md = l.matches || {}, m = byId(l.match_id), sc = m && m.live ? marcador(m) : null;
+    const quien = sc ? `${esc(md.home || m.a)} <b>${sc[0]}:${sc[1]}</b> ${esc(md.away || m.b)}` : `${esc(md.home || '')} <i>vs</i> ${esc(md.away || '')}`;
+    const cuando = k === 'vivo' ? `<span class="rd">${esc(['En vivo', m ? linea(m) : ''].filter(Boolean).join(' · '))}</span>`
+      : k === 'pend' ? esc(empieza(t2(md.starts_at))) : { ok: 'Acertada', ko: 'Fallada', nul: 'Anulada' }[k];
+    return `<div class="ini-pl ${k}" ${l.match_id ? `data-goto="${esc(l.match_id)}"` : ''}><i class="ini-pl-i">${{ ok: '✓', ko: '✗', nul: '·', vivo: '●', pend: '○' }[k]}</i>
+      <span class="ini-pl-t"><b>${esc(nombrePata(l))}</b><small>${cuando} · ${quien}</small></span>${l.odds ? `<span class="ini-pl-o">${O(l.odds)}</span>` : ''}</div>`;
+  }
   function ticketC(c) {
     const ls = legsDe(c), hechas = ls.filter((l) => l.result === 'won').length, vivo = ls.some((l) => pata(l) === 'vivo');
     return `<article class="ini-tk ini-tkc ${vivo ? 'live' : ''}" data-scr="apuestas">
       <div class="ini-tk-h">${vivo ? '<i class="dot"></i>' : `<span class="ini-cmb-ic">${IC_CMB}</span>`}<span class="lab ell">Combinada de ${ls.length}</span><span class="lab r">${hechas} de ${ls.length} acertados</span></div>
-      <div class="ini-patas">${ls.map((l) => { const k = pata(l); return `<span class="ini-pata ${k}"><i>${{ ok: '✓', ko: '✗', nul: '·', vivo: '●', pend: '' }[k]}</i>${esc(nombrePata(l))}</span>` }).join('')}</div>
+      <div class="ini-pls">${ls.map(filaPata).join('')}</div>
       <div class="ini-tk-f"><span class="k"><span class="ini-k2">${N(c.stake)}${coin()}${aCuota(c.odds)}</span></span><span class="p"><span>cobrarías</span><b>${N(c.stake * Number(c.odds))}${coin()}</b></span></div>
     </article>`;
   }
