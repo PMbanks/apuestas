@@ -116,7 +116,7 @@ function build(st, rows, chat, ex) {
     const weeks = p.weeks.length ? p.weeks : [p.saldo];
     return {
       id: k, uid: p.id, n: p.name, ini: p.ini, s: p.saldo, me: p.id === ME, admin: p.admin, username: p.username,
-      apodo: p.apodo, frase: p.frase, photo: p.photo, favs: Array.isArray(p.favs) ? p.favs : [], recibido: p.recibido,
+      apodo: p.apodo, frase: p.frase, photo: window.GM_AVATARES ? GM_AVATARES.foto(p.id, p.photo) : p.photo, photo0: p.photo, favs: Array.isArray(p.favs) ? p.favs : [], recibido: p.recibido,
       h: [WEEKLY, ...weeks], wk: weeks.map((v, i) => v - (i ? weeks[i - 1] : 0) - WEEKLY),
       ac: t ? Math.round((w / t) * 100) + '%' : '·', acn: `${w} de ${t}`, bets: mine.length,
       racha: t ? `${last.st === 'won' ? '▲' : '▼'} ${run}` : '·', streak,
@@ -1687,6 +1687,7 @@ function ajustes() {
     : Notification.permission === 'granted' ? '<p class="aj-n"><span class="pf-ok">Avisos activados</span></p>'
     : '<p class="aj-n">Te avisa de tus apuestas y de los partidos que sigues.</p><button class="aj-a" data-act="notif">Activar avisos</button>';
   return `<div class="pad aj">
+    ${window.GM_AVATARES ? GM_AVATARES.seccion() : ''}
     <section class="aj-s"><h3 class="lab">Sonido y movimiento</h3>${sw('sonido', snd, 'Sonidos', 'Botones, ruletas, premios y mensajes')}${sw('anim', an, 'Animaciones', 'Ruletas, confeti y transiciones')}</section>
     <section class="aj-s"><h3 class="lab">Moneda</h3><p class="aj-n">Cambia el logo y el nombre. Lo que tienes es lo mismo.</p>
       <div class="aj-ops" data-nomon>${mons.map(([k, n, img]) => `<button class="aj-m ${mo === k ? 'on' : ''}" data-act="mon" data-mon="${k}" aria-pressed="${mo === k}"><img src="${img}" alt=""><b data-notr>${n}</b></button>`).join('')}</div></section>
@@ -1718,7 +1719,7 @@ function perfil() {
   const f = fr(S.prof), mine = !!f.me, rank = [...F].sort((a, b) => b.s - a.s), pos = rank.indexOf(f) + 1, op = openOf(f.id);
   const aw = AW.filter((a) => a[2] === f.id), wins = [...f.last].filter((c) => c === 'W').length, h2h = Object.entries(H2H[f.id] || {});
   const pt = ['resumen', 'dinero', 'apuestas', 'premios'].includes(S.pft) ? S.pft : 'resumen', tab = (k) => (pt === k ? '' : ' hidden');
-  return `<div class="pf" style="--fc:var(--f-${f.id});--ring:var(--f-${f.id})">
+  return `<div class="pf" style="--fc:var(--f-${f.id});--ring:var(--rg-${f.id},var(--f-${f.id}))">
     <button class="pf-back" data-act="back">← Volver</button>
     <header class="pf-hero mk-bg-${f.id}">
       <div>${av(f.id, 'huge')}${window.GM_RATIO ? GM_RATIO.slot(f.id) : ''}${mine ? `<div class="pf-act"><button data-act="photo">${f.photo ? 'Cambiar foto' : 'Poner foto'}</button>${f.photo ? '<button class="q" data-act="nophoto">Quitar</button>' : ''}</div><input type="file" id="foto" accept="image/*" data-foto hidden>` : ''}</div>
@@ -1842,7 +1843,7 @@ const MERCADO_MANT = true;
 const mercado = () => (MERCADO_MANT ? `<div class="pad mant"><svg viewBox="0 0 24 24">${SCREENS.mercado[2]}</svg><b>En mantenimiento</b><p>El Mercado está casi listo. Intercambios, ventas, contratos y jackpot llegan pronto.</p></div>` : window.GM_MERCADO ? GM_MERCADO.html(mkCtx()) : '');
 const R = { inicio: () => (window.GM_INICIO ? GM_INICIO.html() : ''), ajustes, novedades, juegos, mercado, directo, partidos, apuestas, colegas, liga, chat, monedero, perfil, cajas: () => (window.GM_CAJAS ? GM_CAJAS.html() : '') };
 const cajasCtx = () => ({ db, me: ME, jugadores: F.map((f) => ({ id: f.uid, n: f.n, color: f.id, ini: f.ini, photo: !!f.photo })), saldo: me().s, toast, refresh });
-const photoCss = () => { document.getElementById('phs').textContent = F.filter((f) => f.photo).map((f) => `.av.${f.id}.ph{background-image:url("${encodeURI(f.photo)}")}`).join('') };
+const photoCss = () => { if (window.GM_AVATARES) GM_AVATARES.aplica(); document.getElementById('phs').textContent = F.filter((f) => f.photo).map((f) => `.av.${f.id}.ph{background-image:url("${encodeURI(f.photo)}")}`).join('') };
 // PM, 30-10: "si estas en una apuesta en directo ahora mismo, que salga toda la info en cualquier lado, encima del perfil,
 // y que se vaya actualizando en tiempo real". vivo.js repinta (render) cuando cambia el marcador.
 // Rehecha (PM: "la tarjeta de live abajo esta como cortada, arreglala y hazla bonita"): dos filas, una por equipo, con su
@@ -2010,7 +2011,7 @@ async function sendMsg(file) {
   } catch (e) { toast(errMsg(e)) }
 }
 async function setPhoto(file) {
-  try { toast('Subiendo foto…'); const url = await upload(await shrink(file, 256, true), 'perfil'); const { error } = await db.rpc('update_profile', { p_photo: url }); if (error) throw error; toast('Foto de perfil cambiada'); await refresh() } catch (e) { toast(errMsg(e)) }
+  try { toast('Subiendo foto…'); const url = await upload(await shrink(file, 256, true), 'perfil'); const { error } = await db.rpc('update_profile', { p_photo: url }); if (error) throw error; toast('Foto de perfil cambiada'); if (window.GM_AVATARES) GM_AVATARES.quita(); await refresh() } catch (e) { toast(errMsg(e)) }
 }
 async function savePerfil(k, v) {
   const { error } = await db.rpc('update_profile', k === 'apodo' ? { p_apodo: v } : { p_frase: v });
