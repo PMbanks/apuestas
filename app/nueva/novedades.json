@@ -2,6 +2,28 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "ahora-mismo-0211",
+   "fecha": "2026-11-02",
+   "hora": "07:20",
+   "titulo": "Ahora mismo",
+   "texto": "Ves en Inicio quién está jugando o abriendo cajas, con un punto en Juegos y Cajas, y te avisamos cuando alguien empieza. Lo apagas en Ajustes.",
+   "titulo_en": "Right now",
+   "texto_en": "See on Home who is playing or opening boxes, with a dot on Games and Boxes, and get an alert when someone starts. Turn it off in Settings.",
+   "img": "novedades/ahora-mismo.webp",
+   "ir": "juegos"
+  },
+  {
+   "id": "inventario-rapido-0211",
+   "fecha": "2026-11-02",
+   "hora": "07:21",
+   "titulo": "Vende varias de golpe",
+   "texto": "Selecciona varios objetos del inventario de golpe: arrastra para marcar varios (o mantén pulsado en el móvil), usa Mayús para un rango y los atajos de las más baratas, menos de un precio o por rareza, y véndelas juntas.",
+   "titulo_en": "Sell several at once",
+   "texto_en": "Select several inventory items at once: drag to mark many (or press and hold on mobile), use Shift for a range, and the shortcuts for the cheapest, under a price or by rarity, then sell them together.",
+   "img": "novedades/seleccion-rapida.webp",
+   "ir": "cajas"
+  },
+  {
    "id": "ajusta-foto-0211",
    "fecha": "2026-11-02",
    "hora": "07:10",

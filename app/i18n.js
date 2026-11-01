@@ -311,6 +311,9 @@
     'El lado que saque más valor se lleva todas las skins.': 'The side with the most value takes every skin.',
     'Páginas': 'Pages', 'Anterior': 'Previous', 'Siguiente': 'Next', 'Ganador': 'Winner',
     'Toca una para elegirla': 'Tap one to select it', '1 objeto': '1 item', 'Cargando…': 'Loading…',
+    // seleccionar varias del inventario (02-11)
+    'Clic para elegir, Mayús y clic para un rango, arrastra para marcar varias': 'Click to select, Shift and click for a range, drag to select several', 'Toca para elegir, mantén y arrastra para marcar varias': 'Tap to select, hold and drag to select several',
+    'Todo lo visible': 'Everything visible', 'Invertir': 'Invert', 'Menos de': 'Under', 'Quitar selección': 'Clear selection',
     'Tus cajas': 'Your boxes', 'Cajas sin abrir': 'Unopened boxes', 'Tuyas sin abrir': 'Yours, unopened',
     'Abrir la tuya': 'Open yours', 'Abrir una tuya': 'Open one of yours', 'Abrir otra tuya': 'Open another of yours',
     'Cara o cruz, crash y blackjack': 'Coin flip, crash and blackjack',
@@ -501,6 +504,10 @@
     'No tienes alarmas puestas.': 'You have no alarms set.', 'Borrar': 'Delete', 'Ver partido': 'View game', 'Empieza ahora': 'Starting now', 'Empieza el partido de tu apuesta': 'The game of your bet is starting',
     'Qué ves': 'What you see', 'Se ve': 'Visible', 'Oculto': 'Hidden', 'Elegir ligas': 'Choose leagues', 'Ocultar la lista de ligas': 'Hide the list of leagues', 'Ocultar esta liga': 'Hide this league',
     'Se vuelve a mostrar desde Ajustes.': 'You can show it again in Settings.',
+    // Actividad en directo (actividad.js, 02-11): la tira Ahora mismo, el aviso con Ir y los interruptores de Ajustes
+    'Ahora mismo': 'Right now', 'Ir': 'Go', 'abriendo cajas': 'opening boxes', 'en una batalla de cajas': 'in a box battle', 'jugando a cara o cruz': 'playing heads or tails', 'jugando al crash': 'playing crash', 'en el blackjack': 'in blackjack', 'en la ruleta': 'on the roulette', 'en el plinko': 'on plinko',
+    'está abriendo cajas': 'is opening boxes', 'está en una batalla de cajas': 'is in a box battle', 'está jugando a cara o cruz': 'is playing heads or tails', 'está jugando al crash': 'is playing crash', 'está en el blackjack': 'is in blackjack', 'está en la ruleta': 'is on the roulette', 'está en el plinko': 'is on plinko',
+    'Avisos de actividad': 'Activity alerts', 'Te avisa cuando alguien empieza a jugar o a abrir cajas': 'Tells you when someone starts playing or opening boxes', 'Cara o cruz, crash y blackjack': 'Heads or tails, crash and blackjack', 'Abrir cajas y batallas': 'Opening boxes and battles',
     'Lo que ocultes no sale en Partidos, Inicio ni Directo. Tus apuestas de ahí siguen en Mis apuestas. También puedes mantener pulsado el escudo de una liga en Partidos.': 'Whatever you hide does not show in Matches, Home or Live. Your bets there stay in My bets. You can also press and hold a league badge in Matches.',
     'Todavía no has jugado': 'You have not played yet', 'Todavía no has ganado ningún premio': 'You have not won a prize yet', '. Te falta eso para pasarle.': '. You need that much to pass them.',
     // la mesa de blackjack compartida (bjmesa.js, db/040)
@@ -597,7 +604,7 @@
     [/^(.+) entra en el reto de (.+?): (.+), ([\d.,]+) en juego$/, '$1 joins the challenge from $2: $3, $4 at stake'],
     [/^(.+) ganó ([\d.,]+) en el reto contra (.+?) · (.+)$/, (m, a, n, b, r) => `${a} won ${n} in the challenge against ${b.replace(/ y /g, ' and ')} · ${r}`],
     [/^(.+) ganaron ([\d.,]+) cada uno en el reto contra (.+?) · (.+)$/, (m, a, n, b, r) => `${a.replace(/ y /g, ' and ')} won ${n} each in the challenge against ${b.replace(/ y /g, ' and ')} · ${r}`],
-    [/^Ganan (.+)$/, 'Winners $1'], [/^y (\d+) reto más$/, 'and $1 more challenge'], [/^y (\d+) retos más$/, 'and $1 more challenges'],
+    [/^Ganan (.+)$/, 'Winners $1'], [/^y (\d+) reto más$/, 'and $1 more challenge'], [/^y (\d+) más$/, 'and $1 more'], [/^y (\d+) retos más$/, 'and $1 more challenges'],
     // repaso del ingles (01-11, ingles2): estas van primero porque las reglas de mas abajo cambian trozos sueltos (contra, con, en juego, a...)
     // y despues la frase entera ya no casa
     [/^Cara o cruz: ganas contra (.+)$/, 'Coin flip: you win against $1'], [/^Cara o cruz: pierdes contra (.+)$/, 'Coin flip: you lose against $1'],
@@ -733,6 +740,7 @@
     [/^ROI (.+) · (\d+) resueltas?$/, 'ROI $1 · $2 settled'], [/^(\d+) resueltas?$/, '$1 settled'], [/^cobradas ([\d.]+)$/, 'paid $1'],
     // cajas (CAJAS-I18N.md, 30-10) y subtitulo de Juegos
     [/^(\d+) objetos$/, '$1 items'], [/^(\d+) rondas$/, '$1 rounds'], [/^(\d+) de 10$/, '$1 of 10'], [/^bote de ([\d.]+)$/, 'pot of $1'],
+    [/^Las (\d+) más baratas$/, 'The $1 cheapest'], [/^([\d.]+) fuera del filtro$/, '$1 outside the filter'], [/^¿Vender las ([\d.]+) por ([\d.,]+)\? Toca otra vez$/, 'Sell all $1 for $2? Tap again'], [/^([\d.]+) objetos$/, '$1 items'], [/^([\d.]+) skins$/, '$1 skins'],
     [/^Inventario de (.+)$/, "$1's inventory"], [/^Elegir las (\d+)$/, 'Select all $1'], [/^Ver los (\d+)$/, 'See all $1'], [/^Ver (\d+) más$/, 'Show $1 more'],
     // recompensas y ruleta nuevas (30-10)
     [/^([\d.]+) V-Bucks cada día que lo reclames$/, '$1 V-Bucks every day you claim them'], [/^([\d.]+) cada uno, de lunes a miércoles · se lo lleva quien más gane$/, '$1 each, Monday to Wednesday · the biggest winner takes it'],
