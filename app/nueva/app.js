@@ -954,6 +954,7 @@ function mbCurva(res) {
   return `<div class="chart mb2-chart">${s}</div><p class="mb2-ch"><span>mejor momento <b class="g">${signo(best) || '0'}</b></span><span>peor momento <b class="r">${signo(worst) || '0'}</b></span></p>`;
 }
 function apuestas() {
+  if (window.GM_MIS) return GM_MIS.html();   // PM 01-11: un solo diseno nuevo, lo tuyo en juego primero (misapuestas.js); lo de abajo queda por si no carga
   const mine = ALL.filter((b) => b.k === MEK && byId(b.m));
   const open = mine.filter((b) => b.st === 'open').sort((a, b) => (byId(b.m).live - byId(a.m).live) || Date.parse(byId(a.m).at) - Date.parse(byId(b.m).at));
   const set = mine.filter((b) => b.st !== 'open').sort((a, b) => Date.parse(b.set || b.at) - Date.parse(a.set || a.at)), res = set.filter((b) => b.st !== 'void'), won = res.filter((b) => b.st === 'won');

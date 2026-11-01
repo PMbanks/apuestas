@@ -1,0 +1,248 @@
+/* ===== Mis apuestas (PM, 01-11: un solo diseno, lo tuyo en juego primero) =====
+   misapuestas.js pinta .mis con tres partes: En juego (tarjetas .mt y el resumen .mis-sum), Tus numeros (curva y cifras) e
+   Historial (las tarjetas .rsl de resultado.js). En PC, columna principal y columna de 300 px a la derecha; en movil, todo
+   en una columna. Los altos van fijos donde llegan datos tarde (boton de cancelar en directo, combinadas, curva). */
+.mis{--mc:#252a33;--mc2:#2b313b;--rojo:#ef5b5b;max-width:1240px}
+.mis .ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.mis-sec{margin-bottom:60px}
+.mis-sec:last-child{margin-bottom:0}
+.mis-h{display:flex;align-items:baseline;gap:12px;margin-bottom:20px}
+.mis-k{font:600 12px var(--mono);letter-spacing:.1em;color:var(--acc)}
+.mis-h h2{font:800 32px/1 var(--disp);letter-spacing:-.03em}
+.mis-h>i{font:500 13px var(--mono);font-style:normal;color:var(--dim)}
+.mis-cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start}
+.mis-cols.solo{grid-template-columns:minmax(0,1fr)}
+.mis-main{min-width:0}
+.mis-sub{display:flex;align-items:baseline;gap:10px;margin:34px 2px 6px}
+.mis-sub h3{font:700 13px/1.2 var(--disp);letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}
+.mis-sub i{font:500 12px var(--mono);font-style:normal;color:var(--dim)}
+
+/* ---------- 1. las tarjetas de lo que tienes en juego ---------- */
+.mt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:18px;align-items:stretch}
+.mt{--k:var(--acc);--kb:242,193,78;position:relative;isolation:isolate;display:flex;flex-direction:column;min-width:0;border-radius:20px;overflow:hidden;background:var(--mc);box-shadow:0 10px 30px rgba(0,0,0,.18);cursor:pointer;transition:transform .2s var(--ease),box-shadow .2s var(--ease)}
+.mt:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(0,0,0,.28)}
+.mt.live{--k:#ff7a86;--kb:239,91,91;background:radial-gradient(90% 70% at 100% 0%,rgba(239,91,91,.12),transparent 70%),var(--mc)}
+.mt-c{cursor:default}.mt-c:hover{transform:none;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.mt-wm{position:absolute;z-index:-1;right:-34px;top:62px;width:190px;height:190px;object-fit:contain;opacity:.08;filter:grayscale(1) brightness(1.7);transform:rotate(-8deg);pointer-events:none}
+.mt-wm.face{border-radius:50%;object-fit:cover;object-position:50% 12%;opacity:.06}
+
+/* la franja de arriba: cuenta atras o en vivo */
+.mt-band{position:relative;display:flex;align-items:center;gap:10px;min-height:54px;padding:12px 18px 13px;background:linear-gradient(100deg,rgba(var(--kb),.2),rgba(var(--kb),.06));color:var(--k)}
+.mt.live .mt-band{background:linear-gradient(100deg,rgba(239,91,91,.32),rgba(239,91,91,.1));color:#ff8a8a}
+.mt-st{display:flex;align-items:center;gap:8px;flex:none;font:800 13px/1 var(--disp);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.mt-st b{font:600 16px/1 var(--mono);letter-spacing:-.02em;text-transform:none;color:var(--acc2)}
+.mt-st svg{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.mt-pt{flex:none;display:inline-block;width:9px;height:9px;border-radius:50%;background:#ff5b6b;box-shadow:0 0 0 4px rgba(255,91,107,.2);animation:latir 1.4s ease-in-out infinite}
+.mt-det{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;font:500 11.5px/1.2 var(--mono);color:#ffc2c7;white-space:nowrap}
+.mt-det>span{overflow:hidden;text-overflow:ellipsis}
+.mt-det>span:first-child{flex:none}
+.mt-det i{font-style:normal;opacity:.6}
+.mt-when{margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font:500 11px/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
+.mt-va{flex:none;margin-left:auto;padding:6px 9px;border-radius:999px;font:700 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.mt-va.gana{color:#05301b;background:var(--win)}
+.mt-va.pierde{color:#3a0808;background:#ff7a86}
+.mt-va.empata{color:var(--ink);background:rgba(255,255,255,.14)}
+.mt-bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.05)}
+.mt-bar i{display:block;height:100%;background:linear-gradient(90deg,rgba(242,193,78,.35),var(--acc))}
+.mt.live .mt-bar i{background:linear-gradient(90deg,rgba(255,122,134,.4),#ff7a86)}
+
+/* liga y numero de boleto */
+.mt-meta{display:flex;align-items:center;gap:8px;min-width:0;padding:16px 18px 0}
+.mt-meta img.tl{flex:none;width:auto;max-width:44px;height:22px;object-fit:contain}
+.mt-meta .lab{min-width:0}
+.mt-meta .dly{flex:none;margin:0}
+.mt-no{flex:none;margin-left:auto;font:500 11px var(--mono);letter-spacing:.12em;color:var(--dim);white-space:nowrap}
+.mt-ci{display:grid;place-items:center;flex:none;width:22px;height:22px;color:var(--acc)}
+.mt-ci svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+
+/* el partido: una fila por equipo, con el marcador a la derecha si se esta jugando */
+.mt-m{display:grid;gap:6px;padding:14px 18px 2px}
+.mt-eq{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:12px;min-height:46px}
+.mt-cr{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--sc) 26%,transparent),transparent)}
+.mt-cr img,.mt-cr .noimg{width:30px;height:30px;object-fit:contain}
+.mt-cr img.face{width:40px;height:40px;border-radius:50%;object-fit:cover;object-position:50% 12%}
+.mt-eq.mio .mt-cr{box-shadow:0 0 0 2px var(--acc),0 0 22px rgba(242,193,78,.22)}
+.mt-nm{display:grid;gap:4px;min-width:0}
+.mt-nm b{overflow:hidden;font:700 17px/1.15 var(--disp);letter-spacing:-.02em;color:var(--soft);text-overflow:ellipsis;white-space:nowrap}
+.mt-eq.mio .mt-nm b{color:var(--ink)}
+.mt-nm em{font:700 10px/1 var(--mono);font-style:normal;letter-spacing:.14em;text-transform:uppercase;color:var(--acc)}
+.mt-pts{display:flex;align-items:baseline;gap:10px;font-family:var(--mono)}
+.mt-pts strong{min-width:.7em;font:600 30px/1 var(--mono);letter-spacing:-.04em;text-align:right;color:var(--mute)}
+.mt-pts strong.w{color:var(--ink)}
+.mt-pts small{font:500 13px var(--mono);color:var(--dim)}
+.mt-pk{display:flex;align-items:center;gap:7px;min-width:0;margin:8px 18px 0;padding:9px 12px;border-radius:12px;background:rgba(242,193,78,.1);font:600 14px/1.2 var(--disp);color:var(--acc)}
+.mt-pk i{font-style:normal}
+.mt-pk b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* las patas de una combinada */
+.mt-legs{padding:8px 18px 0}
+.mt-leg{display:grid;grid-template-columns:22px 30px minmax(0,1fr) auto;align-items:center;gap:10px;min-height:52px;padding:6px 0}
+.mt-leg+.mt-leg{box-shadow:0 -1px 0 var(--hair)}
+.mt-ok{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.08);color:var(--mute)}
+.mt-ok svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.mt-ok .mt-pt{width:7px;height:7px;box-shadow:none}
+.mt-leg.ok .mt-ok{background:rgba(43,212,125,.16);color:var(--win)}
+.mt-leg.ko .mt-ok{background:rgba(239,91,91,.18);color:#ff8a8a}
+.mt-leg.ko b{color:#ff9d9d;text-decoration:line-through;text-decoration-thickness:1px}
+.mt-leg.vivo .mt-ok{background:rgba(239,91,91,.16)}
+.mt-leg .mt-cr{width:30px;height:30px;background:none}
+.mt-leg .mt-cr img,.mt-leg .mt-cr .noimg{width:26px;height:26px}
+.mt-lt{display:grid;gap:3px;min-width:0}
+.mt-lt b{overflow:hidden;font:700 15px/1.2 var(--disp);text-overflow:ellipsis;white-space:nowrap}
+.mt-lt small{overflow:hidden;font:400 12px/1.3 var(--mono);color:var(--mute);text-overflow:ellipsis;white-space:nowrap}
+.mt-q{font:600 15px var(--mono)}
+
+/* los cuadrados (como en resultado.js) y el boton */
+.mt-n{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:auto;padding:16px 16px 16px}
+.mt-n div{display:flex;flex-direction:column;gap:7px;min-width:0;padding:11px 12px;border-radius:12px;background:rgba(10,12,16,.3)}
+.mt-n .lab{font-size:10px;letter-spacing:.12em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mt-n b{display:flex;align-items:center;font:600 17px/1 var(--mono);letter-spacing:-.03em;white-space:nowrap}
+.mt-n b .cn{--s:.9em;margin-left:.2em}
+.mt-n .hi{background:rgba(242,193,78,.12)}
+.mt-n .hi b{font-size:20px;color:var(--acc)}
+.mt-act{display:flex;align-items:center;justify-content:flex-end;margin-top:-4px;padding:0 16px 16px}
+.mt-act.co{min-height:58px}   /* en vivo: el boton de cancelar llega un momento despues (extras.js) y no debe empujar nada */
+.mt-act.vacio{display:none}
+.mt-act .x-cancel,.mt-act .xc-btn{width:100%;justify-content:center;margin:0;padding:12px 16px;font-size:14px}
+.mt-act .xc-btn b{margin-left:4px}
+
+/* una sola apuesta en juego en PC: la tarjeta a lo ancho, el partido a la izquierda y los numeros a la derecha */
+@media (min-width:1181px){
+  .mt-grid.uno{grid-template-columns:1fr}
+  .mt-grid.uno .mt{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:"band band" "meta meta" "m n" "pk act";column-gap:18px}
+  .mt-grid.uno .mt-band{grid-area:band}.mt-grid.uno .mt-meta{grid-area:meta}
+  .mt-grid.uno .mt-m,.mt-grid.uno .mt-legs{grid-area:m;align-self:center;padding:16px 0 18px 22px}
+  .mt-grid.uno .mt-eq{grid-template-columns:56px minmax(0,1fr) auto;min-height:60px}
+  .mt-grid.uno .mt-cr{width:56px;height:56px}.mt-grid.uno .mt-cr img{width:40px;height:40px}.mt-grid.uno .mt-cr img.face{width:54px;height:54px}
+  .mt-grid.uno .mt-nm b{font-size:22px}.mt-grid.uno .mt-pts strong{font-size:38px}
+  .mt-grid.uno .mt-pk{grid-area:pk;align-self:start;margin:0 0 20px 22px}
+  .mt-grid.uno .mt-n{grid-area:n;align-self:center;margin:0;padding:16px 22px 12px 0}
+  .mt-grid.uno .mt-n div{padding:14px 14px}
+  .mt-grid.uno .mt-n b{font-size:20px}.mt-grid.uno .mt-n .hi b{font-size:26px}
+  .mt-grid.uno .mt-act{grid-area:act;align-self:start;margin:0;padding:0 22px 20px 0}
+  .mt-grid.uno .mt-meta{padding:16px 22px 0}
+  .mt-grid.uno .mt-band{padding-left:22px;padding-right:22px}
+  .mt-grid.uno .mt-wm{right:auto;left:30%;top:50px;width:240px;height:240px}
+}
+
+/* sin nada en juego */
+.mis-vacio{display:grid;justify-items:center;align-content:center;gap:8px;min-height:240px;padding:34px 24px 30px;border-radius:20px;text-align:center;background:radial-gradient(60% 80% at 50% 0%,rgba(242,193,78,.08),transparent 70%),var(--mc)}
+.mis-vacio-i{display:grid;place-items:center;width:52px;height:52px;margin-bottom:6px;border-radius:50%;background:rgba(242,193,78,.12);color:var(--acc)}
+.mis-vacio-i svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round}
+.mis-vacio b{font:700 19px/1.25 var(--disp);letter-spacing:-.02em}
+.mis-vacio p{max-width:340px;font:400 14px/1.5 var(--sans);color:var(--mute)}
+.mis-esp{background:var(--mc)}
+.mis-ir{margin-top:8px;padding:12px 20px;border-radius:999px;background:var(--acc);color:#141008;font:700 14px/1 var(--sans);white-space:nowrap;transition:filter .15s}
+.mis-ir:hover{filter:brightness(1.08)}
+
+/* el resumen de la derecha */
+.mis-sum{position:sticky;top:20px;display:grid;gap:22px;padding:22px 22px 24px;border-radius:20px;background:linear-gradient(170deg,var(--mc2),var(--mc))}
+.mis-sum>div{display:grid;gap:8px;min-width:0}
+.mis-sum>div+div{padding-top:20px;box-shadow:0 -1px 0 var(--hair)}
+.mis-sum .num{display:flex;align-items:center;font:600 36px/1 var(--mono);letter-spacing:-.05em}
+.mis-sum .num .cn{--s:.62em;margin-left:.22em}
+.mis-sum-b .num{color:var(--acc)}
+.mis-sum small{font:400 12px/1.4 var(--mono);color:var(--mute)}
+.mis-sum small b{font-weight:600;color:var(--acc)}
+.mis-sum p{overflow:hidden;font:700 16px/1.25 var(--disp);letter-spacing:-.01em;text-overflow:ellipsis;white-space:nowrap}
+.mis-sum p i{font:500 11px var(--mono);font-style:normal;color:var(--dim);margin:0 3px}
+.mis-sum .mis-ir{justify-self:stretch;margin-top:0;text-align:center}
+
+/* retos 1 contra 1 */
+.mis .rts{border-bottom:0}
+.mis .rt{border-top:0;box-shadow:0 -1px 0 var(--hair)}
+
+/* ---------- 2. tus numeros ---------- */
+.mis-ch{position:relative;padding:20px 22px 16px;border-radius:20px;background:linear-gradient(170deg,var(--mc2),var(--mc))}
+.mis-ch-h{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 20px;margin-bottom:6px}
+.mis-ch-h h3{font:800 20px/1.1 var(--disp);letter-spacing:-.03em}
+.mis-ch-h p{display:flex;flex-wrap:wrap;gap:4px 18px;font:400 12px var(--mono);color:var(--mute)}
+.mis-ch-h b{font-weight:600}
+.mis .up{color:var(--win)}.mis .dn{color:#ff8a8a}
+.mis-ch-v{position:relative;touch-action:pan-y}
+.mis-ch-0{aspect-ratio:1100/300}
+.mis-ch-v>.hint{margin:0;display:grid;place-items:center;height:100%;text-align:center}
+.mis-ch-v svg{display:block;width:100%;height:100%;overflow:visible}
+.mis-gr{stroke:var(--hair)}
+.mis-zero{stroke:var(--mute);stroke-dasharray:3 5;opacity:.7}
+.mis-ax{fill:var(--dim);font-family:var(--mono)}
+.mis-ln{fill:none;stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}
+.mis-ln.up{stroke:#2bd47d}.mis-ln.dn{stroke:#ef5b5b}
+.mis-pt{stroke:var(--mc);stroke-width:2}
+.mis-pt.won{fill:#2bd47d}.mis-pt.lost{fill:#ef5b5b}
+.mis-guia{stroke:rgba(255,255,255,.22);stroke-dasharray:2 4}
+.mis-sel{stroke:var(--ink);stroke-width:2.5;fill:var(--mc)}
+.mis-sel.won{fill:#2bd47d}.mis-sel.lost{fill:#ef5b5b}
+.mis-fin{font-family:var(--mono);font-weight:600;fill:var(--soft)}
+.mis-fin.up{fill:#2bd47d}.mis-fin.dn{fill:#ff8a8a}
+.mis-tip{position:absolute;z-index:2;display:grid;gap:5px;max-width:220px;padding:10px 12px;border-radius:12px;background:#11141a;box-shadow:0 10px 26px rgba(0,0,0,.45);pointer-events:none;font:400 12px/1.3 var(--mono);color:var(--mute)}
+.mis-tip>b{overflow:hidden;font:700 14px/1.2 var(--disp);color:var(--ink);text-overflow:ellipsis;white-space:nowrap}
+.mis-tip>span{display:flex;justify-content:space-between;gap:14px}
+.mis-tip>span b{font-weight:600;color:var(--soft)}
+.mis-tip>span.pos b{color:var(--win)}.mis-tip>span.neg b{color:#ff8a8a}
+.mis-tip>span b.up{color:var(--win)}.mis-tip>span b.dn{color:#ff8a8a}
+.mis-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.mis-tl{display:grid;gap:8px;align-content:center;min-width:0;min-height:112px;padding:16px 20px;border-radius:18px;background:var(--mc)}
+.mis-tl .num{display:flex;align-items:center;font:600 30px/1 var(--mono);letter-spacing:-.05em;white-space:nowrap}
+.mis-tl .num i{font-style:normal;font-size:.55em;margin-right:.2em}
+.mis-tl .num .cn{--s:.66em;margin-left:.22em}
+.mis-tl.pos .num{color:var(--win)}.mis-tl.neg .num{color:#ff8a8a}
+.mis-tl small{overflow:hidden;font:400 12px/1.3 var(--mono);color:var(--mute);text-overflow:ellipsis;white-space:nowrap}
+.mis-tl.ben{background:radial-gradient(80% 120% at 100% 0%,rgba(43,212,125,.1),transparent 70%),var(--mc)}
+.mis-tl.ben.neg{background:radial-gradient(80% 120% at 100% 0%,rgba(239,91,91,.12),transparent 70%),var(--mc)}
+.mis-tl.ben .num{font-size:36px}
+
+/* ---------- 3. historial ---------- */
+.mis-fil{margin:-6px 0 14px}
+.mis-rs{align-items:stretch}
+
+/* entrada suave, como el resto de la app */
+@keyframes misIn{from{opacity:0;transform:translateY(14px) scale(.985)}}
+#view.entra .mt,#view.entra .mis-sum,#view.entra .mis-ch,#view.entra .mis-tl,#view.entra .mis-vacio{animation:misIn .5s var(--ease) both;animation-delay:calc(var(--i,0) * 60ms + 60ms)}
+#view.entra .mis-nums .mis-ch,#view.entra .mis-tl{animation-delay:.18s}
+html.sin-anim #view.entra .mt,html.sin-anim #view.entra .mis-sum,html.sin-anim #view.entra .mis-ch,html.sin-anim #view.entra .mis-tl,html.sin-anim #view.entra .mis-vacio{animation:none}
+html.sin-anim .mt:hover{transform:none}
+html.sin-anim .mt-pt{animation:none}
+
+/* pantallas medianas: una columna, el resumen y las cifras en fila */
+@media (max-width:1180px){
+  .mis-cols{grid-template-columns:1fr}
+  .mis-ab .mis-cols{display:flex;flex-direction:column-reverse;align-items:stretch}
+  .mis-sum{position:static;grid-template-columns:repeat(2,minmax(0,1fr)) auto;align-items:center;gap:16px 24px;padding:18px 22px}
+  .mis-sum>div+div{padding-top:0;box-shadow:none}
+  .mis-sum .mis-sum-c{display:none}
+}
+/* movil */
+@media (max-width:760px){
+  .mis-sec{margin-bottom:44px}
+  .mis-h{margin-bottom:14px}
+  .mis-h h2{font-size:26px}
+  .mis-cols{gap:14px}
+  .mt-grid{gap:14px}
+  .mt-band{min-height:50px;padding:11px 14px 12px;gap:8px}
+  .mt-meta{padding:14px 14px 0}
+  .mt-m{padding:12px 14px 2px}
+  .mt-pk{margin:8px 14px 0}
+  .mt-legs{padding:6px 14px 0}
+  .mt-n{gap:6px;padding:14px 12px 14px}
+  .mt-n div{padding:10px 10px}
+  .mt-n b{font-size:15px}.mt-n .hi b{font-size:17px}
+  .mt-act{padding:0 12px 14px}
+  .mis-sum{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:14px 18px;padding:16px 18px}
+  .mis-sum small{font-size:11px}
+  .mis-sum .num{font-size:26px}
+  .mis-sum .mis-ir{display:none}
+  .mis-ch{padding:16px 14px 12px}
+  .mis-ch-h{margin:0 4px 6px}
+  .mis-ch-0{aspect-ratio:360/220}
+  .mis-tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}
+  .mis-tl{min-height:96px;padding:14px 16px}
+  .mis-tl small{white-space:normal}.mis-tl small>span{display:block}.mis-tl small .sep{display:none}
+  .mis-tl .num,.mis-tl.ben .num{font-size:26px}
+}
+@media (max-width:380px){
+  .mt-st{font-size:12px;letter-spacing:.05em}
+  .mt-n .lab{font-size:9px;letter-spacing:.08em}
+}
+/* movil con dos o mas apuestas en vivo: la tira de #vivoyo (app.js) de la barra de abajo no debe ensanchar la pagina */
+@media (max-width:860px){#vivoyo{contain:inline-size}}
