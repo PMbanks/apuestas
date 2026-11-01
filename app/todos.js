@@ -2,7 +2,7 @@
 // Arriba, en una banda, el partido en vivo y quien va en el. Luego una fila por amigo (por saldo): puesto, saldo, lo que
 // tiene en juego en boletos pequenos (sus apuestas con Me sumo, las ocultas con candado, sus combinadas y sus retos) y su
 // ultimo resultado. Debajo, en bloques plegables: resultados recientes de todos, combinadas (las pinta combinadas.js en
-// #cmb-todos), retos 1 contra 1 y Todas las apuestas (todasHtml de app.js, con sus filtros y paginas). Abajo del todo, y
+// #cmb-todos), retos (1v1, 2v1, 2v2...) y Todas las apuestas (todasHtml de app.js, con sus filtros y paginas). Abajo del todo, y
 // solo para el admin, los interruptores de la mesa (Apuesta del dia, Elecciones). Lo resuelto sale con el estilo de
 // resultado.js (franja de color). Va aparte, como inicio.js: app.js lo pinta desde colegas() y aqui se usa lo global de
 // app.js (ALL, F, CH, M, S, MEK, VIS, DAILY_ON, DAILY_BONUS, byId, av, fr, logo, pn, N, O, coin, isOpen, isMine...).
@@ -70,21 +70,23 @@
       <div class="m"><span>${N(c.stake)}</span> → <b>${N(c.stake * odds)}</b>${coin()}<small>cobraría</small></div><div class="bx">${etq}</div></div>`;
   }
   function tkReto(c, fid) {
-    const m = byId(c.m), suyo = fid && c.to === fid && c.st !== 'pending', paraMi = (c.to === MEK || (c.ab && c.from !== MEK)) && c.st === 'pending' && isOpen(m), mio = c.from === MEK, de = pn(m, c.fp);
+    const R = window.GM_RETOS, e = fid && R ? R.pl(c).find((x) => x.k === fid) : null, otros = e ? R.pl(c).filter((x) => x.p !== e.p).map((x) => x.k) : [];
+    const m = byId(c.m), suyo = !!(e && c.from !== fid) && c.st !== 'pending', paraMi = (c.to === MEK || (c.ab && c.from !== MEK)) && c.st === 'pending' && isOpen(m), mio = c.from === MEK, de = pn(m, c.fp);
     let tit, acc = '', act = false;
     if (c.st === 'pending') {
       if (paraMi) { tit = `<span>${c.ab ? 'Reta a cualquiera con' : 'Te reta con'}</span> <span class="nm" data-notr>${esc(de)}</span>`; act = true;
         acc = `<span class="td-btns">${window.GM_RETOS ? GM_RETOS.accion(c, 'en-td') : ''}</span>` }
       else if (mio) { tit = c.ab ? `<span>Retas a cualquiera</span><em data-notr>${esc(de)}</em>` : `<span>Retas a</span> <span class="nm" data-notr>${esc(fr(c.to).n)}</span><em data-notr>${esc(de)}</em>`; acc = '<span class="td-tag q">esperando</span>' }   // los retos no se cancelan
+      else if (e && c.from !== fid) { tit = `<span>Reto de</span> <span class="nm" ${sinTr(c.from)}>${esc(nombre(c.from))}</span><em data-notr>${esc(pn(m, e.p))}</em>`; acc = '<span class="td-tag q">esperando</span>' }
       else { tit = c.ab ? `<span>Reta a cualquiera</span><em data-notr>${esc(de)}</em>` : `<span>Reta a</span> <span class="nm" ${sinTr(c.to)}>${esc(nombre(c.to))}</span><em data-notr>${esc(de)}</em>`; acc = '<span class="td-tag q">esperando</span>' }
     } else {
-      const va = comoVa(m, suyo ? c.tp : c.fp);
-      tit = `<span>Reto contra</span> <span class="nm" ${sinTr(suyo ? c.from : c.to)}>${esc(nombre(suyo ? c.from : c.to))}</span><em data-notr>${esc(suyo ? pn(m, c.tp) : de)}</em>`;
+      const mi = e ? e.p : c.fp, va = comoVa(m, mi), rk = otros.length ? otros[0] : suyo ? c.from : c.to;
+      tit = `<span>Reto contra</span> <span class="nm" ${sinTr(rk)}>${esc(nombre(rk))}${otros.length > 1 ? ` +${otros.length - 1}` : ''}</span><em data-notr>${esc(pn(m, mi))}</em>`;
       acc = va ? `<span class="td-tag ${VA[va][0]}">${VA[va][1]}</span>` : `<span class="td-tag q">${m.live ? 'en vivo' : esc(empieza(t2(m.at)))}</span>`;
     }
-    return `<div class="td-tk reto ${act ? 'act' : ''}" data-goto="${esc(m.id)}"><span class="td-ic vs">1v1</span>
+    return `<div class="td-tk reto ${act ? 'act' : ''}" data-goto="${esc(m.id)}"><span class="td-ic vs">${R ? R.nvm(c) : '1v1'}</span>
       <div class="t"><b>${tit}</b><small><span data-notr>${esc(m.a)} vs ${esc(m.b)}</span><span> · </span><span>${N(c.stake)} cada uno</span></small></div>
-      <div class="m"><b>${N(c.stake * 2)}</b>${coin()}<small>bote</small></div><div class="bx">${acc}</div></div>`;
+      <div class="m"><b>${N(R ? R.bote(c) : c.stake * 2)}</b>${coin()}<small>bote</small></div><div class="bx">${acc}</div></div>`;
   }
 
   /* ---------- lo ultimo resuelto de cada uno, con el estilo de resultado (franja de color) ---------- */
@@ -130,7 +132,7 @@
       .sort((a, b) => abiertas.filter((x) => x.m === b.id).length - abiertas.filter((x) => x.m === a.id).length).slice(0, 3);
     const filas = rank.map((f, i) => {
       const bs = abiertas.filter((b) => b.k === f.id).sort((a, b) => (byId(b.m).live - byId(a.m).live) || t2(byId(a.m).at) - t2(byId(b.m).at));
-      const cs = cmbAb.filter((c) => c.player === f.uid), rs = retosAb.filter((c) => c.from === f.id || (c.to === f.id && c.st === 'accepted'));
+      const cs = cmbAb.filter((c) => c.player === f.uid), rs = retosAb.filter((c) => (window.GM_RETOS ? GM_RETOS.dentro(c, f.id) : c.from === f.id || (c.to === f.id && c.st === 'accepted')));
       const j = bs.reduce((a, b) => a + b.stake, 0) + cs.reduce((a, c) => a + c.stake, 0);
       return { f, i, bs, cs, rs, j, algo: bs.length + cs.length + rs.length > 0 };
     });
@@ -154,13 +156,13 @@
     const cmbRec = combos().filter((c) => c.status === 'open' || t2(c.settled_at) > Date.now() - 2 * DIA), cmbGan = cmbRec.filter((c) => c.status === 'won').length;
     const caras = (ks) => [...new Set(ks)].filter(Boolean).slice(0, 4).map((k) => av(k, 'sm')).join('');
     const kDeUid = (uid) => g(() => F.find((x) => x.uid === uid).id, null);
-    const retoTeEspera = CH.filter((c) => (c.to === MEK || (c.ab && c.from !== MEK)) && c.st === 'pending' && byId(c.m) && isOpen(byId(c.m))).length;
+    const retoTeEspera = CH.filter((c) => (window.GM_RETOS ? GM_RETOS.paraMi(c) : (c.to === MEK || (c.ab && c.from !== MEK)) && c.st === 'pending') && byId(c.m) && isOpen(byId(c.m))).length;
     const blk = (k, h3, i, pv, cuerpo) => `<details class="td-blk" data-tdb="${k}" ${T.blk[k] ? 'open' : ''}><summary><h3>${h3}</h3>${i ? `<i>${i}</i>` : ''}<span class="pv">${pv || ''}</span>${CHEV}</summary><div class="in">${cuerpo}</div></details>`;
     const bajo = `<div class="td-bajo">
         ${blk('res', 'Resultados recientes', 'de todos', '', hechas.map(hecha).join('') || '<p class="hint">Todavía no se ha resuelto ninguna. Cuando acabe un partido sale aquí quién acertó.</p>')}
         <div class="td-col">
           ${cmbRec.length ? blk('cmb', 'Combinadas', `<span>${cmbAb.length} en juego</span>${cmbGan ? `<span> · </span><span>${cmbGan} ${cmbGan === 1 ? 'cobrada' : 'cobradas'}</span>` : ''}`, caras(cmbRec.map((c) => kDeUid(c.player))), '<div id="cmb-todos"></div>') : ''}
-          ${CH.length ? blk('ret', 'Retos 1 contra 1', retoTeEspera ? `<span>${retoTeEspera} ${retoTeEspera === 1 ? 'te espera' : 'te esperan'}</span>` : `<span>${retosAb.length} abiertos</span>`, caras(CH.slice(0, 6).map((c) => c.from)), retosHtml(CH.slice(0, 10), '')) : ''}
+          ${CH.length ? blk('ret', 'Retos', retoTeEspera ? `<span>${retoTeEspera} ${retoTeEspera === 1 ? 'te espera' : 'te esperan'}</span>` : `<span>${retosAb.length} abiertos</span>`, caras(CH.slice(0, 6).map((c) => c.from)), retosHtml(CH.slice(0, 10), '')) : ''}
           <button type="button" class="td-all ${T.todas ? 'on' : ''}" data-tdall><span>Todas las apuestas<small><span>${N(ALL.length)} ${ALL.length === 1 ? 'apuesta' : 'apuestas'}</span><span> · </span><span>filtra por amigo, estado o deporte</span></small></span>${CHEV}</button>
         </div>
       </div>`;

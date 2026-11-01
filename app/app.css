@@ -37,7 +37,7 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 .app{display:grid;grid-template-columns:232px minmax(0,1fr);grid-template-rows:64px minmax(0,1fr);height:100%}
 .rail{grid-row:1/3;display:flex;flex-direction:column;padding:20px 16px 18px;border-right:1px solid var(--hair);background:var(--bg2)}
 .brand{display:flex;align-items:center;gap:10px;height:28px;margin:0 0 30px 6px;font:800 14px var(--disp);letter-spacing:.22em}
-.brand .cn{--s:24px;margin:0}
+.brand .logo-ga{--s:28px}
 .nav{display:flex;flex-direction:column;gap:2px}
 .nv{position:relative;display:flex;align-items:center;gap:13px;height:46px;padding:0 10px;font:600 14px var(--sans);color:var(--mute);transition:color .15s}
 .nv svg{flex:none;width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
@@ -539,7 +539,7 @@ html.sin-anim *{transition:none!important}
 [hidden]{display:none!important}
 body{min-height:100%}
 .boot{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg)}
-.boot .cn{--s:72px;margin:0;animation:latido 1.2s var(--ease) infinite alternate}
+.boot .logo-ga{--s:72px;animation:latido 1.2s var(--ease) infinite alternate}
 @keyframes latido{from{opacity:.4;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
 .login{position:fixed;inset:0;display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-left,0px));background:radial-gradient(60% 50% at 50% 30%,rgba(242,193,78,.08),transparent 70%),var(--bg);overflow:auto}
 .lg-box{display:flex;flex-direction:column;width:min(360px,100%)}
@@ -557,7 +557,7 @@ body{min-height:100%}
 .lgs .chip i{font-style:normal;color:var(--dim);margin-left:4px}
 .noimg{display:inline-block;flex:none;width:21px;height:21px;border-radius:50%;background:#1a1c21}
 .go:disabled{opacity:.4;cursor:default}
-html.sin-anim .boot .cn{animation:none}
+html.sin-anim .boot .logo-ga{animation:none}
 
 .pf-pass{display:flex;gap:14px;align-items:center;max-width:460px;margin-top:18px}
 .pf-pass input{flex:1;min-width:0;padding:10px 0;background:none;border:0;border-bottom:1px solid var(--hair2);outline:none;font:500 16px var(--sans);color:var(--ink)}
@@ -2161,6 +2161,7 @@ img.tl{image-rendering:auto}
 html[data-moneda="usd"] .cn{background-image:url(img/monedas/usd.svg)}
 html[data-moneda="sol"] .cn{background-image:url(img/monedas/sol.svg)}
 html[data-moneda="robux"] .cn{background-image:url(img/monedas/robux.svg)}
+html[data-moneda="gambling"] .cn{background-image:url(img/monedas/gambling.webp)}
 /* Ajustes (30-10): el engranaje de arriba ocupa el sitio del silencio; en el carril, en lugar de ES EN */
 .top .aj-btn{flex:none;display:grid;place-items:center;width:36px;height:36px;margin-left:12px;border-radius:50%;color:var(--mute);transition:color .15s,background .15s}
 .top .aj-btn:hover,.top .aj-btn.on{color:var(--ink);background:rgba(255,255,255,.06)}
@@ -2241,13 +2242,14 @@ html[data-moneda="robux"] .cn{background-image:url(img/monedas/robux.svg)}
 @media (max-width:560px){.bol-n .xc-btn{width:100%;justify-content:center;margin:6px 0 0;padding:12px 16px;white-space:normal}}
 .bol-n{flex-wrap:wrap;row-gap:14px}
 /* Combinadas (30-10 noche, db/029): selector en el boleto y tarjetas en Mis apuestas */
-.blt-modo{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:2px 0 8px;padding:4px;border-radius:14px;background:rgba(255,255,255,.05)}
-.blt-modo button{display:grid;gap:3px;padding:9px 11px;border-radius:10px;text-align:left;color:var(--mute);transition:background .15s,color .15s}
-.blt-modo button b{font:700 14px var(--sans)}.blt-modo button small{font:500 11px/1.3 var(--sans);color:var(--dim)}
-.blt-modo button.on{background:rgba(242,193,78,.16);color:var(--ink)}.blt-modo button.on b{color:var(--acc)}
-.blt-cq{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:4px 0 6px}
-.blt-cq b{font:600 30px/1 var(--mono);letter-spacing:-.03em;color:var(--acc)}
-.blt.comb .blt-l .blt-in,.blt.comb .blt-l .blt-co{display:none}
+/* el selector Sueltas/Combinada y el resto del boleto: estilos en boleto.js */
+/* apuesta suelta desde la ficha (Me sumo): cada cosa en su bloque, con aire y una linea fina (PM 01-11) */
+.det .stk{margin-top:24px;padding-top:24px;border-top:1px solid var(--hair)}
+.det .stk b{min-width:0}
+.det .ret{margin-top:24px;padding:16px;border-radius:14px;background:rgba(255,255,255,.04)}
+.det .ret b{font-size:32px}
+.det .ret2{margin-top:8px}
+.det .stk+.ret+.ret2+.go{margin-top:24px}
 .cmb-cs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:18px}.cmb-cs+.cmb-cs{margin-top:18px}.cmb-cs.cerr{opacity:.85}
 .cmb{padding:18px 20px 16px;border-radius:20px;background:linear-gradient(165deg,#2a2d36,#22252d)}
 .cmb header{display:flex;align-items:baseline;gap:12px;margin-bottom:10px}
@@ -2355,3 +2357,13 @@ html[data-moneda="robux"] .cn{background-image:url(img/monedas/robux.svg)}
 /* PM 01-11 ("los numeros estan fuera de sus casillas"): la flechita de subida o bajada de una cuota usa la clase .mv, que tambien es la fila del Monedero
    (rejilla de 62 px con borde): dentro de una cuota tiene que ser solo un signo pequeno al lado del numero */
 .o .mv{display:inline;grid-template-columns:none;min-height:0;height:auto;padding:0;border:0;column-gap:0;margin-right:4px;vertical-align:2px;line-height:1}
+
+/* PM 01-11: el logo (la ficha GA) es fijo; la moneda .cn cambia con la divisa que elijas */
+.logo-ga{display:inline-block;flex:none;width:var(--s,28px);height:var(--s,28px);border-radius:50%;background:url(img/logo-ga.webp) center/contain no-repeat;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
+
+/* PM 01-11: "gentle mates gc 2 y kru blaze 1 estan muy pegados": en la tarjeta En juego ahora del chat el nombre y su marcador van en lineas aparte, con aire */
+.live-m>div{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;line-height:1.25}
+.live-m>div .vn{display:inline-flex;align-items:baseline;justify-content:center;gap:10px;margin:2px 0 0}
+.live-m>div .vn em{font:600 24px/1 var(--mono);font-style:normal}
+.live-m>div .vn small{font:500 14px/1 var(--mono);opacity:.8;padding:3px 8px;border-radius:8px;background:rgba(255,255,255,.08)}
+.live-m img{margin:0 auto}

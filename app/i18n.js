@@ -17,6 +17,45 @@
 })();
 (function () {
   const D = {
+    // Ficha completa del equipo NBA (01-11, nba.js): plantilla, clasificación, estadísticas y calendario de toda la temporada
+    'victoria seguida': 'win in a row',
+    'victorias seguidas': 'wins in a row',
+    'derrota seguida': 'loss in a row',
+    'derrotas seguidas': 'losses in a row',
+    'ESPN todavía no tiene estos datos.': 'ESPN does not have this data yet.',
+    'Forma, últimos 10 partidos': 'Form, last 10 games',
+    'El último partido está a la derecha.': 'The latest game is on the right.',
+    'Todavía no ha jugado ningún partido.': 'No games played yet.',
+    'Últimos 5 resultados': 'Last 5 results',
+    'Próximos partidos': 'Next games',
+    'Ver el calendario completo': 'See the full schedule',
+    'Plantilla completa': 'Full roster',
+    'Medias por partido de esta temporada. Toca una columna para ordenar.': 'Per game averages this season. Tap a column to sort.',
+    'Todavía no hay estadísticas de esta temporada.': 'There are no stats for this season yet.',
+    'Fuera de playoffs': 'Missing the playoffs',
+    'Los seis primeros van a playoffs, del séptimo al décimo juegan el play in. Toca un equipo para ver su ficha.': 'The top six go to the playoffs, seventh to tenth play the play in. Tap a team to open its page.',
+    'Puntos a favor': 'Points scored',
+    'Puntos en contra': 'Points allowed',
+    'Diferencia por partido': 'Margin per game',
+    'Triples, acierto': 'Three point %',
+    'Triples anotados por partido': 'Threes made per game',
+    'Pérdidas de balón': 'Turnovers',
+    'Estadísticas del equipo': 'Team stats',
+    'Medias por partido de esta temporada.': 'Per game averages this season.',
+    'El puesto en la liga sale donde la fuente lo da.': 'The league rank shows where the source provides it.',
+    'No hay partidos en esta lista.': 'No games in this list.',
+    'se actualiza cada vez que abres la ficha': 'refreshed every time you open this page',
+    'Casi seguro que no': 'Doubtful',
+    // Retos con mas gente (01-11, retos.js, activos.js, db/053): 2v1, 2v2, 3v1, la seccion de Inicio y el boton de unirse
+    'Retos activos': 'Active challenges', 'entra en un lado: el bote se reparte entre los que aciertan': 'join a side: the pot is split between those who are right',
+    'Nadie todavía': 'Nobody yet', 'Estás dentro': 'You are in', 'entras con': 'you join with', 'Unirme con': 'Join', 'pones': 'you put in', 'Reto de': 'Challenge from',
+    'Retos': 'Challenges', 'Gana un reto': 'Win a challenge', 'Van ganando': 'Winning', 'Tu parte si aciertas': 'Your share if you are right',
+    'en juego · se reparte entre los que acierten': 'at stake · split between those who are right', 'el empate': 'the draw',
+    '· crece si entra más gente': '· grows if more people join', 'Reto para ti': 'Challenge for you',
+    'Ya estás dentro de este reto': 'You are already in this challenge', 'Ese reto es para otro amigo': 'That challenge is for another friend',
+    'Ese reto es para ti: acéptalo': 'That challenge is for you: accept it', 'Ese reto está cerrado': 'That challenge is closed', 'Elige un resultado válido': 'Pick a valid result',
+    'No puedes entrar en tu propio reto': 'You cannot join your own challenge', 'Ese partido ya ha empezado': 'That match has already started',
+    'Perdiste el reto con': 'You lost the challenge against', 'Reto con': 'Challenge with',
     // Jugadores (01-11, jugadores.js): ficha de jugador, vista previa, copas y ganancias torneo a torneo
     'Agentes que más juega': 'Most played agents', 'Últimos 60 días, según vlr.gg. Iconos oficiales de Riot Games.': 'Last 60 days, from vlr.gg. Official icons by Riot Games.',
     'Rol en el equipo': 'Role in the team', 'Sus mejores premios': 'Biggest prizes', 'Todavía no tenemos sus ganancias: se cargan solas, jugador a jugador.': 'We do not have his earnings yet: they load by themselves, player by player.',
@@ -124,6 +163,8 @@
     'Todavía no hay resultados.': 'No results yet.', 'Ver el Feed': 'See the Feed', 'ganó': 'won', 'perdió': 'lost', 'retiró': 'cashed out', 'recupera': 'gets back',
 
     // boleto multiple (boleto.js, 30-10)
+    // boleto separado por secciones (01-11)
+    'Tipo de apuesta': 'Bet type', 'Tus elecciones': 'Your picks', 'Cuota total': 'Total odds',
     'Boleto': 'Bet slip', 'Vaciar': 'Clear', 'Mismo importe para todas': 'Same stake for all', 'Abrir el boleto': 'Open the bet slip', 'Ir al partido': 'Go to the match',
     'La mitad de tu saldo, repartida': 'Half your balance, split', 'Todo tu saldo, repartido': 'Your whole balance, split',
     'Total apostado': 'Total stake', 'Cobrarías si aciertas todas': 'Payout if all win', 'Cobrarías si aciertas': 'Payout if it wins',
@@ -476,6 +517,13 @@
     'De 50 a 600 V-Bucks o una caja de CS2 para abrirla tú. Una tirada cada 3 días.': 'From 50 to 600 V-Bucks or a CS2 box to open yourself. One spin every 3 days.',
     'Estás en negativo (': 'You are below zero (', '): no puedes apostar hasta volver a tener saldo. La paga del lunes llega sola.': '): you cannot bet until you have a balance again. The Monday payday comes in by itself.',
     'No te queda saldo para apostar. La paga del lunes llega sola.': 'You have no balance left to bet. The Monday payday comes in by itself.',
+    // Ficha de partido pro (01-11, fichapro.js)
+    'Árbitro': 'Referee', 'Asistencia': 'Attendance', 'Hora local': 'Local time', 'Goles y tarjetas': 'Goals and cards', 'Titulares y cambios': 'Starters and subs', 'Suplentes': 'Substitutes',
+    'Quinteto inicial': 'Starting five', 'Puntos, rebotes y asistencias': 'Points, rebounds and assists', 'Banquillo': 'Bench', 'Jugadores a seguir': 'Players to watch', 'Medias por partido de esta temporada': 'Per game averages this season',
+    'Estadísticas': 'Stats', 'Últimos 5 partidos': 'Last 5 games', 'Últimos duelos': 'Latest meetings', 'Empates': 'Draws', 'Goleadores del equipo': 'Team top scorers', 'Esta temporada': 'This season',
+    'Ver toda la clasificación': 'See the full table', 'Ver menos': 'See less', 'Descenso': 'Relegation', 'Ascenso': 'Promotion', 'Clasifica': 'Qualifies', 'Promoción de descenso': 'Relegation play-off', 'Playoff de ascenso': 'Promotion play-off', 'Playoff': 'Play-off',
+    'Las alineaciones salen sobre una hora antes': 'Line-ups come out about an hour before', 'Cuando los equipos las den, aquí verás los once colocados en el campo, con su dorsal, los suplentes y los cambios.': 'Once the teams announce them, you will see the eleven on the pitch here, with shirt numbers, substitutes and changes.',
+    'No juega': 'Did not play', 'Rebotes': 'Rebounds', 'Asistencias': 'Assists', 'por partido': 'per game', 'PJ': 'GP', 'PTS': 'PTS', 'REB': 'REB', 'AST': 'AST',
   };
   // Nombres de cajas y objetos que vienen de la base en espanol (cajas de lujo y de cosmeticos). Van con data-notr en cajas.js, asi que
   // el diccionario D no los toca: se traducen aparte (NOMB exactos, RN por patron) y tambien dentro de frases del chat y del monedero.
@@ -527,6 +575,11 @@
   const ORD = (n) => (/^1[123]$|[04-9]$/.test(n) ? 'th' : /1$/.test(n) ? 'st' : /2$/.test(n) ? 'nd' : 'rd');
   const MES_N = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const R = [
+    // Retos con mas gente (01-11, db/053): lo que escribe la base en el chat y en el monedero; van primero para que las reglas de mas abajo no las trocen
+    [/^(.+) entra en el reto de (.+?): (.+), ([\d.,]+) en juego$/, '$1 joins the challenge from $2: $3, $4 at stake'],
+    [/^(.+) ganó ([\d.,]+) en el reto contra (.+?) · (.+)$/, (m, a, n, b, r) => `${a} won ${n} in the challenge against ${b.replace(/ y /g, ' and ')} · ${r}`],
+    [/^(.+) ganaron ([\d.,]+) cada uno en el reto contra (.+?) · (.+)$/, (m, a, n, b, r) => `${a.replace(/ y /g, ' and ')} won ${n} each in the challenge against ${b.replace(/ y /g, ' and ')} · ${r}`],
+    [/^Ganan (.+)$/, 'Winners $1'], [/^y (\d+) reto más$/, 'and $1 more challenge'], [/^y (\d+) retos más$/, 'and $1 more challenges'],
     // repaso del ingles (01-11, ingles2): estas van primero porque las reglas de mas abajo cambian trozos sueltos (contra, con, en juego, a...)
     // y despues la frase entera ya no casa
     [/^Cara o cruz: ganas contra (.+)$/, 'Coin flip: you win against $1'], [/^Cara o cruz: pierdes contra (.+)$/, 'Coin flip: you lose against $1'],
@@ -584,6 +637,7 @@
     [/^cobraría ([\d.]+)$/, 'would get $1'], [/^· ([\d.]+) a ([\d.]+)$/, '· $1 at $2'],
     [/^· contra (.+)$/, '· against $1'], [/^contra (.+)$/, 'against $1'], [/^cobró ([\d.]+) a ×([\d.,]+)$/, 'cashed $1 at ×$2'],
     [/^combinada de (\d+)$/, 'parlay of $1'], [/^una combinada de (\d+)$/, 'a parlay of $1'], [/^y (\d+) más en juego$/, 'and $1 more in play'],
+    [/^Lleva (\d+) h (\d+) min$/, '$1 h $2 min in'], [/^Lleva (\d+) min$/, '$1 min in'],
     [/\bMinuto (?=\d)/g, 'Minute '], [/ · Descanso$/, ' · Half time'], [/\bmié(?= \d)/g, 'Wed'],
     [/(^|\s)(\d{1,2}) (ene|abr|ago|dic)(?=$| \d)/g, (m, s, d, mo) => `${s}${d} ${MESES[mo]}`],
     // boleto multiple (boleto.js, 30-10)

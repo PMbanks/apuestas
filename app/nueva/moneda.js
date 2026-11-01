@@ -15,6 +15,7 @@
     usd: [['dólares', 'dollars'], ['Dólares', 'Dollars'], BASE + 'monedas/usd.svg'],
     sol: [['Solana', 'Solana'], ['Solana', 'Solana'], BASE + 'monedas/sol.svg'],
     robux: [['Robux', 'Robux'], ['Robux', 'Robux'], BASE + 'monedas/robux.svg'],
+    gambling: [['Gambling', 'Gambling'], ['Gambling', 'Gambling'], BASE + 'monedas/gambling.webp'],   // la ficha GA del logo (PM 01-11): V-Bucks se queda como la de Fortnite
   };
   let cur = 'vbucks';
   try { const v = localStorage.getItem('gm-moneda'); if (M[v]) cur = v; } catch (e) {}

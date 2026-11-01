@@ -2,6 +2,105 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "moneda-gambling-0111",
+   "fecha": "2026-11-02",
+   "hora": "02:10",
+   "titulo": "Moneda Gambling y retos con tiempo",
+   "texto": "V-Bucks vuelve a ser la moneda de Fortnite de siempre, y la ficha GA del logo es una moneda nueva que se llama Gambling: la eliges en Ajustes. La tarjeta de un reto en directo ahora enseña el tiempo por el que van, el minuto del fútbol, el cuarto de la NBA o el mapa. Y las predicciones rápidas ya solo están en fútbol, baloncesto y UFC.",
+   "titulo_en": "Gambling coin and challenge timer",
+   "texto_en": "V-Bucks is back to the usual Fortnite coin, and the GA chip from the logo is a new coin called Gambling: pick it in Settings. A live challenge card now shows the match time, the football minute, the NBA quarter or the map. And quick predictions are now only on football, basketball and UFC.",
+   "img": "novedades/reto-tiempo.webp",
+   "ir": "ajustes"
+  },
+  {
+   "id": "tv-cajas-0111",
+   "fecha": "2026-11-02",
+   "hora": "01:40",
+   "titulo": "Dónde verlo y cajas",
+   "texto": "En Dónde verlo solo salen las emisiones en español y en inglés; los demás idiomas solo aparecen si no hay ninguna en esos dos. Y al abrir la ficha de una caja, la caja del centro de la tira es más pequeña y deja ver los objetos.",
+   "titulo_en": "Where to watch and boxes",
+   "texto_en": "Where to watch now only lists Spanish and English broadcasts; other languages only show if neither exists. And when you open a box page, the box in the middle of the reel is smaller and lets you see the items.",
+   "img": "novedades/caja-tira.webp",
+   "ir": "cajas"
+  },
+  {
+   "id": "quien-dentro-arriba-0111",
+   "fecha": "2026-11-02",
+   "hora": "01:00",
+   "titulo": "Quién está dentro, arriba",
+   "texto": "Al abrir un partido, arriba salen quién ha apostado y los retos de ese partido con su botón para unirte en un toque. En el chat, el marcador del partido en juego tiene más aire y también lista sus retos.",
+   "titulo_en": "Who is in, at the top",
+   "texto_en": "When you open a match, the top now shows who has bet and the challenges on that match with a button to join in one tap. In the chat, the live match score has more room and also lists its challenges.",
+   "img": "novedades/quien-dentro.webp",
+   "ir": "partidos"
+  },
+  {
+   "id": "logo-nuevo-0111",
+   "fecha": "2026-11-02",
+   "hora": "00:30",
+   "titulo": "Logo nuevo",
+   "texto": "Gambling Addicts estrena logo: una ficha de casino dorada con el monograma GA. Sale al entrar, en la barra lateral, al arrancar y como icono de la app. Y es también la moneda V-Bucks.",
+   "titulo_en": "New logo",
+   "texto_en": "Gambling Addicts has a new logo: a golden casino chip with the GA monogram. It shows on the login screen, the sidebar, at startup and as the app icon. It is also the V-Bucks coin.",
+   "img": "novedades/logo-nuevo.webp",
+   "ir": "inicio"
+  },
+  {
+   "id": "boleto-claro-0111",
+   "fecha": "2026-11-02",
+   "hora": "00:05",
+   "titulo": "Boleto mucho más claro",
+   "texto": "Al pulsar una cuota, el boleto separa bien cada cosa: tipo de apuesta, importe grande con atajos, cada elección en su tarjeta con la cuota destacada, y un resumen con lo que apuestas y lo que cobrarías justo antes del botón Apostar.",
+   "titulo_en": "Much clearer bet slip",
+   "texto_en": "When you tap odds, the bet slip now separates everything: bet type, a big stake field with shortcuts, each pick on its own card with the odds highlighted, and a summary of your stake and payout right above the Bet button.",
+   "img": "novedades/boleto-claro.webp",
+   "ir": "partidos"
+  },
+  {
+   "id": "misapuestas-tiempo-0111",
+   "fecha": "2026-11-01",
+   "hora": "23:50",
+   "titulo": "El tiempo del partido en Mis apuestas",
+   "texto": "En Mis apuestas, cada partido en directo ahora enseña cuánto lleva jugándose, junto a la liga, además del marcador. Y el botón Retar ya no sale suelto en cada fila de Partidos: lo tienes en grande al abrir el partido.",
+   "titulo_en": "Match time in My bets",
+   "texto_en": "In My bets, every live match now shows how long it has been playing, next to the league, besides the score. And the Challenge button no longer sits on every row in Matches: you get it big when you open the match.",
+   "img": "novedades/lleva-tiempo.webp",
+   "ir": "apuestas"
+  },
+  {
+   "id": "nba-equipo-0111",
+   "fecha": "2026-11-01",
+   "hora": "23:30",
+   "titulo": "Fichas de equipo NBA completas",
+   "texto": "La ficha de cada equipo de la NBA ya es completa: plantilla con puntos, rebotes, asistencias y minutos de cada jugador, clasificación de su conferencia y división, estadísticas del equipo y el calendario de toda la temporada con sus resultados.",
+   "titulo_en": "Full NBA team pages",
+   "texto_en": "Every NBA team page is now complete: the full roster with each player's points, rebounds, assists and minutes, the standings of its conference and division, team stats, and the whole season schedule with results.",
+   "img": "novedades/nba-equipo.webp",
+   "ir": "partidos"
+  },
+  {
+   "id": "blackjack-estable-0111",
+   "fecha": "2026-11-01",
+   "hora": "23:05",
+   "titulo": "Blackjack más estable",
+   "texto": "Si te levantas con la mano a medias, tus cartas siguen en la mesa con tu cara y tu número, sin poner Libre. Se acabó el Va a tu mano 0 y la mesa ya no se queda parada en Repartiendo. Y si una ronda se queda más de 5 minutos sin que nadie la juegue, se anula y te devolvemos la apuesta.",
+   "titulo_en": "More stable blackjack",
+   "texto_en": "If you stand up mid-hand, your cards stay on the table with your face and number instead of saying Free. No more Goes to your hand 0, and the table no longer gets stuck on Dealing. And if a round sits for over 5 minutes with nobody playing it, it is cancelled and your bet is returned.",
+   "img": "novedades/blackjack-estable.webp",
+   "ir": "juegos"
+  },
+  {
+   "id": "ficha-pro-0111",
+   "fecha": "2026-11-01",
+   "hora": "22:45",
+   "titulo": "Ficha de partido renovada",
+   "texto": "Las alineaciones salen dibujadas en el campo con dorsal, goles, tarjetas y cambios. La clasificación trae bandas de Champions, Europa y descenso, escudos, forma y tus dos equipos resaltados. Y ahora tienes estadio, goles minuto a minuto, estadísticas, forma y cara a cara.",
+   "titulo_en": "Match page redesigned",
+   "texto_en": "Line-ups are drawn on the pitch with shirt numbers, goals, cards and substitutions. The table shows Champions League, Europa League and relegation bands, crests, form and both teams highlighted. Plus venue, goals minute by minute, match stats, form and head to head.",
+   "img": "novedades/ficha-pro.webp",
+   "ir": "partidos"
+  },
+  {
    "id": "ingles-repaso-0111",
    "fecha": "2026-11-01",
    "hora": "22:10",

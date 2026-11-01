@@ -42,7 +42,7 @@
     if (vacio(ST)) return { vis: rows, ocu: [] };
     const mios = new Set(), me = ctx && ctx.me;
     for (const b of (ctx && ctx.bets) || []) if (b.player === me) mios.add(b.match);
-    for (const c of (ctx && ctx.ch) || []) if (c.from === me || c.to === me) mios.add(c.match);
+    for (const c of (ctx && ctx.ch) || []) if (c.from === me || c.to === me || ((ctx.retos || {})[c.id]?.e || []).some((x) => x[0] === me)) mios.add(c.match);
     const vis = [], ocu = [];
     for (const r of rows) { if (oculta(r.sport, r.league)) { if (mios.has(r.id)) ocu.push(r) } else vis.push(r) }
     return { vis, ocu };

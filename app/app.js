@@ -51,13 +51,14 @@ function nextMonday() {
 const COLS = 'id,sport,league,league_name,league_logo,stage,tag,venue,home,away,home_logo,away_logo,starts_at,status,score,winner,odds_1,odds_x,odds_2,odds_src,bo,details';
 async function load() {
   const from = new Date(Date.now() - 2 * DAY).toISOString(), to = new Date(Date.now() + 72 * DAY).toISOString();
-  const [st, ms, ch, ex, wh, ti] = await Promise.all([
+  const [st, ms, ch, ex, wh, ti, rm] = await Promise.all([
     db.rpc('get_state'),
     db.from('matches').select(COLS).gte('starts_at', from).lte('starts_at', to).neq('status', 'canceled').order('starts_at').limit(3000),
     db.from('chat').select('*').order('id', { ascending: false }).limit(150),
     db.rpc('get_extras'),
     db.from('wheel_spins').select('player,week,prize,label,amount,created_at').order('id', { ascending: false }).limit(40),
     db.rpc('time_status'),
+    db.rpc('get_retos').then((r) => r, () => ({ error: 1 })),   // db/053: quien esta dentro de cada reto (con 053 sin cargar da error y los retos son de 2 como antes)
   ]);
   if (st.error) throw st.error;
   if (ms.error) throw ms.error;
@@ -69,7 +70,7 @@ async function load() {
   }
   WHEEL = wh.error ? null : wh.data || [];
   TIEMPO = ti.error ? null : ti.data || null;
-  build(st.data, rows, (ch.data || []).reverse(), ex.error ? null : ex.data);
+  build(st.data, rows, (ch.data || []).reverse(), ex.error ? null : { ...ex.data, retos: rm && !rm.error && rm.data && typeof rm.data === 'object' ? rm.data : null });
   avisos();
 }
 const LIGAS_FUERA = new Set(['eng.fa', 'usa.1', 'uefa.europa.conf', 'ned.1', 'bra.1', 'mex.1', 'por.1']);
@@ -86,7 +87,7 @@ function build(st, rows, chat, ex) {
   rows = rows.filter((r) => !(LIGAS_FUERA.has(r.league) || LIGAS_FUERA_NOMBRE.test(r.league_name || '')) || conBets.has(r.id));
   // ligas y juegos que cada jugador oculta (ocultas.js): no salen en Partidos, Inicio ni Directo, pero lo que ya tienes apostado
   // o retado sigue saliendo en Mis apuestas (esos partidos se quedan en MI y en L, fuera de M)
-  const oc = window.GM_OCULTAS ? GM_OCULTAS.parte(rows, { bets: st.bets, ch: ex?.challenges, me: ME }) : { vis: rows, ocu: [] };
+  const oc = window.GM_OCULTAS ? GM_OCULTAS.parte(rows, { bets: st.bets, ch: ex?.challenges, retos: ex?.retos, me: ME }) : { vis: rows, ocu: [] };
   rows = oc.vis;
   const mkM = (r) => ({
     id: r.id, s: r.sport, lg: r.league, a: r.home, b: r.away, la: r.home_logo, lb: r.away_logo, at: r.starts_at,
@@ -146,7 +147,15 @@ function build(st, rows, chat, ex) {
   const st2 = [...F].sort((a, b) => b.streak - a.streak)[0]; if (st2?.streak >= 2) AW.push(['Mejor racha', String(st2.streak), st2.id, 'ganadas seguidas']);
   if (!F.some((f) => f.id === S.pf)) S.pf = MEK;
   const uk = new Map(st.players.map((p) => [p.id, p.color]));
-  CH = (ex?.challenges || []).map((c) => ({ id: c.id, m: c.match, from: uk.get(c.from), to: uk.get(c.to), ab: c.to == null, fp: c.from_pick, tp: c.to_pick, stake: c.stake, st: c.status, at: c.created, set: c.settled }));
+  // retos con mas gente (db/053): pl = quien esta dentro y con que lado, en el orden de la base (quien reta, quien acepta, los demas); win = lado ganador
+  const RM = ex?.retos || {};
+  CH = (ex?.challenges || []).map((c) => {
+    const o = { id: c.id, m: c.match, from: uk.get(c.from), to: uk.get(c.to), ab: c.to == null, fp: c.from_pick, tp: c.to_pick, stake: c.stake, st: c.status, at: c.created, set: c.settled };
+    const r = RM[c.id];
+    o.pl = r && Array.isArray(r.e) ? r.e.map(([u, p]) => ({ k: uk.get(u), p })).filter((x) => x.k) : [{ k: o.from, p: o.fp }].concat(o.to && o.tp ? [{ k: o.to, p: o.tp }] : []);
+    o.win = r ? r.w || null : c.status === 'won_from' ? c.from_pick : c.status === 'won_to' ? c.to_pick : null;
+    return o;
+  });
   DAILY = ex?.daily || []; DAILY_ON = !!ex?.daily_on; DAILY_BONUS = Number(ex?.daily_bonus) || 1.25;
   // primera tanda de ideas (db/009): premio diario, rescate, bote, reacciones, encuestas
   CLAIM = ex?.claim || null; BOTE = ex?.bote || null;
@@ -284,19 +293,22 @@ function espnHtml(m, d) {
     const rows = STATS.map(([k, n, u]) => [n, val(tA, k), val(tB, k), u]).filter((r) => r[1] != null && r[2] != null);
     if (rows.length) h += `<div class="sts">${rows.map(([n, a, b, u]) => { const t = a + b || 1; return `<div class="st2"><span>${a}${u || ''}</span><span class="k">${n}</span><span>${b}${u || ''}</span><i class="bar"><b style="width:${(a / t) * 100}%"></b><b style="width:${(b / t) * 100}%"></b></i></div>` }).join('')}</div>`;
   }
+  // ficha pro (fichapro.js): alineaciones en el campo, forma, cara a cara y clasificacion con bandas; si no carga, queda lo de abajo
+  const fp = window.GM_FP && (m.s === 'f' || m.s === 'b') ? GM_FP.html(m, d) : '';
+  if (fp) h += fp;
   // alineaciones (ESPN las publica cerca del partido)
-  const ro = (d?.rosters || []).filter((r) => (r.roster || []).some((x) => x.starter));
+  const ro = fp ? [] : (d?.rosters || []).filter((r) => (r.roster || []).some((x) => x.starter));
   if (ro.length === 2) {
     const col = (r) => { const xi = r.roster.filter((x) => x.starter); return `<div class="xi"><span class="lab">${esc(r.team?.displayName || '')}${r.formation ? ' · ' + esc(r.formation) : ''}</span>${xi.map((x) => `<span class="xp"><b>${esc(x.jersey || '')}</b>${esc(x.athlete?.displayName || '')}<i>${esc(x.position?.abbreviation || '')}</i></span>`).join('')}</div>` };
     h += `<div class="alin"><span class="lab">Alineaciones</span><div class="alin2">${col(ro[0])}${col(ro[1])}</div></div>`;
-  } else if (!m.live && m.s === 'f') h += `<p class="hint">Las alineaciones salen cuando los equipos las dan, sobre una hora antes.</p>`;
+  } else if (!fp && !m.live && m.s === 'f') h += `<p class="hint">Las alineaciones salen cuando los equipos las dan, sobre una hora antes.</p>`;
   // ultimos 5 de cada uno
-  const l5 = d?.lastFiveGames;
+  const l5 = fp ? null : d?.lastFiveGames;
   if (Array.isArray(l5) && l5.length) {
     h += `<div class="l5"><span class="lab">Últimos 5</span>${l5.slice(0, 2).map((t) => `<div class="l5r"><span class="nm">${esc(t.team?.displayName || '')}</span><span class="fm">${(t.events || []).slice(0, 5).map((e) => { const r = (e.gameResult || '').toUpperCase(); const c = r === 'W' ? 'g' : r === 'D' ? 'e' : ''; return `<b class="${c}" title="${esc((e.atVs || '') + ' ' + (e.opponent?.displayName || '') + ' ' + (e.score || ''))}">${r === 'W' ? 'G' : r === 'D' ? 'E' : r === 'L' ? 'P' : '·'}</b>` }).join('')}</span></div>`).join('')}</div>`;
   }
   // clasificacion: las filas de los dos equipos y las de arriba
-  const ent = d?.standings?.groups?.[0]?.standings?.entries;
+  const ent = fp ? null : d?.standings?.groups?.[0]?.standings?.entries;
   if (Array.isArray(ent) && ent.length) {
     const ids = new Set((comp?.competitors || []).map((c) => c.team?.id || c.id));
     const val = (e, k) => e.stats?.find((s) => s.name === k || s.type === k)?.displayValue ?? '';
@@ -314,7 +326,8 @@ const mainTv = (m) => (m.tv || []).find((v) => v.u && v.main && /^(en|es)$/.test
 const tvHtml = (tv, m) => {
   const link = (v) => (v.u ? `<a class="tv" href="${esc(v.u)}" target="_blank" rel="noopener">${esc(v.n)}${v.l && !/^(en|es)$/.test(v.l) ? ' · ' + esc(LANG[v.l] || v.l) : ''} ↗</a>` : `<span class="tv">${esc(v.n)}</span>`);
   const col = (ls, t) => { const x = tv.filter((v) => ls.includes(v.l)); return x.length ? `<div><span class="lab">${t}</span>${x.map(link).join('')}</div>` : '' };
-  const otros = tv.filter((v) => !['en', 'es'].includes(v.l));
+  // PM 01-11: solo español e inglés; los demas idiomas solo salen si no hay ninguna emision en esos dos
+  const otros = tv.some((v) => ['en', 'es'].includes(v.l)) ? [] : tv.filter((v) => !['en', 'es'].includes(v.l));
   let cols = col(['en'], 'En inglés') + col(['es'], 'En español') + (otros.length ? `<div><span class="lab">Otros idiomas</span>${otros.map(link).join('')}</div>` : '');
   // esports sin emision apuntada: buscarlo en Twitch y YouTube
   if (!cols && m && (m.s === 'v' || m.s === 'c')) { const q = encodeURIComponent((L[m.lg]?.[0] || '') + ' ' + m.a + ' ' + m.b); cols = `<div><span class="lab">Buscarlo</span><a class="tv" href="https://www.twitch.tv/search?term=${encodeURIComponent(L[m.lg]?.[0] || m.a)}" target="_blank" rel="noopener">Twitch ↗</a><a class="tv" href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener">YouTube ↗</a></div>` }
@@ -669,21 +682,29 @@ function directo() {
   </div>`;
 }
 
-/* retos 1 contra 1 */
-const chName = (st) => ({ pending: 'Esperando respuesta', accepted: 'En juego', declined: 'Rechazado', expired: 'Sin contestar', canceled: 'Retirado', won_from: 'Ganado', won_to: 'Ganado', void: 'Sin ganador' }[st] || st);
+/* retos (1v1, 2v1, 2v2, 3v1...: db/053, las cuentas estan en retos.js) */
+const chName = (st) => ({ pending: 'Esperando respuesta', accepted: 'En juego', declined: 'Rechazado', expired: 'Sin contestar', canceled: 'Retirado', won_from: 'Ganado', won_to: 'Ganado', won_other: 'Ganado', void: 'Sin ganador' }[st] || st);
 function retoRow(c) {
   const m = byId(c.m); if (!m) return '';
+  const R = window.GM_RETOS;
   // retos.js (01-11): un reto abierto (c.ab) no tiene destinatario: lo coge el primero que entra. Los retos no se cancelan:
   // ya no hay boton Retirar (si nadie entra antes de empezar, la base devuelve lo puesto)
-  const forMe = (c.to === MEK || (c.ab && c.from !== MEK)) && c.st === 'pending' && isOpen(m);
-  const win = c.st === 'won_from' ? c.from : c.st === 'won_to' ? c.to : null;
+  const forMe = R ? R.paraMi(c) : (c.to === MEK || (c.ab && c.from !== MEK)) && c.st === 'pending' && isOpen(m);
+  const ls = R ? R.lados(c) : [{ p: c.fp, ks: [c.from] }].concat(c.tp ? [{ p: c.tp, ks: [c.to] }] : []);
+  const ws = R ? R.ganan(c) : [];
+  const grupo = (l) => l.ks.length === 1 ? esc(fr(l.ks[0]).n) : `${esc(fr(l.ks[0]).n)} +${l.ks.length - 1}`;
+  const caras = (l) => l.ks.slice(0, 3).map((k) => av(k, 'sm')).join('') + (l.ks.length > 3 ? `<span class="rt-n">+${l.ks.length - 3}</span>` : '');
   let act = '';
-  if (forMe) act = `<span class="rt-act">${window.GM_RETOS ? GM_RETOS.accion(c) : ''}</span>`;   // retos.js: "Aceptar · pones X, ganas Y" en un toque (el lado es el contrario) y No
-  const rival = c.ab ? '<span class="av sm rt-any" title="Cualquiera"><svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 6.2a3 3 0 0 1 0 5.6M17.5 14a5 5 0 0 1 3 5"/></svg></span>' : av(c.to, 'sm');
-  return `<div class="rt ${c.st} ${c.ab ? 'ab' : ''}"><div class="rt-who">${av(c.from, 'sm')}<i>vs</i>${rival}</div>
-    <div style="min-width:0"><strong>${esc(fr(c.from).n)} · ${esc(pn(m, c.fp))}${c.tp ? ` <i>contra</i> ${esc(fr(c.to).n)} · ${esc(pn(m, c.tp))}` : c.ab ? ` <i>reta a</i> cualquiera` : ` <i>reta a</i> ${esc(fr(c.to).n)}`}</strong>
-    <span class="m">${esc(m.a)} vs ${esc(m.b)} · ${m.live ? 'en juego' : c.st === 'pending' || c.st === 'accepted' ? WD(m.at).toLowerCase() + ' ' + HM(m.at) + ' · ' + CD(m.at) : when(c.set || c.at)}</span></div>
-    <div class="v"><b>${N(c.stake * 2)}${coin()}</b><span class="st">${win ? 'Gana ' + esc(fr(win).n) : c.ab && c.st === 'pending' ? 'Abierto a todos' : chName(c.st)}</span></div>${act}</div>`;
+  if (forMe) act = `<span class="rt-act">${R ? R.accion(c) : ''}</span>`;   // retos.js: "Aceptar · pones X, ganas Y" en un toque (el lado es el contrario) y No
+  const anyAv = '<span class="av sm rt-any" title="Cualquiera"><svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 6.2a3 3 0 0 1 0 5.6M17.5 14a5 5 0 0 1 3 5"/></svg></span>';
+  const rival = ls[1] ? caras(ls[1]) : c.ab ? anyAv : av(c.to, 'sm');
+  const vs = ls[1] ? ` <i>contra</i> ${grupo(ls[1])} · ${esc(pn(m, ls[1].p))}` : c.ab ? ` <i>reta a</i> cualquiera` : ` <i>reta a</i> ${esc(fr(c.to).n)}`;
+  const gana = ws.length ? (ws.length === 1 ? 'Gana ' + esc(fr(ws[0]).n) : 'Ganan ' + esc(fr(ws[0]).n) + ' +' + (ws.length - 1)) : '';
+  const nv = R ? R.nvm(c) : '1v1', bote = R ? R.bote(c) : c.stake * 2;
+  return `<div class="rt ${c.st} ${c.ab ? 'ab' : ''}"><div class="rt-who">${caras(ls[0])}<i>vs</i>${rival}</div>
+    <div style="min-width:0"><strong>${grupo(ls[0])} · ${esc(pn(m, ls[0].p))}${vs}</strong>
+    <span class="m"><b class="rt-nvm">${nv}</b> · ${esc(m.a)} vs ${esc(m.b)} · ${m.live ? 'en juego' : c.st === 'pending' || c.st === 'accepted' ? WD(m.at).toLowerCase() + ' ' + HM(m.at) + ' · ' + CD(m.at) : when(c.set || c.at)}</span></div>
+    <div class="v"><b>${N(bote)}${coin()}</b><span class="st">${gana || (c.ab && c.st === 'pending' ? 'Abierto a todos' : chName(c.st))}</span></div>${act}</div>`;
 }
 const retosHtml = (list, empty) => (list.length ? `<div class="rts">${list.map(retoRow).join('')}</div>` : `<p class="hint">${empty}</p>`);
 function retoForm(m) { return window.GM_RETOS ? GM_RETOS.btn(m, 'grande') : '' }   // retos.js: un boton Retar que abre un panel con todo a la vista
@@ -699,7 +720,7 @@ const LOGROS = [
   ['fiel', 'Fiel', '20 apuestas', (f, b) => b.length >= 20],
   ['ballena', 'Ballena', 'Apuesta 1.000 de una vez', (f, b) => b.some((x) => x.stake >= 1000)],
   ['verde', 'En verde', 'Ten más de lo que te han dado', (f) => f.s > f.recibido && f.bets > 0],
-  ['duelo', 'Duelista', 'Gana un reto 1 contra 1', (f) => CH.some((c) => (c.st === 'won_from' && c.from === f.id) || (c.st === 'won_to' && c.to === f.id))],
+  ['duelo', 'Duelista', 'Gana un reto', (f) => CH.some((c) => (window.GM_RETOS ? GM_RETOS.ganan(c).includes(f.id) : (c.st === 'won_from' && c.from === f.id) || (c.st === 'won_to' && c.to === f.id)))],
   ['dia', 'Del día', 'Acierta la apuesta del día', (f, b) => b.some((x) => x.st === 'won' && DAILY.some((d) => d.match === x.m))],
   ['rico', 'Rico', 'Llega a 5.000', (f) => f.s >= 5000],
 ];
@@ -724,7 +745,7 @@ function avisos() {
     for (const c of CH) {
       const was = SNAP.ch.get(c.id), m = byId(c.m); if (!m) continue;
       if (!was && c.to === MEK && c.st === 'pending') avisa(`${fr(c.from).n} te reta`, `${m.a} vs ${m.b} · pones ${N(c.stake)}, ganas ${N(c.stake * 2)}`);
-      if (was && was !== c.st && (c.st === 'won_from' || c.st === 'won_to')) { const w = c.st === 'won_from' ? c.from : c.to; if (w === MEK) confeti(); if (c.from === MEK || c.to === MEK) avisa(w === MEK ? '¡Reto ganado!' : 'Reto perdido', `${m.a} ${m.score || ''} ${m.b}`) }
+      if (was && was !== c.st && /^won_/.test(c.st)) { const gana = window.GM_RETOS ? GM_RETOS.ganan(c).includes(MEK) : (c.st === 'won_from' ? c.from : c.to) === MEK; if (gana) confeti(); if (window.GM_RETOS ? GM_RETOS.dentro(c) : (c.from === MEK || c.to === MEK)) avisa(gana ? '¡Reto ganado!' : 'Reto perdido', `${m.a} ${m.score || ''} ${m.b}`) }
       if (was === 'pending' && c.st === 'accepted' && c.from === MEK && !(window.GM_RETOS && GM_RETOS.fueAbierto(c.id))) avisa(`${fr(c.to).n} acepta tu reto`, `${m.a} vs ${m.b} · ${N(c.stake * 2)} en juego`);
     }
     for (const id of now.live) if (!SNAP.live.has(id)) { const m = byId(id); avisa('Empieza tu partido', `${m.a} vs ${m.b}`) }
@@ -852,9 +873,9 @@ function partidos() {
     for (const m of ms) {
       const open = isOpen(m), qn = window.GM_QUIEN ? GM_QUIEN.fila(m) : { cls: '', who: '', movil: '' };
       h += `<div class="row ${S.foc === m.id ? 'on' : ''} ${m.live && m.vivo ? 'cv' : ''} ${m.live ? 'envivo' : ''} ${qn.cls}" data-foc="${m.id}" style="--i:${Math.min(ri++, 14)}">
-        <span class="t">${m.live ? '<em>VIVO</em>' : HM(m.at)}${m.live ? (m.vivo ? '' : `<small class="sc">${esc(String(m.score || '').split(' ')[0])}</small>`) : Date.parse(m.at) <= NOW ? '<small class="pe">por empezar</small>' : `<small>${CD(m.at)}</small>`}${open && window.GM_RETOS ? GM_RETOS.btn(m, 'tiempo') : ''}</span>
+        <span class="t">${m.live ? '<em>VIVO</em>' : HM(m.at)}${m.live ? (m.vivo ? '' : `<small class="sc">${esc(String(m.score || '').split(' ')[0])}</small>`) : Date.parse(m.at) <= NOW ? '<small class="pe">por empezar</small>' : `<small>${CD(m.at)}</small>`}</span>
         <span class="llw" title="${esc(L[m.lg][0])} · ${SP[m.s][0]}"><img class="ll" src="${esc(L[m.lg][1])}" alt="" loading="lazy">${m.s === 'c' || m.s === 'v' ? `<img class="lls" src="${SP[m.s][1]}" alt="">` : ''}</span>
-        <span class="tms"><span class="tm">${logo(m, 'a')}<span>${esc(m.a)}</span>${esFav(favK(m.s, m.a)) || esFav('pa:' + m.id) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${dailyTag(m)}${vN(m, 'a')}</span><span class="tm">${logo(m, 'b')}<span>${esc(m.b)}</span>${esFav(favK(m.s, m.b)) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${vN(m, 'b')}</span>${vL(m)}${qn.movil}${open && window.GM_RETOS ? GM_RETOS.btn(m, 'fila') : ''}</span>
+        <span class="tms"><span class="tm">${logo(m, 'a')}<span>${esc(m.a)}</span>${esFav(favK(m.s, m.a)) || esFav('pa:' + m.id) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${dailyTag(m)}${vN(m, 'a')}</span><span class="tm">${logo(m, 'b')}<span>${esc(m.b)}</span>${esFav(favK(m.s, m.b)) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${vN(m, 'b')}</span>${vL(m)}${qn.movil}</span>
         <span class="who">${window.GM_QUIEN ? qn.who : [...new Set(whoOn(m.id).map((x) => x.f))].map((k) => av(k, 'sm')).join('')}</span>
         ${['1', 'X', '2'].map((p) => oddBtn(m, p, open)).join('')}
       </div>`;
@@ -872,6 +893,7 @@ function ficha(m) {
   let h = `<section class="det ${S.sheet ? 'open' : ''}" data-keep="dt">
     <button class="det-x" data-act="close">← Partidos</button>
     ${open && window.GM_RETOS ? `<div class="d-ret">${GM_RETOS.btn(m, 'grande')}</div>` : ''}
+    ${window.GM_ACTIVOS ? GM_ACTIVOS.arriba(m) : ''}
     <div class="d-meta"><span class="d-sp"><img src="${SP[m.s][1]}" alt="">${SP[m.s][0]}</span><img src="${esc(L[m.lg][1])}" alt="">${esc(L[m.lg][0])}${m.stage ? ' · ' + esc(m.stage) : ''}</div>
     ${m.tour ? `<button class="d-brk" data-act="bracket"><svg viewBox="0 0 24 24"><path d="M4 5h5v5H4zM4 14h5v5H4zM9 7.5h3v9H9M12 12h3M15 9.5h5v5h-5z"/></svg>Ver bracket</button>` : ''}
     ${mainTv(m) ? `<a class="d-ver" href="${esc(mainTv(m).u)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>${m.live ? 'Verlo en directo' : 'Dónde verlo'} · ${esc(mainTv(m).n)}${mainTv(m).l ? ' en ' + esc(LANG[mainTv(m).l] || mainTv(m).l) : ''}</a>` : ''}
@@ -899,7 +921,7 @@ function ficha(m) {
   }
   const mineHere = myBetsOn(m.id);
   if (mineHere.length) h += `<div class="d-mine"><span class="lab">Tus apuestas aquí</span>${mineHere.map((b) => `<div class="dm" data-bet="${b.id}"><strong>${esc(pn(m, b.p))} <em>${O(b.o)}</em></strong><span>${N(b.stake)} → <b>${N(b.stake * b.o)}${coin()}</b></span><button class="x-share" data-share="${b.id}">Al chat</button>${cancelBtn(b)}</div>`).join('')}</div>`;
-  h += `<div id="espn-box" class="espn" data-m="${m.id}">${m.espn ? ESPN_HTML.get(m.id) || '<p class="hint">Cargando datos de ESPN…</p>' : tvHtml(m.tv || [], m)}</div>`;
+  h += `<div id="espn-box" class="espn" data-m="${m.id}">${m.espn ? ESPN_HTML.get(m.id) || (window.GM_FP && (m.s === 'f' || m.s === 'b') ? GM_FP.esqueleto(m) : '<p class="hint">Cargando datos de ESPN…</p>') : tvHtml(m.tv || [], m)}</div>`;
   const rts = CH.filter((c) => c.m === m.id);
   if (rts.length) h += `<div class="d-retos">${retosHtml(rts, '')}</div>`;
   const ws = whoOn(m.id);
@@ -981,7 +1003,7 @@ function apuestas() {
   const bf = ests.some(([k]) => k === S.bf) ? S.bf : 'all';
   const list = set.filter((b) => (bf === 'all' || b.st === bf) && (sp === 'all' || byId(b.m).s === sp));
   const POR = 9, pags = Math.max(1, Math.ceil(list.length / POR)), pg = Math.min(S.bp || 0, pags - 1);
-  const misRetos = CH.filter((c) => c.from === MEK || c.to === MEK);
+  const misRetos = CH.filter((c) => (window.GM_RETOS ? GM_RETOS.dentro(c) : c.from === MEK || c.to === MEK));
   return `<div class="pad mb mb2">
     <section class="mb2-hero">
       <div class="mb2-nums">
@@ -1152,7 +1174,7 @@ function colegas() {
     <div class="sec-h ab-sec"><h2>En juego</h2><i>${abiertas.length} ${abiertas.length === 1 ? 'apuesta' : 'apuestas'} · ${partidos.length} ${partidos.length === 1 ? 'partido' : 'partidos'}</i></div>
     ${partidos.map(partido).join('') || '<p class="hint">Nadie tiene nada en juego. Se apuesta desde Partidos.</p>'}
     <div id="cmb-todos"></div>
-    ${CH.length ? `<div class="sec-h ab-sec"><h2>Retos 1 contra 1</h2><i>${retosAbiertos.length} abiertos</i></div>${retosHtml(CH.slice(0, 10), '')}` : ''}
+    ${CH.length ? `<div class="sec-h ab-sec"><h2>Retos</h2><i>${retosAbiertos.length} abiertos</i></div>${retosHtml(CH.slice(0, 10), '')}` : ''}
     ${todasHtml()}
   </div>`;
 }
@@ -1378,6 +1400,7 @@ function chat() {
     ${S.pollForm ? `<div class="poll-f"><input type="text" id="poll-q" maxlength="140" placeholder="La pregunta" autocomplete="off">${[0, 1, 2, 3].map((i) => `<input type="text" id="poll-o${i}" maxlength="40" placeholder="Opción ${i + 1}${i > 1 ? ' (si quieres)' : ''}" autocomplete="off">`).join('')}<div class="poll-b"><button class="q" data-act="poll-x">Cancelar</button><button class="go-s" data-act="poll-ok">Crear encuesta</button></div></div>` : ''}<div class="ch-in"><button class="ic" data-act="img" aria-label="Mandar foto">${IC_IMG}</button><button class="ic" data-act="poll" aria-label="Encuesta">${IC_POLL}</button><button class="ic mic ${REC ? 'on' : ''}" data-act="mic" aria-label="${REC ? 'Parar y enviar' : 'Nota de voz'}">${IC_MIC}</button>${REC ? `<span class="rec" data-rec>${recTxt()}</span><button class="q rec-x" data-act="mic-x">Cancelar</button>` : ''}<input type="text" id="msg" data-msg placeholder="Escribe a tus amigos" maxlength="500" autocomplete="off"><button class="send" data-act="send" aria-label="Enviar">${IC_SEND}</button><input type="file" id="pic" accept="image/*" data-file hidden></div></div>`}</section>
     ${live ? `<aside class="c-side">
       ${live ? `<section><span class="lab">En juego ahora</span><div class="live-m" data-goto="${live.id}" style="cursor:pointer"><div>${logo(live, 'a')}${esc(live.a)}${vN(live, 'a')}</div><b>${live.vivo ? vL(live) || '·' : esc(live.score || '')}</b><div>${logo(live, 'b')}${esc(live.b)}${vN(live, 'b')}</div></div></section>
+      ${window.GM_ACTIVOS && GM_ACTIVOS.retos(live.id) ? `<section class="ac ac-top"><span class="lab">Retos de este partido</span><div class="ac-lista">${GM_ACTIVOS.retos(live.id)}</div></section>` : ''}
       <section><span class="lab">Sus apuestas</span>${whoOn(live.id).map((x) => `<div class="ifr">${av(x.f)}<span class="nm">${esc(fr(x.f).n)}</span><span class="st rev">${x.p ? esc(pn(live, x.p)) + ' · ' : ''}${N(x.stake)}${coin()}</span></div>`).join('')}</section>` : ''}
     </aside>` : ''}</div>`;
 }

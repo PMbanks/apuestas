@@ -6,6 +6,10 @@
 //  ACEPTAR: la tarjeta del reto que te llega (arriba en cualquier pantalla, y en las listas de retos) lleva un boton "Aceptar · pones 250,
 //    ganas 500" que acepta en un toque (tu lado es el contrario al del que reta). Sin saldo, sale apagado y dice cuanto te falta.
 //  Aviso: punto en Inicio y Apuestas, aviso del navegador (avisa() de app.js) y aviso dentro de la app cuando alguien entra en tu reto abierto.
+//  MAS GENTE (PM, 01-11: "en los challenges se podra meter gente ... 2v1, 2v2, 3v1"; db/053): un reto abierto o aceptado admite a cualquiera
+//    que no este dentro mientras el partido no haya empezado, en cualquier lado (los dos equipos o el empate), poniendo lo mismo. El bote
+//    (lo puesto x la gente) se reparte a partes iguales entre los que aciertan. Aqui van las cuentas comunes (lados, 2v1, bote, reparto):
+//    cada reto de CH lleva pl (quien esta dentro y su lado) y win (el lado que gano), y todos los modulos usan estas funciones.
 // db/042 (retos abiertos, challenge_join) ya esta cargada. Usa lo global de app.js: S, CH, M, F, byId, isOpen, picksOf, po, pn, fr, av, logo,
 // me, MEK, N, CD, coin, esc, toast, errMsg, refresh, db.
 'use strict';
@@ -18,6 +22,55 @@
   const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
   const SWORDS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19l9-9M5 19l-1 2 2-1M15 5l4 0 0 4-6 6M19 19l-9-9M19 19l1 2-2-1M9 5L5 5 5 9 11 15"/></svg>';
   const FICHAS = [50, 100, 250, 500];
+
+  /* ---------- las cuentas de un reto con mas gente ---------- */
+  // pl(c): quien esta dentro, en el orden de la base (quien reta, quien acepta, los demas por llegada). Sin db/053, solo los dos de siempre
+  const pl = (c) => (c.pl && c.pl.length ? c.pl : [{ k: c.from, p: c.fp }].concat(c.to && c.tp ? [{ k: c.to, p: c.tp }] : []));
+  const dentro = (c, k) => pl(c).some((x) => x.k === (k === undefined ? g(() => MEK, null) : k));
+  const esperaAmigo = (c) => c.st === 'pending' && !c.ab && !!c.to && !pl(c).some((x) => x.k === c.to);   // reto a un amigo que aun no contesta
+  const nEntradas = (c) => pl(c).length + (esperaAmigo(c) ? 1 : 0);
+  const bote = (c) => c.stake * nEntradas(c);
+  // los lados: [{ p, ks }], el de quien reta primero
+  function lados(c) {
+    const o = [];
+    for (const x of pl(c)) { let l = o.find((y) => y.p === x.p); if (!l) { l = { p: x.p, ks: [] }; o.push(l) } l.ks.push(x.k) }
+    return o;
+  }
+  // el marcador: 1v1, 2v1, 2v2, 3v1... (sin rival aun: 1v? ; reto a un amigo que no contesta: 1v1)
+  function nvm(c) {
+    const ls = lados(c);
+    if (ls.length < 2) return c.ab ? `${ls[0] ? ls[0].ks.length : 1}v?` : '1v1';
+    return ls.map((l) => l.ks.length).join('v');
+  }
+  const final = (c) => /^(won_|void)/.test(c.st);
+  const ganan = (c) => (c.win && /^won_/.test(c.st) ? pl(c).filter((x) => x.p === c.win).map((x) => x.k) : []);
+  // reparto a partes iguales; lo que no divide exacto se da de una en una a los primeros del lado (igual que la base)
+  function parte(c, pick, k, extra) {
+    const ent = pl(c), n = ent.length + (extra ? 1 : 0) + (esperaAmigo(c) && !extra ? 1 : 0);
+    const gan = ent.filter((x) => x.p === pick).map((x) => x.k); if (extra) gan.push(k);
+    if (!gan.length) return 0;
+    const pool = c.stake * n, share = Math.floor(pool / gan.length), rem = pool - share * gan.length, i = gan.indexOf(k);
+    return i < 0 ? 0 : share + (i < rem ? 1 : 0);
+  }
+  // lo que cobra k: lo que le pagaron (acabado), lo que se le devolvio (sin ganador) o, si aun no acabo, lo que cobraria si gana su lado
+  function pagoDe(c, k) {
+    const e = pl(c).find((x) => x.k === k); if (!e) return 0;
+    if (c.st === 'void') return c.stake;
+    if (/^won_/.test(c.st)) return e.p === c.win ? parte(c, c.win, k) : 0;
+    return parte(c, e.p, k);
+  }
+  // lo que cobraria alguien que entra ahora por ese lado
+  const pagoSiEntra = (c, pick) => parte(c, pick, g(() => MEK, null), true);
+  // cuota efectiva del reto para k: bote / entradas del lado que gana (2,00 en un 1v1). 0 si pierde, 1 si se devuelve, null si no acabo
+  function cuotaEf(c, k) {
+    if (c.st === 'void') return 1;
+    if (!/^won_/.test(c.st)) return null;
+    const gan = ganan(c); return gan.includes(k) ? pl(c).length / gan.length : 0;
+  }
+  const abierto = (c) => c.st === 'pending' || c.st === 'accepted';
+  // puedo entrar: no estoy dentro, el partido no ha empezado y el reto esta sin rival (abierto) o ya aceptado. Los retos a un amigo sin contestar no
+  const puedeEntrar = (c) => !dentro(c) && g(() => isOpen(byId(c.m)), false) && ((c.st === 'pending' && c.ab) || c.st === 'accepted');
+  const picksDe = (m) => g(() => picksOf(m), ['1', '2']);
 
   /* ---------- el lado del que acepta: el contrario al del que reta ---------- */
   // 1 <-> 2; si el que reta va con el empate, el rival se queda con el favorito (la cuota mas baja)
@@ -35,9 +88,19 @@
     const m = g(() => byId(c.m)); if (!m) return '';
     const falta = c.stake - g(() => me().s, 0);
     if (falta > 0) return `<button type="button" class="rt-ok off ${cls || ''}" disabled><span>Te faltan</span> <b class="num">${N(falta)}</b>${g(() => coin(), '')}</button>`;
-    return `<button type="button" class="rt-ok ${cls || ''}" data-accept="${c.id}"><span>Aceptar · pones</span> <b class="num">${N(c.stake)}</b><span>, ganas</span> <b class="num">${N(c.stake * 2)}</b></button>`;
+    const gana = pagoSiEntra(c, ladoRival(m, c.fp)) || c.stake * 2;
+    return `<button type="button" class="rt-ok ${cls || ''}" data-accept="${c.id}"><span>Aceptar · pones</span> <b class="num">${N(c.stake)}</b><span>, ganas</span> <b class="num">${N(gana)}</b></button>`;
   }
-  const paraMi = (c) => c.st === 'pending' && (c.to === MEK || (c.ab && c.from !== MEK)) && g(() => isOpen(byId(c.m)), false);
+  // "Unirme con Arsenal, pones 250": un boton por lado, un toque (la confirmacion es el propio boton). Sin saldo, apagado con lo que falta
+  function unirme(c, p, cls) {
+    const m = g(() => byId(c.m)); if (!m) return '';
+    const falta = c.stake - g(() => me().s, 0), eq = p === 'X' ? '<b class="rt-eq">Empate</b>' : `<b class="rt-eq" data-notr>${esc(g(() => pn(m, p), p))}</b>`;
+    if (falta > 0) return `<button type="button" class="rt-ok rt-j off ${cls || ''}" disabled><span class="rt-j1"><span>Unirme con</span> ${eq}</span><span class="rt-j2"><span>Te faltan</span> <b class="num">${N(falta)}</b></span></button>`;
+    return `<button type="button" class="rt-ok rt-j ${cls || ''}" data-accept="${c.id}|${p}" data-lado="${p}"><span class="rt-j1"><span>Unirme con</span> ${eq}</span><span class="rt-j2"><span>pones</span> <b class="num">${N(c.stake)}</b></span></button>`;
+  }
+  // todos los lados a los que puedo unirme (los del partido: local, empate si hay, visitante)
+  const botonesUnir = (c, cls) => (puedeEntrar(c) ? picksDe(byId(c.m)).map((p) => unirme(c, p, cls)).join('') : '');
+  const paraMi = (c) => c.st === 'pending' && (c.to === MEK || (c.ab && c.from !== MEK && !dentro(c))) && g(() => isOpen(byId(c.m)), false);
   const accion = (c, cls) => (paraMi(c) ? `${aceptar(c, cls)}${c.ab ? '' : `<button type="button" class="rt-no" data-decline="${c.id}">No</button>`}` : '');
 
   /* ---------- aceptar en un toque ---------- */
@@ -48,11 +111,13 @@
     const m = byId(c.m); if (!m) return;
     if (c.stake > me().s) return toast(`Te faltan ${N(c.stake - me().s)}`);
     const p = pick || ladoRival(m, c.fp);
+    if (dentro(c)) return toast('Ya estás dentro de este reto');
     ocupado = true;
     try {
-      const { error } = c.ab ? await db.rpc('challenge_join', { p_id: id, p_pick: p }) : await db.rpc('challenge_answer', { p_id: id, p_accept: true, p_pick: p });
+      const unir = c.ab || c.st === 'accepted';   // reto abierto o ya aceptado: se entra; reto a ti: se acepta
+      const { error } = unir ? await db.rpc('challenge_join', { p_id: id, p_pick: p }) : await db.rpc('challenge_answer', { p_id: id, p_accept: true, p_pick: p });
       if (error) { toast(errMsg(error)); return refresh() }
-      toast(c.ab ? 'Has entrado en el reto' : 'Reto aceptado');
+      toast(unir ? 'Has entrado en el reto' : 'Reto aceptado');
       await refresh();
     } finally { ocupado = false }
   }
@@ -95,7 +160,7 @@
       <p class="rp-n">${nota}</p>
       <span class="lab">Cuánto</span><div class="rp-fs">${FICHAS.map((v) => `<button type="button" class="rp-f1 ${P.stake === v ? 'on' : ''}" data-pn="st|${v}">${N(v)}</button>`).join('')}</div>
       ${boton}
-      <p class="rp-s"><span class="nw"><span>Pones</span> <b class="num">${N(st)}</b>${g(() => coin(), '')}</span> <span>·</span> <span class="nw"><span>el que acierte se lleva</span> <b class="num">${N(st * 2)}</b>${g(() => coin(), '')}</span></p>
+      <p class="rp-s"><span class="nw"><span>Pones</span> <b class="num">${N(st)}</b>${g(() => coin(), '')}</span> <span>·</span> <span class="nw"><span>el que acierte se lleva</span> <b class="num">${N(st * 2)}</b>${g(() => coin(), '')}</span> <span class="nw rp-mas"><span>· crece si entra más gente</span></span></p>
       <p class="rp-no">${LOCK}<span>Un reto no se puede cancelar</span></p></section>`;
     if (el.dataset.k === html) return;
     el.dataset.k = html; el.innerHTML = html; tr(el);
@@ -131,13 +196,18 @@
   const fueAbierto = (id) => ABIERTOS.has(id);
   function tras() {
     if (!g(() => Array.isArray(CH) && typeof MEK !== 'undefined', false)) return;
-    const now = new Map(CH.map((c) => [c.id, { st: c.st, ab: !!c.ab }]));
+    const now = new Map(CH.map((c) => [c.id, { st: c.st, ab: !!c.ab, ks: pl(c).map((x) => x.k) }]));
     if (PREV) for (const c of CH) {
       const p = PREV.get(c.id), m = byId(c.m); if (!m) continue;
       if (!p && c.st === 'pending' && c.ab && c.from !== MEK && isOpen(m)) avisa(`${fr(c.from).n} reta a cualquiera`, `${m.a} vs ${m.b} · pones ${N(c.stake)}, ganas ${N(c.stake * 2)}`);
-      if (p && p.ab && p.st === 'pending' && c.st === 'accepted' && c.from === MEK) {
-        avisa(`${fr(c.to).n} entra en tu reto`, `${m.a} vs ${m.b} · ${N(c.stake * 2)} en juego`);
-        toast(`<b data-notr>${esc(fr(c.to).n)}</b> entra en tu reto`);
+      // alguien entra en un reto en el que estoy (el mio abierto, o uno al que me uni)
+      if (p && p.ks.includes(MEK)) {
+        const nuevos = pl(c).filter((x) => !p.ks.includes(x.k) && x.k !== MEK);
+        if (nuevos.length) {
+          const n = fr(nuevos[0].k).n + (nuevos.length > 1 ? ` +${nuevos.length - 1}` : '');
+          avisa(`${n} entra en tu reto`, `${m.a} vs ${m.b} · ${N(bote(c))} en juego · ${nvm(c)}`);
+          toast(`<b data-notr>${esc(n)}</b> entra en tu reto`);
+        }
       }
     }
     for (const c of CH) if (c.ab) ABIERTOS.add(c.id);
@@ -180,5 +250,6 @@
   addEventListener('resize', vigila);
   document.addEventListener('visibilitychange', vigila);
 
-  window.GM_RETOS = { abre, entra, tras, abiertoOK, fueAbierto, pinta, pendientes, btn, aceptar, accion, paraMi, ladoRival, forzar() {}, repinta: pintaPanel };
+  window.GM_RETOS = { abre, entra, tras, abiertoOK, fueAbierto, pinta, pendientes, btn, aceptar, accion, paraMi, ladoRival, forzar() {}, repinta: pintaPanel,
+    pl, dentro, lados, nvm, bote, nEntradas, ganan, final, pagoDe, pagoSiEntra, cuotaEf, abierto, puedeEntrar, unirme, botonesUnir, esperaAmigo, picksDe };
 })();

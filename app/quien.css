@@ -153,3 +153,32 @@ html.sin-anim .rc,html.sin-anim .rc::after,html.sin-anim .rc-vs,html.sin-anim .r
   .rc-bote b{font-size:22px}
 }
 .rc-mid{flex-direction:column}.rc-sc-n{display:block;max-width:150px;margin:6px auto 0;text-align:center;font:400 11px/1.3 var(--mono);color:var(--mute)}
+
+/* retos con mas gente (db/053): un lado con varias caras, el marcador NvM, un tercer lado y tu parte */
+.qn-tag{white-space:nowrap;gap:5px}
+.rc-nv{font:700 12px var(--mono);letter-spacing:.06em;text-transform:none}
+.rc-grp{display:inline-flex;align-items:center}
+.rc-cara .rc-grp .av.xl{width:52px;height:52px;font-size:17px;box-shadow:0 0 0 3px var(--cl),0 6px 18px color-mix(in srgb,var(--cl) 40%,transparent)}
+.rc-grp.n3 .av.xl{width:44px;height:44px;font-size:14px}
+.rc-grp .av+.av,.rc-grp .rc-mas{margin-left:-14px}
+.rc-grp.n3 .av+.av{margin-left:-13px}
+.rc-grp .av{--sd:var(--bg)}
+.rc-mas{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.18);box-shadow:0 0 0 3px #1b1e26;font:700 12px/1 var(--mono);color:var(--ink)}
+.rc-lado.grp .rc-n{font-size:15px}
+.rc-ex{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;margin:6px 16px 0;font:500 11.5px var(--mono);color:var(--soft)}
+.rc-ex1{display:inline-flex;align-items:center;gap:6px}
+.rc-ex1 .qn-fs,.rc-ex1 .av+.av{margin-left:-5px}
+.rc-ex1 b{font:700 12px var(--sans);color:var(--ink)}
+.rc-ex1 i{font-style:normal;color:var(--dim)}
+.rc-yo{display:block;margin-top:2px;color:var(--acc2)}
+.rc-yo b{font:600 12px var(--mono);color:var(--acc2)}
+@media (max-width:560px){
+  .rc-cara .rc-grp .av.xl{width:44px;height:44px;font-size:15px}
+  .rc-grp.n3 .av.xl{width:38px;height:38px;font-size:12px}
+  .rc-grp .av+.av,.rc-grp .rc-mas{margin-left:-12px}
+  .rc-mas{width:30px;height:30px;font-size:11px}
+  .rc-lado.grp .rc-n{font-size:14px}
+}
+
+/* PM 01-11: tiempo del partido en la tarjeta del reto */
+.rc-st .rc-t{margin-left:8px;padding-left:8px;border-left:1px solid rgba(255,255,255,.22);font:600 11px/1 var(--mono);letter-spacing:.02em;text-transform:none;white-space:nowrap;max-width:22ch;overflow:hidden;text-overflow:ellipsis}

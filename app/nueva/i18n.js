@@ -20,6 +20,45 @@
     // Formula 1 (01-11, f1.js y f1fichas.js, db/052)
     'Fórmula 1': 'Formula 1', 'Ver clasificaciones completas': 'See full standings', 'Pilotos': 'Drivers', 'Constructores': 'Constructors', 'Favorito': 'Favourite', 'Cuotas pronto': 'Odds soon', 'Ganó': 'Won', 'Pole': 'Pole', 'Campeón': 'Champion', 'Carrera': 'Race', 'Cargando el Gran Premio…': 'Loading the Grand Prix…', 'Carrera acabada': 'Race finished', 'Clasificación acabada': 'Qualifying finished', 'Sprint acabado': 'Sprint finished', 'Campeonato decidido': 'Championship decided', 'Anulada: se devuelve todo': 'Cancelled: everything is refunded', 'En juego: a la espera del resultado oficial': 'In play: waiting for the official result', 'Todavía no hay cuotas para esta sesión. Salen solas en unos minutos.': 'There are no odds for this session yet. They appear by themselves in a few minutes.', 'Podio': 'Podium', 'Top 10': 'Top 10', 'Vuelta rápida': 'Fastest lap', 'Abandona': 'Retires', 'Gana la carrera': 'Wins the race', 'Termina entre los 3 primeros': 'Finishes in the top 3', 'Termina entre los 10 primeros': 'Finishes in the top 10', 'Hace la vuelta más rápida de la carrera': 'Sets the fastest lap of the race', 'No ve la bandera de cuadros': 'Does not see the chequered flag', 'Sale primero en la parrilla': 'Starts first on the grid', 'Gana el sprint': 'Wins the sprint', 'Gana el campeonato de pilotos': 'Wins the drivers\' championship', 'Gana el campeonato de constructores': 'Wins the constructors\' championship', 'Cuotas calculadas con la forma de la temporada, el historial del circuito y la parrilla · se congelan al apostar': 'Odds calculated from this season\'s form, the circuit history and the grid · locked when you bet', 'Las cuotas del campeonato se recalculan después de cada carrera con los puntos de hoy y las carreras que quedan · se cierran cuando empieza la última carrera': 'Championship odds are recalculated after every race from the points today and the races left · they close when the last race starts', 'Los duelos entre compañeros salen cuando el Gran Premio está cerca.': 'Teammate duels appear when the Grand Prix is close.', 'Parrilla de salida': 'Starting grid', 'Resultado': 'Result', 'Clasificación final': 'Final standings', 'Orden de salida': 'Starting order', 'Abandonó': 'Retired', 'Descalificado': 'Disqualified', 'No salió': 'Did not start', 'Circuito': 'Circuit', 'Vueltas': 'Laps', 'Longitud': 'Length', 'Distancia': 'Distance', 'Ganadores en los últimos 10 años': 'Winners in the last 10 years', 'Cargando el historial…': 'Loading the history…', 'No se ha podido cargar el historial (Jolpica no responde).': 'Could not load the history (Jolpica is not responding).', 'Este circuito no tiene ganadores anteriores.': 'This circuit has no previous winners.', 'Acabada': 'Finished', 'Anulada': 'Cancelled', 'Ficha del piloto': 'Driver profile', 'Ficha de la escudería': 'Team profile', 'Clasificaciones': 'Standings', 'Clasificaciones del campeonato': 'Championship standings', 'Piloto de Fórmula 1': 'Formula 1 driver', 'Escudería de Fórmula 1': 'Formula 1 team', 'Escudería actual': 'Current team', 'Su última escudería': 'Last team', 'Podios': 'Podiums', 'Poles': 'Poles', 'Vueltas rápidas': 'Fastest laps', 'Carreras': 'Races', 'Primera carrera': 'First race', 'Última carrera': 'Last race', 'Las vueltas rápidas solo constan desde 2004.': 'Fastest laps are only recorded from 2004.', 'Temporada por temporada': 'Season by season', 'Año': 'Year', 'Escudería': 'Team', 'Esta temporada, carrera a carrera': 'This season, race by race', 'Gran Premio': 'Grand Prix', 'Salida': 'Start', 'Llegada': 'Finish', 'Pit': 'Pit lane', 'Este piloto no ha corrido esta temporada.': 'This driver has not raced this season.', 'No se ha podido cargar este dato: Jolpica no responde ahora.': 'Could not load this: Jolpica is not responding right now.', 'Pilotos de esta temporada': 'Drivers this season', 'Pilotos de siempre': 'All time drivers', 'No hay pilotos esta temporada.': 'There are no drivers this season.', 'Títulos de constructores': 'Constructors titles', 'Temporadas': 'Seasons', 'Pos': 'Pos', 'No hay clasificación de esa temporada.': 'There are no standings for that season.', 'Duelo entre compañeros': 'Teammate duel', 'Los Grandes Premios con cuotas aparecen aquí unos días antes de cada fin de semana.': 'Grand Prix with odds appear here a few days before each race weekend.', 'Atrás': 'Back', 'en juego': 'in play',
     'Gran Premio de Australia': 'Australian Grand Prix', 'Gran Premio de China': 'Chinese Grand Prix', 'Gran Premio de Japón': 'Japanese Grand Prix', 'Gran Premio de Baréin': 'Bahrain Grand Prix', 'Gran Premio de Arabia Saudí': 'Saudi Arabian Grand Prix', 'Gran Premio de Miami': 'Miami Grand Prix', 'Gran Premio de Emilia Romaña': 'Emilia Romagna Grand Prix', 'Gran Premio de Mónaco': 'Monaco Grand Prix', 'Gran Premio de Canadá': 'Canadian Grand Prix', 'Gran Premio de España': 'Spanish Grand Prix', 'Gran Premio de Barcelona': 'Barcelona Grand Prix', 'Gran Premio de Austria': 'Austrian Grand Prix', 'Gran Premio de Gran Bretaña': 'British Grand Prix', 'Gran Premio de Hungría': 'Hungarian Grand Prix', 'Gran Premio de Bélgica': 'Belgian Grand Prix', 'Gran Premio de Países Bajos': 'Dutch Grand Prix', 'Gran Premio de Italia': 'Italian Grand Prix', 'Gran Premio de Azerbaiyán': 'Azerbaijan Grand Prix', 'Gran Premio de Singapur': 'Singapore Grand Prix', 'Gran Premio de Estados Unidos': 'United States Grand Prix', 'Gran Premio de México': 'Mexico City Grand Prix', 'Gran Premio de São Paulo': 'São Paulo Grand Prix', 'Gran Premio de Brasil': 'Brazilian Grand Prix', 'Gran Premio de Las Vegas': 'Las Vegas Grand Prix', 'Gran Premio de Catar': 'Qatar Grand Prix', 'Gran Premio de Abu Dabi': 'Abu Dhabi Grand Prix', 'Gran Premio de Francia': 'French Grand Prix', 'Gran Premio de Alemania': 'German Grand Prix', 'Gran Premio de Portugal': 'Portuguese Grand Prix', 'Gran Premio de Turquía': 'Turkish Grand Prix', 'Gran Premio de Rusia': 'Russian Grand Prix', 'Gran Premio de Malasia': 'Malaysian Grand Prix', 'Gran Premio de Madrid': 'Madrid Grand Prix',
+    // Ficha completa del equipo NBA (01-11, nba.js): plantilla, clasificación, estadísticas y calendario de toda la temporada
+    'victoria seguida': 'win in a row',
+    'victorias seguidas': 'wins in a row',
+    'derrota seguida': 'loss in a row',
+    'derrotas seguidas': 'losses in a row',
+    'ESPN todavía no tiene estos datos.': 'ESPN does not have this data yet.',
+    'Forma, últimos 10 partidos': 'Form, last 10 games',
+    'El último partido está a la derecha.': 'The latest game is on the right.',
+    'Todavía no ha jugado ningún partido.': 'No games played yet.',
+    'Últimos 5 resultados': 'Last 5 results',
+    'Próximos partidos': 'Next games',
+    'Ver el calendario completo': 'See the full schedule',
+    'Plantilla completa': 'Full roster',
+    'Medias por partido de esta temporada. Toca una columna para ordenar.': 'Per game averages this season. Tap a column to sort.',
+    'Todavía no hay estadísticas de esta temporada.': 'There are no stats for this season yet.',
+    'Fuera de playoffs': 'Missing the playoffs',
+    'Los seis primeros van a playoffs, del séptimo al décimo juegan el play in. Toca un equipo para ver su ficha.': 'The top six go to the playoffs, seventh to tenth play the play in. Tap a team to open its page.',
+    'Puntos a favor': 'Points scored',
+    'Puntos en contra': 'Points allowed',
+    'Diferencia por partido': 'Margin per game',
+    'Triples, acierto': 'Three point %',
+    'Triples anotados por partido': 'Threes made per game',
+    'Pérdidas de balón': 'Turnovers',
+    'Estadísticas del equipo': 'Team stats',
+    'Medias por partido de esta temporada.': 'Per game averages this season.',
+    'El puesto en la liga sale donde la fuente lo da.': 'The league rank shows where the source provides it.',
+    'No hay partidos en esta lista.': 'No games in this list.',
+    'se actualiza cada vez que abres la ficha': 'refreshed every time you open this page',
+    'Casi seguro que no': 'Doubtful',
+    // Retos con mas gente (01-11, retos.js, activos.js, db/053): 2v1, 2v2, 3v1, la seccion de Inicio y el boton de unirse
+    'Retos activos': 'Active challenges', 'entra en un lado: el bote se reparte entre los que aciertan': 'join a side: the pot is split between those who are right',
+    'Nadie todavía': 'Nobody yet', 'Estás dentro': 'You are in', 'entras con': 'you join with', 'Unirme con': 'Join', 'pones': 'you put in', 'Reto de': 'Challenge from',
+    'Retos': 'Challenges', 'Gana un reto': 'Win a challenge', 'Van ganando': 'Winning', 'Tu parte si aciertas': 'Your share if you are right',
+    'en juego · se reparte entre los que acierten': 'at stake · split between those who are right', 'el empate': 'the draw',
+    '· crece si entra más gente': '· grows if more people join', 'Reto para ti': 'Challenge for you',
+    'Ya estás dentro de este reto': 'You are already in this challenge', 'Ese reto es para otro amigo': 'That challenge is for another friend',
+    'Ese reto es para ti: acéptalo': 'That challenge is for you: accept it', 'Ese reto está cerrado': 'That challenge is closed', 'Elige un resultado válido': 'Pick a valid result',
+    'No puedes entrar en tu propio reto': 'You cannot join your own challenge', 'Ese partido ya ha empezado': 'That match has already started',
+    'Perdiste el reto con': 'You lost the challenge against', 'Reto con': 'Challenge with',
     // Jugadores (01-11, jugadores.js): ficha de jugador, vista previa, copas y ganancias torneo a torneo
     'Agentes que más juega': 'Most played agents', 'Últimos 60 días, según vlr.gg. Iconos oficiales de Riot Games.': 'Last 60 days, from vlr.gg. Official icons by Riot Games.',
     'Rol en el equipo': 'Role in the team', 'Sus mejores premios': 'Biggest prizes', 'Todavía no tenemos sus ganancias: se cargan solas, jugador a jugador.': 'We do not have his earnings yet: they load by themselves, player by player.',
@@ -127,6 +166,8 @@
     'Todavía no hay resultados.': 'No results yet.', 'Ver el Feed': 'See the Feed', 'ganó': 'won', 'perdió': 'lost', 'retiró': 'cashed out', 'recupera': 'gets back',
 
     // boleto multiple (boleto.js, 30-10)
+    // boleto separado por secciones (01-11)
+    'Tipo de apuesta': 'Bet type', 'Tus elecciones': 'Your picks', 'Cuota total': 'Total odds',
     'Boleto': 'Bet slip', 'Vaciar': 'Clear', 'Mismo importe para todas': 'Same stake for all', 'Abrir el boleto': 'Open the bet slip', 'Ir al partido': 'Go to the match',
     'La mitad de tu saldo, repartida': 'Half your balance, split', 'Todo tu saldo, repartido': 'Your whole balance, split',
     'Total apostado': 'Total stake', 'Cobrarías si aciertas todas': 'Payout if all win', 'Cobrarías si aciertas': 'Payout if it wins',
@@ -479,6 +520,13 @@
     'De 50 a 600 V-Bucks o una caja de CS2 para abrirla tú. Una tirada cada 3 días.': 'From 50 to 600 V-Bucks or a CS2 box to open yourself. One spin every 3 days.',
     'Estás en negativo (': 'You are below zero (', '): no puedes apostar hasta volver a tener saldo. La paga del lunes llega sola.': '): you cannot bet until you have a balance again. The Monday payday comes in by itself.',
     'No te queda saldo para apostar. La paga del lunes llega sola.': 'You have no balance left to bet. The Monday payday comes in by itself.',
+    // Ficha de partido pro (01-11, fichapro.js)
+    'Árbitro': 'Referee', 'Asistencia': 'Attendance', 'Hora local': 'Local time', 'Goles y tarjetas': 'Goals and cards', 'Titulares y cambios': 'Starters and subs', 'Suplentes': 'Substitutes',
+    'Quinteto inicial': 'Starting five', 'Puntos, rebotes y asistencias': 'Points, rebounds and assists', 'Banquillo': 'Bench', 'Jugadores a seguir': 'Players to watch', 'Medias por partido de esta temporada': 'Per game averages this season',
+    'Estadísticas': 'Stats', 'Últimos 5 partidos': 'Last 5 games', 'Últimos duelos': 'Latest meetings', 'Empates': 'Draws', 'Goleadores del equipo': 'Team top scorers', 'Esta temporada': 'This season',
+    'Ver toda la clasificación': 'See the full table', 'Ver menos': 'See less', 'Descenso': 'Relegation', 'Ascenso': 'Promotion', 'Clasifica': 'Qualifies', 'Promoción de descenso': 'Relegation play-off', 'Playoff de ascenso': 'Promotion play-off', 'Playoff': 'Play-off',
+    'Las alineaciones salen sobre una hora antes': 'Line-ups come out about an hour before', 'Cuando los equipos las den, aquí verás los once colocados en el campo, con su dorsal, los suplentes y los cambios.': 'Once the teams announce them, you will see the eleven on the pitch here, with shirt numbers, substitutes and changes.',
+    'No juega': 'Did not play', 'Rebotes': 'Rebounds', 'Asistencias': 'Assists', 'por partido': 'per game', 'PJ': 'GP', 'PTS': 'PTS', 'REB': 'REB', 'AST': 'AST',
   };
   // Nombres de cajas y objetos que vienen de la base en espanol (cajas de lujo y de cosmeticos). Van con data-notr en cajas.js, asi que
   // el diccionario D no los toca: se traducen aparte (NOMB exactos, RN por patron) y tambien dentro de frases del chat y del monedero.
@@ -530,6 +578,11 @@
   const ORD = (n) => (/^1[123]$|[04-9]$/.test(n) ? 'th' : /1$/.test(n) ? 'st' : /2$/.test(n) ? 'nd' : 'rd');
   const MES_N = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const R = [
+    // Retos con mas gente (01-11, db/053): lo que escribe la base en el chat y en el monedero; van primero para que las reglas de mas abajo no las trocen
+    [/^(.+) entra en el reto de (.+?): (.+), ([\d.,]+) en juego$/, '$1 joins the challenge from $2: $3, $4 at stake'],
+    [/^(.+) ganó ([\d.,]+) en el reto contra (.+?) · (.+)$/, (m, a, n, b, r) => `${a} won ${n} in the challenge against ${b.replace(/ y /g, ' and ')} · ${r}`],
+    [/^(.+) ganaron ([\d.,]+) cada uno en el reto contra (.+?) · (.+)$/, (m, a, n, b, r) => `${a.replace(/ y /g, ' and ')} won ${n} each in the challenge against ${b.replace(/ y /g, ' and ')} · ${r}`],
+    [/^Ganan (.+)$/, 'Winners $1'], [/^y (\d+) reto más$/, 'and $1 more challenge'], [/^y (\d+) retos más$/, 'and $1 more challenges'],
     // repaso del ingles (01-11, ingles2): estas van primero porque las reglas de mas abajo cambian trozos sueltos (contra, con, en juego, a...)
     // y despues la frase entera ya no casa
     [/^Cara o cruz: ganas contra (.+)$/, 'Coin flip: you win against $1'], [/^Cara o cruz: pierdes contra (.+)$/, 'Coin flip: you lose against $1'],
@@ -587,6 +640,7 @@
     [/^cobraría ([\d.]+)$/, 'would get $1'], [/^· ([\d.]+) a ([\d.]+)$/, '· $1 at $2'],
     [/^· contra (.+)$/, '· against $1'], [/^contra (.+)$/, 'against $1'], [/^cobró ([\d.]+) a ×([\d.,]+)$/, 'cashed $1 at ×$2'],
     [/^combinada de (\d+)$/, 'parlay of $1'], [/^una combinada de (\d+)$/, 'a parlay of $1'], [/^y (\d+) más en juego$/, 'and $1 more in play'],
+    [/^Lleva (\d+) h (\d+) min$/, '$1 h $2 min in'], [/^Lleva (\d+) min$/, '$1 min in'],
     [/\bMinuto (?=\d)/g, 'Minute '], [/ · Descanso$/, ' · Half time'], [/\bmié(?= \d)/g, 'Wed'],
     [/(^|\s)(\d{1,2}) (ene|abr|ago|dic)(?=$| \d)/g, (m, s, d, mo) => `${s}${d} ${MESES[mo]}`],
     // boleto multiple (boleto.js, 30-10)
