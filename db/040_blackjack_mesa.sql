@@ -225,7 +225,7 @@ begin
   v_hole := p_mazo[2 * n + 2];
   insert into bjm_secreto(ronda, mazo, sig, hueco) values (p_ronda, p_mazo, 2 * n + 3, v_hole)
     on conflict (ronda) do update set mazo = excluded.mazo, sig = excluded.sig, hueco = excluded.hueco;
-  update bjm_asiento s set sin_jugar = case when exists (select 1 from bjm_mano m where m.ronda = p_ronda and m.player = s.player) then 0 else s.sin_jugar + 1 end;
+  update bjm_asiento s set sin_jugar = case when exists (select 1 from bjm_mano m where m.ronda = p_ronda and m.player = s.player) then 0 else s.sin_jugar + 1 end where true;   -- Supabase no deja un UPDATE sin WHERE (pg-safeupdate)
   update bjm_mano set estado = case when jg_bj_total(cartas) = 21 then 'blackjack' else 'juega' end where ronda = p_ronda;
   update bjm_ronda set estado = 'turnos', repartida = t, banca = array[v_up], turno = null where id = p_ronda;
   if jg_bj_total(array[v_up, v_hole]) = 21 then perform bjm_pagar(p_ronda); return; end if;     -- la banca mira: blackjack, se acaba ya
