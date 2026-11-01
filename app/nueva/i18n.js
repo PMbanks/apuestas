@@ -313,7 +313,7 @@
     'Toca una para elegirla': 'Tap one to select it', '1 objeto': '1 item', 'Cargando…': 'Loading…',
     // seleccionar varias del inventario (02-11)
     'Clic para elegir, Mayús y clic para un rango, arrastra para marcar varias': 'Click to select, Shift and click for a range, drag to select several', 'Toca para elegir, mantén y arrastra para marcar varias': 'Tap to select, hold and drag to select several',
-    'Todo lo visible': 'Everything visible', 'Invertir': 'Invert', 'Menos de': 'Under', 'Quitar selección': 'Clear selection',
+    'Todo lo visible': 'Everything', 'Invertir': 'Invert', 'Menos de': 'Under', 'Quitar selección': 'Clear selection',
     'Tus cajas': 'Your boxes', 'Cajas sin abrir': 'Unopened boxes', 'Tuyas sin abrir': 'Yours, unopened',
     'Abrir la tuya': 'Open yours', 'Abrir una tuya': 'Open one of yours', 'Abrir otra tuya': 'Open another of yours',
     'Cara o cruz, crash y blackjack': 'Coin flip, crash and blackjack',

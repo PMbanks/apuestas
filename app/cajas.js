@@ -20,8 +20,7 @@
   const RELLENO = { mil: 60, res: 25, cla: 9, cov: 4, esp: 2 };
   const X_TRAMOS = [[0, 0.07, 0.03], [0.07, 0.15, 0.24], [0.15, 0.38, 0.33], [0.38, 0.45, 0.24], [0.45, 1, 0.16]];
   const CORTES = [0, 0.07, 0.15, 0.38, 0.45, 1.000001];
-  const BARATAS_N = [5, 10];  // atajos del inventario: "las N mas baratas"
-  const MENOS_DE = [10, 50, 100];   // atajo "menos de X" (V-Bucks)
+    const MENOS_DE = [10, 50, 100];   // atajo "menos de X" (V-Bucks)
   const POR_PAG = 8;          // batallas terminadas por pagina
   const INV_PASO = 60;        // skins del inventario que se pintan de cada vez
   const ESP_VER = 6;          // cuchillos y guantes que se ven de primeras en lo que trae una caja
@@ -565,14 +564,10 @@
     const herramientas = mio ? `<div class="cj-tools"><span class="hint cj-hint"><span class="pc">Clic para elegir, Mayús y clic para un rango, arrastra para marcar varias</span><span class="mv">Toca para elegir, mantén y arrastra para marcar varias</span></span>
         ${D.st.inv.length ? `<button class="chip cj-todo ${S.sure === 'todo' ? 'on' : ''}" data-cj="vendertodo">${S.sure === 'todo' ? `¿Vender las ${N((S.todo || []).length)} por ${N((S.todo || []).reduce((a, x) => a + x.value, 0))}? Toca otra vez` : 'Vender todo el inventario'}</button>` : ''}</div>` : '';
     // atajos: sobre lo que se ve (el filtro activo)
-    const rarVis = ORDEN.filter((r) => vis.some((i) => item(i.item).rarity === r));
     const atajos = mio && vis.length > 1 ? `<div class="cj-at">
         <button data-cj="at" data-t="todo"><span>Todo lo visible</span><i>${N(vis.length)}</i></button>
-        <button data-cj="at" data-t="ninguno"><span>Ninguno</span></button>
-        <button data-cj="at" data-t="invertir"><span>Invertir</span></button>
-        <span class="cj-at-g">${BARATAS_N.filter((n) => n < vis.length).map((n) => `<button data-cj="at" data-t="baratas" data-v="${n}"><span>Las ${n} más baratas</span></button>`).join('')}</span>
         <span class="cj-at-g"><em>Menos de</em>${MENOS_DE.map((x) => `<button data-cj="at" data-t="menos" data-v="${x}"><span>${x}</span></button>`).join('')}</span>
-        ${rarVis.length > 1 ? `<span class="cj-at-g"><em>Por rareza</em>${rarVis.map((r) => `<button data-cj="at" data-t="rareza" data-v="${r}" style="--c:${color(r)}"><i></i><span>${RAR[r][0]}</span></button>`).join('')}</span>` : ''}</div>` : '';
+      </div>` : '';
     return `${fila}${tuyas}${head}${herramientas}${filtros}
       ${filtrado ? `<p class="cj-count"><span>${cuantas(vis.length, vis)}</span><span class="num">${N(vis.reduce((a, i) => a + i.value, 0))}${coin()}</span><button class="chip" data-cj="sinfiltro">Quitar filtros</button></p>` : ''}
       ${atajos}

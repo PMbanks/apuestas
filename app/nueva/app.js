@@ -1137,12 +1137,19 @@ function abTicket(b, i) {
     <span class="bor-sello">${sello}</span>
   </article>`;
 }
+// PM 02-11: "los challenges tambien cuentan en all bets": los retos se mezclan por fecha con las apuestas. ALL trae todas, asi que aqui se pagina en el navegador
+const abEstR = (c, k) => { const m = byId(c.m); if (c.st === 'pending' || c.st === 'accepted') return m?.live ? 'live' : 'open'; if (/^won_/.test(c.st)) return k && window.GM_RETOS && !GM_RETOS.ganan(c).includes(k) ? 'lost' : 'won'; return c.st === 'void' ? 'void' : null };
+const abRetos = (f) => CH.filter((c) => { const m = byId(c.m); if (!m) return false; if (f.k && !(window.GM_RETOS ? GM_RETOS.dentro(c, f.k) : c.from === f.k || c.to === f.k)) return false; if (f.sp && m.s !== f.sp) return false; const e = abEstR(c, f.k); return !!e && (!f.st || e === f.st) });
 function todasHtml() {
   const f = S.abf || {}, pg0 = S.abpg || 0;
   if (!ABP || ABP.srv !== false) setTimeout(cargaAbp, 0);
   let filas, total;
-  if (ABP?.srv && ABP.key === JSON.stringify([f.k || '', f.st || '', f.sp || '', pg0, ALL.length, ALL.filter((b) => b.st !== 'open').length])) { filas = ABP.rows; total = ABP.total }
-  else { const xs = abFiltra(f); total = xs.length; filas = xs.slice(pg0 * AB_POR, pg0 * AB_POR + AB_POR) }
+  const rts = abRetos(f);
+  if (!rts.length && ABP?.srv && ABP.key === JSON.stringify([f.k || '', f.st || '', f.sp || '', pg0, ALL.length, ALL.filter((b) => b.st !== 'open').length])) { filas = ABP.rows; total = ABP.total }
+  else {
+    const xs = [...abFiltra(f).map((b) => ({ t: Date.parse(b.at) || 0, id: b.id, b })), ...rts.map((c) => ({ t: Date.parse(c.at) || 0, id: c.id, c }))].sort((x, y) => y.t - x.t || y.id - x.id);
+    total = xs.length; filas = xs.slice(pg0 * AB_POR, pg0 * AB_POR + AB_POR).map((x) => x.c || x.b);
+  }
   const pags = Math.max(1, Math.ceil(total / AB_POR)), pg = Math.min(pg0, pags - 1);
   const ests = [['', 'Todas'], ['open', 'En juego'], ['live', 'En vivo'], ['won', 'Ganadas'], ['lost', 'Perdidas'], ['void', 'Devueltas'], ['cashout', 'Retiradas']].filter(([k]) => !k || k === f.st || ALL.some((b) => abEst(b) === k));
   const deps = DEP.filter((k) => ALL.some((b) => byId(b.m)?.s === k));
@@ -1153,7 +1160,7 @@ function todasHtml() {
       <span class="ab-fg">${ests.map(([k, n]) => `<button class="chip ${(f.st || '') === k ? 'on' : ''}" data-abf="st|${k}">${n}</button>`).join('')}</span>
       ${deps.length > 1 ? `<span class="ab-fg">${[['', 'Todo', null], ...deps.map((k) => [k, ...SP[k]])].map(([k, n, im]) => `<button class="f ${(f.sp || '') === k ? 'on' : ''}" data-abf="sp|${k}">${im ? `<img src="${im}" alt="">` : ''}${n}</button>`).join('')}</span>` : ''}
     </nav>
-    ${filas.length ? `<div class="mb-rs2 ab-ts">${filas.map(abTicket).join('')}</div>` : `<p class="hint">${ALL.length ? 'Nada con estos filtros.' : 'Todavía nadie ha apostado.'}</p>`}
+    ${filas.length ? `<div class="mb-rs2 ab-ts">${filas.map((x, i) => (x.pl ? `<div class="rts ab-rt">${retoRow(x)}</div>` : abTicket(x, i))).join('')}</div>` : `<p class="hint">${ALL.length ? 'Nada con estos filtros.' : 'Todavía nadie ha apostado.'}</p>`}
     ${pags > 1 ? `<nav class="pags"><button data-abpg="${pg - 1}" ${pg ? '' : 'disabled'} aria-label="Anterior">‹</button>${nums.map((i) => (i === '…' ? '<span class="pags-g">…</span>' : `<button data-abpg="${i}" class="${i === pg ? 'on' : ''}">${i + 1}</button>`)).join('')}<button data-abpg="${pg + 1}" ${pg < pags - 1 ? '' : 'disabled'} aria-label="Siguiente">›</button></nav>` : ''}`;
 }
 function colegas() {

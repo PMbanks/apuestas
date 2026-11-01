@@ -2374,3 +2374,6 @@ html[data-moneda="vp"] .cn{background-image:url(../img/monedas/vp.png)}
 .live-m>div .vn em{font:600 24px/1 var(--mono);font-style:normal}
 .live-m>div .vn small{font:500 14px/1 var(--mono);opacity:.8;padding:3px 8px;border-radius:8px;background:rgba(255,255,255,.08)}
 .live-m img{margin:0 auto}
+
+/* PM 02-11: los retos entran en Todas las apuestas: una fila entera entre los boletos */
+.ab-ts .ab-rt{grid-column:1/-1}
