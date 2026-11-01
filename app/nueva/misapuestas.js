@@ -93,7 +93,10 @@
     const eq = (s) => { const p = s === 'a' ? '1' : '2', mio = lp === p, sc = s === 'a' ? d && d.sa : d && d.sb;
       return `<div class="mt-eq ${mio ? 'mio' : ''}"><span class="mt-cr">${logo(m, s)}</span><span class="mt-nm"><b>${esc(s === 'a' ? m.a : m.b)}</b>${mio ? '<em>Tu apuesta</em>' : ''}</span>${live ? `<span class="mt-pts">${rondas ? `<small>${s === 'a' ? d.ra : d.rb}</small>` : ''}<strong class="${lid === s ? 'w' : ''}">${sc ?? '·'}</strong></span>` : ''}</div>` };
     const pk = b.p === 'X' ? '<p class="mt-pk"><i>★</i><b>Empate</b></p>' : mkp ? `<p class="mt-pk"><i>★</i><b data-notr>${esc(pn(m, b.p))}</b></p>` : '';
-    const det = live ? (g(() => (window.GM_VIVO ? GM_VIVO.lineaTxt(m) : ''), '') || d.mapa || '') : '';
+    const det0 = live ? (g(() => (window.GM_VIVO ? GM_VIVO.lineaTxt(m) : ''), '') || d.mapa || '') : '';
+    // PM 01-11: "no se ve el tiempo del partido, solo el marcador": si la linea no trae ya un minuto (futbol, NBA), se anade cuanto lleva jugandose
+    const lleva = live ? Math.max(0, Math.floor((Date.now() - t2(m.at)) / 60000)) : 0;
+    const det = live && lleva > 0 && lleva < 600 && !/^Minuto /.test(det0) && !/ · Minuto /.test(det0) && m.s !== 'b' ? (det0 ? det0 + ' · ' : '') + 'Lleva ' + (lleva >= 60 ? Math.floor(lleva / 60) + ' h ' + String(lleva % 60).padStart(2, '0') + ' min' : lleva + ' min') : det0;
     const head = live
       ? `<span class="mt-st"><i class="mt-pt"></i><span>En vivo</span></span>${det ? `<span class="mt-det">${det.split(' · ').map((x) => `<span>${esc(x)}</span>`).join('<i>·</i>')}</span>` : ''}${va ? `<span class="mt-va ${va}">${VA[va]}</span>` : ''}`
       : banda(m, `<span class="mt-when">${empieza(t2(m.at))}</span>`);
