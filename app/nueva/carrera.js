@@ -7,7 +7,7 @@
 // juegos.js deja un hueco [data-jx-hueco] en la pestana Caballos y llama a GM_CARRERA.montar(hueco, ctx, { rank }).
 'use strict';
 (function () {
-  const { N, X, esc, coin, quieto, ms, suena, dic, msgErr, clics, cantidad, engancha, stake, txt, html, azar } = GM_JX;
+  const { N, X, esc, coin, quieto, ms, suena, dic, msgErr, clics, cantidad, engancha, stake, txt, html, azar, fx } = GM_JX;
   const J = GM_JX.juego('carrera');
   const en = GM_JX.en;
   const t = dic({
@@ -269,8 +269,8 @@
       else if (tt < fin1) estadoTxt(P.slow && tt > P.slow.a ? t('Foto finish') : `${N(mts)} m`, '', P.slow && tt > P.slow.a ? 'foto' : '');
       else ganadorTxt(r, P);
       // destello al cruzar la meta el primero
-      if (tt >= fin1 && S.flash !== r.id) { S.flash = r.id; const fl = el.querySelector('[data-flash]'); fl.classList.remove('on'); void fl.offsetWidth; fl.classList.add('on'); if (P.slow) suena('clic') }
-      if (S.sono[r.id] !== 1 && tt > 0.05 && tt < 1.5) { S.sono[r.id] = 1; suena('turno') }
+      if (tt >= fin1 && S.flash !== r.id) { S.flash = r.id; const fl = el.querySelector('[data-flash]'); fl.classList.remove('on'); void fl.offsetWidth; fl.classList.add('on'); fx('sonido', 'campana'); fx('sonido', 'publico'); paraGalope() }
+      if (S.sono[r.id] !== 1 && tt > 0.05 && tt < 1.5) { S.sono[r.id] = 1; fx('sonido', 'publico'); paraGalope(); S.galope = fx('sonido', 'galope') }
       const ultimo = P.F[P.orden[P.orden.length - 1]];
       if (tt > ultimo + 0.5) podio(r, P); else html(el.querySelector('[data-podio]'), '');
     } else { html(el.querySelector('[data-ord]'), ''); el.querySelector('[data-bar] i').style.transform = 'scaleX(0)'; html(el.querySelector('[data-podio]'), '') }
@@ -284,6 +284,7 @@
     const por = P.gap < 0.045 ? t('por una nariz') : P.gap < 0.1 ? t('por media cabeza') : (en() ? (Math.round(P.gap * 9) <= 1 ? 'by a length' : `by ${Math.round(P.gap * 9)} lengths`) : `por ${Math.max(1, Math.round(P.gap * 9))} ${Math.round(P.gap * 9) <= 1 ? 'cuerpo' : 'cuerpos'}`);
     estadoTxt(en() ? `${c.nombre} wins!` : `¡Gana ${c.nombre}!`, por, 'gana');
   }
+  function paraGalope() { if (typeof S.galope === 'function') { try { S.galope() } catch {} } S.galope = null }
   function podio(r, P) {
     const mias = (r.apuestas || []).filter((a) => a.player === J.ctx.me);
     const cobra = mias.filter((a) => a.caballo === P.orden[0]).reduce((s, a) => s + Math.floor(a.stake * a.cuota), 0), puso = mias.reduce((s, a) => s + a.stake, 0);
@@ -292,7 +293,7 @@
     if (S.sono[r.id] !== 2 && S.ult) { setTimeout(() => S.ult.refresca(), 4000) }
     if (mias.length && S.sono[r.id] !== 2) {
       S.sono[r.id] = 2; const neto = cobra - puso;
-      suena(neto > 0 ? 'cobrar' : 'perder');
+      const pi = el.querySelector('[data-pista]'); if (neto > 0) fx('gana', neto, { el: pi }); else if (neto < 0) fx('pierde', -neto, { el: pi });
       if (J.ctx.refresh) setTimeout(() => J.ctx.refresh(), 2500); if (hooks.rank) setTimeout(hooks.rank, 2600)
     } else S.sono[r.id] = 2;
   }
@@ -394,7 +395,7 @@
   }
 
   function para() {
-    S.on = false;
+    S.on = false; paraGalope();
     clearTimeout(S.tPoll); clearTimeout(S.tPlazo); clearTimeout(S.tPlazo2); clearInterval(S.tic); cancelAnimationFrame(S.raf); S.raf = 0; S.tic = 0;
     J.calla();
   }

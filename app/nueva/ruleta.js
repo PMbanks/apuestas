@@ -5,7 +5,7 @@
 // juegos.js deja un hueco [data-jx-hueco] en la pestana Ruleta y llama a GM_RULETA.montar(hueco, ctx, { rank }).
 'use strict';
 (function () {
-  const { N, esc, coin, quieto, ms, suena, dic, msgErr, clics, cantidad, engancha, stake, txt, html } = GM_JX;
+  const { N, esc, coin, quieto, ms, suena, dic, msgErr, clics, cantidad, engancha, stake, txt, html, fx } = GM_JX;
   const J = GM_JX.juego('ruleta');
   const t = dic({
     'Apuesta': 'Bet', 'Todo': 'All', 'Rojo': 'Red', 'Negro': 'Black', 'Verde': 'Green', 'rojo': 'red', 'negro': 'black', 'verde': 'green',
@@ -245,7 +245,7 @@
       if (S.slot >= 0 && S.raf) {
         // un tic por casilla: rapido y suave al principio, mas fuerte y grave cuando frena (la tension del final)
         S.kick = 1; const n = performance.now(), lento = 1 - Math.min(1, S.v || 0);
-        if (n - S.tTick > 75) { S.tTick = n; suena('clic') }
+        if (n - S.tTick > (lento > 0.6 ? 0 : 60)) { S.tTick = n; fx('sonido', 'tick') }
       }
       S.slot = s;
     }
@@ -255,6 +255,7 @@
     const r = d && d.ronda, e = r ? (J.ahora() - ms(r.cierra)) / 1000 : 0;
     const a1 = angulo(d, e), a0 = angulo(d, e - 0.05), v = Math.min(1, Math.abs(a1 - a0) / 0.05 / W0);
     S.v = v;
+    if (r && e >= 0 && S.sGira !== r.id) { S.sGira = r.id; fx('sonido', 'giro'); fx('giro', el.querySelector('.rl-wh'), true) }
 
   }
   function frame() {
@@ -268,18 +269,20 @@
     if (p) { p.style.transform = `rotate(${(-22 * S.kick).toFixed(1)}deg)`; S.kick *= 0.82 }
     if (f === 'giro' || f === 'cerrando') { S.raf = requestAnimationFrame(frame); return }
     if (p) p.style.transform = '';
-    S.v = 0;
+    S.v = 0; fx('giro', el.querySelector('.rl-wh'), false);
     pinta();
   }
   // la bola cae (para todos) y, si jugaste, el momento de ganar o perder: estallido con la cifra o temblor rojo
   function resultadoSuena(r) {
     S.sonado = r.id;
+    fx('sonido', 'bola');
     const mias = (r.apuestas || []).filter((a) => a.player === J.ctx.me);
     setTimeout(() => { if (S.ult) S.ult.refresca() }, 1800);
     if (!mias.length) return;
     const puso = mias.reduce((a, x) => a + x.stake, 0), cobra = mias.filter((a) => a.color === r.color).reduce((a, x) => a + x.stake * MULT[x.color], 0);
     const neto = cobra - puso;
-    suena(neto > 0 ? 'cobrar' : 'perder');
+    const wh = el.querySelector('.rl-wh');
+    setTimeout(() => { if (neto > 0) fx('gana', neto, { el: wh }); else if (neto < 0) fx('pierde', -neto, { el: wh }) }, 350);
     if (cobra && J.ctx.refresh) setTimeout(() => J.ctx.refresh(), 1500);
   }
 

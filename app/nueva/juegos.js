@@ -157,6 +157,7 @@
     if (window.GM_LANG) GM_LANG.traduce(root);
     refs = {};
     const nav = root.querySelector('.jg-tabs'), on = nav && nav.querySelector('.on');
+    if (nav && window.GMFX && !nav.querySelector('.fx-sonido')) GMFX.boton(nav);       // PM 04-11: un solo sonido si/no para todos los juegos (fx.js)
     if (on && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = Math.max(0, on.offsetLeft - 24);
     post();
   }
@@ -315,7 +316,6 @@
   A.tab = ({ v }) => {
     if (S.juego === v) return;
     if (S.juego === 'blackjack' && window.GM_BJMESA) GM_BJMESA.para();
-    if (S.juego === 'blackjack' && bjUlt) bjUlt.para();
     if (mod(S.juego)) mod(S.juego).para();
     S.juego = v; guarda('jg-juego', v); paraLoops(); sigs.v = null;
     pinta(); cargar();
@@ -416,7 +416,7 @@
     const abiertos = `<span class="lab jg-sec">Retos abiertos${ajenos.length ? ` <b class="jg-cnt">${ajenos.length}</b>` : ''}</span>` +
       (ajenos.length ? ajenos.slice(0, 4).map(filaAjena).join('') : '<p class="jg-vacio">Ahora no hay ningún reto abierto. Crea uno y espera a que alguien lo acepte.</p>') +
       (mios.length ? `<span class="lab jg-sec">Tus retos esperando</span>${mios.slice(0, 4).map(filaMia).join('')}<p class="jg-nota">Si nadie acepta en 24 horas, te devuelvo lo que pusiste.</p>` : '');
-    const ultimos = d.recientes.length ? `<span class="lab jg-sec">Últimos</span>${d.recientes.slice(0, 5).map((a) => { const perd = a.ganador === a.creador ? a.rival : a.creador;
+    const ultimos = d.recientes.length ? `<span class="lab jg-sec">Últimos</span>${d.recientes.slice(0, 4).map((a) => { const perd = a.ganador === a.creador ? a.rival : a.creador;
       return fila('', av(a.ganador), `<b>${esc(nom(a.ganador))}</b> <span>${a.ganador === ctx.me ? 'le ganas a' : 'le gana a'}</span> <b>${esc(perd === ctx.me ? 'ti' : nom(perd))}</b><em>${lado2(a.salio)}</em>`, `<b class="num win">+${N(a.stake)}</b>`) }).join('')}` : '';
     return `<section class="jg-g">
       <div class="jg-stage jg-mo">
@@ -793,17 +793,10 @@
   /* =====================================================================
      BLACKJACK: una sola mesa compartida (PM, 01-11). La pinta y la juega bjmesa.js (db/040); aqui solo se le deja su hueco.
      ===================================================================== */
-  const vBj = () => `<section class="jg-g jg-gbjm"><div class="jg-stage"><div data-bjm-hueco></div><div data-bj-ult></div></div></section>`;
-  // PM 04-11: debajo de la mesa, las 5 ultimas manos de todos (jx.js ultimas, db/077); el nodo es siempre el mismo y se refresca solo
-  let bjUlt = null;
+  const vBj = () => `<section class="jg-g jg-gbjm"><div class="jg-stage"><div data-bjm-hueco></div></div></section>`;
   function bjPost() {
     const h = root.querySelector("[data-bjm-hueco]");
     if (h && window.GM_BJMESA) GM_BJMESA.montar(h, ctx, { rank: () => cargaRank() });
-    const u = root.querySelector('[data-bj-ult]');
-    if (u && window.GM_JX) {
-      if (!bjUlt) { const J = GM_JX.juego('blackjack'); bjUlt = GM_JX.ultimas('blackjack', J); bjUlt.J = J }
-      bjUlt.J.ctx = ctx; u.replaceWith(bjUlt.el); bjUlt.arranca();
-    }
   }
 
   /* =====================================================================

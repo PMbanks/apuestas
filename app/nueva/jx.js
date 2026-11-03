@@ -12,6 +12,9 @@
   const movil = () => { try { return matchMedia('(max-width:700px)').matches } catch { return false } };
   const ms = (t) => (t ? Date.parse(t) : 0);
   const suena = (t, p) => { try { window.dispatchEvent(new CustomEvent('gm:sonido', { detail: p ? { ...p, tipo: t } : t })) } catch {} };
+  // efectos y sonido de fx.js (window.GMFX); si no ha cargado todavia, no hacen nada
+  const fx = (f, ...a) => { try { const g = window.GMFX; return g && g[f] ? g[f](...a) : undefined } catch { return undefined } };
+  window.addEventListener('gm-sonido', (e) => { try { if (window.GM_SONIDOS) GM_SONIDOS.silencia(!e.detail) } catch {} });
   function lee(k) { try { return localStorage.getItem(k) } catch { return null } }
   function guarda(k, v) { try { localStorage.setItem(k, String(v)) } catch {} }
   // diccionario propio de cada juego: el texto se escribe ya en el idioma (el nodo lleva data-notr y el traductor general no lo toca)
@@ -137,5 +140,5 @@
     return { el, refresca, arranca() { if (!on) { on = true; bucle() } refresca() }, para() { on = false; clearTimeout(t) } };
   }
 
-  window.GM_JX = { en, N, X, esc, coin, quieto, movil, ms, suena, lee, guarda, dic, msgErr, juego, clics, cantidad, engancha, stake, txt, html, azar, ultimas };
+  window.GM_JX = { en, N, X, esc, coin, quieto, movil, ms, suena, lee, guarda, dic, msgErr, juego, clics, cantidad, engancha, stake, txt, html, azar, ultimas, fx };
 })();
