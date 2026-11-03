@@ -17,7 +17,7 @@
     'Carrera': 'Race', 'semilla': 'seed', 'comprobado': 'verified', 'Preparando la pista…': 'Getting the track ready…', 'Pon una cantidad': 'Enter an amount', 'En carrera': 'Racing',
     'Elige un caballo y apuesta: si gana, cobras lo apostado por su cuota.': 'Pick a horse and bet: if it wins you get your stake times its odds.',
     'El orden de llegada se decide al abrir la carrera y queda cerrado con este hash. Al salir se ve la semilla: sha256(semilla:orden) tiene que dar el hash.': 'The finishing order is decided when the race opens and locked with this hash. At the start the seed is revealed: sha256(seed:order) must give the hash.',
-    'META': 'FINISH', 'por una nariz': 'by a nose', 'por media cabeza': 'by half a head', 'Cuota': 'Odds',
+    'META': 'FINISH', 'Apuestas abiertas': 'Bets open', 'por una nariz': 'by a nose', 'por media cabeza': 'by half a head', 'Cuota': 'Odds',
   });
   const DIST = 1200, TSLOW = 0.3;
 
@@ -59,6 +59,7 @@
         <div class="cb-hud"><div class="cb-hl"><p class="cb-t" data-t></p><p class="cb-s" data-s></p></div><div class="cb-ord" data-ord></div></div>
         <div class="cb-bar" data-bar><i></i></div>
         <div class="cb-flash" data-flash></div>
+        <div class="cb-cdw" data-cdw></div>
         <div class="cb-podio" data-podio></div>
       </div>
       <div class="cb-abajo">
@@ -327,10 +328,17 @@
   function cuenta() {
     const sc = S.escena; if (!sc || !D) return;
     const bar = el.querySelector('[data-bar] i');
+    const cdw = el.querySelector('[data-cdw]');
+    if (sc.estado !== 'apuestas' && cdw._h) { cdw._h = ''; cdw.innerHTML = '' }
     if (sc.estado === 'espera') { const v = D.ventana || 12; estadoTxt(t('Apuesta para que salga la carrera'), en() ? `The first bet opens ${v} seconds for everyone` : `La primera apuesta abre ${v} segundos para todos`); bar.style.transform = 'scaleX(0)'; return }
     if (sc.estado === 'apuestas') {
       const left = Math.max(0, (ms(sc.cierra) - J.ahora()) / 1000);
-      estadoTxt(`${t('Salen en')} ${Math.ceil(left)}`, (() => { const n = new Set((sc.apuestas || []).map((a) => a.player)).size; return en() ? `${n} ${n === 1 ? 'player' : 'players'} in` : `${n} ${n === 1 ? 'jugador dentro' : 'jugadores dentro'}` })(), left <= 5 ? 'pocos' : 'cd');
+      const n = new Set((sc.apuestas || []).map((a) => a.player)).size, gente = en() ? `${n} ${n === 1 ? 'player' : 'players'} in` : `${n} ${n === 1 ? 'jugador dentro' : 'jugadores dentro'}`;
+      estadoTxt(t('Apuestas abiertas'), '');
+      // PM 04-11: la cuenta atras grande y cuantos hay dentro, centrados sobre la pista
+      const h = `<small>${t('Salen en')}</small><b class="num">${Math.ceil(left)}</b><span>${gente}</span><u style="transform:scaleX(${Math.max(0, left / (D.ventana || 12)).toFixed(3)})"></u>`;
+      if (cdw._h !== h) { cdw._h = h; cdw.innerHTML = h }
+      cdw.classList.toggle('pocos', left <= 5);
       bar.style.transform = `scaleX(${(1 - left / (D.ventana || 12)).toFixed(3)})`;
       return;
     }

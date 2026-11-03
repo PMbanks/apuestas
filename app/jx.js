@@ -11,7 +11,10 @@
   const quieto = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return false } };
   const movil = () => { try { return matchMedia('(max-width:700px)').matches } catch { return false } };
   const ms = (t) => (t ? Date.parse(t) : 0);
-  const suena = (t) => { try { window.dispatchEvent(new CustomEvent('gm:sonido', { detail: t })) } catch {} };
+  const suena = (t, p) => { try { window.dispatchEvent(new CustomEvent('gm:sonido', { detail: p ? { ...p, tipo: t } : t })) } catch {} };
+  // efectos y sonido de fx.js (window.GMFX); si no ha cargado todavia, no hacen nada
+  const fx = (f, ...a) => { try { const g = window.GMFX; return g && g[f] ? g[f](...a) : undefined } catch { return undefined } };
+  window.addEventListener('gm-sonido', (e) => { try { if (window.GM_SONIDOS) GM_SONIDOS.silencia(!e.detail) } catch {} });
   function lee(k) { try { return localStorage.getItem(k) } catch { return null } }
   function guarda(k, v) { try { localStorage.setItem(k, String(v)) } catch {} }
   // diccionario propio de cada juego: el texto se escribe ya en el idioma (el nodo lleva data-notr y el traductor general no lo toca)
@@ -106,5 +109,36 @@
     return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296 };
   }
 
-  window.GM_JX = { en, N, X, esc, coin, quieto, movil, ms, suena, lee, guarda, dic, msgErr, juego, clics, cantidad, engancha, stake, txt, html, azar };
+  /* ---------- las 5 ultimas jugadas de todos (jg_ultimas, db/077), en vivo: al montar, cada 8 s mientras se ve y cuando el juego avisa ---------- */
+  function ultimas(juego, J) {
+    const el = document.createElement('div');
+    el.className = 'jx-ult'; el.setAttribute('data-notr', '');
+    let t = 0, sig = '', on = false;
+    const T = dic({ 'Últimas 5 jugadas': 'Last 5 plays', 'Todavía no ha jugado nadie': 'Nobody has played yet', 'salió': 'came up', 'minas': 'mines', 'mina': 'mine', 'abiertas': 'open', 'abierta': 'open', 'ganó': 'won', 'a': 'on', 'Gana': 'Wins', 'Pierde': 'Loses', 'Empate': 'Push', 'le gana a': 'beats', 'Rojo': 'Red', 'Negro': 'Black', 'Verde': 'Green', 'cara': 'heads', 'cruz': 'tails' });
+    const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : '');
+    function que(x) {
+      if (juego === 'ruleta') return `${T(cap(x.que))} · ${T('salió')} ${x.sale}`;
+      if (juego === 'minas') return `${x.minas} ${T(x.minas === 1 ? 'mina' : 'minas')} · ${x.n} ${T(x.n === 1 ? 'abierta' : 'abiertas')}`;
+      if (juego === 'carrera') return `${T('a')} ${esc(x.que)}${x.pago > 0 ? '' : ' · ' + T('ganó') + ' ' + esc(x.sale)}`;
+      if (juego === 'blackjack') return T({ blackjack: 'Blackjack', gana: 'Gana', pierde: 'Pierde', empate: 'Empate' }[x.que] || '');
+      if (juego === 'moneda') return `${T('le gana a')} ${esc(J.nom(x.rival))} · ${T(x.sale)}`;
+      return '';
+    }
+    function pinta(d) {
+      const xs = (d && d.jugadas) || [];
+      const h = `<span class="lab jx-ult-t">${T('Últimas 5 jugadas')}</span>` + (xs.length ? xs.map((x) => {
+        const neto = x.pago - x.stake, gana = neto > 0, emp = neto === 0;
+        return `<div class="jx-u ${gana ? 'w' : emp ? 'e' : 'l'}">${J.av(x.player)}<span class="jx-un"><b>${esc(J.nom(x.player))}</b><em>${que(x)}</em></span><span class="num jx-us">${N(x.stake)}</span><b class="num jx-ux">${x.x ? '×' + X(x.x) : '·'}</b><b class="num jx-uv">${gana ? '+' + N(neto) : emp ? '0' : '−' + N(-neto)}</b></div>`;
+      }).join('') : `<p class="jx-uv0">${T('Todavía no ha jugado nadie')}</p>`);
+      if (h !== sig) { sig = h; el.innerHTML = h }
+    }
+    async function refresca() {
+      if (!J.ctx || !el.isConnected || document.hidden) return;
+      try { const { data, error } = await J.ctx.db.rpc('jg_ultimas', { p_juego: juego }); if (!error) pinta(data) } catch {}
+    }
+    function bucle() { clearTimeout(t); if (!on) return; t = setTimeout(() => { refresca(); bucle() }, 8000) }
+    return { el, refresca, arranca() { if (!on) { on = true; bucle() } refresca() }, para() { on = false; clearTimeout(t) } };
+  }
+
+  window.GM_JX = { en, N, X, esc, coin, quieto, movil, ms, suena, lee, guarda, dic, msgErr, juego, clics, cantidad, engancha, stake, txt, html, azar, ultimas, fx };
 })();

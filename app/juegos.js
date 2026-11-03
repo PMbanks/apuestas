@@ -157,6 +157,7 @@
     if (window.GM_LANG) GM_LANG.traduce(root);
     refs = {};
     const nav = root.querySelector('.jg-tabs'), on = nav && nav.querySelector('.on');
+    if (nav && window.GMFX && !nav.querySelector('.fx-sonido')) GMFX.boton(nav);       // PM 04-11: un solo sonido si/no para todos los juegos (fx.js)
     if (on && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = Math.max(0, on.offsetLeft - 24);
     post();
   }

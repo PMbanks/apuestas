@@ -85,6 +85,7 @@
     // PM 04-11: la rueda centrada y algo mas grande, y debajo los botones de color y la cantidad
     el.innerHTML = `
       <div class="rl-top">
+        <div class="rl-ronda" data-ronda></div>
         <div class="rl-wh">
           <div class="rl-disc" data-rot>${discoSvg()}</div>
           <svg class="rl-hubsvg" viewBox="0 0 320 320" aria-hidden="true"><circle class="rl-rt" cx="160" cy="160" r="70"/><circle class="rl-rp" data-ring cx="160" cy="160" r="70" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}"/></svg>
@@ -168,6 +169,16 @@
     Sx.className = 'rl-s ' + (cobra ? 'win' : 'lose');
   }
   const jugadores = (r) => new Set((r && r.apuestas || []).map((a) => a.player)).size;
+  // la pastilla de la ronda, encima de la rueda: cuenta atras grande, barra que se acaba y cuantos hay dentro
+  function pastilla(f, r, left) {
+    const p = el.querySelector('[data-ronda]'); if (!p) return;
+    const n = jugadores(r), gente = en() ? `${n} ${n === 1 ? 'player' : 'players'} in` : `${n} ${n === 1 ? 'jugador dentro' : 'jugadores dentro'}`;
+    let h = '';
+    if (f === 'apuestas') h = `<span class="rl-rd-l">${en() ? 'Bets close in' : 'Se cierra en'}</span><b class="num">${Math.ceil(left)}</b><span class="rl-rd-s">s</span><i></i><span class="rl-rd-g">${gente}</span><u style="transform:scaleX(${Math.max(0, left / (D.ventana || 12)).toFixed(3)})"></u>`;
+    else if (f === 'cerrando' || f === 'giro') h = `<span class="rl-rd-l">${t('Girando')}</span><i></i><span class="rl-rd-g">${gente}</span>`;
+    if (p._h !== h) { p._h = h; p.innerHTML = h }
+    p.classList.toggle('pocos', f === 'apuestas' && left <= 5);
+  }
   function cuenta() {
     const f = fase(D), r = D && D.ronda, hub = el.querySelector('[data-hub]'), hs = el.querySelector('[data-hubs]'), ring = el.querySelector('[data-ring]');
     let left = 0;
@@ -182,6 +193,7 @@
       else if (f === 'idle' && D.historial && D.historial[0]) { const h = D.historial[0]; txt(hub, String(h.n)); hub.className = 'num dim ' + colorDe(h.n); txt(hs, '') }
       else { txt(hub, ''); txt(hs, '') }
     }
+    pastilla(f, r, left);
   }
   function hist(f, r) {
     const oculta = (f === 'giro' || f === 'cerrando') && r ? r.id : null;
