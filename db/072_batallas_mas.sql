@@ -11,7 +11,7 @@
 -- dos a la vez la llamada vieja de un navegador sin recargar (p_mode, p_cases) seria ambigua para PostgREST; asi sigue funcionando.
 -- Nota del monedero: 'Batalla <formato> #id' y, en Crazy, 'Batalla <formato> Crazy #id'.
 -- Las batallas viejas (1v1 y 2v2, sin regla) quedan como 'normal' y se ven igual.
--- Va despues de 007, 013 y 017 (y de 073 no: 073 va DESPUES de esta y repite el resolve con el Giro Dorado). Se puede ejecutar varias veces.
+-- Va despues de 007, 013 y 017 (y de 075 no: 075 va DESPUES de esta y repite el resolve con el Giro Dorado). Se puede ejecutar varias veces.
 
 -- ---------- columnas y checks ----------
 alter table cs_battles add column if not exists regla text not null default 'normal';
@@ -76,7 +76,7 @@ begin
 end $$;
 
 -- ---------- abrir las cajas de una batalla llena ----------
--- (solo la llaman las funciones de aqui; 073 la vuelve a escribir igual con el Giro Dorado)
+-- (solo la llaman las funciones de aqui; 075 la vuelve a escribir igual con el Giro Dorado)
 create or replace function cs_battle_resolve(p_id bigint) returns void
 language plpgsql security definer set search_path = public as $$
 declare b cs_battles; te int; ne int; s record; d record; iid bigint; tot int[]; mejor int; empatados int[]; gana int; x record; quien uuid;

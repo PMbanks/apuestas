@@ -1,4 +1,4 @@
--- Prueba de db/072_batallas_mas.sql, para el editor SQL de Supabase. Va DESPUES de 072 (y vale tambien con 073 cargada).
+-- Prueba de db/072_batallas_mas.sql, para el editor SQL de Supabase. Va DESPUES de 072 (y vale tambien con 075 cargada).
 -- Con seis jugadores de verdad y un saldo de prueba enorme comprueba, en Normal y en Crazy, cada formato (1v1, 2v2, 3, 4 y 6 jugadores,
 -- 2v2v2 y 3v3): crear cobra una vez y apunta "Batalla <formato> #id" (con Crazy si toca); unirse cobra lo mismo; un sitio fuera del
 -- formato, uno ya cogido o meterse dos veces fallan; al llenarse se abren las cajas sola; hay un total por equipo que es la suma de

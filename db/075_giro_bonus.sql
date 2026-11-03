@@ -1,4 +1,4 @@
--- 073 (03-11). Giro Dorado: un giro extra de premio dentro de las cajas. Va DESPUES de 072_batallas_mas.sql.
+-- 075 (03-11). Giro Dorado: un giro extra de premio dentro de las cajas. Va DESPUES de 072_batallas_mas.sql.
 -- Como funciona (todo aqui dentro, en la misma transaccion que abre la caja: el navegador solo ensena lo que ya esta guardado):
 --   1. Sale lo de siempre de la caja (cs_roll).
 --   2. Con una probabilidad del 4 % (settings 'giro_dorado_pct', se puede cambiar sin tocar esto) salta el Giro Dorado.

@@ -873,7 +873,7 @@ html.cj-pintando,html.cj-pintando *{-webkit-user-select:none;user-select:none;cu
   .cj-bar .go.armado{white-space:normal;line-height:1.2;font-size:11px;letter-spacing:.04em;height:auto;min-height:48px;padding:8px 14px;text-align:center}
 }
 
-/* ===== Batallas de 3, 4 y 6 jugadores, 2v2v2, 3v3 y Crazy (db/072) y Giro Dorado (db/073), PM 03-11 ===== */
+/* ===== Batallas de 3, 4 y 6 jugadores, 2v2v2, 3v3 y Crazy (db/072) y Giro Dorado (db/075), PM 03-11 ===== */
 /* filas de la lista: con mas de dos equipos, cada uno en columna y mas pequeno */
 .cj-bt-m b.l{font-size:18px}
 .cj-bt-m b.w{display:flex;align-items:baseline;gap:5px;white-space:nowrap}

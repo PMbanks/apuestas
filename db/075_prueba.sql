@@ -1,4 +1,4 @@
--- Prueba de db/073_giro_bonus.sql (Giro Dorado), para el editor SQL de Supabase. Va DESPUES de 072 y 073.
+-- Prueba de db/075_giro_bonus.sql (Giro Dorado), para el editor SQL de Supabase. Va DESPUES de 072 y 075.
 -- Comprueba, con el giro al 100 % (settings giro_dorado_pct, solo dentro de la prueba): abrir cajas de lujo y de CS2 (1 y 5 a la vez),
 -- una caja tuya sin pagar y una batalla. En cada giro: ARRIBA vale mas que lo que salio y ABAJO menos (o es quedarse con lo mismo),
 -- los dos son de la misma caja, lo que queda en el inventario es el lado que ha tocado (objeto, valor, desgaste y StatTrak), el
@@ -49,12 +49,12 @@ declare
   jug uuid[] := array(select id from players order by created_at, username);
   pct0 jsonb := (select value from settings where key = 'giro_dorado_pct');
   cajas text[]; c text; cs2 text; r jsonb; x jsonb; s0 int; k int; w int; giros int := 0; ganados int := 0; sin int := 0; abiertas int := 0;
-  oid bigint; bid bigint; b cs_battles; d record; g record; n int; resumen text := ''; trig int; ntir int := 20000; ptop numeric; esperado numeric; sd numeric;
+  oid bigint; bid bigint; b cs_battles; d record; g record; n int; resumen text := ''; trig int; ntir int := 5000; ptop numeric; esperado numeric; sd numeric;
   base numeric; extra numeric; nmed int := 3000; precio int; caja_n text; pago text := ''; te int; suma int; t int;
 begin
   if cardinality(jug) < 2 then raise exception 'FALLO: hacen falta al menos dos jugadores'; end if;
-  if pct0 is null then raise exception 'FALLO: no esta el ajuste giro_dorado_pct (carga 073)'; end if;
-  insert into ledger(player, amount, kind, note) select id, 500000000, 'ajuste', 'saldo de prueba 073' from players;
+  if pct0 is null then raise exception 'FALLO: no esta el ajuste giro_dorado_pct (carga 075)'; end if;
+  insert into ledger(player, amount, kind, note) select id, 500000000, 'ajuste', 'saldo de prueba 075' from players;
   select id into cs2 from cs_cases where active and cat = 'skins' order by price, id limit 1;
   cajas := array(select id from cs_cases where active and cat = 'lujo' and id in ('lujo-gaming', 'lujo-cartas', 'lujo-relojes') order by id);
   if cs2 is not null then cajas := cajas || cs2; end if;
@@ -130,7 +130,7 @@ begin
   if abs(ganados - giros / 2.0) > 3 * sqrt(giros) / 2 then raise exception 'FALLO: la moneda no va al 50 %%: % de % arriba', ganados, giros; end if;
   resumen := resumen || format('Moneda: %s arriba de %s giros (50/50 dentro de 3 sigmas). ', ganados, giros);
 
-  -- 3. con el 4 %% de verdad: 20.000 tiradas de la primera caja dan un giro en torno al 4 %%
+  -- 3. con el 4 %% de verdad: 5.000 tiradas (20.000 en PGlite) de la primera caja dan un giro en torno al 4 %%
   update settings set value = '4' where key = 'giro_dorado_pct';
   c := cajas[1]; trig := 0;
   for k in 1..ntir loop

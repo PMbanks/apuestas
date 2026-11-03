@@ -48,7 +48,7 @@
   const loca = (b) => !!b && b.regla === 'crazy';
   // '1v1v1v1' -> '4 jugadores'; los de equipos se quedan como estan
   const fmtTxt = (m) => (libre({ mode: m }) ? `${eqDe({ mode: m })} jugadores` : m);
-  // Giro Dorado (db/073): lo decide la base; aqui solo se ensena. La prueba gratis lo imita con la misma probabilidad
+  // Giro Dorado (db/075): lo decide la base; aqui solo se ensena. La prueba gratis lo imita con la misma probabilidad
   const GD_PCT = 4, GD_DUR = [1800, 1000, 550], GD_HOLD = [650, 380, 200];
 
   /* ---------- estado ---------- */
@@ -711,7 +711,7 @@
       ${mio ? `<div class="cj-bar" data-selbar ${S.sel.size ? '' : 'hidden'}>${S.sel.size ? barraHtml() : ''}</div>` : ''}`;
   }
 
-  /* ----- Giro Dorado (db/073) ----- */
+  /* ----- Giro Dorado (db/075) ----- */
   // PM 03-11: un giro extra de premio dentro de las cajas. A veces (4 %), despues de frenar la tira, salta el Giro Dorado: dos objetos de
   // verdad de la misma caja, uno que vale mas (Sube) y otro que vale menos (Baja; si no hay nada mas barato, quedarse con lo que salio),
   // al 50 %. Lo decide la base al abrir la caja y lo guarda en cs_inv.bonus ({orig, up, down, won}); aqui solo se ensena: un selector
@@ -900,7 +900,7 @@
   // PM, 30-10: "lo de las battles se bugea y quiero un diseño mucho mejor".
   // La repeticion va por reloj: cada fotograma saca la ronda y la posicion de cada ruleta de la hora de inicio,
   // y las ruletas se rellenan con un azar con semilla. Si la app repinta a mitad, se vuelve a pintar igual y sigue.
-  // Con Giro Dorado (db/073) la ronda dura un poco mas: la ruleta frena en lo que salio y el giro lo cambia por lo que se queda.
+  // Con Giro Dorado (db/075) la ronda dura un poco mas: la ruleta frena en lo que salio y el giro lo cambia por lo que se queda.
   const KN = 34;
   let REP = null, repRaf = 0;
   const RD = () => (S.rapido ? 1700 : 4600), SPIN = () => (quieto() ? 1 : S.rapido ? 1150 : 3500);

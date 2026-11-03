@@ -4,7 +4,7 @@
 -- esa skin no tiene); la lista de objetivos (dentro del rango, ordenada, valor = cs_val, solo cajas activas de CS2 y lujo, el buscador); una mejora que
 -- gana y otra que pierde (las skins puestas quedan 'upg' en los dos casos, no se pueden vender ni volver a poner; los V-Bucks se cobran una sola vez; si gana
 -- entra el objetivo con su valor y un float dentro de su desgaste); la probabilidad es exactamente 0,95 x puesto / objetivo y gana si la tirada sale por debajo;
--- y 20.000 mejoras a x2 dan una tasa de acierto dentro de 3,5 sigmas de lo esperado y una devolucion media del 95 %.
+-- y 2.000 mejoras a x2 (20.000 en la prueba local de PGlite; en el editor de Supabase 20.000 pasan del tiempo maximo) dan una tasa de acierto dentro de 3,5 sigmas de lo esperado y una devolucion media del 95 %.
 -- Al final lanza un error A PROPOSITO para que se deshaga todo: no queda nada guardado (ni saldo, ni skins, ni mejoras).
 -- Si todo va bien, el error dice "PRUEBA SUPERADA" con el resumen. Si algo falla, dice "FALLO" y que.
 
@@ -27,7 +27,7 @@ declare
   t record; tl record; tb record; r jsonb; m text; resumen text := '';
   a1 bigint; a2 bigint; ids bigint[]; s0 int; s1 int; n int; k int; sv int; tv int; vb int;
   gano boolean := false; perdio boolean := false; ch numeric; esperado numeric := 0; var numeric := 0; wins int := 0; pagado bigint := 0; puesto bigint := 0;
-  ntir int := 20000; sd numeric; rtp numeric; rtp_sd numeric; fl numeric; cut numeric[] := array[0, 0.07, 0.15, 0.38, 0.45, 1];
+  ntir int := 2000; sd numeric; rtp numeric; rtp_sd numeric; fl numeric; cut numeric[] := array[0, 0.07, 0.15, 0.38, 0.45, 1];
   it cs_items; un0 int;
 begin
   if cardinality(jug) < 2 then raise exception 'FALLO: hacen falta al menos dos jugadores'; end if;
@@ -190,7 +190,7 @@ begin
     resumen := resumen || format('Lujo ganado (%s, %s) sin desgaste ni float. ', tl.name, tl.value);
   end if;
 
-  -- 4. 20.000 mejoras a x2 con skins: tasa de acierto y devolucion media
+  -- 4. 2.000 mejoras a x2 con skins: tasa de acierto y devolucion media
   perform pg_temp.yo(2);
   tv := t.value; sv := greatest(1, floor(tv / 2.0)::int);
   ids := array(select pg_temp.da(2, t.id, sv) from generate_series(1, ntir));
@@ -211,7 +211,7 @@ begin
     raise exception 'FALLO: alguna skin ganada no tiene el float, el desgaste o el valor de su objetivo';
   end if;
   if (select count(*) from cs_upgrades where player = jug[2] and won) <> wins or (select count(*) from cs_upgrades where player = jug[2] and won and inv_id is null) > 0 then raise exception 'FALLO: las ganadas apuntadas no cuadran'; end if;
-  if (select count(*) from cs_inv where id = any(ids) and status <> 'upg') > 0 then raise exception 'FALLO: alguna skin de las 20.000 no ha quedado gastada'; end if;
+  if (select count(*) from cs_inv where id = any(ids) and status <> 'upg') > 0 then raise exception 'FALLO: alguna skin de las simuladas no ha quedado gastada'; end if;
   resumen := resumen || format('%s mejoras a x%s (probabilidad %s %%): %s ganadas, se esperaban %s (+-%s a 3,5 sigmas); devolucion media %s %% (95 %% +- %s). ',
     ntir, round(tv::numeric / sv, 3), round(100 * esperado / ntir, 3), wins, round(esperado, 1), round(3.5 * sd, 1), round(100 * rtp, 2), round(350 * rtp_sd, 2));
 

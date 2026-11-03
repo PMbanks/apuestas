@@ -17,7 +17,7 @@
 })();
 (function () {
   const D = {
-    // Batallas de 3, 4 y 6, 2v2v2, 3v3 y Crazy (03-11, cajas.js, db/072) y Giro Dorado (03-11, cajas.js, db/073)
+    // Batallas de 3, 4 y 6, 2v2v2, 3v3 y Crazy (03-11, cajas.js, db/072) y Giro Dorado (03-11, cajas.js, db/075)
     'cara a cara': 'head to head', 'por parejas': 'in pairs', 'jugadores': 'players', 'tres parejas': 'three pairs', 'por tríos': 'teams of three',
     'Cada uno abre las mismas cajas y el lado ganador se lo lleva todo. En Normal gana quien más saca; en Crazy, quien menos.': 'Everyone opens the same boxes and the winning side takes it all. In Normal the highest total wins; in Crazy, the lowest.',
     'Cada uno abre las mismas cajas y el lado ganador se lleva todas las skins.': 'Everyone opens the same boxes and the winning side takes every skin.',
@@ -638,7 +638,7 @@
   const ORD = (n) => (/^1[123]$|[04-9]$/.test(n) ? 'th' : /1$/.test(n) ? 'st' : /2$/.test(n) ? 'nd' : 'rd');
   const MES_N = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const R = [
-    // Batallas de 3, 4 y 6, 2v2v2, 3v3 y Crazy y Giro Dorado (03-11, db/072 y db/073): van primero para que las reglas viejas no las trocen
+    // Batallas de 3, 4 y 6, 2v2v2, 3v3 y Crazy y Giro Dorado (03-11, db/072 y db/075): van primero para que las reglas viejas no las trocen
     [/^Batalla (\d) jugadores · (\d+) rondas?$/, (m, j, n) => `Battle of ${j} players · ${n} round${n === '1' ? '' : 's'}`],
     [/^Batalla (\S+) · (\d+) rondas?$/, (m, f, n) => `Battle ${f} · ${n} round${n === '1' ? '' : 's'}`],
     [/^Batalla (\S+)( Crazy)? · ([\d.,]+) contra (.+?) · (\d+) cajas?$/, (m, f, cz, a, r, n) => `Battle ${f}${cz || ''} · ${a} vs ${r.replace(/ y /g, ' and ')} · ${n} box${n === '1' ? '' : 'es'}`],
