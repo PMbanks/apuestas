@@ -150,7 +150,8 @@ begin
   gana := r < ch;
 
   update cs_inv set status = 'upg', sold_at = now() where id = any(ids) and player = me and status = 'own';
-  if vb > 0 then insert into ledger(player, amount, kind, note) values (me, -vb, 'mejora', nom);   -- como 'venta': el monedero ya pone "Mejora" encima end if;
+  -- la nota es el objetivo, como en 'venta': el monedero ya pone "Mejora" encima
+  if vb > 0 then insert into ledger(player, amount, kind, note) values (me, -vb, 'mejora', nom); end if;
 
   if gana then
     if tgt.minf is null then
