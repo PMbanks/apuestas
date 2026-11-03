@@ -9,7 +9,7 @@ const SP = { f: ['Fútbol', '../img/futbol.svg'], v: ['Valorant', '../img/valora
   b: ['NBA', 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" fill="#f58426"/><g fill="none" stroke="#1d1309" stroke-width="3.4"><circle cx="32" cy="32" r="29"/><path d="M3 32h58M32 3v58M13 10c8 6 12 13 12 22s-4 16-12 22M51 10c-8 6-12 13-12 22s4 16 12 22"/></g></svg>')],
   r: ['Fórmula 1', 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" fill="#e10600"/><text x="32" y="41" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-style="italic" font-size="26" text-anchor="middle" fill="#fff">F1</text></svg>')] };   // NBA (nba.js, db/039) y F1 (f1.js, db/052)
 const DEP = ['f', 'v', 'c', 'u', 'b', 'r'];
-const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', tiempo: 'Tiempo en la app', trato: 'Trato entre amigos', mercado: 'Mercado', jackpot: 'Jackpot', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', ruleta_semana: 'Ruleta de premios', ruleta_global: 'Ruleta global', premio_semana: 'Premio de la semana', moneda: 'Cara o cruz', crash: 'Crash', ruleta: 'Ruleta', blackjack: 'Blackjack', plinko: 'Plinko', cashout: 'Cash out', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta' };
+const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', tiempo: 'Tiempo en la app', trato: 'Trato entre amigos', mercado: 'Mercado', jackpot: 'Jackpot', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', mejora: 'Mejora', ruleta_semana: 'Ruleta de premios', ruleta_global: 'Ruleta global', premio_semana: 'Premio de la semana', moneda: 'Cara o cruz', crash: 'Crash', ruleta: 'Ruleta', blackjack: 'Blackjack', plinko: 'Plinko', cashout: 'Cash out', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta' };
 let TIEMPO = null, CLAIM = null, BOTE = null, REACT = new Map(), POLLS = new Map(), CAMPEON = null;
 
 /* ---------- estado ---------- */
@@ -1391,7 +1391,8 @@ function feedItems() {
   // cajas: las aperturas seguidas de la misma persona (menos de 10 minutos entre una y otra) van en una sola fila
   if (FEED_CS) {
     const grupos = [], RK = { esp: 5, cov: 4, cla: 3, res: 2, mil: 1 };
-    for (const x of FEED_CS.inv) { const quien = x.opened_by || x.player, t = Date.parse(x.created_at), g = grupos[grupos.length - 1];
+    for (const x of FEED_CS.inv) { if (!x.case_id) continue;   // lo ganado en Mejorar (db/071) no sale de ninguna caja
+      const quien = x.opened_by || x.player, t = Date.parse(x.created_at), g = grupos[grupos.length - 1];
       if (g && g.quien === quien && g.tMin - t < 6e5) { g.xs.push(x); g.tMin = t } else grupos.push({ quien, t, tMin: t, xs: [x] }) }
     for (const g of grupos) {
       const k = kDe(g.quien); if (!k) continue;
@@ -1446,7 +1447,7 @@ function chat() {
 // o contra quien fue la batalla; sin las reglas. Y la ruleta de la semana
 let WHEEL = null, CASOS = null, BATS = new Map();
 // PM, 01-11: "las bets rapidas que se vean como categoria distinta y que no cuenten como apuestas reales": las predicciones en directo van aparte
-const movTipo = (k) => (['apuesta', 'premio', 'devolucion', 'cashout'].includes(k) ? 'apuestas' : ['pred_apuesta', 'pred_premio', 'pred_devol'].includes(k) ? 'rapidas' :['caja', 'venta', 'batalla', 'trato', 'mercado', 'jackpot'].includes(k) ? 'cajas' : ['moneda', 'crash', 'ruleta', 'blackjack', 'plinko'].includes(k) ? 'juegos' : 'pagas');
+const movTipo = (k) => (['apuesta', 'premio', 'devolucion', 'cashout'].includes(k) ? 'apuestas' : ['pred_apuesta', 'pred_premio', 'pred_devol'].includes(k) ? 'rapidas' :['caja', 'venta', 'batalla', 'trato', 'mercado', 'jackpot', 'mejora'].includes(k) ? 'cajas' : ['moneda', 'crash', 'ruleta', 'blackjack', 'plinko'].includes(k) ? 'juegos' : 'pagas');
 // 047: una tirada cada 3 dias con premios mas pequenos. [texto, tipo, probabilidad]: cada gajo mide lo que toca (spin_wheel)
 const RUEDA = [['75', 0, .34], ['Caja', 1, .065], ['110', 0, .25], ['225', 0, .12], ['Caja ★', 2, .02], ['450', 0, .05], ['150', 0, .145], ['900', 3, .01]];
 const RU_A = RUEDA.reduce((a, r) => (a.push(a[a.length - 1] + r[2] * 360), a), [0]), RU_W = RUEDA.map((r) => r[2] * 360);

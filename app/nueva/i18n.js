@@ -17,6 +17,8 @@
 })();
 (function () {
   const D = {
+    // Mejorar (03-11, mejora.js, db/071): la pestana y el movimiento del monedero; el resto de la pantalla ya se pinta en su idioma
+    'Mejorar': 'Upgrader', 'Mejora': 'Upgrade',
     // Combinada con varias del mismo partido (02-11, boleto.js, db/067)
     'Es la misma apuesta dos veces': 'It is the same bet twice', 'Son del mismo mercado: elige solo una': 'Same market: pick only one',
     'Son del mismo jugador: elige solo una': 'Same player: pick only one', 'Van demasiado unidas: no se pueden combinar': 'Too closely linked: they cannot be combined',
