@@ -576,7 +576,8 @@
         <span class="cj-fd-b">${av(i.by, 'sm')}<span class="cj-fd-v">${N(i.value)}${coin()}</span></span>
         <span class="cj-fd-tip">${c.image ? `<span class="cj-fd-ti">${pic(c.image, 256)}</span>` : ''}${c.name ? `<span class="lab">${i.battle ? 'En batalla' : 'Salió de'}</span><b data-notr>${esc(c.name)}</b>` : ''}<span class="cj-fd-q"><span>Lo abrió</span><i data-notr>${esc(jug(i.by).n)}</i></span></span></div>`;
   }
-  function fdAlFinal() { const e = FD.el; if (e && e.isConnected) e.scrollLeft = e.scrollWidth - e.clientWidth + FD.sx }
+  // Ultimos: al final (lo nuevo entra por la derecha); Mejores: al principio (el mas caro a la izquierda)
+  function fdAlFinal() { const e = FD.el; if (e && e.isConnected) e.scrollLeft = FD.modo === 'best' ? 0 : e.scrollWidth - e.clientWidth + FD.sx }
   function fdLlena(list) {
     FD.list = list.slice(); if (!FD.el) return;
     FD.el.innerHTML = FD.list.map(fdTile).join('');
@@ -600,7 +601,7 @@
     if (!FD.el) {
       FD.el = document.createElement('div'); FD.el.className = 'cj-feed';
       FD.el.addEventListener('click', fdToque);
-      FD.el.addEventListener('scroll', () => { if (!FD.mov) FD.sx = Math.min(0, FD.el.scrollLeft - (FD.el.scrollWidth - FD.el.clientWidth)) }, { passive: true });
+      FD.el.addEventListener('scroll', () => { if (!FD.mov && FD.modo !== 'best') FD.sx = Math.min(0, FD.el.scrollLeft - (FD.el.scrollWidth - FD.el.clientWidth)) }, { passive: true });
     }
     if (!FD.list.length) fdLlena(fdObjetivo());
     h.replaceWith(FD.el); fdAlFinal();
@@ -1229,7 +1230,7 @@
       case 'sinfiltro': S.fR = null; S.fC = null; return filtra();
       case 'mas': S.invN += INV_PASO; return pinta();
       case 'esptodo': S.espTodo = v; return pinta();
-      case 'fdmodo': if (v === FD.modo) return; FD.modo = v === 'best' ? 'best' : 'latest'; guarda('cj-fd-modo', FD.modo); FD.cola = []; clearTimeout(FD.t); FD.list = []; return pinta();
+      case 'fdmodo': if (v === FD.modo) return; FD.modo = v === 'best' ? 'best' : 'latest'; guarda('cj-fd-modo', FD.modo); FD.cola = []; clearTimeout(FD.t); FD.list = []; FD.sx = 0; return pinta();
       case 'pag': {
         S.pag = Math.max(0, +v || 0); pinta();
         const l = root.querySelector('[data-hechas]'), sc = root.closest('.scr');

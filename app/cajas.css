@@ -872,3 +872,176 @@ html.cj-pintando,html.cj-pintando *{-webkit-user-select:none;user-select:none;cu
   body:has(.cj-bar:not([hidden])) #chatb>*{pointer-events:none}
   .cj-bar .go.armado{white-space:normal;line-height:1.2;font-size:11px;letter-spacing:.04em;height:auto;min-height:48px;padding:8px 14px;text-align:center}
 }
+
+/* ===== Batallas de 3, 4 y 6 jugadores, 2v2v2, 3v3 y Crazy (db/072) y Giro Dorado (db/075), PM 03-11 ===== */
+/* filas de la lista: con mas de dos equipos, cada uno en columna y mas pequeno */
+.cj-bt-m b.l{font-size:18px}
+.cj-bt-m b.w{display:flex;align-items:baseline;gap:5px;white-space:nowrap}
+.cj-bt-m b.w small{font:500 11px var(--sans);letter-spacing:0;color:var(--dim)}
+.cj-loca{display:inline-block;align-self:flex-start;padding:3px 8px 2px;border-radius:999px;background:rgba(255,79,176,.15);font:800 9px var(--disp);font-style:normal;letter-spacing:.14em;text-transform:uppercase;color:#ff8fcf}
+.cj-vs.multi{display:flex;align-items:flex-start;justify-content:space-between;gap:4px}
+.cj-vs.multi>i{align-self:center;font-size:9px;letter-spacing:.06em}
+.cj-side.m{flex:1 1 0;flex-direction:column;align-items:center;gap:5px;text-align:center}
+.cj-side.m .cj-side-n{flex:none;justify-content:center;max-width:100%;gap:4px}
+.cj-side.m .cj-side-n b{font-size:11px;font-weight:600;color:var(--soft)}
+.cj-side.m>.num{font-size:14px}
+.cj-side.m .cj-crown{width:12px;height:9px}
+/* crear: los siete formatos y la regla */
+.cj-modes{flex-wrap:wrap;max-width:980px;margin-left:auto;margin-right:auto;gap:10px}
+.cj-mode{width:128px;gap:10px;padding:18px 0 16px}
+.cj-mode b{font-size:22px}
+.cj-mode small{font:500 11px var(--sans);color:var(--dim)}
+.cj-mode.on small{color:var(--soft)}
+.cj-mode-d{gap:5px}
+.cj-mode-d>span{display:flex;gap:3px}
+.cj-mode-d.multi{gap:8px}
+.cj-mode-d i{width:10px;height:10px}
+.cj-mode-d em{margin:0 3px}
+.cj-regla{display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:26px}
+.cj-regla .cj-seg{margin:0}
+.cj-regla-t{font:13px var(--mono);color:var(--mute)}
+.cj-regla.crazy .cj-seg button.on{background:rgba(255,79,176,.2);color:#ffc2e4}
+.cj-regla.crazy .cj-regla-t{color:#ff8fcf}
+/* la batalla: un equipo detras de otro con VS entre medias; las ruletas miden lo que diga el JS (--rkh, --rwin, --rgap) */
+.bv-t .cj-loca{margin-left:10px;vertical-align:2px}
+.bv-cz{margin-top:6px!important;color:#ff8fcf!important}
+.bv-tug i{min-width:3px}
+.bv-arena{display:flex;align-items:flex-start;gap:22px}
+.bv-arena .bv-team{flex:var(--te,1) 1 0;min-width:0;grid-template-columns:repeat(var(--te,1),minmax(0,1fr))}
+.bv-arena .bv-vs{flex:none;align-self:center}
+.bv-arena.e3,.bv-arena.e4,.bv-arena.e6{gap:12px}
+.bv-arena.e3 .bv-vs,.bv-arena.e4 .bv-vs,.bv-arena.e6 .bv-vs{font-size:12px;letter-spacing:.06em}
+.bv-arena.t3 .bv-team,.bv-arena.e3 .bv-team{gap:12px}
+.bv-arena.estrecha .bv-p{column-gap:8px}
+.bv-arena.estrecha .bv-p .av.xl{width:34px;height:34px;font-size:11px}
+.bv-arena.estrecha .bv-tot .num{font-size:20px}
+.bv-arena.estrecha .bv-tot .cn{--s:14px}
+.bv-arena.estrecha .bv-track{padding:0 8px}
+.bv-reel{height:var(--rwin,212px)}
+.bv-track{gap:var(--rgap,8px)}
+.bv-k{height:var(--rkh,92px)}
+.bv-k img{height:calc(var(--rkh,92px) * .76)}
+.bv-k.esp span{font-size:calc(var(--rkh,92px) * .48)}
+.bv-gdt{font:800 9px var(--disp);font-style:normal;letter-spacing:.16em;text-transform:uppercase;color:#f5c542}
+.bv-it.gd{box-shadow:inset 0 -2px 0 var(--c),0 0 0 1.5px #f5c542,0 0 14px rgba(245,197,66,.35)}
+@media (max-width:860px){
+  .bv-reel{height:var(--rwin,190px)}
+  /* por equipos (2v2, 3v3, 2v2v2): un equipo debajo de otro */
+  .bv-arena:not(.t1){flex-direction:column;align-items:stretch;gap:12px}
+  .bv-arena:not(.t1) .bv-team{flex:none}
+  .bv-arena.e2.t1{gap:10px}
+  /* todos contra todos: rejilla de 2 o 3 columnas y sin VS */
+  .bv-arena.ffa{display:grid;grid-template-columns:repeat(var(--fc,3),minmax(0,1fr));gap:14px 8px}
+  .bv-arena.ffa .bv-vs{display:none}
+  /* tres columnas: todo mas compacto */
+  .bv-arena.mini .bv-team{gap:8px}
+  .bv-arena.mini .bv-p{grid-template-columns:minmax(0,1fr);grid-template-areas:"av" "nm" "tt";justify-items:center;row-gap:3px;margin-bottom:8px;text-align:center}
+  .bv-arena.mini .bv-p>b{max-width:100%;font-size:12px}
+  .bv-arena.mini .bv-p .av.xl{width:30px;height:30px;font-size:10px}
+  .bv-arena.mini .bv-tot .num{font-size:15px}
+  .bv-arena.mini .bv-tot .cn{--s:12px}
+  .bv-arena.mini .bv-reel{border-radius:12px}
+  .bv-arena.mini .bv-track{padding:0 5px}
+  .bv-arena.mini .bv-k{border-radius:9px}
+  .bv-arena.mini .bv-haul{grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:5px;margin-top:8px}
+  .bv-arena.mini .bv-it{padding:4px 1px 3px;border-radius:8px}
+  .bv-arena.mini .bv-it img{width:34px;height:26px}
+  .bv-arena.mini .bv-it em{font-size:9px}
+  .bv-arena.mini .bv-best{padding:8px 4px}
+  .bv-arena.mini .bv-best img{height:64px}
+  .bv-arena.mini .bv-best span{font-size:10px;line-height:1.2}
+  .bv-arena.mini .bv-best b{font-size:13px}
+  .bv-arena.mini .bv-col.vacio{min-height:150px}
+  .bv-arena.mini .bv-join b{width:42px;height:42px;font-size:24px}
+  .bv-arena.mini .bv-join span{font-size:12px}
+  .cj-vs.multi{gap:2px}
+  .cj-side.m .cj-side-n{display:none}
+  .cj-side.m>.num{font-size:12px}
+  .cj-vs.multi .cj-avs .av.md,.cj-vs.multi .cj-seat{width:26px;height:26px;font-size:9px}
+  .cj-vs.multi .cj-avs>*+*{margin-left:-11px}
+  .cj-bt-m b.w small{font-size:10px}
+  .cj-bt-m b.l{font-size:15px}
+  .cj-modes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:26px}
+  .cj-mode{width:auto;padding:14px 2px 12px;gap:8px;border-radius:18px}
+  .cj-mode b{font-size:17px}
+  .cj-mode small{font-size:10px}
+  .cj-mode-d,.cj-mode-d.multi{gap:4px}
+  .cj-mode-d>span{gap:2px}
+  .cj-mode-d i{width:7px;height:7px}
+  .cj-mode-d em{margin:0 1px;font-size:8px}
+}
+
+/* Giro Dorado: dos cartas (Sube y Baja, 50 % cada una) y un selector dorado que salta entre ellas y para en la que toca */
+.gd{--oro:#f5c542;position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:10px 14px;
+  background:radial-gradient(46% 120% at 50% 50%,rgba(245,197,66,.24),transparent 72%),#0f0d09;animation:gdIn .28s ease-out both}
+.gd.sale{animation:gdOut .26s ease-in both}
+@keyframes gdIn{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:none}}
+@keyframes gdOut{to{opacity:0}}
+.gd-t{display:flex;align-items:center;gap:10px;flex:none;font:800 12px/1 var(--disp);letter-spacing:.24em;text-transform:uppercase;color:var(--oro);text-shadow:0 0 16px rgba(245,197,66,.75)}
+.gd-t i{width:30px;height:1px;background:linear-gradient(90deg,transparent,var(--oro))}
+.gd-t i:last-child{transform:scaleX(-1)}
+.gd-cs{display:flex;justify-content:center;gap:14px;flex:1;min-height:0;width:100%}
+.gd-c{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0;width:var(--kw,160px);padding:6px 8px 8px;border-radius:16px;
+  background:linear-gradient(180deg,rgba(255,255,255,.03) 20%,color-mix(in srgb,var(--c) 26%,transparent)),#1b1e26;box-shadow:inset 0 -3px 0 var(--c);
+  opacity:.42;transform:scale(.93);transition:opacity .07s,transform .07s,box-shadow .07s}
+.gd[data-on="0"] .gd-c.sube,.gd[data-on="1"] .gd-c.baja{opacity:1;transform:scale(1.02);box-shadow:inset 0 -3px 0 var(--c),0 0 0 2px var(--oro),0 0 26px rgba(245,197,66,.55)}
+.gd.fin .gd-c{transition:opacity .35s,transform .35s,box-shadow .35s}
+.gd.fin[data-on="0"] .gd-c.baja,.gd.fin[data-on="1"] .gd-c.sube{opacity:.16;transform:scale(.88)}
+.gd.fin[data-on="0"] .gd-c.sube,.gd.fin[data-on="1"] .gd-c.baja{transform:scale(1.07);box-shadow:inset 0 -3px 0 var(--c),0 0 0 2px var(--oro),0 0 44px rgba(245,197,66,.8)}
+.gd-p{display:flex;align-items:center;gap:5px;flex:none;font:600 10px var(--mono);letter-spacing:.04em;color:var(--soft);text-transform:uppercase}
+.gd-p i{font-style:normal;font-size:11px}
+.gd-c.sube .gd-p i{color:#5fe08a}
+.gd-c.baja .gd-p i{color:#ff7a7a}
+.gd .gd-p b{font:700 10px var(--mono);color:var(--oro)}
+.gd .gd-p span{font:600 10px var(--mono)}
+.gd-i{position:relative;display:block;flex:1;min-height:0;width:100%;margin-top:2px}
+.gd-i img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 6px 9px rgba(0,0,0,.5))}
+.gd-i .cj-k-star{position:absolute;inset:0;display:grid;place-items:center;font:800 34px/1 var(--disp);font-style:normal;color:#ffd77a}
+.gd-n{max-width:100%;overflow:hidden;font:700 12px/1.25 var(--sans);text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.gd-v{display:flex;align-items:center;flex:none;font:500 12px var(--mono);color:var(--soft)}
+.gd-v .cn{--s:12px;margin-left:4px}
+/* en la tira de abrir */
+.ca .cj-strip.dorado{background:radial-gradient(40% 160% at 50% 50%,rgba(245,197,66,.25),transparent 80%),var(--bg2)}
+.ca-tiras.n2 .gd{padding:6px 12px;gap:4px}
+.ca-tiras.n2 .gd-n,.ca-tiras.n3 .gd-n,.ca-tiras.n4 .gd-n,.ca-tiras.n5 .gd-n{display:none}
+.ca-tiras.n3 .gd,.ca-tiras.n4 .gd,.ca-tiras.n5 .gd{flex-direction:row;gap:14px;padding:6px 12px}
+.ca-tiras.n3 .gd-t,.ca-tiras.n4 .gd-t,.ca-tiras.n5 .gd-t{font-size:10px;letter-spacing:.16em;writing-mode:vertical-rl;transform:rotate(180deg)}
+.ca-tiras.n3 .gd-t i,.ca-tiras.n4 .gd-t i,.ca-tiras.n5 .gd-t i{display:none}
+.ca-tiras.n3 .gd-cs,.ca-tiras.n4 .gd-cs,.ca-tiras.n5 .gd-cs{flex:none;width:auto;height:100%}
+.ca-tiras.n4 .gd-p span,.ca-tiras.n5 .gd-p span{display:none}
+.ca-tiras.n4 .gd-c,.ca-tiras.n5 .gd-c{padding:4px 6px 5px;border-radius:12px}
+/* en la columna de una batalla: una carta encima de la otra */
+.bv-gdw{position:relative;height:var(--rwin,212px);overflow:hidden;border-radius:16px;background:var(--bg2)}
+.gd.v{padding:8px 8px 10px;gap:6px}
+.gd.v .gd-t{font-size:10px;letter-spacing:.18em}
+.gd.v .gd-t i{width:14px}
+.gd.v .gd-cs{flex-direction:column;gap:6px}
+.gd.v .gd-c{flex-direction:row;align-items:center;justify-content:flex-start;gap:8px;width:100%;flex:1;min-height:0;padding:4px 10px 4px 8px;border-radius:12px;box-shadow:inset 3px 0 0 var(--c);transform:none}
+.gd.v[data-on="0"] .gd-c.sube,.gd.v[data-on="1"] .gd-c.baja,.gd.v.fin[data-on="0"] .gd-c.sube,.gd.v.fin[data-on="1"] .gd-c.baja{transform:none;box-shadow:inset 3px 0 0 var(--c),0 0 0 2px var(--oro),0 0 22px rgba(245,197,66,.55)}
+.gd.v.fin[data-on="0"] .gd-c.baja,.gd.v.fin[data-on="1"] .gd-c.sube{transform:none}
+.gd.v .gd-p{flex-direction:column;gap:1px;min-width:34px}
+.gd.v .gd-p span{display:none}
+.gd.v .gd-i{flex:1;height:100%;margin:0}
+.gd.v .gd-n{display:none}
+.gd.v .gd-v{font-size:11px}
+.bv-arena.mini .gd.v{padding:6px 4px 6px;gap:4px}
+.bv-arena.mini .gd.v .gd-c{padding:3px 5px;gap:4px}
+.bv-arena.mini .gd.v .gd-p{min-width:22px;font-size:9px}
+.bv-arena.mini .gd.v .gd-v{font-size:10px}
+.bv-arena.mini .gd.v .gd-v .cn{display:none}
+.bv-arena.mini .gd.v .gd-t{font-size:8px;letter-spacing:.1em}
+.bv-arena.mini .gd.v .gd-t i{display:none}
+/* la etiqueta en lo que ha salido */
+.ca-gd{display:inline-flex;align-items:center;gap:7px;margin-top:3px;font:500 11px var(--mono);color:var(--dim)}
+.ca-gd b{padding:3px 9px 2px;border-radius:999px;background:rgba(245,197,66,.16);font:800 9px var(--disp);letter-spacing:.16em;text-transform:uppercase;color:#f5c542}
+.ca-gd i{font-style:normal;font-size:11px}
+.ca-gd.sube i{color:#5fe08a}
+.ca-gd.baja i{color:#ff7a7a}
+.ca-gd em{font-style:normal}
+html.sin-anim .gd,html.sin-anim .gd.sale{animation:none}
+@media (max-width:860px){
+  .gd{padding:8px 10px;gap:6px}
+  .gd-cs{gap:10px}
+  .gd-t{font-size:10px;letter-spacing:.18em}
+  .ca-tiras .gd-n{display:none}
+}

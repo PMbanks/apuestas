@@ -1,4 +1,4 @@
-"""Dibuja la imagen de cada caja de lujo al estilo de las paginas de cajas: el objeto estrella, grande y recortado, en medio,
+"""Dibuja la imagen de cada caja de lujo al estilo de las paginas de cajas (EmpireDrops y parecidas): el objeto estrella, grande y recortado, en medio,
 con un brillo del color de la categoria detras, y otros dos objetos de la caja a los lados, mas pequenos y algo girados, un poco por detras.
 Sin fondo (transparente), 640x480 (4:3 como las cajas de CS2). Las guarda en <salida>/cajas/<id sin "lujo-">.webp.
 Lo lanza sync/lujo-imagenes.mjs:  python sync/lujo-cajas.py <carpeta app/img/lujo> <id:color:centro+lado+lado> ...

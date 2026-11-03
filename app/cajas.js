@@ -1,4 +1,4 @@
-// Cajas en Gambling Master: abrir cajas, el inventario de cada uno y batallas 1v1 y 2v2.
+// Cajas en Gambling Master: abrir cajas, el inventario de cada uno y batallas (1v1, 2v2, 3v3, 2v2v2 y de 3, 4 o 6 todos contra todos, db/072).
 // El azar y el dinero los pone la base (db/007_cajas.sql); aqui solo se pide y se pinta.
 // La app lo monta asi (ver CAJAS-INTEGRAR.md): R.cajas = () => GM_CAJAS.html() y, justo despues de pintar,
 // GM_CAJAS.montar(vista, ctx, cambia). El nodo de la pantalla es siempre el mismo, asi que aunque la app
@@ -34,10 +34,22 @@
     'lujo-zapatillas-basicas': 'moda', 'lujo-zapatillas': 'moda', 'lujo-zapatillas-2026': 'moda', 'lujo-moda-calle': 'moda', 'lujo-bolsos': 'moda', 'lujo-gafas': 'moda', 'lujo-streetwear': 'moda', 'lujo-perfumes': 'moda',
     'lujo-motos': 'motor', 'lujo-coches': 'motor', 'lujo-motor': 'motor', 'lujo-viajes': 'motor',
     'lujo-oro': 'inv', 'lujo-cripto': 'inv', 'lujo-cartas': 'inv',
-    // las cajas nuevas de EmpireDrop (db/055)
+    // las 35 cajas nuevas de lujo (db/055)
     'lujo-ed-xbox-vs-playstation': 'tec', 'lujo-ed-5-console-legends': 'tec', 'lujo-ed-10-gaming': 'tec', 'lujo-ed-full-send-gaming': 'tec', 'lujo-ed-pro-setup': 'tec', 'lujo-ed-streamer-setup': 'tec', 'lujo-ed-only-mac': 'tec', 'lujo-ed-cinematic-view': 'tec', 'lujo-ed-1-patek': 'relojes', 'lujo-ed-master-of-time': 'relojes', 'lujo-ed-rado-vs-tudor': 'relojes', 'lujo-ed-cartier-treasure': 'relojes', 'lujo-ed-pandora': 'relojes', 'lujo-ed-1-versace': 'moda', 'lujo-ed-1-louis-vuitton': 'moda', 'lujo-ed-chanel-prestige': 'moda', 'lujo-ed-birkin-addict': 'moda', 'lujo-ed-100-bags': 'moda', 'lujo-ed-nike': 'moda', 'lujo-ed-jordan': 'moda', 'lujo-ed-street-soles': 'moda', 'lujo-ed-1-cars': 'motor', 'lujo-ed-1-mercedes': 'motor', 'lujo-ed-german-engine': 'motor', 'lujo-ed-heritage-motors': 'motor', 'lujo-ed-tesla': 'motor', 'lujo-ed-american-driver': 'motor', 'lujo-ed-yacht-club': 'motor', 'lujo-ed-luxury-garage': 'motor', 'lujo-ed-gold-digger': 'inv', 'lujo-ed-fortune-box': 'inv', 'lujo-ed-poke-starter': 'inv', 'lujo-ed-5-pokemon': 'inv', 'lujo-ed-legendary-pulls': 'inv', 'lujo-ed-panini': 'inv' };
   const ORDENES = [['valor', 'Más valiosas'], ['nuevas', 'Más nuevas'], ['rareza', 'Por rareza']];
-  const SEL_BAT = 'id,mode,cases,cost,status,created_by,winner,totals,created_at,done_at,cs_battle_seats(seat,player)';
+  const SEL_BAT0 = 'id,mode,cases,cost,status,created_by,winner,totals,created_at,done_at,cs_battle_seats(seat,player)';
+  let SEL_BAT = SEL_BAT0.replace('totals,', 'totals,regla,');   // regla (Normal o Crazy) llega con db/072; sin ella se lee como antes
+  // formatos de batalla (db/072): mode es el texto de siempre; cada trozo separado por v es un equipo y el numero, cuantos van en el
+  // ('2v2v2' son 3 equipos de 2). El equipo de un sitio es sitio / tamano del equipo. Regla: 'normal' gana quien mas saca, 'crazy' quien menos.
+  const FORMATOS = [['1v1', '1v1', 'cara a cara'], ['2v2', '2v2', 'por parejas'], ['1v1v1', '3', 'jugadores'], ['1v1v1v1', '4', 'jugadores'], ['1v1v1v1v1v1', '6', 'jugadores'], ['2v2v2', '2v2v2', 'tres parejas'], ['3v3', '3v3', 'por tríos']];
+  const eqDe = (b) => Math.max(2, String((b && b.mode) || '1v1').split('v').length);       // cuantos equipos
+  const teDe = (b) => Math.max(1, parseInt(String((b && b.mode) || '1v1'), 10) || 1);    // cuantos en cada equipo
+  const libre = (b) => teDe(b) === 1 && eqDe(b) > 2;                                     // 3, 4 o 6 todos contra todos
+  const loca = (b) => !!b && b.regla === 'crazy';
+  // '1v1v1v1' -> '4 jugadores'; los de equipos se quedan como estan
+  const fmtTxt = (m) => (libre({ mode: m }) ? `${eqDe({ mode: m })} jugadores` : m);
+  // Giro Dorado (db/075): lo decide la base; aqui solo se ensena. La prueba gratis lo imita con la misma probabilidad
+  const GD_PCT = 4, GD_DUR = [1800, 1000, 550], GD_HOLD = [650, 380, 200];
 
   /* ---------- estado ---------- */
   let ctx = null, root = null;
@@ -78,7 +90,7 @@
     // las 16 de Gemini (db/046): el color de su caja
     'lujo-gaming': '#a855f7', 'lujo-zapatillas-2026': '#ff8a2a', 'lujo-relojes-2026': '#ffc43a', 'lujo-tecnologia-2026': '#ff4fb0', 'lujo-motor': '#ff4848', 'lujo-joyas': '#34d6d6', 'lujo-perfumes': '#ff9eb5',
     'lujo-bolsos': '#e0c9a0', 'lujo-viajes': '#48a0ff', 'lujo-patinetes': '#a6e22e', 'lujo-camaras': '#c8ccd2', 'lujo-streetwear': '#e6e6e6', 'lujo-oro': '#ffb020', 'lujo-cripto': '#ff9a1f', 'lujo-gafas': '#ffd23a', 'lujo-cartas': '#a855f7' };
-  const GLOW_G = { tec: '#48a0ff', relojes: '#ffc43a', moda: '#c060ff', motor: '#ff4848', inv: '#ffb020' };   // las de EmpireDrop (db/055) sin color propio: el de su categoria
+  const GLOW_G = { tec: '#48a0ff', relojes: '#ffc43a', moda: '#c060ff', motor: '#ff4848', inv: '#ffb020' };   // las de db/055 sin color propio: el de su categoria
   const brillo = (c) => GLOW[c && c.id] || (c && GRUPO_DE[c.id] && GLOW_G[GRUPO_DE[c.id]]) || '#f2c14e';
   const esLujo = (id) => /^(lujo|cos)-/.test(String(id || ''));
   const catDe = (c) => { const k = c && (c.cat || c.category || c.categoria); return k ? (/lujo/i.test(k) ? 'lujo' : /cosm/i.test(k) ? 'cosmeticos' : 'skins') : /^cos-/.test(String((c && c.id) || '')) ? 'cosmeticos' : esLujo(c && c.id) ? 'lujo' : 'skins' };
@@ -141,7 +153,7 @@
 
   // probabilidad de cada rareza (fraccion) y de cada objeto dentro de ella, para "lo que trae"
   function probN(info) { const PESO = D.cases && D.cases.some((c) => c.cat != null) ? PESO_012 : PESO_007, hay = info ? ORDEN.filter((r) => info.por[r]) : ORDEN, tot = hay.reduce((a, r) => a + PESO[r], 0), o = {}; for (const r of hay) o[r] = PESO[r] / tot; return o }
-  // una caja con tickets (las de EmpireDrop) tira por objeto; sin ellos (CS2, Patinetes, Gafas) tira por rareza
+  // una caja con tickets (las de db/055) tira por objeto; sin ellos (CS2, Patinetes, Gafas) tira por rareza
   const conTickets = (info) => !!(info && info.items && info.items.some((it) => it.tickets != null));
   const pctTxt = (f) => { const v = f * 100, t = (v >= 10 ? v.toFixed(1) : v >= 0.1 ? v.toFixed(2) : v.toFixed(3)).replace('.', ','); return t.replace(/(,\d*?)0+$/, '$1').replace(/,$/, '') + ' %' };
 
@@ -162,19 +174,22 @@
   async function cargaBat(id) {
     const b = await rpc('cs_battle', { p_id: id });
     for (const cid of new Set(b.cases)) await cargaCaja(cid);
-    await asegura(b.drops.map((d) => d.inv.item));
+    await asegura(b.drops.flatMap((d) => [d.inv.item, ...(d.inv.bonus ? ['orig', 'up', 'down'].map((k) => d.inv.bonus[k] && d.inv.bonus[k].item) : [])]));
     D.bats.set(id, b);
     return b;
   }
   // las terminadas, de todas las fechas, por paginas: se leen de las tablas (los jugadores pueden leerlas).
   // cs_state solo trae las de los ultimos 14 dias; si la lectura falla se usan esas.
-  const aBat = (r) => ({ id: r.id, mode: r.mode, cases: r.cases || [], cost: r.cost, status: r.status, by: r.created_by, winner: r.winner, totals: r.totals,
+  const aBat = (r) => ({ id: r.id, mode: r.mode, regla: r.regla || 'normal', cases: r.cases || [], cost: r.cost, status: r.status, by: r.created_by, winner: r.winner, totals: r.totals,
     at: r.created_at, done_at: r.done_at, seats: (r.cs_battle_seats || []).slice().sort((x, y) => x.seat - y.seat) });
   async function cargaHechas() {
     const pag = S.pag, a = pag * POR_PAG;
     try {
-      const { data, error, count } = await ctx.db.from('cs_battles').select(SEL_BAT, { count: 'exact' }).eq('status', 'done')
+      const lee = (sel) => ctx.db.from('cs_battles').select(sel, { count: 'exact' }).eq('status', 'done')
         .order('done_at', { ascending: false, nullsFirst: false }).order('id', { ascending: false }).range(a, a + POR_PAG - 1);
+      let { data, error, count } = await lee(SEL_BAT);
+      // sin db/072 cargada no hay columna regla: se lee como antes
+      if (error && SEL_BAT !== SEL_BAT0) { SEL_BAT = SEL_BAT0; ({ data, error, count } = await lee(SEL_BAT)) }
       if (error) throw error;
       const total = count == null ? (data || []).length : count;
       if (pag > 0 && !(data || []).length && total) { S.pag = Math.max(0, Math.ceil(total / POR_PAG) - 1); return cargaHechas() }
@@ -190,6 +205,15 @@
         .in('cs_items.rarity', ['cla', 'cov', 'esp']).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(FD_N);
       if (error) throw error;
       return (data || []).map((r) => ({ id: r.id, item: r.item_id, value: r.value, case: r.case_id, battle: r.battle_id, by: r.opened_by, at: r.created_at }));
+    } catch { return null }
+  }
+  // los 7 de mas valor de siempre (cs_inv entera: cajas, batallas, vendidas o no)
+  async function cargaMejores() {
+    try {
+      const { data, error } = await ctx.db.from('cs_inv').select('id,item_id,value,case_id,battle_id,opened_by,player,created_at')
+        .order('value', { ascending: false }).order('id', { ascending: true }).limit(FD_N);
+      if (error) throw error;
+      return (data || []).map((r) => ({ id: r.id, item: r.item_id, value: r.value, case: r.case_id, battle: r.battle_id, by: r.opened_by || r.player, at: r.created_at }));
     } catch { return null }
   }
   async function cargaMias(quien) {
@@ -208,9 +232,9 @@
         // PM 01-11 "si, abrelas": Lujo abierta otra vez con las 16 cajas nuevas (db/046). Cosmeticos sigue fuera (Mercado en mantenimiento)
         if (!D.cases) D.cases = ((await rpc('cs_cases')) || []).filter((c) => catDe(c) !== 'cosmeticos');
         const st = await rpc('cs_state', { p_player: S.quien || ctx.me });
-        const bu = await cargaBuenos();
-        await asegura([...st.inv, ...st.feed, ...(bu || [])].map((i) => i.item));
-        D.st = st; D.buenos = bu; D.err = null;
+        const [bu, mj] = await Promise.all([cargaBuenos(), cargaMejores()]);
+        await asegura([...st.inv, ...st.feed, ...(bu || []), ...(mj || [])].map((i) => i.item));
+        D.st = st; D.buenos = bu; D.mejores = mj || D.mejores || []; D.err = null;
         await cargaMias(ctx.me);
         if (S.quien && S.quien !== ctx.me) await cargaMias(S.quien);
         if (S.caja) await cargaCaja(S.caja);
@@ -385,6 +409,7 @@
     armados(root);
     indexa();
     traduce(root);
+    if (S.tab === 'mejorar' && window.GM_MEJORA) GM_MEJORA.montar(root.querySelector('[data-mejora]'), window.GM_CAJAS.util);
     if (!anim && S.tab === 'batallas' && S.bat && !S.rep) {
       const b = D.bats.get(S.bat);
       if (b && b.status === 'done' && !visto(b.id)) repeticion(b);
@@ -396,9 +421,10 @@
     return D.st.battles.some((b) => { const dentro = b.seats.some((x) => x.player === ctx.me); return b.status === 'open' ? !dentro : dentro && reciente(b) && !visto(b.id) });
   }
   function vista() {
-    const tabs = [['abrir', 'Abrir'], ['inventario', 'Inventario'], ['batallas', 'Batallas']], dot = hayAviso();
+    const tabs = [['abrir', 'Abrir'], ['inventario', 'Inventario'], ['batallas', 'Batallas'], ['mejorar', 'Mejorar']], dot = hayAviso();   // Mejorar: mejora.js (db/071)
     const cab = `<nav class="cj-tabs">${tabs.map(([k, n]) => `<button class="cj-tab ${S.tab === k ? 'on' : ''}" data-cj="tab" data-v="${k}">${n}${k === 'batallas' && dot ? '<i class="cj-dot"></i>' : ''}</button>`).join('')}</nav>`;
     if (!D.st || !D.cases) return cab + `<p class="hint cj-c">${D.err ? esc(D.err) : 'Cargando…'}</p>`;
+    if (S.tab === 'mejorar') return cab + '<div data-mejora></div>';
     return cab + (S.tab === 'abrir' ? vAbrir() : S.tab === 'inventario' ? vInv() : S.bat ? vBat() : S.nueva ? vNueva() : vBatallas());
   }
 
@@ -431,13 +457,15 @@
   function nuevaTira(info, inv) {
     const cs = [];
     // que no salgan dos cartas iguales seguidas (ni a una de distancia) si la caja tiene de donde elegir
+    // con Giro Dorado la tira frena en lo que salio de la caja (orig); el giro lo cambia despues por lo que se queda
+    const o = inv && inv.bonus && inv.bonus.orig ? inv.bonus.orig : inv;
     for (let i = 0; i < TOTAL; i++) {
-      if (i === G && inv) { cs.push({ x: item(inv.item), v: inv.value }); continue }
+      if (i === G && inv) { cs.push({ x: item(o.item), v: o.value }); continue }
       let x = relleno(info);
       for (let k = 0; k < 12 && cs.slice(-2).some((c) => c.x.id === x.id); k++) x = relleno(info);
       cs.push({ x, v: valorDe(x) });
     }
-    return { cs, j: inv ? (Math.random() - 0.5) * 0.6 : 0, premio: inv || null };
+    return { cs, j: inv ? (Math.random() - 0.5) * 0.6 : 0, premio: inv || null, col: o ? color(item(o.item).rarity) : null };
   }
   function kcard(t, gana) {
     const { x, v } = t, n = nombre(x), sinFoto = x.rarity === 'esp' && !esLujo(x.id) && !x.image;
@@ -445,7 +473,7 @@
       ${n.top ? `<em data-notr>${esc(n.top)}</em>` : ''}<b data-notr>${esc(n.main)}</b><span class="cj-k-v">${N(v)}${coin()}</span></div>`;
   }
   function vTira(t, modo, c) {
-    const fin = modo === 'fin', col = t.premio ? color(item(t.premio.item).rarity) : color('mil');
+    const fin = modo === 'fin', col = t.col || (t.premio ? color(item(t.premio.item).rarity) : color('mil'));
     return `<div class="cj-strip ${fin ? 'fin' : ''}" style="--i:${fin ? G : INI};--j:${fin ? t.j.toFixed(3) : 0};--c:${col}"><div class="cj-track">${t.cs.map((k, i) => kcard(k, fin && i === G)).join('')}</div><i class="cj-mark"></i></div>`;
   }
   // las tiras: paradas con la caja en medio, girando (cj-spin: sonidos.js la oye) o ya paradas en el premio
@@ -478,7 +506,7 @@
       <button class="cj-fast ca-auto ${S.auto ? 'on' : ''}" data-cj="auto" aria-pressed="${S.auto}" ${busy || S.auto || falta ? 'disabled' : ''}><i></i><span>Giro automático</span></button>
     </div>
     ${tuyas.length ? `<button class="go ghost ca-mia" data-cj="abrirMia" data-v="${tuyas[0].id}" ${busy ? 'disabled' : ''}><span>${tuyas.length === 1 ? 'Abrir la tuya' : 'Abrir una tuya'}</span>${tuyas.length > 1 ? `<b>×${tuyas.length}</b>` : ''}</button>` : ''}
-    ${falta && !tuyas.length && !S.auto ? `<p class="hint ca-hint">Tienes ${N(ctx.saldo)}. La paga del lunes llega sola.</p>` : ''}`;
+    ${falta && !tuyas.length && !S.auto ? `<p class="hint ca-hint">Tienes ${N(ctx.saldo)}. La paga del lunes se reclama en Recompensas.</p>` : ''}`;
     return `<section class="ca" style="--g:${brillo(c)}">${cab}${vEscena(c, info)}${vResultado(c)}${barra}</section>${vContenido(info)}`;
   }
   // lo que ha salido: cada premio con su valor y, si es de verdad, Vender. Si fue una prueba, solo se dice lo que habria salido
@@ -489,7 +517,7 @@
     const filas = it.map((i) => {
       const x = item(i.item), { top, main } = nombre(x), vendida = i.status === 'sold';
       return `<div class="ca-rw ${vendida ? 'sold' : ''}" style="--c:${color(x.rarity)}"><span class="ca-rw-i">${pic(x.image, 256)}</span>
-        <span class="ca-rw-t">${top ? `<span class="lab" data-notr>${esc(top)}</span>` : `<span class="lab">${(RAR[x.rarity] || RAR.mil)[0]}</span>`}<b data-notr>${x.rarity === 'esp' && top ? '★ ' : ''}${esc(main)}</b></span>
+        <span class="ca-rw-t">${top ? `<span class="lab" data-notr>${esc(top)}</span>` : `<span class="lab">${(RAR[x.rarity] || RAR.mil)[0]}</span>`}<b data-notr>${x.rarity === 'esp' && top ? '★ ' : ''}${esc(main)}</b>${gdTag(i)}</span>
         <span class="ca-rw-v">${N(i.value)}${coin()}</span>
         ${r.prueba ? '' : vendida ? '<span class="cj-sold">Vendida</span>' : `<button class="chip" data-cj="vender1" data-v="${i.id}">Vender</button>`}</div>`;
     }).join('');
@@ -511,7 +539,7 @@
   // el contenido de la caja: una sola rejilla, de más a menos valor, con la franja de su rareza y el % arriba a la derecha
   function vContenido(info) {
     const pn = probN(info), filas = [], tk = conTickets(info);
-    // cajas de EmpireDrop (db/055): cada objeto lleva su propia probabilidad (sus tickets entre el total)
+    // cajas con tickets (db/055): cada objeto lleva su propia probabilidad (sus tickets entre el total)
     if (tk) { const tot = info.items.reduce((a, it) => a + (it.tickets || 0), 0) || 1; for (const it of info.items) filas.push({ it, v: tipico(it), pct: (it.tickets || 0) / tot }) }
     else for (const r of ORDEN) {
       const list = info.por[r]; if (!list) continue;
@@ -537,8 +565,10 @@
   // El mas viejo a la izquierda y el nuevo entra por la derecha. La tira es un nodo fijo (FD.el) que la pantalla vuelve a colgar en cada
   // repintado, asi que la animacion no se corta. Llega en vivo: abrir una caja toca pulse, la app recarga y cargar() llama a fdSync().
   const FD_N = 7, FD_ESPERA = 3600;   // lo que saca otro espera a que acabe su ruleta en directo (cajas-vivo.js), para no chafarsela
-  const FD = { el: null, list: [], cola: [], t: 0, mov: false, sx: 0 };
-  const fdObjetivo = () => (D.st ? (D.buenos || D.st.feed).slice(0, FD_N).reverse() : []);
+  // PM 03-11: "en Latest drops haz que se pueda cambiar por Best drops tambien". Mejores = los 7 de mas valor de siempre (cajas y batallas,
+  // cualquier rareza), del mas caro al mas barato; se rehace cuando sale uno que supera al 7o. La eleccion se guarda en este aparato.
+  const FD = { el: null, list: [], cola: [], t: 0, mov: false, sx: 0, modo: lee('cj-fd-modo') === 'best' ? 'best' : 'latest' };
+  const fdObjetivo = () => (!D.st ? [] : FD.modo === 'best' ? (D.mejores || []).slice(0, FD_N) : (D.buenos || D.st.feed).slice(0, FD_N).reverse());
   function fdTile(i) {
     const x = item(i.item), n = nombre(x), c = caja(i.case), top = n.top || (esLujo(x.id) || catDe(c) === 'lujo' ? c.name || '' : '');
     return `<div class="cj-fd" data-id="${esc(i.id)}" style="--c:${color(x.rarity)}" tabindex="0"><span class="cj-fd-img">${pic(x.image, 256)}</span>
@@ -546,7 +576,8 @@
         <span class="cj-fd-b">${av(i.by, 'sm')}<span class="cj-fd-v">${N(i.value)}${coin()}</span></span>
         <span class="cj-fd-tip">${c.image ? `<span class="cj-fd-ti">${pic(c.image, 256)}</span>` : ''}${c.name ? `<span class="lab">${i.battle ? 'En batalla' : 'Salió de'}</span><b data-notr>${esc(c.name)}</b>` : ''}<span class="cj-fd-q"><span>Lo abrió</span><i data-notr>${esc(jug(i.by).n)}</i></span></span></div>`;
   }
-  function fdAlFinal() { const e = FD.el; if (e && e.isConnected) e.scrollLeft = e.scrollWidth - e.clientWidth + FD.sx }
+  // Ultimos: al final (lo nuevo entra por la derecha); Mejores: al principio (el mas caro a la izquierda)
+  function fdAlFinal() { const e = FD.el; if (e && e.isConnected) e.scrollLeft = FD.modo === 'best' ? 0 : e.scrollWidth - e.clientWidth + FD.sx }
   function fdLlena(list) {
     FD.list = list.slice(); if (!FD.el) return;
     FD.el.innerHTML = FD.list.map(fdTile).join('');
@@ -560,14 +591,17 @@
     k.classList.toggle('ver', on);
   }
   document.addEventListener('click', (e) => { if (FD.el && !FD.el.contains(e.target)) FD.el.querySelectorAll('.cj-fd.ver').forEach((x) => x.classList.remove('ver')) });
-  function vFeed() { return fdObjetivo().length ? '<section class="cj-feed-s"><header class="cj-sec-h"><h3>Lo último que ha salido</h3></header><div data-cjfeed></div></section>' : '' }
+  function vFeed() {
+    const hay = D.st && ((D.buenos || D.st.feed).length || (D.mejores || []).length); if (!hay) return '';
+    return `<section class="cj-feed-s ${FD.modo}"><header class="cj-sec-h"><h3>${FD.modo === 'best' ? 'Los mejores drops' : 'Lo último que ha salido'}</h3>${seg('fdmodo', [['latest', 'Últimos'], ['best', 'Mejores']], FD.modo, 'sm cj-fd-modo')}</header><div data-cjfeed></div></section>`;
+  }
   // despues de cada repintado: la tira de siempre en su hueco (y en el sitio del scroll en el que estaba)
   function ponFeed() {
     const h = root && root.querySelector('[data-cjfeed]'); if (!h) return;
     if (!FD.el) {
       FD.el = document.createElement('div'); FD.el.className = 'cj-feed';
       FD.el.addEventListener('click', fdToque);
-      FD.el.addEventListener('scroll', () => { if (!FD.mov) FD.sx = Math.min(0, FD.el.scrollLeft - (FD.el.scrollWidth - FD.el.clientWidth)) }, { passive: true });
+      FD.el.addEventListener('scroll', () => { if (!FD.mov && FD.modo !== 'best') FD.sx = Math.min(0, FD.el.scrollLeft - (FD.el.scrollWidth - FD.el.clientWidth)) }, { passive: true });
     }
     if (!FD.list.length) fdLlena(fdObjetivo());
     h.replaceWith(FD.el); fdAlFinal();
@@ -575,6 +609,14 @@
   // tras cada carga: lo que ha entrado nuevo se pone en cola y entra de uno en uno; si no cuadra (o es la primera vez), se pinta tal cual
   function fdSync() {
     const obj = fdObjetivo(), ids = obj.map((i) => i.id).join();
+    // Mejores: sin tira viva; si entra uno nuevo en el top 7 se repinta y el nuevo brilla
+    if (FD.modo === 'best') {
+      if (FD.list.map((i) => i.id).join() === ids) return;
+      const antes = new Set(FD.list.map((i) => i.id)), habia = FD.list.length;
+      FD.cola = []; clearTimeout(FD.t); fdLlena(obj);
+      if (habia && FD.el) for (const i of obj) if (!antes.has(i.id)) { const k = FD.el.querySelector(`.cj-fd[data-id="${CSS.escape(String(i.id))}"]`); if (k) { k.classList.add('nuevo'); setTimeout(() => k.classList.remove('nuevo'), 2600) } }
+      return;
+    }
     if (!FD.list.length) { FD.cola = []; clearTimeout(FD.t); return fdLlena(obj) }
     const ya = new Set([...FD.list, ...FD.cola.map((q) => q.i)].map((i) => i.id)), nuevos = obj.filter((i) => !ya.has(i.id));
     const esperado = [...FD.list, ...FD.cola.map((q) => q.i), ...nuevos].slice(-FD_N).map((i) => i.id).join();
@@ -670,8 +712,86 @@
       ${mio ? `<div class="cj-bar" data-selbar ${S.sel.size ? '' : 'hidden'}>${S.sel.size ? barraHtml() : ''}</div>` : ''}`;
   }
 
+  /* ----- Giro Dorado (db/075) ----- */
+  // PM 03-11: un giro extra de premio dentro de las cajas. A veces (4 %), despues de frenar la tira, salta el Giro Dorado: dos objetos de
+  // verdad de la misma caja, uno que vale mas (Sube) y otro que vale menos (Baja; si no hay nada mas barato, quedarse con lo que salio),
+  // al 50 %. Lo decide la base al abrir la caja y lo guarda en cs_inv.bonus ({orig, up, down, won}); aqui solo se ensena: un selector
+  // dorado que salta de uno a otro cada vez mas despacio y para en el que toco. Respeta la velocidad (Normal, Rapido, Ultra) y Saltar.
+  const gdDur = () => GD_DUR[+S.vel] || GD_DUR[0];
+  const gdTag = (i) => (!i || !i.bonus || !i.bonus.orig ? '' : `<span class="ca-gd ${i.bonus.won ? 'sube' : 'baja'}"><b>Giro Dorado</b><i>${i.bonus.won ? '▲' : i.bonus.down && i.bonus.down.keep ? '=' : '▼'}</i><em>antes ${N(i.bonus.orig.value)}</em></span>`);
+  function gdCarta(o, lado) {
+    const x = item(o.item), n = nombre(x), sinFoto = x.rarity === 'esp' && !esLujo(x.id) && !x.image, t = lado === 'sube' ? 'Sube' : o.keep ? 'Se queda' : 'Baja';
+    return `<div class="gd-c ${lado}" style="--c:${color(x.rarity)}"><span class="gd-p"><i>${lado === 'sube' ? '▲' : o.keep ? '=' : '▼'}</i><span>${t}</span><b>50 %</b></span>
+      <span class="gd-i">${sinFoto ? '<i class="cj-k-star">★</i>' : pic(x.image, 256, '', true)}</span>
+      <span class="gd-n" data-notr>${esc(n.main)}</span><span class="gd-v">${N(o.value)}${coin()}</span></div>`;
+  }
+  // h: sobre la tira de abrir (las dos cartas una al lado de otra); v: en la columna de una batalla (una encima de otra)
+  const gdHtml = (bo, cls = '') => `<div class="gd ${cls}" data-gd data-k="${bo.won ? 12 : 11}" data-on="0" data-won="${bo.won ? 1 : 0}" data-keep="${bo.down && bo.down.keep ? 1 : 0}">
+    <span class="gd-t"><i></i><span>Giro Dorado</span><i></i></span><div class="gd-cs">${gdCarta(bo.up, 'sube')}${gdCarta(bo.down, 'baja')}</div></div>`;
+  // el selector a los ms de empezar: k saltos, cada uno mas lento (el salto i a dur * (i/k)^1,8); acaba en el lado que toco
+  function gdPaso(el, ms, dur, sonFin = true) {
+    const k = +el.dataset.k || 12, fin = ms >= dur;
+    let c = k;
+    if (!fin) { c = 0; for (let i = 1; i <= k; i++) { if (dur * Math.pow(i / k, 1.8) <= ms) c = i; else break } }
+    if (el.dataset.c !== String(c)) {
+      if (el.dataset.c != null) { try { window.dispatchEvent(new CustomEvent('gm:sonido', { detail: { tipo: 'caja-tic', vol: 0.9 } })) } catch {} }
+      el.dataset.c = String(c); el.dataset.on = String(c % 2);
+    }
+    if (fin && !el.classList.contains('fin')) {
+      el.classList.add('fin', el.dataset.won === '1' ? 'gano' : 'perdio');
+      if (sonFin) { try { window.dispatchEvent(new CustomEvent('gm:sonido', { detail: el.dataset.won === '1' ? 'cobrar' : el.dataset.keep === '1' ? 'clic' : 'perder' })) } catch {} }
+    }
+  }
+  // al acabar el giro, la carta del centro de la tira pasa a ser lo que se queda
+  function gdFinTira(strip, t, inv) {
+    t.cs[G] = { x: item(inv.item), v: inv.value }; t.col = color(item(inv.item).rarity);
+    if (!strip || !strip.isConnected) return;
+    const k = strip.firstElementChild && strip.firstElementChild.children[G];
+    if (k) { const w = document.createElement('div'); w.innerHTML = kcard(t.cs[G], true); const nk = w.firstElementChild; k.replaceWith(nk); traduce(nk) }
+    strip.style.setProperty('--c', t.col);
+  }
+  // el Giro Dorado encima de una tira ya parada
+  function gdEnTira(strip, t, inv) {
+    return new Promise((ok) => {
+      if (!strip || !strip.isConnected) { gdFinTira(strip, t, inv); return ok() }
+      const w = document.createElement('div'); w.innerHTML = gdHtml(inv.bonus, 'h'); const el = w.firstElementChild;
+      traduce(el); strip.appendChild(el); strip.classList.add('dorado');
+      const dur = gdDur(), hold = GD_HOLD[+S.vel] || GD_HOLD[0], t0 = performance.now();
+      const paso = () => {
+        const sal = !!(anim && anim.saltar), ms = sal ? dur : performance.now() - t0;
+        gdPaso(el, ms, dur);
+        if (ms < dur) { requestAnimationFrame(paso); return }
+        setTimeout(() => {
+          gdFinTira(strip, t, inv); el.classList.add('sale');
+          setTimeout(() => { el.remove(); strip.classList.remove('dorado'); ok() }, anim && anim.saltar ? 0 : 260);
+        }, sal ? 0 : hold);
+      };
+      requestAnimationFrame(paso);
+    });
+  }
+  // la prueba gratis lo imita (sin base) con la misma probabilidad y las mismas reglas, con lo que vale cada objeto normalmente
+  function gdFalso(info, i) {
+    const v = i.value; if (!(v >= 1) || !info || !info.items) return null;
+    const tk = conTickets(info), al = (l) => l[(Math.random() * l.length) | 0];
+    const cand = info.items.filter((it) => it.id !== i.item && (!tk || it.tickets != null)).map((it) => ({ item: it.id, value: valorDe(it) })).filter((c) => c.value >= 1);
+    let up = cand.filter((c) => c.value >= 1.5 * v && c.value <= 6 * v);
+    up = up.length ? al(up) : cand.filter((c) => c.value > v).sort((a, b) => a.value - b.value)[0];
+    if (!up) return null;
+    let dn = cand.filter((c) => c.value >= 0.25 * v && c.value <= 0.75 * v);
+    dn = dn.length ? al(dn) : cand.filter((c) => c.value < v).sort((a, b) => b.value - a.value)[0];
+    const orig = { item: i.item, value: v };
+    return { orig, up, down: dn || { ...orig, keep: true }, won: Math.random() < 0.5 };
+  }
+
   /* ----- batallas ----- */
-  const tamDe = (b) => (b.mode === '1v1' ? 2 : 4);
+  // db/072: 1v1, 2v2, 3v3, 2v2v2 y 3, 4 o 6 todos contra todos; Normal (gana quien mas saca) o Crazy (quien menos)
+  const tamDe = (b) => eqDe(b) * teDe(b);
+  const sitiosDe = (b, t) => Array.from({ length: teDe(b) }, (_, i) => t * teDe(b) + i);
+  // el color de un equipo: el de su primer jugador
+  const eqColor = (b, t) => { const x = b.seats.find((y) => Math.floor(y.seat / teDe(b)) === t); return x ? `var(--f-${esc(jug(x.player).color)})` : 'rgba(255,255,255,.18)' };
+  // "Ana", "Ana y Luis", "Ana, Luis y Eva"
+  // (en: los nombres de las filas no pasan por el diccionario, asi que ahi se pone and directamente)
+  const yLista = (l, en) => (l.length < 2 ? l.join('') : `${l.slice(0, -1).join(', ')} ${en && window.GM_LANG && GM_LANG.get() === 'en' ? 'and' : 'y'} ${l[l.length - 1]}`);
   // las terminadas de esta pagina: de la base si se ha podido, si no las de cs_state
   function hechas() {
     const h = D.hechas;
@@ -688,8 +808,8 @@
       ctx.db.from('cs_battles').select('mode,winner,totals,cs_battle_seats(seat,player)').eq('status', 'done').limit(1000).then(({ data }) => {
         const t = {};
         for (const b of data || []) {
-          const mitad = b.mode === '1v1' ? 1 : 2, bote = (b.totals || []).reduce((a, v) => a + (v || 0), 0);
-          const gan = (b.cs_battle_seats || []).filter((x) => Math.floor(x.seat / mitad) === b.winner);
+          const te = teDe(b), bote = (b.totals || []).reduce((a, v) => a + (v || 0), 0);
+          const gan = (b.cs_battle_seats || []).filter((x) => Math.floor(x.seat / te) === b.winner);
           for (const g of gan) { const o = t[g.player] || (t[g.player] = { won: 0, n: 0 }); o.won += bote / gan.length; o.n++ }
         }
         TOPB = Object.entries(t).sort((a, b) => b[1].won - a[1].won).slice(0, 3);
@@ -701,34 +821,36 @@
   }
   function vBatallas() {
     const abiertas = D.st.battles.filter((b) => b.status === 'open'), H = hechas();
-    return `${topBat()}<header class="cj-bh"><p class="cj-lead">Cada uno abre las mismas cajas. El lado que saque más valor se lleva todas las skins.</p>
+    return `${topBat()}<header class="cj-bh"><p class="cj-lead">Cada uno abre las mismas cajas y el lado ganador se lo lleva todo. En Normal gana quien más saca; en Crazy, quien menos.</p>
         <button class="go" data-cj="nueva"><span>Crear batalla</span></button></header>
       <section class="cj-bl"><header class="cj-bl-h"><h3>Abiertas</h3>${abiertas.length ? `<span class="num">${abiertas.length}</span>` : ''}</header>
         ${abiertas.length ? `<div class="cj-bts">${abiertas.map(filaBat).join('')}</div>` : '<p class="hint">Ninguna abierta ahora mismo.</p>'}</section>
       <section class="cj-bl" data-hechas><header class="cj-bl-h"><h3>Terminadas</h3>${H.total ? `<span class="num">${N(H.total)}</span>` : ''}</header>
         ${H.rows.length ? `<div class="cj-bts ${H.espera ? 'espera' : ''}">${H.rows.map(filaBat).join('')}</div>${pager(H)}` : '<p class="hint">Todavía no ha terminado ninguna.</p>'}</section>`;
   }
-  // un lado de la fila: avatares, nombres y (si ha terminado) lo que ha sacado
+  // un lado (un equipo) de la fila: avatares, nombres y (si ha terminado) lo que ha sacado. Con mas de dos equipos, en columna y mas pequeno
   function lado(b, t, unir) {
-    const mitad = tamDe(b) / 2, done = b.status === 'done', dentro = b.seats.some((x) => x.player === ctx.me);
-    const ss = Array.from({ length: mitad }, (_, i) => ({ s: t * mitad + i, x: b.seats.find((y) => y.seat === t * mitad + i) }));
+    const multi = eqDe(b) > 2 || teDe(b) > 2, done = b.status === 'done', dentro = b.seats.some((x) => x.player === ctx.me);
+    const ss = sitiosDe(b, t).map((s) => ({ s, x: b.seats.find((y) => y.seat === s) }));
     const avs = ss.map(({ s, x }) => x ? av(x.player, 'md')
       : unir && !dentro && b.status === 'open' && ctx.saldo >= b.cost ? `<button class="cj-seat" data-cj="unir" data-v="${b.id}|${s}" title="Unirme aquí">+</button>` : '<span class="cj-seat"></span>').join('');
-    const nombres = ss.filter(({ x }) => x).map(({ x }) => esc(jug(x.player).n)).join(' y ');
+    const nombres = yLista(ss.filter(({ x }) => x).map(({ x }) => esc(jug(x.player).n)), true);
     const gana = done && b.winner === t;
-    return `<span class="cj-side s${t} ${done ? (gana ? 'win' : 'lose') : ''}"><span class="cj-avs">${avs}</span>
+    return `<span class="cj-side ${multi ? 'm' : 's' + t} ${done ? (gana ? 'win' : 'lose') : ''}"><span class="cj-avs">${avs}</span>
       <span class="cj-side-n"><b data-notr>${nombres || '&nbsp;'}</b>${gana ? '<i class="cj-crown" title="Ganador"></i>' : ''}</span>
       ${done && b.totals ? `<span class="num">${N(b.totals[t])}</span>` : ''}</span>`;
   }
+  // el formato en la fila: 1v1, 2v2v2... y los de todos contra todos como "4 jugadores"
+  const fmtB = (b) => (libre(b) ? `<b class="w">${eqDe(b)}<small>jugadores</small></b>` : `<b class="${b.mode.length > 3 ? 'l' : ''}">${esc(b.mode)}</b>`);
   function filaBat(b) {
     const dentro = b.seats.some((x) => x.player === ctx.me), mio = b.by === ctx.me, done = b.status === 'done', nueva = done && dentro && reciente(b) && !visto(b.id);
-    const n = b.cases.length, muestra = b.cases.slice(0, 4);
+    const n = b.cases.length, muestra = b.cases.slice(0, 4), ne = eqDe(b), multi = ne > 2 || teDe(b) > 2;
     const cs = `${muestra.map((cid) => pic(caja(cid).image, 128)).join('')}${n > muestra.length ? `<em>+${n - muestra.length}</em>` : ''}`;
-    const vs = `<span class="cj-vs">${lado(b, 0, true)}<i>vs</i>${lado(b, 1, true)}</span>`;
-    const meta = (cases) => `<span class="cj-bt-meta"><span class="cj-bt-m"><b>${b.mode}</b><em>${n === 1 ? '1 ronda' : n + ' rondas'}</em></span>${cases}
+    const vs = `<span class="cj-vs ${multi ? 'multi' : ''}">${Array.from({ length: ne }, (_, t) => lado(b, t, true)).join('<i>vs</i>')}</span>`;
+    const meta = (cases) => `<span class="cj-bt-meta"><span class="cj-bt-m">${fmtB(b)}${loca(b) ? '<i class="cj-loca">Crazy</i>' : ''}<em>${n === 1 ? '1 ronda' : n + ' rondas'}</em></span>${cases}
       <span class="cj-bt-wh">${done ? `<span data-notr>${cuando(b.done_at || b.at)}</span>` : `<b class="num">${N(b.cost)}</b>${coin()}<em>por cabeza</em>`}</span></span>`;
     // en el movil no cabe la hora: el precio va en el boton de unirse
-    if (done) return `<button class="cj-bt done ${dentro ? 'mia' : ''}" data-cj="ver" data-v="${b.id}">${meta(`<span class="cj-bt-cs">${cs}</span>`)}${vs}
+    if (done) return `<button class="cj-bt done ${dentro ? 'mia' : ''} ${multi ? 'multi' : ''}" data-cj="ver" data-v="${b.id}">${meta(`<span class="cj-bt-cs">${cs}</span>`)}${vs}
       <span class="cj-bt-act"><span class="cj-ver ${nueva ? 'nueva' : ''}">${nueva ? 'Ver el resultado' : 'Ver'}</span></span></button>`;
     // cancelar (la tuya) o salir: boton rojo; al tocarlo pregunta en claro y dice cuanto te devuelve
     let act, pide = false;
@@ -739,7 +861,7 @@
           <button class="cj-danger armado" data-cj="salir" data-v="${b.id}"><span>${mio ? 'Sí, cancelar' : 'Sí, salir'}</span><em>+${N(b.cost)}</em>${coin()}</button></span>`
         : `<button class="cj-danger" data-cj="salir" data-v="${b.id}"><i></i><span>${mio ? 'Cancelar' : 'Salir'}</span></button>`;
     } else act = ctx.saldo >= b.cost ? `<button class="go" data-cj="unir" data-v="${b.id}|"><span>Unirme</span><b>${N(b.cost)}</b>${coin()}</button>` : '<span class="hint">Sin saldo</span>';
-    return `<div class="cj-bt open ${pide ? 'pide' : ''}">${meta(`<button class="cj-bt-cs" data-cj="ver" data-v="${b.id}" title="Ver">${cs}</button>`)}${vs}<span class="cj-bt-act">${act}</span></div>`;
+    return `<div class="cj-bt open ${pide ? 'pide' : ''} ${multi ? 'multi' : ''}">${meta(`<button class="cj-bt-cs" data-cj="ver" data-v="${b.id}" title="Ver">${cs}</button>`)}${vs}<span class="cj-bt-act">${act}</span></div>`;
   }
   function pager(H) {
     if (H.pags <= 1) return '';
@@ -751,17 +873,20 @@
       <button class="cj-pg next" data-cj="pag" data-v="${p + 1}" ${p >= H.pags - 1 ? 'disabled' : ''} aria-label="Siguiente"></button></nav>`;
   }
   function vNueva() {
-    const nv = S.nueva, tam = nv.mode === '1v1' ? 2 : 4, n = nv.cases.length;
+    const nv = S.nueva, tam = tamDe(nv), n = nv.cases.length, cz = loca(nv);
     const cuesta = nv.cases.reduce((a, id) => a + (caja(id).price || 0), 0), falta = cuesta > ctx.saldo;
     const dos = gruposVivos().length > 1;
     const pk = (c) => { const k = nv.cases.filter((x) => x === c.id).length; return `<button class="cj-pk ${k ? 'on' : ''}" data-cj="add" data-v="${esc(c.id)}" ${n >= 10 ? 'disabled' : ''} title="${esc(c.name)}">
       <span class="cj-pk-img">${pic(c.image, 128)}${k ? `<i>${k}</i>` : ''}</span><span class="cj-pk-n" data-notr>${esc(c.name)}</span><span class="cj-pk-p">${N(c.price)}${coin()}</span></button>` };
     const elegir = dos ? GRUPOS.map(([k, t]) => { const l = D.cases.filter((c) => grupoDe(c) === k); return l.length ? `<h4 class="cj-pk-h">${t}</h4><div class="cj-pick">${l.map(pk).join('')}</div>` : '' }).join('') : `<div class="cj-pick">${D.cases.map(pk).join('')}</div>`;
-    const puntos = (m) => { const k = m === '1v1' ? 1 : 2, d = '<i></i>'.repeat(k); return `<span class="cj-mode-d">${d}<em>vs</em>${d}</span>` };
+    // un punto por jugador, agrupados por equipo
+    const puntos = (m) => { const eq = m.split('v'); return `<span class="cj-mode-d ${eq.length > 2 ? 'multi' : ''}">${eq.map((k) => `<span>${'<i></i>'.repeat(+k || 1)}</span>`).join(eq.length === 2 ? '<em>vs</em>' : '')}</span>` };
     return `<button class="cj-back" data-cj="nueva-x">Batallas</button>
     <section class="cj-new">
-      <header class="cj-new-h"><h2>Nueva batalla</h2><p class="cj-lead">El lado que saque más valor se lleva todas las skins.</p></header>
-      <div class="cj-modes">${['1v1', '2v2'].map((m) => `<button class="cj-mode ${nv.mode === m ? 'on' : ''}" data-cj="modo" data-v="${m}">${puntos(m)}<b>${m}</b></button>`).join('')}</div>
+      <header class="cj-new-h"><h2>Nueva batalla</h2><p class="cj-lead">Cada uno abre las mismas cajas y el lado ganador se lleva todas las skins.</p></header>
+      <div class="cj-modes">${FORMATOS.map(([m, t, sub]) => `<button class="cj-mode ${nv.mode === m ? 'on' : ''}" data-cj="modo" data-v="${m}">${puntos(m)}<b>${t}</b><small>${sub}</small></button>`).join('')}</div>
+      <div class="cj-regla ${cz ? 'crazy' : ''}">${seg('regla', [['normal', 'Normal'], ['crazy', 'Crazy']], cz ? 'crazy' : 'normal', 'sm')}
+        <p class="cj-regla-t">${cz ? 'Crazy: gana el lado que saque menos valor.' : 'Normal: gana el lado que saque más valor.'}</p></div>
       <header class="cj-sec-h"><h3>Cajas</h3><span class="cj-sec-s">Toca una caja para añadir una ronda</span></header>
       ${elegir}
       <header class="cj-sec-h"><h3>Rondas</h3><span class="cj-sec-s">${n} de 10</span></header>
@@ -776,9 +901,26 @@
   // PM, 30-10: "lo de las battles se bugea y quiero un diseño mucho mejor".
   // La repeticion va por reloj: cada fotograma saca la ronda y la posicion de cada ruleta de la hora de inicio,
   // y las ruletas se rellenan con un azar con semilla. Si la app repinta a mitad, se vuelve a pintar igual y sigue.
-  const KH = 92, GAP = 8, WIN = 212, KN = 34;
+  // Con Giro Dorado (db/075) la ronda dura un poco mas: la ruleta frena en lo que salio y el giro lo cambia por lo que se queda.
+  const KN = 34;
   let REP = null, repRaf = 0;
   const RD = () => (S.rapido ? 1700 : 4600), SPIN = () => (quieto() ? 1 : S.rapido ? 1150 : 3500);
+  const gdRep = () => gdDur() + (GD_HOLD[+S.vel] || GD_HOLD[0]);
+  const conGd = (b, r) => b.drops.some((d) => d.round === r && d.inv && d.inv.bonus);
+  // donde va la repeticion a los e ms: ronda, tiempo dentro de ella, si ya ha frenado, el Giro Dorado (ms desde que empieza) y si ya acabo
+  function reloj(b, e) {
+    const n = b.cases.length; let ini = 0;
+    for (let r = 1; r <= n; r++) {
+      const gd = conGd(b, r), dur = RD() + (gd ? gdRep() : 0), t = e - ini;
+      if (t < dur || r === n) return { r, t, landed: t >= SPIN(), gd: gd && t >= SPIN() && t < SPIN() + gdRep() ? t - SPIN() : null, gdOk: !gd || t >= SPIN() + gdRep(), fin: t >= dur };
+      ini += dur;
+    }
+    return { r: n, t: 0, landed: true, gd: null, gdOk: true, fin: true };
+  }
+  // el tamano de las ruletas: en el movil, con 3 columnas, cartas mas bajas
+  const movil = () => !!(window.matchMedia && window.matchMedia('(max-width:860px)').matches);
+  const colsDe = (b) => (!movil() ? tamDe(b) : libre(b) ? (eqDe(b) === 4 ? 2 : 3) : teDe(b) === 1 ? 2 : teDe(b));
+  const geo = (b) => { const m = movil(), c = colsDe(b); return m && c >= 3 ? { kh: 64, gap: 6, win: 150, c: 'mini' } : m ? { kh: 92, gap: 8, win: 190, c: '' } : { kh: 92, gap: 8, win: 212, c: c >= 5 ? 'estrecha' : '' } };
   // un objeto de la caja segun sus tickets (x entre 0 y 1)
   function porTickets(info, x) { const l = info.items, tot = l.reduce((a, it) => a + (it.tickets || 0), 0) || 1; let t = x * tot; for (const it of l) { t -= it.tickets || 0; if (t < 0) return it } return l[l.length - 1] }
   const sem = (x) => () => { x = (x + 0x6D2B79F5) | 0; let t = Math.imul(x ^ (x >>> 15), 1 | x); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 };
@@ -791,52 +933,63 @@
     const l = info.por[r]; return l[(rnd() * l.length) | 0];
   }
   const kCard = (it, gana) => it.rarity === 'esp' && !esLujo(it.id) && !it.image ? `<div class="bv-k esp ${gana ? 'gana' : ''}"><span>★</span></div>` : `<div class="bv-k ${gana ? 'gana' : ''}" style="--c:${color(it.rarity)}">${pic(it.image, 256, '', true)}</div>`;
-  function reel(b, r, seat, e, landed) {
+  // la ruleta de un sitio en una ronda: p de 0 (parada arriba) a 1 (frenada en el premio). antes: con Giro Dorado, aun en lo que salio
+  function reel(b, r, seat, p, g, ya, antes) {
     const d = b.drops.find((x) => x.round === r && x.seat === seat);
     if (!d) return `<div class="bv-reel"></div>`;
-    const info = D.caja.get(b.cases[r - 1]), rnd = sem(b.id * 1009 + r * 31 + seat * 7), win = item(d.inv.item), cs = [];
+    const info = D.caja.get(b.cases[r - 1]), rnd = sem(b.id * 1009 + r * 31 + seat * 7), o = antes && d.inv.bonus ? d.inv.bonus.orig : d.inv, win = item(o.item), cs = [];
     for (let i = 0; i < KN + 3; i++) cs.push(i === KN ? win : rellenoS(info, rnd) || win);
-    const fin = KN * (KH + GAP) - (WIN - KH) / 2 + (rnd() - 0.5) * KH * 0.45;
-    const p = landed ? 1 : Math.min(1, Math.max(0, (e - (r - 1) * RD()) / SPIN())), y = fin * (1 - Math.pow(1 - p, 4));
-    return `<div class="bv-reel ${landed ? 'ya' : ''}" style="--c:${color(win.rarity)}"><div class="bv-track" data-tr="${seat}" data-fin="${fin.toFixed(1)}" style="transform:translateY(${(-y).toFixed(1)}px)">${cs.map((it, i) => kCard(it, i === KN)).join('')}</div><i class="bv-line"></i></div>`;
+    const fin = KN * (g.kh + g.gap) - (g.win - g.kh) / 2 + (rnd() - 0.5) * g.kh * 0.45, y = fin * (1 - Math.pow(1 - p, 4));
+    return `<div class="bv-reel ${ya ? 'ya' : ''}" style="--c:${color(win.rarity)}"><div class="bv-track" data-tr="${seat}" data-fin="${fin.toFixed(1)}" style="transform:translateY(${(-y).toFixed(1)}px)">${cs.map((it, i) => kCard(it, i === KN)).join('')}</div><i class="bv-line"></i></div>`;
   }
-  function bvIt(d, nuevo) { const x = item(d.inv.item); return `<span class="bv-it ${nuevo ? 'nuevo' : ''}" style="--c:${color(x.rarity)}" title="${esc(x.name)}">${x.rarity === 'esp' && !x.image ? '<b>★</b>' : pic(x.image, 128)}<em>${N(d.inv.value)}</em></span>` }
+  function bvIt(d, nuevo, antes) {
+    const o = antes ? d.inv.bonus.orig : d.inv, x = item(o.item), gd = d.inv.bonus && !antes;
+    return `<span class="bv-it ${nuevo ? 'nuevo' : ''} ${gd ? 'gd' : ''}" style="--c:${color(x.rarity)}" title="${esc(x.name)}${gd ? ' · Giro Dorado' : ''}">${x.rarity === 'esp' && !x.image ? '<b>★</b>' : pic(x.image, 128)}<em>${N(o.value)}</em></span>`;
+  }
   function vBat() {
     const b = D.bats.get(S.bat), atras = '<button class="cj-back" data-cj="batallas">Batallas</button>';
     if (!b) return atras + `<p class="hint">${D.err ? esc(D.err) : 'Cargando batalla…'}</p>`;
-    const tam = tamDe(b), mitad = tam / 2, n = b.cases.length, rep = !!(REP && REP.id === b.id);
-    const e = rep ? Date.now() - REP.t0 : 0, rNow = rep ? Math.min(n, Math.floor(e / RD()) + 1) : n + 1, landed = rep && e - (rNow - 1) * RD() >= SPIN();
+    const ne = eqDe(b), te = teDe(b), tam = ne * te, n = b.cases.length, rep = !!(REP && REP.id === b.id), cz = loca(b), g = geo(b);
+    const ph = rep ? reloj(b, Date.now() - REP.t0) : null, rNow = rep ? ph.r : n + 1, landed = rep && ph.landed;
     const visible = (d) => b.status === 'done' && (!rep || d.round < rNow || (d.round === rNow && landed));
+    // con Giro Dorado en la ronda de ahora, hasta que acaba se ve (y cuenta) lo que salio, no lo que se queda
+    const antes = (d) => rep && d.round === rNow && !!d.inv.bonus && !ph.gdOk;
+    const val = (d) => (antes(d) ? d.inv.bonus.orig.value : d.inv.value);
     const dr = (st) => b.drops.filter((d) => d.seat === st && visible(d)).sort((x, y) => x.round - y.round);
-    const tot = (st) => dr(st).reduce((a, d) => a + d.inv.value, 0);
-    const T = [0, 1].map((t) => Array.from({ length: mitad }, (_, i) => tot(t * mitad + i)).reduce((a, v) => a + v, 0));
+    const tot = (st) => dr(st).reduce((a, d) => a + val(d), 0);
+    const T = Array.from({ length: ne }, (_, t) => sitiosDe(b, t).reduce((a, st) => a + tot(st), 0));
     const fin = b.status === 'done' && !rep, dentro = b.seats.some((y) => y.player === ctx.me);
-    const nombres = (t) => b.seats.filter((x) => Math.floor(x.seat / mitad) === t).map((x) => esc(jug(x.player).n)).join(' y ');
-    const lider = T[0] === T[1] ? null : T[0] > T[1] ? 0 : 1;
+    const nombres = (t) => yLista(b.seats.filter((x) => Math.floor(x.seat / te) === t).map((x) => esc(jug(x.player).n)));
+    // va ganando el que mas lleva (en Crazy, el que menos); si los dos primeros empatan, nadie
+    const orden = T.map((v, t) => [v, t]).sort((x, y) => (cz ? x[0] - y[0] : y[0] - x[0]));
+    const lider = orden[0][0] === orden[1][0] ? null : orden[0][1], ventaja = Math.abs(orden[0][0] - orden[1][0]);
     const titulo = b.status === 'open' ? (tam - b.seats.length === 1 ? 'Falta 1 jugador' : `Faltan ${tam - b.seats.length} jugadores`)
       : rep ? `Ronda ${rNow} de ${n}` : `Gana ${nombres(b.winner) || '·'}`;
-    const sub = b.status === 'open' ? 'Se abre sola en cuanto se llena. El lado que saque más valor se lleva todas las skins.'
-      : fin ? `${N(T[b.winner])} contra ${N(T[1 - b.winner])} · ${mitad > 1 ? 'se llevan' : 'se lleva'} las ${b.drops.length} skins`
-      : lider == null ? 'Van empatados' : `Va ganando ${nombres(lider)} por ${N(Math.abs(T[0] - T[1]))}`;
+    const sub = b.status === 'open' ? (cz ? 'Se abre sola en cuanto se llena. En Crazy el lado que saque menos valor se lleva todas las skins.' : 'Se abre sola en cuanto se llena. El lado que saque más valor se lleva todas las skins.')
+      : fin ? `${N(T[b.winner])} contra ${yLista(T.filter((_, t) => t !== b.winner).map(N))} · ${te > 1 ? 'se llevan' : 'se lleva'} las ${b.drops.length} skins`
+      : lider == null ? 'Van empatados' : `Va ganando ${nombres(lider)} por ${N(ventaja)}`;
     const act = rep ? '<button class="chip" data-cj="saltar">Saltar</button>' : fin ? '<button class="chip" data-cj="otravez">Ver otra vez</button>'
       : b.status === 'open' && dentro ? `<button class="chip" data-cj="salir" data-v="${b.id}">${S.sure === 'salir' + b.id ? '¿Seguro? Toca otra vez' : b.by === ctx.me ? 'Cancelar' : 'Salir'}</button>` : '';
-    const head = `<header class="bv-h"><div class="bv-t"><span class="lab">Batalla ${b.mode} · ${n} ${n === 1 ? 'ronda' : 'rondas'}</span><h2 class="${fin ? 'gana' : ''}">${titulo}</h2><p>${sub}</p></div>
+    const head = `<header class="bv-h"><div class="bv-t"><span class="lab">Batalla ${fmtTxt(b.mode)} · ${n} ${n === 1 ? 'ronda' : 'rondas'}</span>${cz ? '<i class="cj-loca">Crazy</i>' : ''}<h2 class="${fin ? 'gana' : ''}">${titulo}</h2><p>${sub}</p>${cz && b.status !== 'open' ? '<p class="bv-cz">Crazy: gana el lado que saque menos valor.</p>' : ''}</div>
       <div class="bv-pot"><span class="num">${N(b.cost * tam)}</span>${coin()}<em>${b.status === 'open' ? N(b.cost) + ' cada uno' : 'en juego'}</em></div>${act ? `<div class="bv-act">${act}</div>` : ''}</header>`;
     const rds = `<div class="bv-rds">${b.cases.map((cid, i) => { const st = !rep ? (b.status === 'done' ? 'ok' : '') : i + 1 < rNow || (i + 1 === rNow && landed) ? 'ok' : i + 1 === rNow ? 'now' : ''; return `<span class="${st}">${pic((D.cases.find((c) => c.id === cid) || {}).image, 128)}<i>${i + 1}</i></span>` }).join('')}</div>`;
-    const tug = b.status === 'done' ? `<div class="bv-tug" aria-hidden="true"><i style="flex:${T[0] + T[1] ? Math.max(T[0], 0.01) : 1}"></i><i style="flex:${T[0] + T[1] ? Math.max(T[1], 0.01) : 1}"></i></div>` : '';
+    // la barra de reparto: un trozo por equipo, del tamano de lo que lleva
+    const sumT = T.reduce((a, v) => a + v, 0);
+    const tug = b.status === 'done' ? `<div class="bv-tug" aria-hidden="true">${T.map((v, t) => `<i style="flex:${sumT ? Math.max(v, sumT * 0.004) : 1};background:${eqColor(b, t)}"></i>`).join('')}</div>` : '';
     const col = (st) => {
-      const x = b.seats.find((y) => y.seat === st), t = Math.floor(st / mitad);
+      const x = b.seats.find((y) => y.seat === st), t = Math.floor(st / te);
       if (!x) return `<div class="bv-col vacio">${b.status === 'open' && !dentro && ctx.saldo >= b.cost ? `<button class="bv-join" data-cj="unir" data-v="${b.id}|${st}"><b>+</b><span>Unirme aquí</span><em>${N(b.cost)}${coin()}</em></button>` : '<span class="bv-free">Libre</span>'}</div>`;
       const j = jug(x.player), ds = dr(st), mejor = ds.reduce((a, d) => (!a || d.inv.value > a.inv.value ? d : a), null);
-      const stage = rep ? reel(b, rNow, st, e, landed)
-        : fin && mejor ? `<div class="bv-best" style="--c:${color(item(mejor.inv.item).rarity)}">${pic(item(mejor.inv.item).image, 360)}<span>${esc(partes(item(mejor.inv.item)).join(' | '))}</span><b>${N(mejor.inv.value)}${coin()}</b></div>` : '';
+      const dNow = rep ? b.drops.find((d) => d.round === rNow && d.seat === st) : null;
+      const stage = rep ? (dNow && dNow.inv.bonus && ph.gd != null ? `<div class="bv-gdw">${gdHtml(dNow.inv.bonus, 'v')}</div>` : reel(b, rNow, st, landed ? 1 : Math.min(1, Math.max(0, ph.t / SPIN())), g, landed, !ph.gdOk))
+        : fin && mejor ? `<div class="bv-best" style="--c:${color(item(mejor.inv.item).rarity)}">${pic(item(mejor.inv.item).image, 360)}<span>${esc(partes(item(mejor.inv.item)).join(' | '))}</span><b>${N(mejor.inv.value)}${coin()}</b>${mejor.inv.bonus ? '<i class="bv-gdt">Giro Dorado</i>' : ''}</div>` : '';
       return `<div class="bv-col ${fin ? (t === b.winner ? 'win' : 'lose') : rep && lider === t ? 'va' : ''}" style="--pc:var(--f-${esc(j.color)})">
         <div class="bv-p">${av(x.player, 'xl')}<b>${esc(j.n)}</b><span class="bv-tot"><span class="num">${N(tot(st))}</span>${coin()}</span></div>
-        ${stage}<div class="bv-haul">${ds.map((d) => bvIt(d, rep && d.round === rNow)).join('')}</div></div>`;
+        ${stage}<div class="bv-haul">${ds.map((d) => bvIt(d, rep && d.round === rNow, antes(d))).join('')}</div></div>`;
     };
-    const team = (t) => `<div class="bv-team n${mitad}">${Array.from({ length: mitad }, (_, i) => col(t * mitad + i)).join('')}</div>`;
-    const cl = (t) => jug(b.seats.find((y) => Math.floor(y.seat / mitad) === t)?.player).color;
-    return `${atras}<div class="bv" style="--c0:var(--f-${esc(cl(0))});--c1:var(--f-${esc(cl(1))})">${head}${rds}${tug}<div class="bv-arena m${tam}">${team(0)}<span class="bv-vs">VS</span>${team(1)}</div></div>`;
+    const team = (t) => `<div class="bv-team n${te}">${sitiosDe(b, t).map(col).join('')}</div>`;
+    const arena = `<div class="bv-arena m${tam} e${ne} t${te} ${libre(b) ? 'ffa' : ''} ${g.c}" style="--te:${te};--fc:${colsDe(b)}">${Array.from({ length: ne }, (_, t) => team(t)).join('<span class="bv-vs">VS</span>')}</div>`;
+    return `${atras}<div class="bv ${cz ? 'crazy' : ''}" style="--c0:${eqColor(b, 0)};--c1:${eqColor(b, 1)};--rkh:${g.kh}px;--rwin:${g.win}px;--rgap:${g.gap}px">${head}${rds}${tug}${arena}</div>`;
   }
 
   /* ---------- la ruleta ---------- */
@@ -868,7 +1021,12 @@
     const c = D.cases.find((x) => x.id === S.caja) || D.caja.get(S.caja), info = D.caja.get(S.caja), n = mia ? 1 : S.n;
     if (!c || !info) return false;
     let items;
-    if (prueba) items = Array.from({ length: n }, () => { const x = relleno(info); return { id: 0, item: x.id, value: valorDe(x), status: 'prueba' } });
+    if (prueba) items = Array.from({ length: n }, () => {
+      const x = relleno(info), i = { id: 0, item: x.id, value: valorDe(x), status: 'prueba' };
+      const bo = Math.random() * 100 < GD_PCT ? gdFalso(info, i) : null;
+      if (bo) { const f = bo.won ? bo.up : bo.down; Object.assign(i, { item: f.item, value: f.value, bonus: bo }) }
+      return i;
+    });
     else {
       if (!mia && c.price * n > ctx.saldo) { avisa('No tienes saldo suficiente'); return false }
       ocupado = true;
@@ -883,11 +1041,13 @@
       try { const f = (x) => ({ r: x.rarity, i: src(x.image, 256), l: esLujo(x.id) ? 1 : 0 }); window.dispatchEvent(new CustomEvent('gm:caja-abierta', { detail: { quien: ctx.me, nombre: jug(ctx.me).n, caja: c.id, cajaNombre: c.name, items: r.items.map((i) => ({ ...f(item(i.item)), n: item(i.item).name, v: i.value })), pool: Array.from({ length: 24 }, () => f(relleno(info))) } })) } catch {}   // en directo (cajas-vivo.js)
       if (mia) D.cajasDe.set(ctx.me, mias().filter((o) => o.id !== mia));
       // la imagen grande del premio se va bajando mientras gira
-      for (const i of r.items) { const im = new Image(); im.decoding = 'async'; im.src = src(item(i.item).image, 256) }
+      for (const i of r.items) for (const o of [i, ...(i.bonus ? [i.bonus.up, i.bonus.down] : [])]) { const im = new Image(); im.decoding = 'async'; im.src = src(item(o.item).image, 256) }
     }
     const animar = !sinAnim();
     S.res = null; S.sure = null; S.prueba = !!prueba;
     S.tiras = items.map((inv) => nuevaTira(info, inv)); S.tirasK = ''; S.tirasC = c.id;
+    // sin animaciones el Giro Dorado no se ensena: la tira queda directamente en lo que se queda
+    if (!animar) items.forEach((inv, i) => { if (inv.bonus) gdFinTira(null, S.tiras[i], inv) });
     S.fase = animar ? 'gira' : 'fin';
     anim = { anims: [], saltar: false };
     pinta(true);    // las tiras con su sitio, ya con el premio dentro
@@ -896,6 +1056,9 @@
       if (sc && sc.getBoundingClientRect().top < 64) sc.scrollIntoView({ block: 'start', behavior: 'smooth' });
       const v = +S.vel;
       await Promise.all(strips.map((s, i) => gira(s, S.tiras[i], DUR[v] + i * PASO[v])));
+      // Giro Dorado: en las tiras que lo llevan, en cuanto frenan (todas a la vez)
+      const conGiro = items.map((inv, i) => (inv.bonus ? i : -1)).filter((i) => i >= 0);
+      if (conGiro.length) { await espera(GD_HOLD[v]); await Promise.all(conGiro.map((i) => gdEnTira(strips[i], S.tiras[i], items[i]))) }
       await espera(FIN[v]);
     } else {
       const top = items.reduce((a, i) => (i.value > a.value ? i : a), items[0]);
@@ -940,13 +1103,18 @@
       if (!REP) return;
       const b = D.bats.get(REP.id);
       if (!b || S.bat !== REP.id || S.tab !== 'batallas') { REP = null; S.rep = null; return }
-      const n = b.cases.length, e = Date.now() - REP.t0, r = Math.floor(e / RD()) + 1;
-      if (r > n) return termina();
-      const landed = e - (r - 1) * RD() >= SPIN(), key = r + '|' + landed;
-      if (key !== REP.key || !root.querySelector('[data-tr]')) { REP.key = key; pinta(true) }
-      else if (!landed) {
-        const k = 1 - Math.pow(1 - Math.min(1, (e - (r - 1) * RD()) / SPIN()), 4);
+      const ph = reloj(b, Date.now() - REP.t0);
+      if (ph.fin) return termina();
+      const key = `${ph.r}|${ph.landed}|${ph.gd != null}|${ph.gdOk}`;
+      if (key !== REP.key || !root.querySelector('[data-tr],[data-gd]')) { REP.key = key; pinta(true) }
+      else if (!ph.landed) {
+        const k = 1 - Math.pow(1 - Math.min(1, ph.t / SPIN()), 4);
         root.querySelectorAll('[data-tr]').forEach((tr) => { tr.style.transform = `translateY(${(-(+tr.dataset.fin) * k).toFixed(1)}px)` });
+      }
+      // el Giro Dorado de los sitios que lo tienen en esta ronda; el sonido del final, una vez por ronda
+      if (ph.gd != null) {
+        root.querySelectorAll('[data-gd]').forEach((el) => gdPaso(el, ph.gd, gdDur(), false));
+        if (ph.gd >= gdDur() && REP.son !== ph.r) { REP.son = ph.r; try { window.dispatchEvent(new CustomEvent('gm:sonido', { detail: 'cobrar' })) } catch {} }
       }
       repRaf = requestAnimationFrame(paso);
     };
@@ -1062,20 +1230,23 @@
       case 'sinfiltro': S.fR = null; S.fC = null; return filtra();
       case 'mas': S.invN += INV_PASO; return pinta();
       case 'esptodo': S.espTodo = v; return pinta();
+      case 'fdmodo': if (v === FD.modo) return; FD.modo = v === 'best' ? 'best' : 'latest'; guarda('cj-fd-modo', FD.modo); FD.cola = []; clearTimeout(FD.t); FD.list = []; FD.sx = 0; return pinta();
       case 'pag': {
         S.pag = Math.max(0, +v || 0); pinta();
         const l = root.querySelector('[data-hechas]'), sc = root.closest('.scr');
         if (l && sc && l.getBoundingClientRect().top < sc.getBoundingClientRect().top) l.scrollIntoView({ block: 'start' });
         await cargaHechas(); return pinta();
       }
-      case 'nueva': S.nueva = { mode: '1v1', cases: [] }; pinta(); return arriba();
+      case 'nueva': S.nueva = { mode: '1v1', regla: 'normal', cases: [] }; pinta(); return arriba();
       case 'nueva-x': S.nueva = null; pinta(); return arriba();
-      case 'modo': S.nueva.mode = v; return pinta();
+      case 'modo': if (FORMATOS.some((f) => f[0] === v)) S.nueva.mode = v; return pinta();
+      case 'regla': S.nueva.regla = v === 'crazy' ? 'crazy' : 'normal'; return pinta();
       case 'add': if (S.nueva.cases.length < 10) S.nueva.cases.push(v); return pinta();
       case 'quita': S.nueva.cases.splice(+v, 1); return pinta();
       case 'crear': {
         const nv = S.nueva; if (!nv || !nv.cases.length) return;
-        const r = await hazlo(() => rpc('cs_battle_create', { p_mode: nv.mode, p_cases: nv.cases }));
+        // Normal se pide como siempre (dos argumentos): vale con y sin db/072; Crazy necesita 072
+        const r = await hazlo(() => rpc('cs_battle_create', loca(nv) ? { p_mode: nv.mode, p_cases: nv.cases, p_regla: 'crazy' } : { p_mode: nv.mode, p_cases: nv.cases }));
         if (!r) return;
         S.nueva = null; S.bat = r.id; avisa('Batalla creada: falta que se unan');
         if (ctx.refresh) ctx.refresh();
@@ -1114,5 +1285,7 @@
       cargar();
     },
     estado: () => ({ tab: S.tab, girando: !!anim }),
+    // lo que usa Mejorar (mejora.js) para no repetirlo
+    util: { ctx: () => ctx, item, asegura, pic, color, nombre, esLujo, av, recarga: () => cargar(true) },
   };
 })();

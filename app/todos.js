@@ -169,7 +169,6 @@
       </div>`;
     const ajustes = admin ? `<section class="td-adm"><span class="who2">${GEAR}<span>Ajustes de la mesa · solo tú</span></span>
         <span class="grp"><span class="lab">Apuesta del día</span><span class="seg"><button class="${DAILY_ON ? 'on' : ''}" data-daily="true" ${DAILY_ON ? 'disabled' : ''}>Con extra ×${O(DAILY_BONUS)}</button><button class="${!DAILY_ON ? 'on' : ''}" data-daily="false" ${!DAILY_ON ? 'disabled' : ''}>Sin extra</button></span></span>
-        <span class="grp"><span class="lab">Elecciones</span><span class="seg"><button class="${VIS === 'open' ? 'on' : ''}" data-vis="open" ${VIS === 'open' ? 'disabled' : ''}>Visibles</button><button class="${VIS === 'kick' ? 'on' : ''}" data-vis="kick" ${VIS === 'kick' ? 'disabled' : ''}>Ocultas hasta empezar</button></span></span>
       </section>` : '';
     return `<div class="td">
       ${vivos.length ? `<div class="td-vivos">${vivos.map(banda).join('')}</div>` : ''}

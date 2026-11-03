@@ -6,8 +6,6 @@ La foto recortada es una obra derivada: mantiene la licencia de la original. Las
 
 Las imagenes de las cajas (`cajas/*.webp`, 460x480 transparentes) las dibuja `sync/lujo-cajas.py`: la caja es el arte de la Horizon Case de CS2 (de Valve, la misma CDN de Steam que ya usa la app para las cajas) recolorada, con aura de luz, destellos y el objeto estrella (foto recortada de esta tabla) saliendo por la tapa.
 
-**Arte de las 59 cajas de lujo actuales (db/074, 03-11).** Las 24 cajas con el id de siempre (`lujo-gaming` ... `lujo-cartas`) usan nuestro arte de antes, `cajas/<id sin lujo->.webp` (el de la Horizon Case recoloreada y el de Gemini de la db/046). Las 35 cajas `lujo-ed-*` llevan arte nuevo, `cajas/propia-<id sin lujo-ed->.webp`, dibujado por `sync/lujo-cajas.py` con las fotos de producto de sus objetos (`ed/*.webp`): el objeto mas valioso en el centro, dos mas a los lados y un brillo del color de la categoria (tecnologia azul, relojes y joyas y inversion oro, moda morado, motor rojo). Ya no hay imagenes de caja copiadas de otra web.
-
 Las 16 cajas nuevas (Gaming, Zapatillas, Relojes, Tecnologia 2026, Motor, Joyas, Perfumes, Bolsos, Viajes, Patinetes, Camaras, Streetwear, Oro, Cripto, Gafas y Cartas) tienen la imagen que dibujo Gemini para PM (modelos/cajas-gemini/sueltas/), sin la franja del nombre y sin fondo (`sync/cajas-gemini.py`). Los objetos de esas cajas que no tienen foto libre (cartas de Pokemon, perfumes, joyas de marca, ropa de marca...) usan la imagen de su caja: no se ha dibujado ni generado ningun personaje ni producto. Los logos de cripto (BTC, ETH, BNB, LTC) y los lingotes y monedas de oro comparten foto entre varios objetos.
 
 | Foto | Objeto | Cajas | Pagina en Commons | Autor | Licencia |

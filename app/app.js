@@ -9,8 +9,8 @@ const SP = { f: ['Fútbol', 'img/futbol.svg'], v: ['Valorant', 'img/valorant.svg
   b: ['NBA', 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" fill="#f58426"/><g fill="none" stroke="#1d1309" stroke-width="3.4"><circle cx="32" cy="32" r="29"/><path d="M3 32h58M32 3v58M13 10c8 6 12 13 12 22s-4 16-12 22M51 10c-8 6-12 13-12 22s4 16 12 22"/></g></svg>')],
   r: ['Fórmula 1', 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" fill="#e10600"/><text x="32" y="41" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-style="italic" font-size="26" text-anchor="middle" fill="#fff">F1</text></svg>')] };   // NBA (nba.js, db/039) y F1 (f1.js, db/052)
 const DEP = ['f', 'v', 'c', 'u', 'b', 'r'];
-const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', tiempo: 'Tiempo en la app', trato: 'Trato entre amigos', mercado: 'Mercado', jackpot: 'Jackpot', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', ruleta_semana: 'Ruleta de premios', ruleta_global: 'Ruleta global', premio_semana: 'Premio de la semana', moneda: 'Cara o cruz', crash: 'Crash', ruleta: 'Ruleta', blackjack: 'Blackjack', plinko: 'Plinko', minas: 'Minas', carrera: 'Carrera de caballos', cashout: 'Cash out', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta' };
-let TIEMPO = null, CLAIM = null, BOTE = null, REACT = new Map(), POLLS = new Map(), CAMPEON = null;
+const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', tiempo: 'Tiempo en la app', trato: 'Trato entre amigos', mercado: 'Mercado', jackpot: 'Jackpot', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', ruleta_semana: 'Ruleta de premios', ruleta_global: 'Ruleta global', premio_semana: 'Premio de la semana', moneda: 'Cara o cruz', crash: 'Crash', ruleta: 'Ruleta', blackjack: 'Blackjack', plinko: 'Plinko', minas: 'Minas', carrera: 'Carrera de caballos', cashout: 'Cash out', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta', mejora: 'Mejora' };
+let TIEMPO = null, CLAIM = null, PAGA = null, BOTE = null, REACT = new Map(), POLLS = new Map(), CAMPEON = null;
 
 /* ---------- estado ---------- */
 let NOW = Date.now(), PAY = 0, WEEK0 = 0;
@@ -52,13 +52,14 @@ function nextMonday() {
 const COLS = 'id,sport,league,league_name,league_logo,stage,tag,venue,home,away,home_logo,away_logo,starts_at,status,score,winner,odds_1,odds_x,odds_2,odds_src,bo,details';
 async function load() {
   const from = new Date(Date.now() - 2 * DAY).toISOString(), to = new Date(Date.now() + 72 * DAY).toISOString();
-  const [st, ms, ch, ex, wh, ti, rm] = await Promise.all([
+  const [st, ms, ch, ex, wh, ti, , rm] = await Promise.all([
     db.rpc('get_state'),
     db.from('matches').select(COLS).gte('starts_at', from).lte('starts_at', to).neq('status', 'canceled').order('starts_at').limit(3000),
     db.from('chat').select('*').order('id', { ascending: false }).limit(150),
     db.rpc('get_extras'),
     db.from('wheel_spins').select('player,week,prize,label,amount,created_at').order('id', { ascending: false }).limit(40),
     db.rpc('time_status'),
+    db.rpc('paga_estado').then((r) => { PAGA = r.error ? null : r.data }, () => { PAGA = null }),   // db/070: la paga del lunes se reclama en Recompensas (sin 070 cargado, null: como antes)
     db.rpc('get_retos').then((r) => r, () => ({ error: 1 })),   // db/053: quien esta dentro de cada reto (con 053 sin cargar da error y los retos son de 2 como antes)
   ]);
   if (st.error) throw st.error;
@@ -110,7 +111,7 @@ function build(st, rows, chat, ex) {
   // cash out (db/024): una apuesta retirada cuenta como resuelta; con beneficio es 'won' (cobra pay), con perdida es 'lost' (pierde stake - pay). cash = true
   ALL = st.bets.filter((b) => !BRETO.has(Number(b.id))).map((b) => { const c = b.status === 'cashout', w = c && b.payout > b.stake; return { id: b.id, k: key.get(b.player), m: b.match, p: b.pick, stake: b.stake, o: w ? b.payout / b.stake : Number(b.odds), st: c ? (w ? 'won' : 'lost') : b.status, pay: b.payout, at: b.created, set: b.settled, cash: c } });
   LEDGER = st.ledger.map((l) => ({ t: when(l.at), at: Date.parse(l.at), kind: l.kind, c: KIND[l.kind] || l.kind, d: l.note, a: l.amount }));
-  chat = chat.filter((c) => c.player || !/^(Batalla (1v1|2v2) lista|.+ abre una batalla (1v1|2v2))/.test(c.body || ''));
+  chat = chat.filter((c) => c.player || !/^(Batalla [\dv]+ lista|.+ abre una batalla [\dv]+)/.test(c.body || ''));
   CHAT = chat.map((c) => ({ id: c.id, poll: c.poll_id || null, bet: c.bet_id || null, k: c.player ? key.get(c.player) : null, at: Date.parse(c.created_at), t: HM(Date.parse(c.created_at)), txt: c.body, img: c.image_url, aud: c.audio_url || null, secs: c.audio_secs || 0 }));
   F = st.players.map((p) => {
     const k = p.color, mine = ALL.filter((b) => b.k === k);
@@ -941,7 +942,7 @@ function ficha(m) {
   else if (!sel) h += `<p class="hint">Elige ${ps.length > 2 ? '1, X o 2' : '1 o 2'} para apostar.</p>`;
   else {
     const o = po(m, S.sel.p), st = stakeNow(), pv = ((st / Math.max(1, me().s)) * 100).toFixed(1);
-    if (me().s < 1) h += `<p class="hint sin-saldo">${me().s < 0 ? `Estás en negativo (<span class="neg-s">${N(me().s)}</span>): no puedes apostar hasta volver a tener saldo.` : 'No te queda saldo para apostar.'} La paga del lunes llega sola.</p>`;
+    if (me().s < 1) h += `<p class="hint sin-saldo">${me().s < 0 ? `Estás en negativo (<span class="neg-s">${N(me().s)}</span>): no puedes apostar hasta volver a tener saldo.` : 'No te queda saldo para apostar.'} ${PAGA ? 'Reclama la paga del lunes en Recompensas.' : 'La paga del lunes llega sola.'}</p>`;
     else h += `<div class="stk"><span class="lab">Apuestas</span><b data-sv>${N(st)}${coin()}</b>
       <input type="range" id="stake" min="1" max="${Math.max(1, me().s)}" step="1" value="${st}" data-in style="--p:${pv}%" aria-label="Cuánto apuestas"><div class="chips">${chips()}</div></div>
       <div class="ret"><span>Si aciertas con <em>${esc(pn(m, S.sel.p))} ${O(o)}</em></span><b data-ret>${N(st * o)}${coin()}</b></div>
@@ -1097,7 +1098,7 @@ function duels() {
     return `<div class="du" data-goto="${m.id}"><div class="du-t"><b>${m.live ? 'EN VIVO' : CD(m.at)}</b><span>${m.live ? esc(m.score || '') : WD(m.at) + ' ' + HM(m.at)}</span></div>
       <div class="du-s">${ks.map((k) => `<div class="du-g">${k === 'X' ? '<span class="du-x">X</span>' : logo(m, k === '1' ? 'a' : 'b')}<div><strong>${esc(pn(m, k))}</strong><span>${g[k].map((w) => av(w.f, 'sm')).join('')}<em>${N(g[k].reduce((a, w) => a + w.stake, 0))}${coin()}</em></span></div></div>`).join('<i>vs</i>')}</div></div>`;
   }).join('');
-  return rows || `<p class="hint">Sin duelos a la vista.${VIS === 'kick' ? ' Se descubren al empezar cada partido.' : ''}</p>`;
+  return rows || `<p class="hint">Sin duelos a la vista.</p>`;
 }
 function betCard(f, b) {
   const m = byId(b.m), left = Date.parse(m.at) - NOW, fill = m.live ? 100 : Math.max(4, 100 - (left / (72 * 36e5)) * 100);
@@ -1183,7 +1184,7 @@ function colegas() {
   const abiertas = ALL.filter((b) => b.st === 'open' && byId(b.m));
   const partidos = [...new Set(abiertas.map((b) => b.m))].map(byId).sort((a, b) => (b.live - a.live) || Date.parse(a.at) - Date.parse(b.at));
   const hechas = ALL.filter((b) => (b.st === 'won' || b.st === 'lost') && byId(b.m)).sort((a, b) => Date.parse(b.set || b.at) - Date.parse(a.set || a.at)).slice(0, 12);
-  const ajustes = admin ? `<div class="ab-aj"><nav class="vis"><span class="lab">Apuesta del día</span><button class="chip ${DAILY_ON ? 'on' : ''}" data-daily="true">Con extra ×${O(DAILY_BONUS)}</button><button class="chip ${!DAILY_ON ? 'on' : ''}" data-daily="false">Sin extra</button></nav><nav class="vis"><span class="lab">Elecciones</span><button class="chip ${VIS === 'open' ? 'on' : ''}" data-vis="open">Visibles</button><button class="chip ${VIS === 'kick' ? 'on' : ''}" data-vis="kick">Ocultas hasta empezar</button></nav></div>` : '';
+  const ajustes = admin ? `<div class="ab-aj"><nav class="vis"><span class="lab">Apuesta del día</span><button class="chip ${DAILY_ON ? 'on' : ''}" data-daily="true">Con extra ×${O(DAILY_BONUS)}</button><button class="chip ${!DAILY_ON ? 'on' : ''}" data-daily="false">Sin extra</button></nav></div>` : '';
   const gente = rank.map((f, i) => {
     const op = openOf(f.id), inP = op.reduce((a, b) => a + b.stake, 0);
     return `<button class="ab-p ${f.me ? 'me' : ''}" data-prof="${f.id}" style="--c:var(--f-${f.id})">${av(f.id, 'xl')}<span class="ab-pn"><b>${esc(f.n)}</b><small>${i + 1}º · ${f.ac !== '·' ? f.ac + ' aciertos' : 'sin resueltas'}</small></span><span class="ab-ps num">${N(f.s)}${coin()}</span><span class="ab-pj">${op.length ? `${N(inP)}${coin()} en juego · ${op.length} ${op.length === 1 ? 'apuesta' : 'apuestas'}` : 'nada en juego'}</span></button>`;
@@ -1354,10 +1355,13 @@ async function cargaFeed() {
   cargandoFeed = (async () => {
     try {
       if (!CAJAS_L) await cargaCasos();
-      const [inv, bt] = await Promise.all([
+      // regla (Normal o Crazy) llega con db/072: sin ella se leen las batallas como antes
+      const bats = (sel) => db.from('cs_battles').select(sel).eq('status', 'done').order('done_at', { ascending: false }).limit(20);
+      let [inv, bt] = await Promise.all([
         db.from('cs_inv').select('id,player,item_id,wear,st,value,case_id,battle_id,opened_by,created_at').is('battle_id', null).order('created_at', { ascending: false }).limit(80),
-        db.from('cs_battles').select('id,mode,cases,cost,winner,totals,done_at,cs_battle_seats(seat,player)').eq('status', 'done').order('done_at', { ascending: false }).limit(20),
+        bats('id,mode,regla,cases,cost,winner,totals,done_at,cs_battle_seats(seat,player)'),
       ]);
+      if (bt.error) bt = await bats('id,mode,cases,cost,winner,totals,done_at,cs_battle_seats(seat,player)');
       const ids = [...new Set((inv.data || []).map((x) => x.item_id))];
       const it = ids.length ? await db.rpc('cs_items_info', { p_ids: ids }) : { data: [] };
       FEED_CS = { inv: inv.data || [], bats: bt.data || [], items: new Map(((it.data) || []).map((x) => [x.id, x])) };
@@ -1391,7 +1395,8 @@ function feedItems() {
   // cajas: las aperturas seguidas de la misma persona (menos de 10 minutos entre una y otra) van en una sola fila
   if (FEED_CS) {
     const grupos = [], RK = { esp: 5, cov: 4, cla: 3, res: 2, mil: 1 };
-    for (const x of FEED_CS.inv) { const quien = x.opened_by || x.player, t = Date.parse(x.created_at), g = grupos[grupos.length - 1];
+    for (const x of FEED_CS.inv) { if (!x.case_id) continue;   // lo ganado en Mejorar (db/071) no sale de ninguna caja
+      const quien = x.opened_by || x.player, t = Date.parse(x.created_at), g = grupos[grupos.length - 1];
       if (g && g.quien === quien && g.tMin - t < 6e5) { g.xs.push(x); g.tMin = t } else grupos.push({ quien, t, tMin: t, xs: [x] }) }
     for (const g of grupos) {
       const k = kDe(g.quien); if (!k) continue;
@@ -1404,12 +1409,15 @@ function feedItems() {
         <span class="fd-its">${its.slice(0, 14).map(({ x, it }) => `<span class="fd-it" style="--c:${RAR_C[it.rarity] || RAR_C.mil}" title="${esc(it.name)} · ${N(x.value)}">${it.image ? `<img src="${esc(casoSrc(it.image, 96))}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : ''}</span>`).join('')}${its.length > 14 ? `<i class="fd-mas">+${its.length - 14}</i>` : ''}</span></div>
         ${amt(N(tot))}<span class="fd-vis">${c0?.image ? `<img class="fd-case" src="${esc(casoSrc(c0.image, 128))}" alt="" loading="lazy">` : `<span class="fd-ic">${IC_BOX}</span>`}</span>${hora(g.t)}</div>` });
     }
+    // batallas de 2 a 6 equipos (db/072): el equipo de un sitio es sitio / cuantos van en cada equipo ('2v2v2' -> 2)
+    const yL = (l) => (l.length < 2 ? l.join('') : `${l.slice(0, -1).join(', ')} y ${l[l.length - 1]}`);
     for (const b of FEED_CS.bats) {
-      const seats = (b.cs_battle_seats || []).sort((x, y) => x.seat - y.seat), mitad = seats.length / 2;
-      const lados = [seats.filter((s) => s.seat < mitad), seats.filter((s) => s.seat >= mitad)].map((l) => l.map((s) => kDe(s.player)).filter(Boolean));
-      if (!lados[0].length || !lados[1].length || b.winner == null) continue;
-      const g = lados[b.winner], p = lados[1 - b.winner], tt = b.totals || [0, 0], c = (CAJAS_L || []).find((y) => y.id === (b.cases || [])[0]);
-      out.push({ at: Date.parse(b.done_at), t: 'cajas', html: `<div class="fd fdb" data-scr="cajas"><span class="fd-avs">${g.map((k) => av(k)).join('')}</span><div class="fd-b"><p><b>${g.map((k) => esc(fr(k).n)).join(' y ')}</b> <span>${g.length > 1 ? 'ganan la batalla a' : 'gana la batalla a'}</span> <b>${p.map((k) => esc(fr(k).n)).join(' y ')}</b><small>Batalla ${esc(b.mode)} · ${N(tt[b.winner])} contra ${N(tt[1 - b.winner])} · ${(b.cases || []).length} ${(b.cases || []).length === 1 ? 'caja' : 'cajas'}</small></p></div>${amt(N((tt[0] || 0) + (tt[1] || 0)), 'won')}<span class="fd-vis">${c?.image ? `<img class="fd-case" src="${esc(casoSrc(c.image, 128))}" alt="" loading="lazy">` : `<span class="fd-ic">${IC_VS}</span>`}</span>${hora(Date.parse(b.done_at))}</div>` });
+      const seats = (b.cs_battle_seats || []).sort((x, y) => x.seat - y.seat), te = parseInt(b.mode, 10) || 1, ne = Math.max(2, String(b.mode || '1v1').split('v').length);
+      const lados = Array.from({ length: ne }, (_, t) => seats.filter((s) => Math.floor(s.seat / te) === t).map((s) => kDe(s.player)).filter(Boolean));
+      if (lados.some((l) => !l.length) || b.winner == null || !lados[b.winner]) continue;
+      const g = lados[b.winner], p = lados.filter((_, t) => t !== b.winner).flat(), tt = b.totals || [], c = (CAJAS_L || []).find((y) => y.id === (b.cases || [])[0]);
+      const resto = tt.filter((_, t) => t !== b.winner).map((v) => N(v || 0)), bote = tt.reduce((a, v) => a + (v || 0), 0);
+      out.push({ at: Date.parse(b.done_at), t: 'cajas', html: `<div class="fd fdb" data-scr="cajas"><span class="fd-avs">${g.map((k) => av(k)).join('')}</span><div class="fd-b"><p><b>${yL(g.map((k) => esc(fr(k).n)))}</b> <span>${g.length > 1 ? 'ganan la batalla a' : 'gana la batalla a'}</span> <b>${yL(p.map((k) => esc(fr(k).n)))}</b><small>Batalla ${esc(b.mode)}${b.regla === 'crazy' ? ' Crazy' : ''} · ${N(tt[b.winner] || 0)} contra ${yL(resto)} · ${(b.cases || []).length} ${(b.cases || []).length === 1 ? 'caja' : 'cajas'}</small></p></div>${amt(N(bote), 'won')}<span class="fd-vis">${c?.image ? `<img class="fd-case" src="${esc(casoSrc(c.image, 128))}" alt="" loading="lazy">` : `<span class="fd-ic">${IC_VS}</span>`}</span>${hora(Date.parse(b.done_at))}</div>` });
     }
   }
   return out.filter((x) => isFinite(x.at)).sort((a, b) => b.at - a.at);
@@ -1446,7 +1454,7 @@ function chat() {
 // o contra quien fue la batalla; sin las reglas. Y la ruleta de la semana
 let WHEEL = null, CASOS = null, BATS = new Map();
 // PM, 01-11: "las bets rapidas que se vean como categoria distinta y que no cuenten como apuestas reales": las predicciones en directo van aparte
-const movTipo = (k) => (['apuesta', 'premio', 'devolucion', 'cashout'].includes(k) ? 'apuestas' : ['pred_apuesta', 'pred_premio', 'pred_devol'].includes(k) ? 'rapidas' :['caja', 'venta', 'batalla', 'trato', 'mercado', 'jackpot'].includes(k) ? 'cajas' : ['moneda', 'crash', 'ruleta', 'blackjack', 'plinko', 'minas', 'carrera'].includes(k) ? 'juegos' : 'pagas');
+const movTipo = (k) => (['apuesta', 'premio', 'devolucion', 'cashout'].includes(k) ? 'apuestas' : ['pred_apuesta', 'pred_premio', 'pred_devol'].includes(k) ? 'rapidas' :['caja', 'venta', 'batalla', 'trato', 'mercado', 'jackpot', 'mejora'].includes(k) ? 'cajas' : ['moneda', 'crash', 'ruleta', 'blackjack', 'plinko', 'minas', 'carrera'].includes(k) ? 'juegos' : 'pagas');
 // 047: una tirada cada 3 dias con premios mas pequenos. [texto, tipo, probabilidad]: cada gajo mide lo que toca (spin_wheel)
 const RUEDA = [['75', 0, .34], ['Caja', 1, .065], ['110', 0, .25], ['225', 0, .12], ['Caja ★', 2, .02], ['450', 0, .05], ['150', 0, .145], ['900', 3, .01]];
 const RU_A = RUEDA.reduce((a, r) => (a.push(a[a.length - 1] + r[2] * 360), a), [0]), RU_W = RUEDA.map((r) => r[2] * 360);
@@ -1468,7 +1476,17 @@ async function cargaMov() {
   let cambia = false;
   if (!CASOS) { const { data } = await db.rpc('cs_cases'); CASOS = new Map(((Array.isArray(data) ? data : data?.cases) || []).map((c) => [c.name, c.image])); cambia = true }
   const ids = [...new Set(LEDGER.filter((m) => m.kind === 'batalla').map((m) => +((m.d || '').match(/#(\d+)/) || [])[1]).filter((x) => x && !BATS.has(x)))];
-  if (ids.length) { const { data } = await db.from('cs_battle_seats').select('battle_id,player').in('battle_id', ids); for (const id of ids) BATS.set(id, (data || []).filter((x) => x.battle_id === id).map((x) => x.player)); cambia = true }
+  // los rivales de cada batalla: los de los otros equipos (en 2v2, 3v3 y 2v2v2 el compañero no es rival). Sin el formato, todos los demas
+  if (ids.length) {
+    let { data, error } = await db.from('cs_battle_seats').select('battle_id,seat,player,cs_battles(mode)').in('battle_id', ids);
+    if (error) ({ data } = await db.from('cs_battle_seats').select('battle_id,player').in('battle_id', ids));
+    const yo = me()?.uid;
+    for (const id of ids) {
+      const l = (data || []).filter((x) => x.battle_id === id), te = parseInt(l[0]?.cs_battles?.mode, 10) || 0, mio = l.find((x) => x.player === yo);
+      BATS.set(id, l.filter((x) => !te || !mio || x.seat == null || Math.floor(x.seat / te) !== Math.floor(mio.seat / te)).map((x) => x.player));
+    }
+    cambia = true;
+  }
   if (cambia && S.scr === 'monedero') render();
 }
 const casoImg = (nota) => { const nm = String(nota || '').replace(/ × \d+$/, ''), im = CASOS?.get(nm); return im ? `<img class="mv-img" src="${esc(/^https?:/.test(im) ? im : 'https://community.akamai.steamstatic.com/economy/image/' + im + '/128fx128f')}" alt="" loading="lazy">` : '' };
@@ -1478,7 +1496,7 @@ function movFila(m, saldo) {
   const ico = m.kind === 'caja' ? casoImg(m.d) || `<span class="mv-i c">${IC_BOX}</span>`
     : m.kind === 'batalla' && rivales.length ? `<span class="mv-av">${rivales.map((f) => av(f.id, 'sm')).join('')}</span>`
     : `<span class="mv-i ${tipo === 'apuestas' ? 'b' : tipo === 'cajas' ? 'c' : tipo === 'juegos' ? 'j' : 'p'}">${tipo === 'apuestas' ? IC_TICKET : tipo === 'cajas' ? IC_BOX : tipo === 'juegos' ? IC_DADO : IC_GIFT}</span>`;
-  const det = m.kind === 'batalla' && rivales.length ? `Contra ${rivales.map((f) => esc(f.n)).join(' y ')}` : esc(m.d && m.d !== m.c ? m.d : '');
+  const det = m.kind === 'batalla' && rivales.length ? `Contra ${((l) => (l.length < 2 ? l.join('') : `${l.slice(0, -1).join(', ')} y ${l[l.length - 1]}`))(rivales.map((f) => esc(f.n)))}` : esc(m.d && m.d !== m.c ? m.d : '');
   return `<div class="mv"><time>${DD(m.at)} ${MO(m.at)}<small>${HM(m.at)}</small></time>${ico}<p><b>${esc(m.c)}</b>${det ? `<span>${det}</span>` : ''}</p><span class="a ${m.a > 0 ? 'up' : 'dn'}">${m.a > 0 ? '▲' : '▼'} ${N(Math.abs(m.a))}${coin()}</span>${saldo != null ? `<span class="s">${N(saldo)}</span>` : ''}</div>`;
 }
 // PM, 30-10: "la weekly wheel esta super bugeada, las vueltas y todo". Ahora el angulo sale del reloj en cada
@@ -1564,9 +1582,9 @@ function ruedaHtml() {
 function rwPend() {
   const rueda = !ruMia(me().uid);
   const tiempo = (TIEMPO?.tiers || []).filter((t) => !t.claimed && TIEMPO.minutes >= t.min).length;
-  return { diario: !!CLAIM && !CLAIM.today, rueda, rescate: puedeRescate(), tiempo };
+  return { diario: !!CLAIM && !CLAIM.today, paga: !!PAGA && PAGA.abierta && !PAGA.claimed, rueda, rescate: puedeRescate(), tiempo };
 }
-function rwBoton() { const p = rwPend(), n = [p.diario, p.rueda, p.rescate].filter(Boolean).length + p.tiempo;
+function rwBoton() { const p = rwPend(), n = [p.diario, p.paga, p.rueda, p.rescate].filter(Boolean).length + p.tiempo;
   return `<button class="claim ${n ? '' : 'nada'} ${S.rew ? 'on' : ''}" data-act="rw" aria-label="Recompensas">${IC_GIFT}<span>Recompensas</span>${n ? `<b>${n}</b>` : ''}</button>` }
 const IC_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 // PM, 30-10: premios por estar en la app (db/019): 30 min, 1 h y 2 h al dia. La app manda un latido por minuto a la vista
@@ -1605,6 +1623,7 @@ function pintaRw() {
     <div class="rw-l">
       ${window.GM_RGLOBAL ? GM_RGLOBAL.fila() : ''}
       ${tiempoHtml()}
+      ${PAGA ? `<div class="rw-r2"><span class="rw-t d"><span class="cn"></span></span><p><b>Paga del lunes</b><span>${N(PAGA.amount)} V-Bucks cada semana, reclamándola. Si no la reclamas esa semana, se pierde</span></p>${p.paga ? `<button class="go-s" data-act="claimweek">Reclamar</button>` : hecho('Hecha esta semana')}</div>` : ''}
       <div class="rw-r2"><span class="rw-t d"><span class="cn"></span></span><p><b>Premio diario</b><span>${N(CLAIM?.amount || 50)} V-Bucks cada día que lo reclames</span></p>${p.diario ? `<button class="go-s" data-act="claim">Reclamar</button>` : hecho('Hecho hoy')}</div>
       <div class="rw-r2"><span class="rw-t b">${IC_TICKET}</span><p><b>Bote de la semana</b><span>${BOTE?.pot ? `<i class="rw-pot">${N(BOTE.pot)}${coin()}</i> en el bote` : `Cada lunes, ${N(BOTE?.amount || 100)} de cada uno`} · se lo lleva quien más gane</span>${dentro.length ? `<span class="rw-av">${dentro.map((f) => av(f.id, 'sm')).join('')}<small>${dentro.length} dentro</small></span>` : ''}</p><button class="go-s res" data-apo-ir>Ver el bote</button></div>
       ${p.rescate ? `<div class="rw-r2"><span class="rw-t p">${IC_GIFT}</span><p><b>Rescate</b><span>Te has quedado a cero: ${N(CLAIM.rescue)} para seguir, una vez por semana</span></p><button class="go-s" data-act="rescue">Pedir</button></div>` : ''}
@@ -1625,7 +1644,7 @@ function monedero() {
   return `<div class="pad">
     <div class="w-hero">${coin('big')}
       <div><span class="lab">Tu saldo</span><div class="w-bal">${NS(me().s)}</div>
-        <p class="w-pay">Paga del lunes <b>+${N(WEEKLY)}</b> · se acumula</p>
+        <p class="w-pay">Paga del lunes <b>+${N(WEEKLY)}</b> · ${PAGA ? (PAGA.claimed ? 'reclamada esta semana' : 'reclámala en Recompensas') : 'se acumula'}</p>
         <div class="w-cd" data-cdpay>${fmtPay(PAY)}</div>
         <div class="wk7">${days.map((d, i) => `<i class="${i <= di ? 'on' : ''}"></i>`).join('')}${days.map((d, i) => `<span class="${i === di ? 'on' : ''}">${d}</span>`).join('')}</div>
       </div></div>
@@ -1984,7 +2003,7 @@ async function refresh() { try { await loadSeguro(); render() } catch (e) { toas
 let busy = false;
 async function placeBet() {
   const m = S.sel && byId(S.sel.m); if (!m || !isOpen(m) || busy) return;
-  const st = stakeNow(); if (st < 1) return toast(puedeRescate() ? 'Sin saldo: pide el rescate en Monedero' : CLAIM && !CLAIM.today ? 'Sin saldo: reclama el premio diario arriba' : 'Sin saldo: espera a la paga del lunes');
+  const st = stakeNow(); if (st < 1) return toast(puedeRescate() ? 'Sin saldo: pide el rescate en Monedero' : CLAIM && !CLAIM.today ? 'Sin saldo: reclama el premio diario arriba' : (PAGA && PAGA.abierta && !PAGA.claimed ? 'Sin saldo: reclama la paga del lunes en Recompensas' : 'Sin saldo: espera a la paga del lunes'));
   busy = true; const p = S.sel.p;
   const { data, error } = await db.rpc('place_bet', { p_match: m.id, p_pick: p, p_stake: st });
   busy = false;
@@ -2121,6 +2140,7 @@ document.addEventListener('click', async (e) => {
   if (d.act === 'rw') { S.rew = !S.rew; if (S.rew) S.nvp = false; return render() }
   if (d.tclaim) { const { data, error } = await db.rpc('claim_time_reward', { p_min: +d.tclaim }); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} por tu tiempo en la app`); return refresh() }
   if (d.act === 'rw-cajas') { S.rew = false; S.scr = 'cajas'; document.getElementById('view').scrollTop = 0; return render() }
+  if (d.act === 'claimweek') { const { data, error } = await db.rpc('claim_week'); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} de la paga del lunes`); return refresh() }
   if (d.act === 'claim') { const { data, error } = await db.rpc('claim_daily'); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} del premio diario`); return refresh() }
   if (d.act === 'rescue') { const { data, error } = await db.rpc('claim_rescue'); if (error) return toast(errMsg(error)); toast(`Rescate: +${N(data)}${coin()}`); return refresh() }
   if (d.act === 'poll') { S.pollForm = !S.pollForm; render(); if (S.pollForm) document.getElementById('poll-q')?.focus(); return }

@@ -17,6 +17,16 @@
 })();
 (function () {
   const D = {
+    // Batallas de 3, 4 y 6, 2v2v2, 3v3 y Crazy (03-11, cajas.js, db/072) y Giro Dorado (03-11, cajas.js, db/075)
+    'cara a cara': 'head to head', 'por parejas': 'in pairs', 'jugadores': 'players', 'tres parejas': 'three pairs', 'por tríos': 'teams of three',
+    'Cada uno abre las mismas cajas y el lado ganador se lo lleva todo. En Normal gana quien más saca; en Crazy, quien menos.': 'Everyone opens the same boxes and the winning side takes it all. In Normal the highest total wins; in Crazy, the lowest.',
+    'Cada uno abre las mismas cajas y el lado ganador se lleva todas las skins.': 'Everyone opens the same boxes and the winning side takes every skin.',
+    'Normal: gana el lado que saque más valor.': 'Normal: the side with the highest total wins.', 'Crazy: gana el lado que saque menos valor.': 'Crazy: the side with the lowest total wins.',
+    'Se abre sola en cuanto se llena. En Crazy el lado que saque menos valor se lleva todas las skins.': 'It opens by itself as soon as it fills up. In Crazy the side with the lowest total takes every skin.',
+    'Van empatados': 'All square', 'Elige 1v1, 2v2, 3, 4 o 6 jugadores, 2v2v2 o 3v3': 'Pick 1v1, 2v2, 3, 4 or 6 players, 2v2v2 or 3v3', 'Elige Normal o Crazy': 'Pick Normal or Crazy',
+    'Giro Dorado': 'Golden Spin', 'Sube': 'Up', 'Baja': 'Down', 'Se queda': 'Stays',
+    // Mejorar (03-11, mejora.js, db/071): la pestana y el movimiento del monedero; el resto de la pantalla ya se pinta en su idioma
+    'Mejorar': 'Upgrader', 'Mejora': 'Upgrade',
     // Combinada con varias del mismo partido (02-11, boleto.js, db/067)
     'Es la misma apuesta dos veces': 'It is the same bet twice', 'Son del mismo mercado: elige solo una': 'Same market: pick only one',
     'Son del mismo jugador: elige solo una': 'Same player: pick only one', 'Van demasiado unidas: no se pueden combinar': 'Too closely linked: they cannot be combined',
@@ -547,7 +557,7 @@
     'Cancelar reto': 'Cancel challenge', '¿Seguro? Te devuelvo': 'Sure? You get back', 'Escribe cuánto': 'Type an amount', 'El reto máximo es 100.000': 'The maximum challenge is 100,000',
     '· si empatan y nadie va con el empate, perdéis los dos': '· if they draw and nobody backs the draw, you both lose', 'elige tu lado para ver lo que cobras': 'pick your side to see what you get',
     'Si aciertas cobras': 'If you are right you get', 'de la banca (cuota': 'from the bank (odds', 'de cada uno que entre en contra': 'from each one who joins against you',
-    'de tu rival si acepta': 'from your opponent if they accept', 'Si nadie entra en contra, se queda como una apuesta normal a esa cuota': 'If nobody joins against you, it stays as a normal bet at those odds',
+    'de tu rival si acepta': 'from your opponent if they accept', 'Si nadie entra en contra, la banca juega contra ti: tu apuesta cuenta igual, a esa cuota': 'If nobody joins against you, the house takes the other side: your bet still counts, at those odds',
     'Puedes cancelarlo mientras no entre nadie y no empiece el partido': 'You can cancel it while nobody has joined and the match has not started',
     'en juego entre vosotros · el que acierta cobra además su cuota de la banca': 'at stake between you · the winner also gets their odds from the bank',
     'tu apuesta · si alguien entra en contra, te llevas también lo suyo': 'your bet · if someone joins against you, you also take theirs', 'si acierta': 'if right', 'Te llevas si aciertas': 'You get if right', 'La mitad de tu saldo': 'Half your balance', 'Todo tu saldo (máximo 100.000)': 'All your balance (max 100,000)',
@@ -564,6 +574,11 @@
     'De 75 a 900 V-Bucks o una caja de CS2 para abrirla tú. Una tirada cada 3 días.': 'From 75 to 900 V-Bucks or a CS2 box to open yourself. One spin every 3 days.',
     'Estás en negativo (': 'You are below zero (', '): no puedes apostar hasta volver a tener saldo. La paga del lunes llega sola.': '): you cannot bet until you have a balance again. The Monday payday comes in by itself.',
     'No te queda saldo para apostar. La paga del lunes llega sola.': 'You have no balance left to bet. The Monday payday comes in by itself.',
+    // 070 (03-11): la paga del lunes se reclama a mano en Recompensas
+    'No te queda saldo para apostar. Reclama la paga del lunes en Recompensas.': 'You have no balance left to bet. Claim the Monday payday in Rewards.',
+    '): no puedes apostar hasta volver a tener saldo. Reclama la paga del lunes en Recompensas.': '): you cannot bet until you have a balance again. Claim the Monday payday in Rewards.',
+    'Los mejores drops': 'Best drops', 'Mejores': 'Best',
+    'Hecha esta semana': 'Done this week', 'Sin saldo: reclama la paga del lunes en Recompensas': 'No balance: claim the Monday payday in Rewards',
     // Ficha de partido pro (01-11, fichapro.js)
     'Árbitro': 'Referee', 'Asistencia': 'Attendance', 'Hora local': 'Local time', 'Goles y tarjetas': 'Goals and cards', 'Titulares y cambios': 'Starters and subs', 'Suplentes': 'Substitutes',
     'Quinteto inicial': 'Starting five', 'Puntos, rebotes y asistencias': 'Points, rebounds and assists', 'Banquillo': 'Bench', 'Jugadores a seguir': 'Players to watch', 'Medias por partido de esta temporada': 'Per game averages this season',
@@ -624,6 +639,15 @@
   const ORD = (n) => (/^1[123]$|[04-9]$/.test(n) ? 'th' : /1$/.test(n) ? 'st' : /2$/.test(n) ? 'nd' : 'rd');
   const MES_N = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const R = [
+    // Batallas de 3, 4 y 6, 2v2v2, 3v3 y Crazy y Giro Dorado (03-11, db/072 y db/075): van primero para que las reglas viejas no las trocen
+    [/^Batalla (\d) jugadores · (\d+) rondas?$/, (m, j, n) => `Battle of ${j} players · ${n} round${n === '1' ? '' : 's'}`],
+    [/^Batalla (\S+) · (\d+) rondas?$/, (m, f, n) => `Battle ${f} · ${n} round${n === '1' ? '' : 's'}`],
+    [/^Batalla (\S+)( Crazy)? · ([\d.,]+) contra (.+?) · (\d+) cajas?$/, (m, f, cz, a, r, n) => `Battle ${f}${cz || ''} · ${a} vs ${r.replace(/ y /g, ' and ')} · ${n} box${n === '1' ? '' : 'es'}`],
+    [/^Batalla (\S+)( Crazy)? #(\d+)$/, (m, f, cz, n) => `Battle ${f}${cz || ''} #${n}`],
+    [/^([\d.,]+) contra (.+) · se llevan? las (\d+) skins$/, (m, a, r, n) => `${a} vs ${r.replace(/ y /g, ' and ')} · takes all ${n} skins`],
+    [/^Va ganando (.+) por ([\d.,]+)$/, (m, q, n) => `${q.replace(/ y /g, ' and ')} ${/ y |, /.test(q) ? 'lead' : 'leads'} by ${n}`],
+    [/^Gana (.+) y ([^,]+)$/, (m, a, b) => `${a} and ${b} win`], [/^Contra (.+) y ([^,]+)$/, 'Against $1 and $2'],
+    [/^antes ([\d.,]+)$/, 'was $1'], [/ · Giro Dorado$/, ' · Golden Spin'],
     // retos contra la banca (02-11, db/066): chat y monedero; van primero para que las reglas viejas de retos no las trocen
     [/^Reto ganado a (.+): lo que puso el rival$/, 'Challenge won against $1: what your opponent put in'],
     [/^Reto ganado: (.+?) contra (.+?) · (.+)$/, (m, a, b, r) => `Challenge won: ${a} against ${b.replace(/ y /g, ' and ')} · ${r}`],
@@ -784,7 +808,9 @@
     [/^Las (\d+) más baratas$/, 'The $1 cheapest'], [/^([\d.]+) fuera del filtro$/, '$1 outside the filter'], [/^¿Vender las ([\d.]+) por ([\d.,]+)\? Toca otra vez$/, 'Sell all $1 for $2? Tap again'], [/^([\d.]+) objetos$/, '$1 items'], [/^([\d.]+) skins$/, '$1 skins'],
     [/^Inventario de (.+)$/, "$1's inventory"], [/^Elegir las (\d+)$/, 'Select all $1'], [/^Ver los (\d+)$/, 'See all $1'], [/^Ver (\d+) más$/, 'Show $1 more'],
     // recompensas y ruleta nuevas (30-10)
-    [/^([\d.]+) V-Bucks cada día que lo reclames$/, '$1 V-Bucks every day you claim them'], [/^([\d.]+) cada uno, de lunes a miércoles · se lo lleva quien más gane$/, '$1 each, Monday to Wednesday · the biggest winner takes it'],
+    [/^([\d.]+) V-Bucks cada día que lo reclames$/, '$1 V-Bucks every day you claim them'], [/^([\d.]+) V-Bucks cada semana, reclamándola\. Si no la reclamas esa semana, se pierde$/, '$1 V-Bucks every week, if you claim it. If you do not claim it that week, it is gone'],
+    [/^Paga del lunes: \+([\d.]+) para cada uno\. Reclámala en Recompensas$/, 'Monday payday: +$1 for each. Claim it in Rewards'], [/^\+([\d.]+) de la paga del lunes$/, '+$1 from the Monday payday'],
+    [/ · reclámala en Recompensas$/, ' · claim it in Rewards'], [/ · reclamada esta semana$/, ' · claimed this week'], [/^Tienes ([\d.,]+)\. La paga del lunes se reclama en Recompensas\.$/, 'You have $1. Claim the Monday payday in Rewards.'], [/^([\d.]+) cada uno, de lunes a miércoles · se lo lleva quien más gane$/, '$1 each, Monday to Wednesday · the biggest winner takes it'],
     [/^(\d+) dentro$/, '$1 in'], [/^La siguiente tirada, el lunes · en (.+)$/, 'Next spin on Monday · in $1'], [/: la tienes en Cajas › Inventario$/, ': it is in Boxes › Inventory'],
     // mis apuestas estilo boleto (30-10)
     [/^última · (\d+) apuestas$/, 'last · $1 bets'],

@@ -1,3 +1,4 @@
+-- DESHECHA por 076 (04-11): PM no queria que se tocaran los nombres ni las imagenes de las cajas (la vista previa). No volver a cargar.
 -- 074 (03-11). Cajas de lujo con nombre y arte propios. db/055b las creo con los nombres de otra web traducidos y sus imagenes copiadas (img/lujo/cajas/ed-*.webp).
 -- PM: "usa tus propios nombres y tus propias imagenes". Aqui cambian SOLO name e image de las 59 cajas; los ids, los objetos, los precios y las probabilidades (tickets) no se tocan.
 -- Las 24 cajas viejas (lujo-gaming ... lujo-cartas) vuelven al arte que ya era nuestro (img/lujo/cajas/<nombre>.webp); las 35 lujo-ed-* llevan arte nuevo dibujado por
