@@ -15,7 +15,7 @@ declare
   jug uuid[] := array(select id from players order by created_at, username);
   a uuid; b uuid; wk date := madrid_week(); amt int := (select (value #>> '{}')::int from settings where key = 'weekly_amount');
   fin timestamptz := (madrid_week()::timestamp at time zone 'Europe/Madrid');
-  s0 int; s1 int; r jsonb; n int; err text; resumen text := ''; habia int;
+  s0 int; s1 int; r jsonb; n int; err text; resumen text := ''; habia int; av0 bigint := 0;
 begin
   if cardinality(jug) < 2 then raise exception 'FALLO: hacen falta dos jugadores'; end if;
   a := jug[1]; b := jug[2];
@@ -43,6 +43,7 @@ begin
   resumen := resumen || 'pay_week no paga y avisa una sola vez. ';
 
   -- 2. el jugador 1 la reclama
+  if to_regclass('public.avisos') is not null then execute 'select coalesce(max(id), 0) from avisos' into av0; end if;
   perform pg_temp.yo(a);
   r := paga_estado();
   if (r->>'claimed')::boolean or (r->>'amount')::int <> amt or (r->>'week')::date <> wk then raise exception 'FALLO: paga_estado antes de reclamar: %', r; end if;
@@ -66,7 +67,8 @@ begin
 
   -- 4. sin el aviso viejo "Ya tienes la paga del lunes"
   if to_regclass('public.avisos') is not null then
-    if exists (select 1 from avisos where titulo = 'Ya tienes la paga del lunes' and creado >= now() - interval '1 minute') then
+    execute 'select count(*) from avisos where id > $1 and titulo = ''Ya tienes la paga del lunes''' into n using av0;
+    if n > 0 then
       raise exception 'FALLO: sigue saliendo el aviso viejo de la paga';
     end if;
   end if;
