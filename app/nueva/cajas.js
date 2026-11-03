@@ -409,6 +409,7 @@
     armados(root);
     indexa();
     traduce(root);
+    if (S.tab === 'mejorar' && window.GM_MEJORA) GM_MEJORA.montar(root.querySelector('[data-mejora]'), window.GM_CAJAS.util);
     if (!anim && S.tab === 'batallas' && S.bat && !S.rep) {
       const b = D.bats.get(S.bat);
       if (b && b.status === 'done' && !visto(b.id)) repeticion(b);
@@ -420,9 +421,10 @@
     return D.st.battles.some((b) => { const dentro = b.seats.some((x) => x.player === ctx.me); return b.status === 'open' ? !dentro : dentro && reciente(b) && !visto(b.id) });
   }
   function vista() {
-    const tabs = [['abrir', 'Abrir'], ['inventario', 'Inventario'], ['batallas', 'Batallas']], dot = hayAviso();
+    const tabs = [['abrir', 'Abrir'], ['inventario', 'Inventario'], ['batallas', 'Batallas'], ['mejorar', 'Mejorar']], dot = hayAviso();   // Mejorar: mejora.js (db/071)
     const cab = `<nav class="cj-tabs">${tabs.map(([k, n]) => `<button class="cj-tab ${S.tab === k ? 'on' : ''}" data-cj="tab" data-v="${k}">${n}${k === 'batallas' && dot ? '<i class="cj-dot"></i>' : ''}</button>`).join('')}</nav>`;
     if (!D.st || !D.cases) return cab + `<p class="hint cj-c">${D.err ? esc(D.err) : 'Cargando…'}</p>`;
+    if (S.tab === 'mejorar') return cab + '<div data-mejora></div>';
     return cab + (S.tab === 'abrir' ? vAbrir() : S.tab === 'inventario' ? vInv() : S.bat ? vBat() : S.nueva ? vNueva() : vBatallas());
   }
 
@@ -1282,5 +1284,7 @@
       cargar();
     },
     estado: () => ({ tab: S.tab, girando: !!anim }),
+    // lo que usa Mejorar (mejora.js) para no repetirlo
+    util: { ctx: () => ctx, item, asegura, pic, color, nombre, esLujo, av, recarga: () => cargar(true) },
   };
 })();

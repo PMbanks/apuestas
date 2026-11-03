@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "mejora-0311",
+   "fecha": "2026-11-03",
+   "hora": "23:50",
+   "titulo": "Mejorar: sube tus skins",
+   "texto": "En Cajas hay una pestaña nueva, Mejorar: pones skins de tu inventario o V-Bucks, eliges un objeto que valga más y la rueda decide. Cuanto más arriesgas, más premio y menos probabilidad. Si ganas, el objeto entra en tu inventario; si pierdes, lo que pusiste se va.",
+   "titulo_en": "Upgrader: level up your skins",
+   "texto_en": "Boxes has a new tab, Upgrader: put in skins from your inventory or V-Bucks, pick an item worth more and the wheel decides. The more you risk, the bigger the prize and the lower the chance. Win and the item lands in your inventory; lose and what you put in is gone.",
+   "img": "novedades/mejora.webp",
+   "ir": "cajas"
+  },
+  {
    "id": "giro-dorado-0311",
    "fecha": "2026-11-03",
    "hora": "23:30",

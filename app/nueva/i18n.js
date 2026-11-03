@@ -25,6 +25,8 @@
     'Se abre sola en cuanto se llena. En Crazy el lado que saque menos valor se lleva todas las skins.': 'It opens by itself as soon as it fills up. In Crazy the side with the lowest total takes every skin.',
     'Van empatados': 'All square', 'Elige 1v1, 2v2, 3, 4 o 6 jugadores, 2v2v2 o 3v3': 'Pick 1v1, 2v2, 3, 4 or 6 players, 2v2v2 or 3v3', 'Elige Normal o Crazy': 'Pick Normal or Crazy',
     'Giro Dorado': 'Golden Spin', 'Sube': 'Up', 'Baja': 'Down', 'Se queda': 'Stays',
+    // Mejorar (03-11, mejora.js, db/071): la pestana y el movimiento del monedero; el resto de la pantalla ya se pinta en su idioma
+    'Mejorar': 'Upgrader', 'Mejora': 'Upgrade',
     // Combinada con varias del mismo partido (02-11, boleto.js, db/067)
     'Es la misma apuesta dos veces': 'It is the same bet twice', 'Son del mismo mercado: elige solo una': 'Same market: pick only one',
     'Son del mismo jugador: elige solo una': 'Same player: pick only one', 'Van demasiado unidas: no se pueden combinar': 'Too closely linked: they cannot be combined',
