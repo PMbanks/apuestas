@@ -519,3 +519,28 @@ html.sin-anim .jg-mr:not(:empty){animation:none}
 .jg-side .jg-who:first-child{grid-column:span 2}
 .jg-side .jg-who{min-width:0}
 .jg-side .jg-who em{font-size:10px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* crash: quien jugo cada ronda y donde retiro (pastilla del historial -> panel; fila de Ultimas rondas -> se abre) */
+.jg-hist button{font:600 12px var(--mono);color:inherit;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.jg-hist button.lo{background:rgba(224,100,111,.14);color:var(--jg-lose)}.jg-hist button.md{background:rgba(244,242,236,.09);color:var(--soft)}
+.jg-hist button.hi{background:rgba(242,193,78,.15);color:var(--acc)}.jg-hist button.xx{background:rgba(43,212,125,.16);color:var(--win)}
+.jg-hist .jg-hq{padding:5px 11px;border-radius:999px;position:relative}
+.jg-hist .jg-hq::after{content:"";position:absolute;right:4px;top:4px;width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.55}
+.jg-hist .jg-hq:hover,.jg-hist .jg-hq.sel{box-shadow:inset 0 0 0 1.5px currentColor}
+.jg-hd{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-top:10px;min-height:44px;max-height:44px;overflow:hidden;font:500 12px var(--mono);color:var(--soft)}
+.jg-hd-t{color:var(--mute)}
+.jg-hd-x{font-size:15px;font-weight:600}.jg-hd-x.lo{color:var(--jg-lose)}.jg-hd-x.md{color:var(--soft)}.jg-hd-x.hi{color:var(--acc)}.jg-hd-x.xx{color:var(--win)}
+.jg-hp{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.jg-hp .av{width:18px;height:18px;font-size:7px}
+.jg-hp em{font-style:normal;color:var(--ink,inherit)}
+.jg-hp.w b,.jg-hp.w i{color:var(--win)}.jg-hp.l b,.jg-hp.l i{color:var(--jg-lose)}
+.jg-hp b{font-weight:600}.jg-hp i{font-style:normal;opacity:.9}
+.jg-hp .cn{width:.9em;height:.9em}
+/* Ultimas rondas: la fila es un boton (como antes) y debajo se abre el detalle */
+button.jg-rr{width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--hair);color:inherit;cursor:pointer;font:inherit;-webkit-tap-highlight-color:transparent}
+.jg-rw{position:relative}
+.jg-rw>.jg-rr::after{content:"";justify-self:end;margin-right:4px;width:6px;height:6px;border-right:1.5px solid var(--mute);border-bottom:1.5px solid var(--mute);transform:rotate(45deg);transition:transform .15s}
+.jg-rw.open>.jg-rr::after{transform:rotate(-135deg)}
+.jg-rw>.jg-rr{grid-template-columns:62px minmax(0,1fr) auto}
+.jg-rd{display:none;flex-wrap:wrap;gap:6px 14px;padding:2px 0 10px 14px;font:500 12px var(--mono);color:var(--soft)}
+.jg-rw.open>.jg-rd{display:flex}
