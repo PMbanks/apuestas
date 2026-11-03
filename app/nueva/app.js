@@ -111,7 +111,7 @@ function build(st, rows, chat, ex) {
   // cash out (db/024): una apuesta retirada cuenta como resuelta; con beneficio es 'won' (cobra pay), con perdida es 'lost' (pierde stake - pay). cash = true
   ALL = st.bets.filter((b) => !BRETO.has(Number(b.id))).map((b) => { const c = b.status === 'cashout', w = c && b.payout > b.stake; return { id: b.id, k: key.get(b.player), m: b.match, p: b.pick, stake: b.stake, o: w ? b.payout / b.stake : Number(b.odds), st: c ? (w ? 'won' : 'lost') : b.status, pay: b.payout, at: b.created, set: b.settled, cash: c } });
   LEDGER = st.ledger.map((l) => ({ t: when(l.at), at: Date.parse(l.at), kind: l.kind, c: KIND[l.kind] || l.kind, d: l.note, a: l.amount }));
-  chat = chat.filter((c) => c.player || !/^(Batalla (1v1|2v2) lista|.+ abre una batalla (1v1|2v2))/.test(c.body || ''));
+  chat = chat.filter((c) => c.player || !/^(Batalla [\dv]+ lista|.+ abre una batalla [\dv]+)/.test(c.body || ''));
   CHAT = chat.map((c) => ({ id: c.id, poll: c.poll_id || null, bet: c.bet_id || null, k: c.player ? key.get(c.player) : null, at: Date.parse(c.created_at), t: HM(Date.parse(c.created_at)), txt: c.body, img: c.image_url, aud: c.audio_url || null, secs: c.audio_secs || 0 }));
   F = st.players.map((p) => {
     const k = p.color, mine = ALL.filter((b) => b.k === k);
@@ -1355,10 +1355,13 @@ async function cargaFeed() {
   cargandoFeed = (async () => {
     try {
       if (!CAJAS_L) await cargaCasos();
-      const [inv, bt] = await Promise.all([
+      // regla (Normal o Crazy) llega con db/072: sin ella se leen las batallas como antes
+      const bats = (sel) => db.from('cs_battles').select(sel).eq('status', 'done').order('done_at', { ascending: false }).limit(20);
+      let [inv, bt] = await Promise.all([
         db.from('cs_inv').select('id,player,item_id,wear,st,value,case_id,battle_id,opened_by,created_at').is('battle_id', null).order('created_at', { ascending: false }).limit(80),
-        db.from('cs_battles').select('id,mode,cases,cost,winner,totals,done_at,cs_battle_seats(seat,player)').eq('status', 'done').order('done_at', { ascending: false }).limit(20),
+        bats('id,mode,regla,cases,cost,winner,totals,done_at,cs_battle_seats(seat,player)'),
       ]);
+      if (bt.error) bt = await bats('id,mode,cases,cost,winner,totals,done_at,cs_battle_seats(seat,player)');
       const ids = [...new Set((inv.data || []).map((x) => x.item_id))];
       const it = ids.length ? await db.rpc('cs_items_info', { p_ids: ids }) : { data: [] };
       FEED_CS = { inv: inv.data || [], bats: bt.data || [], items: new Map(((it.data) || []).map((x) => [x.id, x])) };
@@ -1405,12 +1408,15 @@ function feedItems() {
         <span class="fd-its">${its.slice(0, 14).map(({ x, it }) => `<span class="fd-it" style="--c:${RAR_C[it.rarity] || RAR_C.mil}" title="${esc(it.name)} · ${N(x.value)}">${it.image ? `<img src="${esc(casoSrc(it.image, 96))}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : ''}</span>`).join('')}${its.length > 14 ? `<i class="fd-mas">+${its.length - 14}</i>` : ''}</span></div>
         ${amt(N(tot))}<span class="fd-vis">${c0?.image ? `<img class="fd-case" src="${esc(casoSrc(c0.image, 128))}" alt="" loading="lazy">` : `<span class="fd-ic">${IC_BOX}</span>`}</span>${hora(g.t)}</div>` });
     }
+    // batallas de 2 a 6 equipos (db/072): el equipo de un sitio es sitio / cuantos van en cada equipo ('2v2v2' -> 2)
+    const yL = (l) => (l.length < 2 ? l.join('') : `${l.slice(0, -1).join(', ')} y ${l[l.length - 1]}`);
     for (const b of FEED_CS.bats) {
-      const seats = (b.cs_battle_seats || []).sort((x, y) => x.seat - y.seat), mitad = seats.length / 2;
-      const lados = [seats.filter((s) => s.seat < mitad), seats.filter((s) => s.seat >= mitad)].map((l) => l.map((s) => kDe(s.player)).filter(Boolean));
-      if (!lados[0].length || !lados[1].length || b.winner == null) continue;
-      const g = lados[b.winner], p = lados[1 - b.winner], tt = b.totals || [0, 0], c = (CAJAS_L || []).find((y) => y.id === (b.cases || [])[0]);
-      out.push({ at: Date.parse(b.done_at), t: 'cajas', html: `<div class="fd fdb" data-scr="cajas"><span class="fd-avs">${g.map((k) => av(k)).join('')}</span><div class="fd-b"><p><b>${g.map((k) => esc(fr(k).n)).join(' y ')}</b> <span>${g.length > 1 ? 'ganan la batalla a' : 'gana la batalla a'}</span> <b>${p.map((k) => esc(fr(k).n)).join(' y ')}</b><small>Batalla ${esc(b.mode)} · ${N(tt[b.winner])} contra ${N(tt[1 - b.winner])} · ${(b.cases || []).length} ${(b.cases || []).length === 1 ? 'caja' : 'cajas'}</small></p></div>${amt(N((tt[0] || 0) + (tt[1] || 0)), 'won')}<span class="fd-vis">${c?.image ? `<img class="fd-case" src="${esc(casoSrc(c.image, 128))}" alt="" loading="lazy">` : `<span class="fd-ic">${IC_VS}</span>`}</span>${hora(Date.parse(b.done_at))}</div>` });
+      const seats = (b.cs_battle_seats || []).sort((x, y) => x.seat - y.seat), te = parseInt(b.mode, 10) || 1, ne = Math.max(2, String(b.mode || '1v1').split('v').length);
+      const lados = Array.from({ length: ne }, (_, t) => seats.filter((s) => Math.floor(s.seat / te) === t).map((s) => kDe(s.player)).filter(Boolean));
+      if (lados.some((l) => !l.length) || b.winner == null || !lados[b.winner]) continue;
+      const g = lados[b.winner], p = lados.filter((_, t) => t !== b.winner).flat(), tt = b.totals || [], c = (CAJAS_L || []).find((y) => y.id === (b.cases || [])[0]);
+      const resto = tt.filter((_, t) => t !== b.winner).map((v) => N(v || 0)), bote = tt.reduce((a, v) => a + (v || 0), 0);
+      out.push({ at: Date.parse(b.done_at), t: 'cajas', html: `<div class="fd fdb" data-scr="cajas"><span class="fd-avs">${g.map((k) => av(k)).join('')}</span><div class="fd-b"><p><b>${yL(g.map((k) => esc(fr(k).n)))}</b> <span>${g.length > 1 ? 'ganan la batalla a' : 'gana la batalla a'}</span> <b>${yL(p.map((k) => esc(fr(k).n)))}</b><small>Batalla ${esc(b.mode)}${b.regla === 'crazy' ? ' Crazy' : ''} · ${N(tt[b.winner] || 0)} contra ${yL(resto)} · ${(b.cases || []).length} ${(b.cases || []).length === 1 ? 'caja' : 'cajas'}</small></p></div>${amt(N(bote), 'won')}<span class="fd-vis">${c?.image ? `<img class="fd-case" src="${esc(casoSrc(c.image, 128))}" alt="" loading="lazy">` : `<span class="fd-ic">${IC_VS}</span>`}</span>${hora(Date.parse(b.done_at))}</div>` });
     }
   }
   return out.filter((x) => isFinite(x.at)).sort((a, b) => b.at - a.at);
@@ -1469,7 +1475,17 @@ async function cargaMov() {
   let cambia = false;
   if (!CASOS) { const { data } = await db.rpc('cs_cases'); CASOS = new Map(((Array.isArray(data) ? data : data?.cases) || []).map((c) => [c.name, c.image])); cambia = true }
   const ids = [...new Set(LEDGER.filter((m) => m.kind === 'batalla').map((m) => +((m.d || '').match(/#(\d+)/) || [])[1]).filter((x) => x && !BATS.has(x)))];
-  if (ids.length) { const { data } = await db.from('cs_battle_seats').select('battle_id,player').in('battle_id', ids); for (const id of ids) BATS.set(id, (data || []).filter((x) => x.battle_id === id).map((x) => x.player)); cambia = true }
+  // los rivales de cada batalla: los de los otros equipos (en 2v2, 3v3 y 2v2v2 el compañero no es rival). Sin el formato, todos los demas
+  if (ids.length) {
+    let { data, error } = await db.from('cs_battle_seats').select('battle_id,seat,player,cs_battles(mode)').in('battle_id', ids);
+    if (error) ({ data } = await db.from('cs_battle_seats').select('battle_id,player').in('battle_id', ids));
+    const yo = me()?.uid;
+    for (const id of ids) {
+      const l = (data || []).filter((x) => x.battle_id === id), te = parseInt(l[0]?.cs_battles?.mode, 10) || 0, mio = l.find((x) => x.player === yo);
+      BATS.set(id, l.filter((x) => !te || !mio || x.seat == null || Math.floor(x.seat / te) !== Math.floor(mio.seat / te)).map((x) => x.player));
+    }
+    cambia = true;
+  }
   if (cambia && S.scr === 'monedero') render();
 }
 const casoImg = (nota) => { const nm = String(nota || '').replace(/ × \d+$/, ''), im = CASOS?.get(nm); return im ? `<img class="mv-img" src="${esc(/^https?:/.test(im) ? im : 'https://community.akamai.steamstatic.com/economy/image/' + im + '/128fx128f')}" alt="" loading="lazy">` : '' };
@@ -1479,7 +1495,7 @@ function movFila(m, saldo) {
   const ico = m.kind === 'caja' ? casoImg(m.d) || `<span class="mv-i c">${IC_BOX}</span>`
     : m.kind === 'batalla' && rivales.length ? `<span class="mv-av">${rivales.map((f) => av(f.id, 'sm')).join('')}</span>`
     : `<span class="mv-i ${tipo === 'apuestas' ? 'b' : tipo === 'cajas' ? 'c' : tipo === 'juegos' ? 'j' : 'p'}">${tipo === 'apuestas' ? IC_TICKET : tipo === 'cajas' ? IC_BOX : tipo === 'juegos' ? IC_DADO : IC_GIFT}</span>`;
-  const det = m.kind === 'batalla' && rivales.length ? `Contra ${rivales.map((f) => esc(f.n)).join(' y ')}` : esc(m.d && m.d !== m.c ? m.d : '');
+  const det = m.kind === 'batalla' && rivales.length ? `Contra ${((l) => (l.length < 2 ? l.join('') : `${l.slice(0, -1).join(', ')} y ${l[l.length - 1]}`))(rivales.map((f) => esc(f.n)))}` : esc(m.d && m.d !== m.c ? m.d : '');
   return `<div class="mv"><time>${DD(m.at)} ${MO(m.at)}<small>${HM(m.at)}</small></time>${ico}<p><b>${esc(m.c)}</b>${det ? `<span>${det}</span>` : ''}</p><span class="a ${m.a > 0 ? 'up' : 'dn'}">${m.a > 0 ? '▲' : '▼'} ${N(Math.abs(m.a))}${coin()}</span>${saldo != null ? `<span class="s">${N(saldo)}</span>` : ''}</div>`;
 }
 // PM, 30-10: "la weekly wheel esta super bugeada, las vueltas y todo". Ahora el angulo sale del reloj en cada

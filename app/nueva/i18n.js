@@ -17,6 +17,14 @@
 })();
 (function () {
   const D = {
+    // Batallas de 3, 4 y 6, 2v2v2, 3v3 y Crazy (03-11, cajas.js, db/072) y Giro Dorado (03-11, cajas.js, db/073)
+    'cara a cara': 'head to head', 'por parejas': 'in pairs', 'jugadores': 'players', 'tres parejas': 'three pairs', 'por tríos': 'teams of three',
+    'Cada uno abre las mismas cajas y el lado ganador se lo lleva todo. En Normal gana quien más saca; en Crazy, quien menos.': 'Everyone opens the same boxes and the winning side takes it all. In Normal the highest total wins; in Crazy, the lowest.',
+    'Cada uno abre las mismas cajas y el lado ganador se lleva todas las skins.': 'Everyone opens the same boxes and the winning side takes every skin.',
+    'Normal: gana el lado que saque más valor.': 'Normal: the side with the highest total wins.', 'Crazy: gana el lado que saque menos valor.': 'Crazy: the side with the lowest total wins.',
+    'Se abre sola en cuanto se llena. En Crazy el lado que saque menos valor se lleva todas las skins.': 'It opens by itself as soon as it fills up. In Crazy the side with the lowest total takes every skin.',
+    'Van empatados': 'All square', 'Elige 1v1, 2v2, 3, 4 o 6 jugadores, 2v2v2 o 3v3': 'Pick 1v1, 2v2, 3, 4 or 6 players, 2v2v2 or 3v3', 'Elige Normal o Crazy': 'Pick Normal or Crazy',
+    'Giro Dorado': 'Golden Spin', 'Sube': 'Up', 'Baja': 'Down', 'Se queda': 'Stays',
     // Combinada con varias del mismo partido (02-11, boleto.js, db/067)
     'Es la misma apuesta dos veces': 'It is the same bet twice', 'Son del mismo mercado: elige solo una': 'Same market: pick only one',
     'Son del mismo jugador: elige solo una': 'Same player: pick only one', 'Van demasiado unidas: no se pueden combinar': 'Too closely linked: they cannot be combined',
@@ -628,6 +636,15 @@
   const ORD = (n) => (/^1[123]$|[04-9]$/.test(n) ? 'th' : /1$/.test(n) ? 'st' : /2$/.test(n) ? 'nd' : 'rd');
   const MES_N = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const R = [
+    // Batallas de 3, 4 y 6, 2v2v2, 3v3 y Crazy y Giro Dorado (03-11, db/072 y db/073): van primero para que las reglas viejas no las trocen
+    [/^Batalla (\d) jugadores · (\d+) rondas?$/, (m, j, n) => `Battle of ${j} players · ${n} round${n === '1' ? '' : 's'}`],
+    [/^Batalla (\S+) · (\d+) rondas?$/, (m, f, n) => `Battle ${f} · ${n} round${n === '1' ? '' : 's'}`],
+    [/^Batalla (\S+)( Crazy)? · ([\d.,]+) contra (.+?) · (\d+) cajas?$/, (m, f, cz, a, r, n) => `Battle ${f}${cz || ''} · ${a} vs ${r.replace(/ y /g, ' and ')} · ${n} box${n === '1' ? '' : 'es'}`],
+    [/^Batalla (\S+)( Crazy)? #(\d+)$/, (m, f, cz, n) => `Battle ${f}${cz || ''} #${n}`],
+    [/^([\d.,]+) contra (.+) · se llevan? las (\d+) skins$/, (m, a, r, n) => `${a} vs ${r.replace(/ y /g, ' and ')} · takes all ${n} skins`],
+    [/^Va ganando (.+) por ([\d.,]+)$/, (m, q, n) => `${q.replace(/ y /g, ' and ')} ${/ y |, /.test(q) ? 'lead' : 'leads'} by ${n}`],
+    [/^Gana (.+) y ([^,]+)$/, (m, a, b) => `${a} and ${b} win`], [/^Contra (.+) y ([^,]+)$/, 'Against $1 and $2'],
+    [/^antes ([\d.,]+)$/, 'was $1'], [/ · Giro Dorado$/, ' · Golden Spin'],
     // retos contra la banca (02-11, db/066): chat y monedero; van primero para que las reglas viejas de retos no las trocen
     [/^Reto ganado a (.+): lo que puso el rival$/, 'Challenge won against $1: what your opponent put in'],
     [/^Reto ganado: (.+?) contra (.+?) · (.+)$/, (m, a, b, r) => `Challenge won: ${a} against ${b.replace(/ y /g, ' and ')} · ${r}`],
