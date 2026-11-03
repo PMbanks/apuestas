@@ -21,7 +21,7 @@
     juego: (() => { const j = lee('jg-juego'); return JUEGOS.some((x) => x[0] === j) ? j : 'crash' })(), stake: Math.max(1, parseInt(lee('jg-stake'), 10) || 100), saldo: 0,
     lado: 'cara', para: null, riesgo: 'medio', color: 'rojo', auto: '', busy: 0, err: null, ocupa: false, rk: { modo: lee('jg-rk-m') === 'mayor' ? 'mayor' : 'neto', periodo: lee('jg-rk-p') === 'semana' ? 'semana' : 'siempre', riv: null, sig: '', n: 0, recarga: false, d: {} }, aviso: '', pd: 0,
     mo: { vistos: parseInt(lee('jg-mo-visto'), 10) || null, lado: 'cara', msg: '' },
-    cr: { ultima: null },
+    cr: { ultima: null, sel: null, abre: [] },
     ru: { ang: 0, spin: null, hecho: null, msg: '' },
     pl: { msg: '', ball: null },
   };
@@ -133,6 +133,15 @@
       S.pd = Date.now(); onClick({ type: 'pointerup', target: b });
     });
     root.addEventListener('pointercancel', () => { S.dn = null });
+    // con raton, pasar por una pastilla de ronda ensena quien jugo; al salir vuelve la ronda elegida
+    root.addEventListener('mouseover', (e) => {
+      const c = e.target.closest && e.target.closest('.jg-hist [data-rid]');
+      if (c && c.matches('.jg-hq') && S.juego === 'crash') crPanel(Number(c.dataset.rid));
+    });
+    root.addEventListener('mouseout', (e) => {
+      const c = e.target.closest && e.target.closest('.jg-hist [data-rid]');
+      if (c && S.juego === 'crash' && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.jg-hist [data-rid]'))) crPanel(S.cr.sel);
+    });
     root.addEventListener('focusout', (e) => {
       if (e.target.matches && e.target.matches('[data-in]')) e.target.value = N(S.stake || 0);
       if (pend) setTimeout(() => { if (pend && !S.busy) pinta() }, 60);
@@ -310,6 +319,24 @@
     S.juego = v; guarda('jg-juego', v); paraLoops(); sigs.v = null;
     pinta(); cargar();
   };
+  // ronda del historial: la detalla bajo las pastillas (tocar de nuevo la cierra). Solo DOM, sin repintar el crash
+  A.crRd = ({ v }) => {
+    const id = Number(v); S.cr.sel = S.cr.sel === id ? null : id;
+    root.querySelectorAll('.jg-hist [data-rid]').forEach((c) => c.classList.toggle('sel', Number(c.dataset.rid) === S.cr.sel));
+    crPanel(S.cr.sel);
+  };
+  A.crRd.libre = true;
+  A.crRr = ({ v }, b) => {
+    const id = Number(v), i = S.cr.abre.indexOf(id);
+    if (i >= 0) S.cr.abre.splice(i, 1); else S.cr.abre.push(id);
+    const w = b.closest('.jg-rw'); if (w) w.classList.toggle('open', i < 0); b.setAttribute('aria-expanded', String(i < 0));
+  };
+  A.crRr.libre = true;
+  function crPanel(id) {
+    const hd = root && root.querySelector('[data-hd]'); if (!hd) return;
+    const x = (D.crash && D.crash.rondas || []).find((r) => r.id === id);
+    const h = crDetalle(x); if (hd.dataset.k !== h) { hd.dataset.k = h; hd.innerHTML = h; if (window.GM_LANG) GM_LANG.traduce(hd) }
+  }
   A.rkP = ({ v }) => { S.rk.periodo = v === 'semana' ? 'semana' : 'siempre'; guarda('jg-rk-p', S.rk.periodo); pintaRank(); cargaRank() };
   A.rkP.libre = true;
   A.rkM = ({ v }) => { S.rk.modo = v === 'mayor' ? 'mayor' : 'neto'; guarda('jg-rk-m', S.rk.modo); pintaRank() };
@@ -497,7 +524,8 @@
         <div class="jg-big num" data-mult>×1,00</div>
         <p class="jg-sub" data-sub></p>
         <div class="jg-cvw"><canvas class="jg-cv" data-cv></canvas><div class="jg-cd" data-cd hidden><svg viewBox="0 0 220 220" aria-hidden="true"><circle class="t" cx="110" cy="110" r="96"/><circle class="p" data-cdp cx="110" cy="110" r="96"/></svg><div class="jg-cdn"><b data-cdn>10</b><small>segundos</small></div></div></div>
-        <div class="jg-hist">${(d.rondas ? d.rondas.map((x) => x.punto) : d.historial).map((p) => `<span class="${clsP(p)}">×${X(p)}</span>`).join('')}</div>
+        <div class="jg-hist">${d.rondas ? d.rondas.map((x) => (x.gente.length ? `<button type="button" class="${clsP(x.punto)} jg-hq ${S.cr.sel === x.id ? 'sel' : ''}" data-jg="crRd" data-v="${x.id}" data-rid="${x.id}">×${X(x.punto)}</button>` : `<span class="${clsP(x.punto)}" data-rid="${x.id}">×${X(x.punto)}</span>`)).join('') : d.historial.map((p) => `<span class="${clsP(p)}">×${X(p)}</span>`).join('')}</div>
+        ${d.rondas ? `<div class="jg-hd" data-hd>${crDetalle(d.rondas.find((x) => x.id === S.cr.sel))}</div>` : ''}
         ${d.apuestas.length ? `<div class="jg-ron"><div class="jg-ron-h"><span class="lab">En la ronda</span><i class="num">${d.apuestas.length}</i></div>${d.apuestas.map((a) => crFila(a, f, d.ronda)).join('')}</div>` : ''}
       </div>
       <div class="jg-side">
@@ -511,7 +539,16 @@
   function rondasHtml(d) {
     const rs = (d.rondas || []).filter((x) => x.gente.length).slice(0, 5);
     if (!rs.length) return '';
-    return `<span class="lab jg-sec">Últimas rondas</span>${rs.map((x) => `<div class="jg-rr ${clsP(x.punto)}"><b class="num">×${X(x.punto)}</b><span class="jg-rav">${x.gente.slice(0, 5).map((g) => `<span class="jg-ra ${g.estado === 'cobrada' ? (g.pago > g.stake ? 'w' : 'e') : 'l'}" title="${esc(nom(g.player))} ${g.estado === 'cobrada' ? '×' + X(g.retiro) + ' +' + N(g.pago) : '▼ ' + N(g.stake)}">${av(g.player)}</span>`).join('')}</span></div>`).join('')}`;
+    return `<span class="lab jg-sec">Últimas rondas</span>${rs.map((x) => `<div class="jg-rw ${S.cr.abre.includes(x.id) ? 'open' : ''}"><button type="button" class="jg-rr ${clsP(x.punto)}" data-jg="crRr" data-v="${x.id}" aria-expanded="${S.cr.abre.includes(x.id)}"><b class="num">×${X(x.punto)}</b><span class="jg-rav">${x.gente.slice(0, 5).map((g) => `<span class="jg-ra ${g.estado === 'cobrada' ? (g.pago > g.stake ? 'w' : 'e') : 'l'}" title="${esc(nom(g.player))} ${g.estado === 'cobrada' ? '×' + X(g.retiro) + ' +' + N(g.pago) : '▼ ' + N(g.stake)}">${av(g.player)}</span>`).join('')}</span></button><div class="jg-rd">${crDetalle(x, true)}</div></div>`).join('')}`;
+  }
+  // quien jugo una ronda y donde retiro: "Johan ×2,31 +131" (verde) o "Tony explotó −100" (rojo). Sin jugadores, solo el maximo
+  function crDetalle(x, sinCab) {
+    if (!x) return '<span class="jg-hd-t">Toca una ronda para ver quién jugó y dónde retiró</span>';
+    const cab = sinCab ? '' : `<b class="num jg-hd-x ${clsP(x.punto)}">×${X(x.punto)}</b>`;
+    if (!x.gente.length) return cab + '<span class="jg-hd-t">Nadie jugó esta ronda</span>';
+    return cab + x.gente.map((g) => (g.estado === 'cobrada'
+      ? `<span class="jg-hp w">${av(g.player)}<em>${esc(nom(g.player))}</em><b class="num">×${X(g.retiro)}</b><i class="num">+${N(g.pago - g.stake)}${coin()}</i></span>`
+      : `<span class="jg-hp l">${av(g.player)}<em>${esc(nom(g.player))}</em><b>explotó</b><i class="num">−${N(g.stake)}${coin()}</i></span>`)).join('');
   }
   // una linea de "En la ronda": avatar, nombre, apuesta, ×, lo que gana (en vivo mientras sigue dentro) y el estado
   function crFila(a, f, ronda) {

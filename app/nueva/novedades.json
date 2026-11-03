@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "crash-quien-jugo-0311",
+   "fecha": "2026-11-03",
+   "hora": "23:26",
+   "titulo": "Crash: quién jugó cada ronda",
+   "texto": "En Juegos > Crash, toca (o pasa el ratón por) una ronda de las últimas y ves quién jugó y dónde retiró cada uno, con lo que ganó o perdió. Las rondas sin nadie solo enseñan el máximo.",
+   "titulo_en": "Crash: who played each round",
+   "texto_en": "In Games > Crash, tap (or hover) one of the latest rounds to see who played and where each one cashed out, with what they won or lost. Rounds nobody played only show the max.",
+   "img": "novedades/crash-quien-jugo.webp",
+   "ir": "juegos"
+  },
+  {
    "id": "ultimos-drops-0311",
    "fecha": "2026-11-03",
    "hora": "23:00",
