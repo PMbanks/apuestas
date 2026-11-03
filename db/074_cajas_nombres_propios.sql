@@ -1,0 +1,64 @@
+-- 074 (03-11). Cajas de lujo con nombre y arte propios. db/055b las creo con los nombres de otra web traducidos y sus imagenes copiadas (img/lujo/cajas/ed-*.webp).
+-- PM: "usa tus propios nombres y tus propias imagenes". Aqui cambian SOLO name e image de las 59 cajas; los ids, los objetos, los precios y las probabilidades (tickets) no se tocan.
+-- Las 24 cajas viejas (lujo-gaming ... lujo-cartas) vuelven al arte que ya era nuestro (img/lujo/cajas/<nombre>.webp); las 35 lujo-ed-* llevan arte nuevo dibujado por
+-- sync/lujo-cajas.py con las fotos de sus objetos (img/lujo/cajas/propia-<nombre>.webp). Va despues de 055b. Se puede ejecutar varias veces. Prueba: 074_prueba.sql.
+
+update cs_cases set name = 'Taller del gamer', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/gaming.webp' where id = 'lujo-gaming';
+update cs_cases set name = 'Gadgets de bolsillo', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/tecnologia-basica.webp' where id = 'lujo-tecnologia-basica';
+update cs_cases set name = 'Lote tecnológico', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/tecnologia.webp' where id = 'lujo-tecnologia';
+update cs_cases set name = 'Huerto digital', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/tecnologia-2026.webp' where id = 'lujo-tecnologia-2026';
+update cs_cases set name = 'Ojo de águila', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/camaras.webp' where id = 'lujo-camaras';
+update cs_cases set name = 'Relojes de diario', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/relojes-calle.webp' where id = 'lujo-relojes-calle';
+update cs_cases set name = 'Muñeca elegante', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/relojes-2026.webp' where id = 'lujo-relojes-2026';
+update cs_cases set name = 'La corona', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/relojes.webp' where id = 'lujo-relojes';
+update cs_cases set name = 'Piedras preciosas', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/joyas.webp' where id = 'lujo-joyas';
+update cs_cases set name = 'Diamantes de escaparate', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/moda-joyas.webp' where id = 'lujo-moda-joyas';
+update cs_cases set name = 'Cajón de zapatillas', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/zapatillas-basicas.webp' where id = 'lujo-zapatillas-basicas';
+update cs_cases set name = 'Museo del calzado', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/zapatillas.webp' where id = 'lujo-zapatillas';
+update cs_cases set name = 'Pisando fuerte', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/zapatillas-2026.webp' where id = 'lujo-zapatillas-2026';
+update cs_cases set name = 'Abrigos de invierno', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/moda-calle.webp' where id = 'lujo-moda-calle';
+update cs_cases set name = 'Armario urbano', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/streetwear.webp' where id = 'lujo-streetwear';
+update cs_cases set name = 'Bolsos de autor', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/bolsos.webp' where id = 'lujo-bolsos';
+update cs_cases set name = 'Fragancias raras', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/perfumes.webp' where id = 'lujo-perfumes';
+update cs_cases set name = 'Dos ruedas', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/motos.webp' where id = 'lujo-motos';
+update cs_cases set name = 'Concesionario', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/coches.webp' where id = 'lujo-coches';
+update cs_cases set name = 'Salón del automóvil', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/motor.webp' where id = 'lujo-motor';
+update cs_cases set name = 'Gran viaje', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/viajes.webp' where id = 'lujo-viajes';
+update cs_cases set name = 'Lingotes', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/oro.webp' where id = 'lujo-oro';
+update cs_cases set name = 'Monedero cripto', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/cripto.webp' where id = 'lujo-cripto';
+update cs_cases set name = 'Coleccionista de cartas', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/cartas.webp' where id = 'lujo-cartas';
+update cs_cases set name = 'Duelo de consolas', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-xbox-vs-playstation.webp' where id = 'lujo-ed-xbox-vs-playstation';
+update cs_cases set name = 'Portátiles y consolas', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-5-console-legends.webp' where id = 'lujo-ed-5-console-legends';
+update cs_cases set name = 'Portátiles gaming', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-10-gaming.webp' where id = 'lujo-ed-10-gaming';
+update cs_cases set name = 'Gaming a todo gas', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-full-send-gaming.webp' where id = 'lujo-ed-full-send-gaming';
+update cs_cases set name = 'Puesto de mando', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-pro-setup.webp' where id = 'lujo-ed-pro-setup';
+update cs_cases set name = 'Directo desde casa', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-streamer-setup.webp' where id = 'lujo-ed-streamer-setup';
+update cs_cases set name = 'Cuaderno de aluminio', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-only-mac.webp' where id = 'lujo-ed-only-mac';
+update cs_cases set name = 'Cine en casa', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-cinematic-view.webp' where id = 'lujo-ed-cinematic-view';
+update cs_cases set name = 'Alta relojería', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-1-patek.webp' where id = 'lujo-ed-1-patek';
+update cs_cases set name = 'Cronómetros de élite', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-master-of-time.webp' where id = 'lujo-ed-master-of-time';
+update cs_cases set name = 'Buzos y cronógrafos', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-rado-vs-tudor.webp' where id = 'lujo-ed-rado-vs-tudor';
+update cs_cases set name = 'Joyero parisino', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-cartier-treasure.webp' where id = 'lujo-ed-cartier-treasure';
+update cs_cases set name = 'Charms y plata', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-pandora.webp' where id = 'lujo-ed-pandora';
+update cs_cases set name = 'Barroco italiano', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-1-versace.webp' where id = 'lujo-ed-1-versace';
+update cs_cases set name = 'Maletero de lujo', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-1-louis-vuitton.webp' where id = 'lujo-ed-1-louis-vuitton';
+update cs_cases set name = 'Tweed y perlas', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-chanel-prestige.webp' where id = 'lujo-ed-chanel-prestige';
+update cs_cases set name = 'Bolsos de colección', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-birkin-addict.webp' where id = 'lujo-ed-birkin-addict';
+update cs_cases set name = 'Premio en bolsos', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-100-bags.webp' where id = 'lujo-ed-100-bags';
+update cs_cases set name = 'Chándal y retro', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-nike.webp' where id = 'lujo-ed-nike';
+update cs_cases set name = 'Equipo de baloncesto', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-jordan.webp' where id = 'lujo-ed-jordan';
+update cs_cases set name = 'Calzado limitado', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-street-soles.webp' where id = 'lujo-ed-street-soles';
+update cs_cases set name = 'Aparcamiento premium', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-1-cars.webp' where id = 'lujo-ed-1-cars';
+update cs_cases set name = 'Estrella de tres puntas', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-1-mercedes.webp' where id = 'lujo-ed-1-mercedes';
+update cs_cases set name = 'Acero y velocidad', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-german-engine.webp' where id = 'lujo-ed-german-engine';
+update cs_cases set name = 'Clásicos de garaje', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-heritage-motors.webp' where id = 'lujo-ed-heritage-motors';
+update cs_cases set name = 'Flota eléctrica', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-tesla.webp' where id = 'lujo-ed-tesla';
+update cs_cases set name = 'Músculo americano', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-american-driver.webp' where id = 'lujo-ed-american-driver';
+update cs_cases set name = 'Puerto deportivo', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-yacht-club.webp' where id = 'lujo-ed-yacht-club';
+update cs_cases set name = 'Cochera de millonario', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-luxury-garage.webp' where id = 'lujo-ed-luxury-garage';
+update cs_cases set name = 'Fiebre del oro', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-gold-digger.webp' where id = 'lujo-ed-gold-digger';
+update cs_cases set name = 'Cofre del tesoro', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-fortune-box.webp' where id = 'lujo-ed-fortune-box';
+update cs_cases set name = 'Mochila de entrenador', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-poke-starter.webp' where id = 'lujo-ed-poke-starter';
+update cs_cases set name = 'Sellados Pokémon', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-5-pokemon.webp' where id = 'lujo-ed-5-pokemon';
+update cs_cases set name = 'Sobres de coleccionista', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-legendary-pulls.webp' where id = 'lujo-ed-legendary-pulls';
+update cs_cases set name = 'Cromos deportivos', image = 'https://pmbanks.github.io/apuestas/img/lujo/cajas/propia-panini.webp' where id = 'lujo-ed-panini';
