@@ -566,6 +566,7 @@
     // 070 (03-11): la paga del lunes se reclama a mano en Recompensas
     'No te queda saldo para apostar. Reclama la paga del lunes en Recompensas.': 'You have no balance left to bet. Claim the Monday payday in Rewards.',
     '): no puedes apostar hasta volver a tener saldo. Reclama la paga del lunes en Recompensas.': '): you cannot bet until you have a balance again. Claim the Monday payday in Rewards.',
+    'Los mejores drops': 'Best drops', 'Mejores': 'Best',
     'Hecha esta semana': 'Done this week', 'Sin saldo: reclama la paga del lunes en Recompensas': 'No balance: claim the Monday payday in Rewards',
     // Ficha de partido pro (01-11, fichapro.js)
     'Árbitro': 'Referee', 'Asistencia': 'Attendance', 'Hora local': 'Local time', 'Goles y tarjetas': 'Goals and cards', 'Titulares y cambios': 'Starters and subs', 'Suplentes': 'Substitutes',

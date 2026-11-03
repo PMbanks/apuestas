@@ -192,6 +192,15 @@
       return (data || []).map((r) => ({ id: r.id, item: r.item_id, value: r.value, case: r.case_id, battle: r.battle_id, by: r.opened_by, at: r.created_at }));
     } catch { return null }
   }
+  // los 7 de mas valor de siempre (cs_inv entera: cajas, batallas, vendidas o no)
+  async function cargaMejores() {
+    try {
+      const { data, error } = await ctx.db.from('cs_inv').select('id,item_id,value,case_id,battle_id,opened_by,player,created_at')
+        .order('value', { ascending: false }).order('id', { ascending: true }).limit(FD_N);
+      if (error) throw error;
+      return (data || []).map((r) => ({ id: r.id, item: r.item_id, value: r.value, case: r.case_id, battle: r.battle_id, by: r.opened_by || r.player, at: r.created_at }));
+    } catch { return null }
+  }
   async function cargaMias(quien) {
     try {
       const { data, error } = await ctx.db.from('cs_owned').select('id,case_id,source,created_at').eq('player', quien).eq('status', 'own').order('created_at', { ascending: true });
@@ -208,9 +217,9 @@
         // PM 01-11 "si, abrelas": Lujo abierta otra vez con las 16 cajas nuevas (db/046). Cosmeticos sigue fuera (Mercado en mantenimiento)
         if (!D.cases) D.cases = ((await rpc('cs_cases')) || []).filter((c) => catDe(c) !== 'cosmeticos');
         const st = await rpc('cs_state', { p_player: S.quien || ctx.me });
-        const bu = await cargaBuenos();
-        await asegura([...st.inv, ...st.feed, ...(bu || [])].map((i) => i.item));
-        D.st = st; D.buenos = bu; D.err = null;
+        const [bu, mj] = await Promise.all([cargaBuenos(), cargaMejores()]);
+        await asegura([...st.inv, ...st.feed, ...(bu || []), ...(mj || [])].map((i) => i.item));
+        D.st = st; D.buenos = bu; D.mejores = mj || D.mejores || []; D.err = null;
         await cargaMias(ctx.me);
         if (S.quien && S.quien !== ctx.me) await cargaMias(S.quien);
         if (S.caja) await cargaCaja(S.caja);
@@ -537,8 +546,10 @@
   // El mas viejo a la izquierda y el nuevo entra por la derecha. La tira es un nodo fijo (FD.el) que la pantalla vuelve a colgar en cada
   // repintado, asi que la animacion no se corta. Llega en vivo: abrir una caja toca pulse, la app recarga y cargar() llama a fdSync().
   const FD_N = 7, FD_ESPERA = 3600;   // lo que saca otro espera a que acabe su ruleta en directo (cajas-vivo.js), para no chafarsela
-  const FD = { el: null, list: [], cola: [], t: 0, mov: false, sx: 0 };
-  const fdObjetivo = () => (D.st ? (D.buenos || D.st.feed).slice(0, FD_N).reverse() : []);
+  // PM 03-11: "en Latest drops haz que se pueda cambiar por Best drops tambien". Mejores = los 7 de mas valor de siempre (cajas y batallas,
+  // cualquier rareza), del mas caro al mas barato; se rehace cuando sale uno que supera al 7o. La eleccion se guarda en este aparato.
+  const FD = { el: null, list: [], cola: [], t: 0, mov: false, sx: 0, modo: lee('cj-fd-modo') === 'best' ? 'best' : 'latest' };
+  const fdObjetivo = () => (!D.st ? [] : FD.modo === 'best' ? (D.mejores || []).slice(0, FD_N) : (D.buenos || D.st.feed).slice(0, FD_N).reverse());
   function fdTile(i) {
     const x = item(i.item), n = nombre(x), c = caja(i.case), top = n.top || (esLujo(x.id) || catDe(c) === 'lujo' ? c.name || '' : '');
     return `<div class="cj-fd" data-id="${esc(i.id)}" style="--c:${color(x.rarity)}" tabindex="0"><span class="cj-fd-img">${pic(x.image, 256)}</span>
@@ -560,7 +571,10 @@
     k.classList.toggle('ver', on);
   }
   document.addEventListener('click', (e) => { if (FD.el && !FD.el.contains(e.target)) FD.el.querySelectorAll('.cj-fd.ver').forEach((x) => x.classList.remove('ver')) });
-  function vFeed() { return fdObjetivo().length ? '<section class="cj-feed-s"><header class="cj-sec-h"><h3>Lo último que ha salido</h3></header><div data-cjfeed></div></section>' : '' }
+  function vFeed() {
+    const hay = D.st && ((D.buenos || D.st.feed).length || (D.mejores || []).length); if (!hay) return '';
+    return `<section class="cj-feed-s ${FD.modo}"><header class="cj-sec-h"><h3>${FD.modo === 'best' ? 'Los mejores drops' : 'Lo último que ha salido'}</h3>${seg('fdmodo', [['latest', 'Últimos'], ['best', 'Mejores']], FD.modo, 'sm cj-fd-modo')}</header><div data-cjfeed></div></section>`;
+  }
   // despues de cada repintado: la tira de siempre en su hueco (y en el sitio del scroll en el que estaba)
   function ponFeed() {
     const h = root && root.querySelector('[data-cjfeed]'); if (!h) return;
@@ -575,6 +589,14 @@
   // tras cada carga: lo que ha entrado nuevo se pone en cola y entra de uno en uno; si no cuadra (o es la primera vez), se pinta tal cual
   function fdSync() {
     const obj = fdObjetivo(), ids = obj.map((i) => i.id).join();
+    // Mejores: sin tira viva; si entra uno nuevo en el top 7 se repinta y el nuevo brilla
+    if (FD.modo === 'best') {
+      if (FD.list.map((i) => i.id).join() === ids) return;
+      const antes = new Set(FD.list.map((i) => i.id)), habia = FD.list.length;
+      FD.cola = []; clearTimeout(FD.t); fdLlena(obj);
+      if (habia && FD.el) for (const i of obj) if (!antes.has(i.id)) { const k = FD.el.querySelector(`.cj-fd[data-id="${CSS.escape(String(i.id))}"]`); if (k) { k.classList.add('nuevo'); setTimeout(() => k.classList.remove('nuevo'), 2600) } }
+      return;
+    }
     if (!FD.list.length) { FD.cola = []; clearTimeout(FD.t); return fdLlena(obj) }
     const ya = new Set([...FD.list, ...FD.cola.map((q) => q.i)].map((i) => i.id)), nuevos = obj.filter((i) => !ya.has(i.id));
     const esperado = [...FD.list, ...FD.cola.map((q) => q.i), ...nuevos].slice(-FD_N).map((i) => i.id).join();
@@ -1062,6 +1084,7 @@
       case 'sinfiltro': S.fR = null; S.fC = null; return filtra();
       case 'mas': S.invN += INV_PASO; return pinta();
       case 'esptodo': S.espTodo = v; return pinta();
+      case 'fdmodo': if (v === FD.modo) return; FD.modo = v === 'best' ? 'best' : 'latest'; guarda('cj-fd-modo', FD.modo); FD.cola = []; clearTimeout(FD.t); FD.list = []; return pinta();
       case 'pag': {
         S.pag = Math.max(0, +v || 0); pinta();
         const l = root.querySelector('[data-hechas]'), sc = root.closest('.scr');
