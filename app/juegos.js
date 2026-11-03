@@ -1,4 +1,4 @@
-// Juegos de Gambling Master: cara o cruz, crash, ruleta, blackjack y plinko, con V-Bucks.
+// Juegos de Gambling Master: cara o cruz, crash, ruleta, blackjack, minas y carrera de caballos, con V-Bucks (plinko fuera, PM 03-11).
 // El azar, las cartas, el punto de explosion y el dinero los pone la base (db/010_juegos.sql): aqui solo se pide
 // ("apuesto esto", "retiro ya", "pido carta") y se pinta lo que devuelve. Nada de esto se decide en el navegador.
 // La app lo monta asi (ver JUEGOS-INTEGRAR.md): R.juegos = () => GM_JUEGOS.html(ctx) y, justo despues de pintar,
@@ -7,28 +7,27 @@
 // solo corren mientras hay una ronda o una animacion y la pantalla esta a la vista.
 'use strict';
 (function () {
-  const JUEGOS = [['moneda', 'Cara o cruz'], ['crash', 'Crash'], ['blackjack', 'Blackjack']];   // PM, 30-10: ruleta y plinko fuera (su codigo sigue aqui, sin pestana)
-  const CON_RANKING = ['moneda', 'crash', 'blackjack'];                                   // juegos con ranking (db/017b)
-  const FN = { moneda: 'moneda_estado', crash: 'crash_estado', ruleta: 'ruleta_estado', blackjack: null, plinko: 'plinko_estado' };
+  // PM 03-11: fuera plinko; vuelve la ruleta, ahora compartida (ruleta.js), y llegan Minas (minas.js) y la carrera de caballos (carrera.js), db/073
+  const JUEGOS = [['moneda', 'Cara o cruz'], ['crash', 'Crash'], ['ruleta', 'Ruleta'], ['blackjack', 'Blackjack'], ['minas', 'Minas'], ['carrera', 'Caballos']];
+  const CON_RANKING = ['moneda', 'crash', 'ruleta', 'blackjack', 'minas', 'carrera'];       // juegos con ranking (db/017b, db/073)
+  const FN = { moneda: 'moneda_estado', crash: 'crash_estado', ruleta: null, blackjack: null, minas: null, carrera: null };
+  // los juegos que se pintan solos en su hueco (como la mesa de blackjack): su modulo y su objeto global
+  const MOD = { ruleta: 'GM_RULETA', minas: 'GM_MINAS', carrera: 'GM_CARRERA' };
+  const mod = (j) => (MOD[j] && window[MOD[j]]) || null;
   const SUIT = ['♠', '♥', '♦', '♣'], RANK = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-  const ORDEN = [0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7];       // casillas de la ruleta, en el sentido del reloj desde arriba
-  const SPIN = 6;                                                          // segundos de giro (la base paga a los 7)
-  const DX = 26, DY = 24, TOP = 26, FILAS = 12;                            // geometria del plinko
 
   /* ---------- estado ---------- */
   let ctx = null, root = null;
   const S = {
     juego: (() => { const j = lee('jg-juego'); return JUEGOS.some((x) => x[0] === j) ? j : 'crash' })(), stake: Math.max(1, parseInt(lee('jg-stake'), 10) || 100), saldo: 0,
-    lado: 'cara', para: null, riesgo: 'medio', color: 'rojo', auto: '', busy: 0, err: null, ocupa: false, rk: { modo: lee('jg-rk-m') === 'mayor' ? 'mayor' : 'neto', periodo: lee('jg-rk-p') === 'semana' ? 'semana' : 'siempre', riv: null, sig: '', n: 0, recarga: false, d: {} }, aviso: '', pd: 0,
+    lado: 'cara', para: null, auto: '', busy: 0, err: null, ocupa: false, rk: { modo: lee('jg-rk-m') === 'mayor' ? 'mayor' : 'neto', periodo: lee('jg-rk-p') === 'semana' ? 'semana' : 'siempre', riv: null, sig: '', n: 0, recarga: false, d: {} }, aviso: '', pd: 0,
     mo: { vistos: parseInt(lee('jg-mo-visto'), 10) || null, lado: 'cara', msg: '' },
     cr: { ultima: null, sel: null, abre: [] },
-    ru: { ang: 0, spin: null, hecho: null, msg: '' },
-    pl: { msg: '', ball: null },
   };
-  const D = { moneda: null, crash: null, ruleta: null, blackjack: null, plinko: null, res: null };
+  const D = { moneda: null, crash: null, ruleta: null, blackjack: null, minas: null, carrera: null, res: null };
   const T = { off: 0 };
   let ultima = 0, cargaId = 0, pend = false, refs = {}, sigs = {};
-  let tCarga = 0, crRaf = 0, crPoll = 0, ruRaf = 0, ruPoll = 0, ruTimer = 0;
+  let tCarga = 0, crRaf = 0, crPoll = 0;
 
   /* ---------- utilidades ---------- */
   function lee(k) { try { return localStorage.getItem(k) } catch { return null } }
@@ -95,8 +94,8 @@
   }
   function firma() {
     const d = D[S.juego] || {}, r = D.res || {};
-    const base = [S.juego, S.err, r.crash && r.crash.id, r.ruleta && r.ruleta.estado, r.moneda, r.bj, S.lado, S.para, S.riesgo, S.color, S.mo.lado, S.mo.msg, S.ru.msg, S.pl.msg];
-    return JSON.stringify([base, d, S.juego === 'crash' ? crFase() : S.juego === 'ruleta' ? ruFase() : 0], (k, v) => (k === 'now' ? undefined : v));
+    const base = [S.juego, S.err, r.crash && r.crash.id, r.moneda, r.bj, S.lado, S.para, S.mo.lado, S.mo.msg];
+    return JSON.stringify([base, MOD[S.juego] ? 0 : d, S.juego === 'crash' ? crFase() : 0], (k, v) => (k === 'now' ? undefined : v));
   }
   // lo propio de cada juego al llegar datos nuevos
   function aplica(j) {
@@ -106,7 +105,7 @@
       const nuevo = rec.filter((x) => x.id > S.mo.vistos && (x.creador === ctx.me || x.rival === ctx.me)).sort((a, b) => a.id - b.id).pop();
       if (max > S.mo.vistos) { S.mo.vistos = max; guarda('jg-mo-visto', max) }
       if (nuevo && nuevo.creador === ctx.me && ahora() - ms(nuevo.cerrado) < 60000) { const gane = nuevo.ganador === ctx.me; moLanza(nuevo.salio, { gane, monto: gane ? nuevo.stake * 2 : nuevo.stake, rival: nuevo.rival, acepto: false }, false) }
-    } else if (j === 'ruleta') ruAplica();
+    }
   }
 
   /* ---------- armazon ---------- */
@@ -172,28 +171,28 @@
   }
   function tabs() {
     const r = D.res || {};
-    const pt = { crash: !!r.crash, ruleta: !!r.ruleta, blackjack: !!r.bj };
+    const pt = { crash: !!r.crash, ruleta: !!r.ruleta, blackjack: !!r.bj, minas: !!r.minas, carrera: !!r.carrera };
     return JUEGOS.map(([k, n]) => `<button class="jg-tab ${S.juego === k ? 'on' : ''}" data-jg="tab" data-v="${k}">${n}${k === 'moneda' ? `<b class="${r.moneda > 0 ? '' : 'off'}">${r.moneda || 0}</b>` : `<i class="${pt[k] ? '' : 'off'}"></i>`}</button>`).join('');
   }
   function vista() {
     const hs = stripHtml(), hd = duelHtml();
     S.rk.sig = hs + hd;
-    return hs + { moneda: vMoneda, crash: vCrash, ruleta: vRuleta, blackjack: vBj, plinko: vPlinko }[S.juego]().replace(/<\/section>\s*$/, () => hd + '</section>');
+    return hs + (MOD[S.juego] ? vMod : { moneda: vMoneda, crash: vCrash, blackjack: vBj }[S.juego])().replace(/<\/section>\s*$/, () => hd + '</section>');
   }
   function post() {
     if (!root) return;
     refs = {
       mult: root.querySelector('[data-mult]'), sub: root.querySelector('[data-sub]'), cv: root.querySelector('[data-cv]'), go: root.querySelector('[data-go]'), cd: root.querySelector('[data-cd]'),
-      coin: root.querySelector('[data-coin]'), rot: root.querySelector('[data-rot]'), hub: root.querySelector('[data-hub]'), ball: root.querySelector('[data-ball]'),
+      coin: root.querySelector('[data-coin]'),
     };
     root.querySelectorAll('[data-saldo]').forEach((e) => (e.textContent = N(S.saldo)));
     if (S.juego === 'moneda' && refs.coin) refs.coin.style.transform = moPose(S.mo.lado === 'cara' ? 0 : 180);
     if (S.juego === 'crash') { crFilasFx(); crFrame(true); crLoop() }
-    if (S.juego === 'ruleta') { ruPos(); ruLoop() }
     if (S.juego === 'blackjack') bjPost();
+    if (MOD[S.juego]) modPost();
   }
-  function paraLoops() { cancelAnimationFrame(crRaf); clearTimeout(crPoll); cancelAnimationFrame(ruRaf); clearTimeout(ruPoll); clearTimeout(ruTimer); crRaf = crPoll = ruRaf = ruPoll = ruTimer = 0 }
-  function reanuda() { if (S.juego === 'crash') crLoop(); if (S.juego === 'ruleta') ruLoop() }
+  function paraLoops() { cancelAnimationFrame(crRaf); clearTimeout(crPoll); crRaf = crPoll = 0 }
+  function reanuda() { if (S.juego === 'crash') crLoop() }
 
   /* ---------- ranking (modelo F "Tira y duelo", PM 01-11): una tira de caras con su cifra ENCIMA del juego y, a la derecha (en movil debajo),
      "Tu posicion" y el duelo contra el rival que se elige tocando su cara. La base lo da ya agregado (db/017b). Se repinta SOLO esta parte
@@ -316,6 +315,7 @@
   A.tab = ({ v }) => {
     if (S.juego === v) return;
     if (S.juego === 'blackjack' && window.GM_BJMESA) GM_BJMESA.para();
+    if (mod(S.juego)) mod(S.juego).para();
     S.juego = v; guarda('jg-juego', v); paraLoops(); sigs.v = null;
     pinta(); cargar();
   };
@@ -790,136 +790,6 @@
   A.crGo.libre = false;
 
   /* =====================================================================
-     RULETA
-     ===================================================================== */
-  const colorDe = (n) => (n === 0 ? 'verde' : n <= 7 ? 'rojo' : 'negro');
-  const MULT = { rojo: 2, negro: 2, verde: 14 };
-  function ruFase() {
-    const r = D.ruleta && D.ruleta.ronda;
-    if (!r) return 'idle';
-    if (r.estado === 'pagada') return 'pagada';
-    if (r.estado === 'giro') return 'giro';
-    return ahora() < ms(r.cierra) ? 'apuestas' : 'cerrando';
-  }
-  const ruRest = (n) => -ORDEN.indexOf(n) * 24;
-  function ruedaSvg() {
-    const R = 150, r0 = 96, c = 160, pt = (a, rad) => [(c + rad * Math.sin((a * Math.PI) / 180)).toFixed(2), (c - rad * Math.cos((a * Math.PI) / 180)).toFixed(2)];
-    let g = '';
-    ORDEN.forEach((n, i) => {
-      const [x0, y0] = pt(i * 24 - 12, R), [x1, y1] = pt(i * 24 + 12, R), [x2, y2] = pt(i * 24 + 12, r0), [x3, y3] = pt(i * 24 - 12, r0), [tx, ty] = pt(i * 24, (R + r0) / 2 + 3);
-      g += `<path class="jg-w ${colorDe(n)}" d="M${x0} ${y0}A${R} ${R} 0 0 1 ${x1} ${y1}L${x2} ${y2}A${r0} ${r0} 0 0 0 ${x3} ${y3}Z"/><text class="jg-wn ${colorDe(n)}" x="${tx}" y="${ty}" transform="rotate(${i * 24} ${tx} ${ty})" text-anchor="middle" dominant-baseline="central">${n}</text>`;
-    });
-    return `<svg class="jg-wheel" viewBox="0 0 320 324" role="img" aria-label="Ruleta"><g data-rot>${g}</g><circle class="jg-core" cx="160" cy="160" r="88"/><polygon class="jg-ptr" points="150,0 170,0 160,20"/><text class="jg-hub" data-hub x="160" y="172" text-anchor="middle" dominant-baseline="central"></text></svg>`;
-  }
-  function vRuleta() {
-    const d = D.ruleta || { ronda: null, apuestas: [], historial: [] };
-    const f = ruFase(), r = d.ronda;
-    const pool = (c) => d.apuestas.filter((a) => a.color === c);
-    const fin = f === 'giro' || f === 'pagada';
-    const hist = d.historial.filter((h) => !(r && h.id === r.id && S.ru.spin)).slice(0, 15);
-    const sub = S.ru.msg || (f === 'idle' || f === 'pagada' ? 'Apuesta para abrir una ronda' : '');
-    return `<section class="jg-g">
-      <div class="jg-stage jg-ru">
-        ${ruedaSvg()}
-        <p class="jg-sub" data-sub>${esc(sub)}</p>
-        <div class="jg-hist ru">${hist.map((h) => `<span class="${colorDe(h.n)}">${h.n}</span>`).join('')}</div>
-      </div>
-      <div class="jg-side">
-        <span class="lab">Color</span>
-        <div class="jg-cols">${['rojo', 'negro', 'verde'].map((c) => {
-          const ps = pool(c), tot = ps.reduce((a, x) => a + x.stake, 0), mi = ps.some((x) => x.player === ctx.me);
-          return `<button class="jg-col ${c} ${S.color === c ? 'on' : ''}" data-jg="color" data-v="${c}"><i></i><span class="jg-col-n">${c[0].toUpperCase() + c.slice(1)}<em>×${MULT[c]}</em></span><span class="jg-col-p">${[...new Set(ps.map((x) => x.player))].map((u) => av(u)).join('')}</span><span class="jg-col-t num ${mi ? 'mi' : ''}">${tot ? N(tot) : ''}</span></button>`;
-        }).join('')}</div>
-        <div class="jg-gap">${apuesta()}</div>
-        <button class="go" data-jg="ruGo" data-go ${f === 'giro' || f === 'cerrando' ? 'disabled' : ''}>${f === 'giro' || f === 'cerrando' ? 'Girando' : `Apostar <span data-go-n>${N(S.stake)}</span> a ${S.color}`}</button>
-      </div></section>`;
-  }
-  function ruPos() {
-    if (!refs.rot) return;
-    const sp = S.ru.spin;
-    if (!sp) {
-      const r = D.ruleta && D.ruleta.ronda;
-      if (r && r.n != null && (r.estado === 'pagada' || S.ru.hecho === r.id)) S.ru.ang = ruRest(r.n);
-      refs.rot.setAttribute('transform', `rotate(${S.ru.ang} 160 160)`);
-    }
-    ruHub();
-  }
-  // el centro de la rueda: la cuenta atras mientras se apuesta y el numero que ha salido
-  function ruHub() {
-    if (!refs.hub) return;
-    const f = ruFase(), r = D.ruleta && D.ruleta.ronda;
-    let t = '', c = '';
-    if (f === 'apuestas') { t = String(Math.max(0, Math.ceil((ms(r.cierra) - ahora()) / 1000))); c = 'cd' }
-    else if ((f === 'giro' && !S.ru.spin) || f === 'pagada') { t = String(r.n); c = colorDe(r.n) }
-    else if (f === 'giro') t = '';
-    if (refs.hub.textContent !== t) refs.hub.textContent = t;
-    const cl = 'jg-hub ' + c; if (refs.hub.getAttribute('class') !== cl) refs.hub.setAttribute('class', cl);
-  }
-  function ruAplica() {
-    const r = D.ruleta.ronda, f = ruFase();
-    if (!r) return;
-    if (f === 'giro' && S.ru.hecho !== r.id && !S.ru.spin) ruGira(r);
-    else if (f === 'pagada' && S.ru.hecho !== r.id && !S.ru.spin) { S.ru.hecho = r.id; S.ru.msg = ruResultado(r) }
-    if (f === 'apuestas') S.ru.msg = '';
-  }
-  function ruResultado(r) {
-    const mias = D.ruleta.apuestas.filter((a) => a.player === ctx.me);
-    const base = `Salió el ${r.n}, ${r.color}`;
-    if (!mias.length) return base;
-    const puso = mias.reduce((a, x) => a + x.stake, 0), cobra = mias.filter((a) => a.color === r.color).reduce((a, x) => a + x.stake * MULT[x.color], 0);
-    return cobra ? `${base} · cobras ${N(cobra)}` : `${base} · pierdes ${N(puso)}`;
-  }
-  function ruGira(r) {
-    const el = Math.max(0, (ahora() - ms(r.cierra)) / 1000);
-    if (quieto() || el >= SPIN) { S.ru.hecho = r.id; S.ru.ang = ruRest(r.n); S.ru.msg = ruResultado(r); return }
-    const from = S.ru.ang, rest = ruRest(r.n), extra = (((rest - from) % 360) + 360) % 360;
-    S.ru.spin = { id: r.id, t0: Date.now() - el * 1000, from, to: from + 5 * 360 + extra };
-    S.busy++; S.ru.msg = '';
-    ruRaf = requestAnimationFrame(ruFrame);
-  }
-  function ruFrame() {
-    ruRaf = 0;
-    const sp = S.ru.spin; if (!sp) return;
-    const conectado = root && root.isConnected;
-    const s = Math.min(1, (Date.now() - sp.t0) / (SPIN * 1000)), e = 1 - Math.pow(1 - s, 4), ang = sp.from + (sp.to - sp.from) * e;
-    if (!conectado && s < 1) { setTimeout(ruFrame, 400); return }                        // fuera de pantalla: sin animar, solo espera a que acabe el giro
-    if (!refs.rot || !refs.rot.isConnected) { refs.rot = root.querySelector('[data-rot]'); refs.hub = root.querySelector('[data-hub]'); ruHub() }
-    if (refs.rot) refs.rot.setAttribute('transform', `rotate(${ang.toFixed(2)} 160 160)`);
-    if (s < 1) { ruRaf = requestAnimationFrame(ruFrame); return }
-    S.ru.ang = sp.to % 360; S.ru.hecho = sp.id; S.ru.spin = null;
-    const r = D.ruleta.ronda; S.ru.msg = ruResultado(r);
-    setT(root.querySelector('[data-sub]'), S.ru.msg);
-    refs.hub = root.querySelector('[data-hub]'); ruHub();
-    sigs.v = null; libera();
-  }
-  function ruLoop() {
-    clearTimeout(ruPoll); clearTimeout(ruTimer); ruPoll = ruTimer = 0;
-    if (!visible() || S.juego !== 'ruleta' || !D.ruleta) return;
-    const f = ruFase(), r = D.ruleta.ronda;
-    if (f === 'apuestas') {
-      const tick = () => { ruTimer = 0; if (!visible() || S.juego !== 'ruleta' || ruFase() !== 'apuestas') return; ruHub(); ruTimer = setTimeout(tick, 250) };
-      ruTimer = setTimeout(tick, 250);
-      ruPoll = setTimeout(ruSondeo, Math.max(250, ms(r.cierra) - ahora() + 350));
-    } else if (f === 'cerrando') ruPoll = setTimeout(ruSondeo, 400);
-    else if (f === 'giro') ruPoll = setTimeout(ruSondeo, Math.max(300, ms(r.cierra) + 7300 - ahora()));       // el pago llega a los 7 s
-  }
-  async function ruSondeo() {
-    ruPoll = 0;
-    if (!visible() || S.juego !== 'ruleta') return;
-    try { D.ruleta = await rpc('ruleta_estado'); S.err = null; ruAplica() } catch (e) { S.err = msgErr(e) }
-    pintaSi(); ruLoop();
-    if (ruFase() === 'pagada' && ctx.refresh && !S.busy) ctx.refresh();
-  }
-  A.color = ({ v }) => { S.color = v; pintaSi(true) };
-  A.color.libre = true;
-  A.ruGo = async () => {
-    if (!stakeOk()) return;
-    await rpc('ruleta_apostar', { p_color: S.color, p_stake: S.stake });
-    S.ru.msg = '';
-    D.ruleta = await rpc('ruleta_estado'); ruAplica(); pintaSi(true); ruLoop(); if (ctx.refresh) ctx.refresh();
-  };
-
-  /* =====================================================================
      BLACKJACK: una sola mesa compartida (PM, 01-11). La pinta y la juega bjmesa.js (db/040); aqui solo se le deja su hueco.
      ===================================================================== */
   const vBj = () => `<section class="jg-g jg-gbjm"><div class="jg-stage"><div data-bjm-hueco></div></div></section>`;
@@ -929,77 +799,13 @@
   }
 
   /* =====================================================================
-     PLINKO
+     RULETA, MINAS Y CABALLOS: cada uno se pinta solo en su hueco (ruleta.js, minas.js, carrera.js; db/073)
      ===================================================================== */
-  const peg = (r, j) => [((2 * j - r) * DX) / 2, TOP + r * DY];
-  const clasM = (m) => (m < 1 ? 'lo' : m < 2 ? 'md' : m < 10 ? 'hi' : 'xx');
-  function tablaPl() { return (D.plinko && D.plinko.tablas && D.plinko.tablas[S.riesgo]) || []; }
-  function tableroSvg() {
-    const W = 13 * DX + 24, cx = W / 2, by = TOP + FILAS * DY + 4, tb = tablaPl();
-    let g = '';
-    for (let r = 0; r < FILAS; r++) for (let j = 0; j <= r; j++) { const [x, y] = peg(r, j); g += `<circle class="jg-peg" cx="${(cx + x).toFixed(1)}" cy="${y}" r="2.1"/>` }
-    tb.forEach((m, k) => { const x = cx + (k - 6) * DX; g += `<g class="jg-pb ${clasM(m)}" data-b="${k}"><rect x="${(x - DX / 2 + 1.5).toFixed(1)}" y="${by}" width="${DX - 3}" height="26" rx="5"/><text x="${x.toFixed(1)}" y="${by + 14}" text-anchor="middle" dominant-baseline="central">${M1(m)}</text></g>` });
-    return `<svg class="jg-board" viewBox="0 0 ${W} ${by + 34}" role="img" aria-label="Plinko" data-cx="${cx}">${g}<circle class="jg-ball" data-ball r="5.5" cx="${cx}" cy="-20" visibility="hidden"/></svg>`;
-  }
-  function vPlinko() {
-    const d = D.plinko || { recientes: [], tablas: {} };
-    const tb = tablaPl(), max = tb.length ? Math.max(...tb) : 0;
-    return `<section class="jg-g">
-      <div class="jg-stage jg-pl">
-        ${tableroSvg()}
-        <p class="jg-msg ${S.pl.cls || ''}" data-msg>${esc(S.pl.msg)}</p>
-      </div>
-      <div class="jg-side">
-        <span class="lab">Riesgo</span>
-        <div class="chips">${['bajo', 'medio', 'alto'].map((k) => `<button class="chip ${S.riesgo === k ? 'on' : ''}" data-jg="riesgo" data-v="${k}">${k[0].toUpperCase() + k.slice(1)}</button>`).join('')}</div>
-        <p class="jg-mx">Máximo ×${M1(max)}</p>
-        <div class="jg-gap">${apuesta()}</div>
-        <button class="go" data-jg="soltar" data-go>Soltar bola por <span data-go-n>${N(S.stake)}</span></button>
-        ${d.recientes.length ? `<span class="lab jg-sec">Últimas bolas</span>${d.recientes.slice(0, 6).map((x) => fila('', av(x.player), `${esc(nom(x.player))}<em>${esc(x.riesgo)}</em>`, `<b class="num">×${M1(x.mult)}</b>`, `<b class="num ${x.pago >= x.stake ? 'win' : 'dim'}">${x.pago >= x.stake ? '+' + N(x.pago - x.stake) : N(x.pago)}</b>`)).join('')}` : ''}
-      </div></section>`;
-  }
-  A.riesgo = ({ v }) => { S.riesgo = v; pintaSi(true) };
-  A.riesgo.libre = true;
-  A.soltar = async () => {
-    if (S.busy) return;
-    if (!stakeOk()) return;
-    S.busy++;
-    let r; try { r = await rpc('plinko_soltar', { p_stake: S.stake, p_riesgo: S.riesgo }) } catch (e) { S.busy--; throw e }
-    S.pl.msg = ''; S.pl.cls = '';
-    const msg = (r.pago > S.stake ? `×${M1(r.mult)} · ▲ ${N(r.pago - S.stake)}` : r.pago === S.stake ? `×${M1(r.mult)} · te devuelve lo apostado` : `×${M1(r.mult)} · ▼ ${N(S.stake - r.pago)}`);
-    await plCae(r, msg, r.pago >= S.stake);
-    D.plinko = await rpc('plinko_estado'); sigs.v = null; pinta();
-    libera();
-  };
-  async function plCae(r, msg, gana) {
-    const svg = root.querySelector('.jg-board'), ball = svg && svg.querySelector('[data-ball]');
-    const fin = () => { S.pl.msg = msg; S.pl.cls = gana ? 'win' : 'lose'; const m2 = root && root.querySelector('[data-msg]'); if (m2) { setT(m2, msg); m2.className = 'jg-msg ' + S.pl.cls } };
-    if (!ball || quieto()) { fin(); return }
-    const cx = +svg.dataset.cx, cam = r.camino, pts = [[cx, TOP - 3 * DY]];
-    let rights = 0;
-    for (let i = 0; i < FILAS; i++) { pts.push([cx + ((2 * rights - i) * DX) / 2, TOP + i * DY - 7]); rights += cam[i] }
-    pts.push([cx + (rights - 6) * DX, TOP + FILAS * DY + 17]);
-    const SEG = 150, T0 = 230, total = T0 + (pts.length - 2) * SEG, t0 = performance.now();
-    ball.setAttribute('visibility', 'visible');
-    await new Promise((ok) => {
-      const paso = (now) => {
-        const t = now - t0;
-        if (!svg.isConnected) { ok(); return }
-        let x, y;
-        if (t < T0) { const s = t / T0; x = pts[0][0] + (pts[1][0] - pts[0][0]) * s; y = pts[0][1] + (pts[1][1] - pts[0][1]) * s * s }
-        else {
-          const i = Math.min(pts.length - 2, Math.floor((t - T0) / SEG)) + 1, s = Math.min(1, (t - T0 - (i - 1) * SEG) / SEG), [xa, ya] = pts[i], [xb, yb] = pts[Math.min(pts.length - 1, i + 1)];
-          x = xa + (xb - xa) * s; y = ya + (yb - ya) * s - 6 * 4 * s * (1 - s);
-        }
-        ball.setAttribute('cx', x.toFixed(1)); ball.setAttribute('cy', y.toFixed(1));
-        if (t < total) requestAnimationFrame(paso); else ok();
-      };
-      requestAnimationFrame(paso);
-    });
-    const bk = svg.querySelector(`[data-b="${r.k}"]`);
-    if (bk) { bk.classList.add("pega"); setTimeout(() => bk.classList.remove("pega"), 1400) }
-    ball.setAttribute('visibility', 'hidden');
-    fin();
+  const vMod = () => `<section class="jg-g jg-gx jg-gx-${S.juego}"><div class="jg-stage"><div data-jx-hueco></div></div></section>`;
+  function modPost() {
+    const h = root.querySelector('[data-jx-hueco]'), m = mod(S.juego);
+    if (h && m) m.montar(h, ctx, { rank: () => cargaRank() });
+    else if (h && !m) h.outerHTML = '<p class="jg-err">Este juego no ha cargado: recarga la app</p>';
   }
 
   /* ---------- la app llama a esto ---------- */
@@ -1019,7 +825,7 @@
       else { post(); reanuda(); clearTimeout(tCarga); tCarga = setTimeout(cargar, 1250 - (Date.now() - ultima)) }      // pulso pegado al anterior: no se pierde, se pide un poco despues
     },
     // true mientras una animacion esconde un resultado: la app no debe repintar el saldo todavia (llamara a refresh() sola al acabar)
-    ocupado: () => S.busy > 0 || !!(window.GM_BJMESA && S.juego === 'blackjack' && GM_BJMESA.ocupado()),
+    ocupado: () => S.busy > 0 || !!(window.GM_BJMESA && S.juego === 'blackjack' && GM_BJMESA.ocupado()) || !!(mod(S.juego) && mod(S.juego).ocupado()),
     estado: () => ({ juego: S.juego, ocupado: S.busy > 0 }),
   };
 })();

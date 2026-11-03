@@ -42,10 +42,12 @@
     crash: { scr: 'juegos', tab: 'crash', grp: 'juegos', t: 'jugando al crash', e: 'playing crash' },
     blackjack: { scr: 'juegos', tab: 'blackjack', grp: 'juegos', t: 'en el blackjack', e: 'in blackjack' },
     ruleta: { scr: 'juegos', tab: 'ruleta', grp: 'juegos', t: 'en la ruleta', e: 'on the roulette' },
-    plinko: { scr: 'juegos', tab: 'plinko', grp: 'juegos', t: 'en el plinko', e: 'on plinko' },
+    minas: { scr: 'juegos', tab: 'minas', grp: 'juegos', t: 'jugando a las minas', e: 'playing mines' },
+    carrera: { scr: 'juegos', tab: 'carrera', grp: 'juegos', t: 'en la carrera de caballos', e: 'at the horse race' },
   };
   // botones que cuentan como "jugar" (ninguno es ver ni cambiar la cantidad)
-  const JG = { retar: 'moneda', aceptar: 'moneda', crGo: 'crash', ruGo: 'ruleta', soltar: 'plinko' };
+  const JG = { retar: 'moneda', aceptar: 'moneda', crGo: 'crash' };
+  const JX = { rl: 'ruleta', mn: 'minas', cb: 'carrera' };                 // ruleta.js, minas.js y carrera.js (db/073)
   const BJ = { sit: 1, apostar: 1, otra: 1, pedir: 1, plantar: 1, doblar: 1 };
   const CJ = { abrir: 'cajas', abrirMia: 'cajas', auto: 'cajas', crear: 'batalla', unir: 'batalla' };
 
@@ -243,11 +245,12 @@
     const ir = t.closest('[data-avt-ir]');
     if (ir) { const q = ir.dataset.avtIr, a = ir.closest('.avt-a'); setTimeout(() => iraTab(q), 0); if (a) cierra(a); return }   // la navegacion la hace app.js con el data-scr
     // lo que cuenta como jugar o abrir cajas
-    const b = t.closest('[data-jg],[data-bjm],[data-cj]'); if (!b || b.disabled) return;
+    const b = t.closest('[data-jg],[data-bjm],[data-cj],[data-rl],[data-mn="go"],[data-mn="abrir"],[data-cb]'); if (!b || b.disabled) return;
     let q = '';
     if (b.dataset.jg) q = JG[b.dataset.jg] || '';
     else if (b.dataset.bjm) q = BJ[b.dataset.bjm] ? 'blackjack' : '';
     else if (b.dataset.cj) q = CJ[b.dataset.cj] || '';
+    else q = b.dataset.rl != null ? JX.rl : b.dataset.mn != null ? JX.mn : b.dataset.cb != null ? JX.cb : '';
     if (q) haceAlgo(q);
   }, true);
   // una caja abierta de verdad (tambien las del giro automatico, que no pasan por un clic cada vez)
