@@ -101,7 +101,9 @@ button.mk-it:hover .mk-it-img{background:radial-gradient(circle at 50% 42%,color
 .mk-nota{display:block;width:min(420px,92%);margin:30px auto 0;padding:8px 0;background:none;border:0;border-bottom:1px solid var(--hair);outline:0;text-align:center;font:14px var(--sans);color:var(--ink)}
 .mk-nota:focus{border-color:var(--acc)}
 .mk-trato{margin-top:36px;padding-top:30px;border-top:1px solid var(--hair)}
-.mk-trato header{display:flex;align-items:center;justify-content:center;gap:10px;font:600 15px var(--sans)}
+.mk-trato header{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;font:600 15px var(--sans)}
+.mk-trato header .mk-a{font:400 14px var(--sans);color:var(--mute)}
+.mk-trato.pub header em{color:var(--acc)}
 .mk-trato header em{font:11px var(--mono);font-style:normal;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
 .mk-trato header em.win{color:var(--win)}
 .mk-trato .mk-par{margin-top:26px}

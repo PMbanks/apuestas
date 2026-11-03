@@ -260,8 +260,11 @@
   function vTratos() {
     const e = D.est, yo = mios();
     const para = S.para && jug(S.para);
-    const abiertos = e.tratos.filter((t) => t.status === 'abierto'), cerrados = e.tratos.filter((t) => t.status !== 'abierto').slice(0, 6);
+    // 03-11 (PM: "no hay trades privados, que se puedan ver todos"): la base da los tratos de TODOS (db/068). Arriba los tuyos abiertos,
+    // con sus botones; debajo todos los demas, abiertos y cerrados, solo para mirar (aceptar, rechazar y cancelar los comprueba la base)
+    const abiertos = e.tratos.filter((t) => t.status === 'abierto');
     const recibidos = abiertos.filter((t) => t.para === yo), enviados = abiertos.filter((t) => t.de === yo);
+    const todos = e.tratos.filter((t) => !(t.status === 'abierto' && (t.de === yo || t.para === yo))).slice(0, 30);
     const sel = (ids) => ids.map((id) => pieza(id)).filter(Boolean);
     return `<section class="mk-sec mk-nuevo">
       <h2>Proponer un trato</h2>
@@ -288,17 +291,19 @@
     </section>
     ${recibidos.length ? `<section class="mk-sec"><h2>Te proponen</h2>${recibidos.map((t) => filaTrato(t, 'rec')).join('')}</section>` : ''}
     ${enviados.length ? `<section class="mk-sec"><h2>Tus propuestas</h2>${enviados.map((t) => filaTrato(t, 'env')).join('')}</section>` : ''}
-    ${cerrados.length ? `<section class="mk-sec"><h2>Últimos tratos</h2>${cerrados.map((t) => filaTrato(t, 'fin')).join('')}</section>` : ''}
-    ${!abiertos.length && !cerrados.length ? '<p class="mk-hint">Aún no hay tratos. Elige a un amigo y propón el primero.</p>' : ''}`;
+    ${todos.length ? `<section class="mk-sec mk-todos"><h2>Todos los tratos</h2><p class="mk-sub">Lo que se proponen todos los amigos, abierto o cerrado. Solo los dos del trato pueden aceptarlo, rechazarlo o cancelarlo.</p>${todos.map((t) => filaTrato(t, t.status === 'abierto' ? 'pub' : 'fin')).join('')}</section>` : ''}
+    ${!e.tratos.length ? '<p class="mk-hint">Aún no hay tratos. Elige a un amigo y propón el primero.</p>' : ''}`;
   }
   const lados = (items) => (items.length ? `<span class="mk-fila">${items.map((it) => tile(it, { cls: 'mini', btn: `data-mk="quita" data-v="${it.id}"` })).join('')}</span>` : '<span class="mk-nada">Nada de momento</span>');
-  const ESTADO = { aceptado: 'Aceptado', rechazado: 'Rechazado', cancelado: 'Cancelado' };
+  const ESTADO = { abierto: 'Abierto', aceptado: 'Aceptado', rechazado: 'Rechazado', cancelado: 'Cancelado' };
   function filaTrato(t, tipo) {
-    const yo = mios(), otro = t.de === yo ? t.para : t.de;
+    const yo = mios(), otro = t.de === yo ? t.para : t.de, ajeno = t.de !== yo && t.para !== yo;
     const quien = tipo === 'rec' ? `${esc(nom(t.de))} te propone` : tipo === 'env' ? `Le propones a ${esc(nom(t.para))}` : t.de === yo ? `Tú a ${esc(nom(t.para))}` : `${esc(nom(t.de))} a ti`;
-    const da = t.de === yo ? 'Das' : 'Te da', pide = t.de === yo ? 'Pides' : 'Te pide';
+    const da = ajeno ? 'Ofrece' : t.de === yo ? 'Das' : 'Te da', pide = ajeno ? 'Pide' : t.de === yo ? 'Pides' : 'Te pide';
+    // un trato entre otros dos: los dos con su cara, "Chris le propone a Johan" (sin botones: solo pueden tocarlo ellos dos)
+    const cab = ajeno ? `${av(t.de, 'sm')}<b>${esc(nom(t.de))}</b><span class="mk-a">le propone a</span>${av(t.para, 'sm')}<b>${esc(nom(t.para))}</b>` : `${av(otro, 'sm')}<b>${quien}</b>`;
     return `<article class="mk-trato ${tipo}">
-      <header>${av(otro, 'sm')}<b>${quien}</b>${tipo === 'fin' ? `<em class="${t.status === 'aceptado' ? 'win' : ''}">${ESTADO[t.status] || t.status}</em>` : ''}</header>
+      <header>${cab}${tipo === 'fin' || tipo === 'pub' ? `<em class="${t.status === 'aceptado' ? 'win' : ''}">${ESTADO[t.status] || t.status}</em>` : ''}</header>
       ${t.nota ? `<p class="mk-nota-t" data-notr>“${esc(t.nota)}”</p>` : ''}
       <div class="mk-par"><div class="mk-lado-e"><span class="lab">${da}</span>${lado(t.da, t.da_vb)}</div><div class="mk-cambio" aria-hidden="true">⇄</div><div class="mk-lado-e"><span class="lab">${pide}</span>${lado(t.pide, t.pide_vb)}</div></div>
       ${tipo === 'rec' ? `<div class="mk-bt"><button class="mk-b ok" data-mk="aceptar" data-v="${t.id}">Aceptar</button><button class="mk-b" data-mk="rechazar" data-v="${t.id}">Rechazar</button></div>` : ''}
