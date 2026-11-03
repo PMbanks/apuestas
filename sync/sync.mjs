@@ -156,6 +156,48 @@ const tvEspn = (c) => {
 
 // ---------- futbol (ESPN) ----------
 const espnDark = (kind, id, size) => `https://a.espncdn.com/combiner/i?img=/i/${kind}/soccer/500-dark/${id}.png&w=${size}&h=${size}`;
+// la fila de un partido de futbol tal cual la guarda la pasada (soccer) y el cierre rapido (cierraFutbol): una sola forma de hacerla
+function filaFutbol(lg, name, lgId, e) {
+  const c = e.competitions?.[0]; if (!c) return null;
+  const t = Date.parse(c.date || e.date);
+  const h = c.competitors.find((x) => x.homeAway === 'home'), a = c.competitors.find((x) => x.homeAway === 'away');
+  if (!h || !a) return null;
+  const st = c.status?.type || {};
+  const status = /CANCELED|POSTPONED|ABANDONED|FORFEIT/.test(st.name || '') ? 'canceled' : st.state === 'post' && st.completed ? 'final' : st.state === 'in' ? 'live' : st.state === 'post' ? 'live' : 'scheduled';
+  const sh = Number(h.score), sa = Number(a.score);
+  const row = {
+    id: `espn:${lg}:${e.id}`, sport: 'f', league: lg, league_name: name,
+    league_logo: lgId ? espnDark('leaguelogos', lgId, 64) : null,
+    stage: c.notes?.[0]?.headline || null, venue: c.venue?.fullName || null,
+    home: h.team.shortDisplayName || h.team.displayName, away: a.team.shortDisplayName || a.team.displayName,
+    home_logo: espnDark('teamlogos', h.team.id, 96), away_logo: espnDark('teamlogos', a.team.id, 96),
+    starts_at: new Date(t).toISOString(), status,
+    score: status === 'live' || status === 'final' ? `${isFinite(sh) ? sh : 0}:${isFinite(sa) ? sa : 0}` : null,
+    winner: status === 'final' ? (sh > sa ? '1' : sh < sa ? '2' : 'X') : null,
+    details: {
+      espn: { sport: 'soccer', league: lg, event: e.id, ids: { a: h.team.id, b: a.team.id } },
+      tv: tvEspn(c),
+      tape: [
+        [formEs(h.form) ? 'F:' + formEs(h.form) : '', 'Forma', formEs(a.form) ? 'F:' + formEs(a.form) : ''],
+        [h.records?.[0]?.summary?.replace(/-/g, '·') || '', 'G · E · P', a.records?.[0]?.summary?.replace(/-/g, '·') || ''],
+      ].filter((r) => r[0] || r[2]),
+    },
+  };
+  if (status === 'scheduled') {
+    const ml = c.odds?.[0]?.moneyline;
+    let o = ml ? [american(ml.home?.close?.odds ?? ml.home?.open?.odds), american(ml.draw?.close?.odds ?? ml.draw?.open?.odds), american(ml.away?.close?.odds ?? ml.away?.open?.odds)] : null;
+    if (o && o.every(Boolean)) row.odds_src = 'draftkings';
+    else {
+      const rh = parseRecord(h.records?.[0]?.summary), ra = parseRecord(a.records?.[0]?.summary);
+      const ppg = (r) => (r && r.w + r.d + r.l ? (3 * r.w + r.d) / (r.w + r.d + r.l) : 1.35);
+      o = soccerModel(ppg(rh), ppg(ra)); row.odds_src = 'modelo';
+    }
+    [row.odds_1, row.odds_x, row.odds_2] = o.map(sube);
+    row.odds_mk = mercadosFutbol(o, totalDk(c), row.odds_src === 'draftkings');                                  // db/036: goles y ambos marcan
+  }
+  if (status === 'final') row.details.r90 = r90(c, h, a, sh, sa);                   // db/036: con esto se pagan
+  return row;
+}
 async function soccer() {
   const months = [...new Set([0, SOCCER_AHEAD].map((o) => new Date(NOW + o).toISOString().slice(0, 7).replace('-', '')))];
   months.unshift(new Date(NOW - SOCCER_PAST).toISOString().slice(0, 7).replace('-', ''));
@@ -166,50 +208,43 @@ async function soccer() {
       if (!d?.events) continue;
       const lgId = (d.leagues?.[0]?.logos?.[0]?.href || '').match(/\/(\d+)\.png/)?.[1];
       for (const e of d.events) {
-        const c = e.competitions?.[0]; if (!c) continue;
-        const t = Date.parse(c.date || e.date);
+        const t = Date.parse(e.competitions?.[0]?.date || e.date);
         if (!(t > NOW - SOCCER_PAST && t < NOW + SOCCER_AHEAD)) continue;
-        const h = c.competitors.find((x) => x.homeAway === 'home'), a = c.competitors.find((x) => x.homeAway === 'away');
-        if (!h || !a) continue;
-        const st = c.status?.type || {};
-        const status = /CANCELED|POSTPONED|ABANDONED|FORFEIT/.test(st.name || '') ? 'canceled' : st.state === 'post' && st.completed ? 'final' : st.state === 'in' ? 'live' : st.state === 'post' ? 'live' : 'scheduled';
-        const sh = Number(h.score), sa = Number(a.score);
-        const row = {
-          id: `espn:${lg}:${e.id}`, sport: 'f', league: lg, league_name: name,
-          league_logo: lgId ? espnDark('leaguelogos', lgId, 64) : null,
-          stage: c.notes?.[0]?.headline || null, venue: c.venue?.fullName || null,
-          home: h.team.shortDisplayName || h.team.displayName, away: a.team.shortDisplayName || a.team.displayName,
-          home_logo: espnDark('teamlogos', h.team.id, 96), away_logo: espnDark('teamlogos', a.team.id, 96),
-          starts_at: new Date(t).toISOString(), status,
-          score: status === 'live' || status === 'final' ? `${isFinite(sh) ? sh : 0}:${isFinite(sa) ? sa : 0}` : null,
-          winner: status === 'final' ? (sh > sa ? '1' : sh < sa ? '2' : 'X') : null,
-          details: {
-            espn: { sport: 'soccer', league: lg, event: e.id, ids: { a: h.team.id, b: a.team.id } },
-            tv: tvEspn(c),
-            tape: [
-              [formEs(h.form) ? 'F:' + formEs(h.form) : '', 'Forma', formEs(a.form) ? 'F:' + formEs(a.form) : ''],
-              [h.records?.[0]?.summary?.replace(/-/g, '·') || '', 'G · E · P', a.records?.[0]?.summary?.replace(/-/g, '·') || ''],
-            ].filter((r) => r[0] || r[2]),
-          },
-        };
-        if (status === 'scheduled') {
-          const ml = c.odds?.[0]?.moneyline;
-          let o = ml ? [american(ml.home?.close?.odds ?? ml.home?.open?.odds), american(ml.draw?.close?.odds ?? ml.draw?.open?.odds), american(ml.away?.close?.odds ?? ml.away?.open?.odds)] : null;
-          if (o && o.every(Boolean)) row.odds_src = 'draftkings';
-          else {
-            const rh = parseRecord(h.records?.[0]?.summary), ra = parseRecord(a.records?.[0]?.summary);
-            const ppg = (r) => (r && r.w + r.d + r.l ? (3 * r.w + r.d) / (r.w + r.d + r.l) : 1.35);
-            o = soccerModel(ppg(rh), ppg(ra)); row.odds_src = 'modelo';
-          }
-          [row.odds_1, row.odds_x, row.odds_2] = o.map(sube);
-          row.odds_mk = mercadosFutbol(o, totalDk(c), row.odds_src === 'draftkings');                                  // db/036: goles y ambos marcan
-        }
-        if (status === 'final') row.details.r90 = r90(c, h, a, sh, sa);                   // db/036: con esto se pagan
-        out.push(row);
+        const row = filaFutbol(lg, name, lgId, e); if (row) out.push(row);
       }
     }
   }
   return out;
+}
+
+// Cierre rapido del futbol (PM 03-11: "le cuesta dar el dinero una vez terminado el resultado"). La pasada cierra los partidos cada
+// 5 min, asi que un partido acabado esperaba de 0 a 5 min a la pasada siguiente (Villarreal 0:6 PSG acabo a las 21:52:08 UTC y se pago a
+// las 21:56:40). Esto mira cada 25 s, dentro de la pasada, SOLO los partidos que ella vio en directo: pide el mismo scoreboard de ESPN que
+// soccer() (una peticion por liga y mes), hace la fila con filaFutbol() y, si ya es final, la guarda y pide a la base que pague.
+// Nunca decide nada que la pasada no decidiria: misma fila, mismo marcador, mismo resultado de los 90 (r90).
+async function cierraFutbol(frows) {
+  const vivos = frows.filter((r) => r.status === 'live' && r.details?.espn?.event);
+  if (!vivos.length) return 0;
+  const nombre = new Map(SOCCER), ligas = new Map(), finales = [];
+  for (const r of vivos) { const k = `${r.league}|${r.starts_at.slice(0, 7).replace('-', '')}`; ligas.set(k, [...(ligas.get(k) || []), r]); }
+  for (const [k, rs] of ligas) {
+    const [lg, mo] = k.split('|');
+    const d = await getJson(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard?dates=${mo}&limit=1000`);
+    if (!d?.events) continue;
+    const lgId = (d.leagues?.[0]?.logos?.[0]?.href || '').match(/\/(\d+)\.png/)?.[1];
+    for (const r of rs) {
+      const e = d.events.find((x) => String(x.id) === String(r.details.espn.event));
+      const f = e && filaFutbol(lg, nombre.get(lg) || r.league_name, lgId, e);
+      if (f && f.id === r.id && f.status === 'final') finales.push(f);
+    }
+  }
+  if (!finales.length) return 0;
+  await rpc('sync_push', { p_secret: SECRET, p_rows: finales });
+  for (const f of finales) { const r = vivos.find((x) => x.id === f.id); r.status = 'final'; }   // la pasada (y el cash out) ya no lo tratan como en directo
+  let res;
+  do { res = await rpc('sync_close', { p_secret: SECRET }); } while ((res?.pagadas || 0) >= 60);
+  console.log(`cierre rapido futbol: ${finales.map((f) => `${f.home} ${f.score} ${f.away}`).join(' · ')}`);
+  return finales.length;
 }
 
 // ---------- UFC (ESPN) ----------
@@ -554,6 +589,7 @@ async function extras(vrows, frows = [], crows = [], brows = []) {
   for (;;) {
     vlrLista = null; espnCache.clear();
     await cierraRapido({ rows: [...vrows, ...crows], getJson, rpc, secret: SECRET, ps: PS }).catch((e) => console.log('cierre rapido:', e.message || e));
+    await cierraFutbol(frows).catch((e) => console.log('cierre rapido futbol:', e.message || e));
     const o = await obsValorant(vrows), [abiertas, cerradas] = await resolverPredicciones();
     const lf = await liveFutbol(frows).catch(() => 0), lc = await liveCs2(crows).catch(() => 0), lb = await liveNba(brows, { getJson, ponLive }).catch(() => 0);
     console.log(`predicciones: ${o} mapas en directo apuntados · ${abiertas} abiertas · ${cerradas} resueltas · cash out: ${lf} partidos de futbol, ${lc} de CS2 y ${lb} de NBA al día`);
