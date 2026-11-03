@@ -80,6 +80,7 @@
       const c = db.channel(CANAL, { config: { presence: { key: String(key) } } });
       c.on('presence', { event: 'sync' }, () => g(() => procesa(Object.values(c.presenceState()).flat(), true)));
       ch = c; ckey = key; suscrito = false;
+      conectaFeed();
       c.subscribe((st) => {
         if (c !== ch) return;
         if (st === 'SUBSCRIBED') { suscrito = true; baseT = Date.now() + 4000; anuncia() }   // los 4 s de la primera foto son lo que ya estaba: no se avisa
@@ -90,6 +91,7 @@
   function desconecta() {
     clearTimeout(tIdle); clearTimeout(tOculta); clearTimeout(tReint);
     if (ch) { try { db.removeChannel(ch) } catch {} }
+    if (chF) { try { db.removeChannel(chF) } catch {} chF = null }
     ch = null; suscrito = false; yo = null; ckey = '';
     procesa([], false);
   }
@@ -177,6 +179,7 @@
   function aviso(k, q) {
     const kd = KS[q], p = prefs();
     if (!kd || !p.on || !p[kd.grp] || k === yoK()) return;
+    if (kd.grp === 'juegos' && chF) return;                       // de los juegos avisa jg_feed (abajo), con la cantidad
     if (g(() => S.scr, '') === kd.scr) return;                    // ya estas en esa pantalla
     const id = k + '|' + q, ahora = Date.now();
     if (ahora - (AVISADO.get(id) || 0) < ENFRIA) return;
@@ -191,12 +194,29 @@
   //     Hoy no hace nada a proposito: esta pensado para el aviso de los que NO tienen la app abierta.
   function avisaPush(k, q) { void k; void q }
 
-  function enApp(k, q) {
+  /* ---------- PM 04-11: aviso en el momento en que alguien EMPIEZA una jugada, con lo que pone (db/077, tabla jg_feed por Realtime) ----------
+     Solo dentro de la app abierta (nada de push). A ti no te avisa de lo tuyo. Como mucho uno por jugador y juego cada minuto y tres a la vez. */
+  let chF = null;
+  const FEEDV = new Map(), FEED_ENFRIA = 60000;
+  function conectaFeed() {
+    if (chF || !g(() => typeof db.channel === 'function', false)) return;
+    try { chF = db.channel('gm-feed').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'jg_feed' }, (m) => g(() => jugada(m.new))).subscribe() } catch { chF = null }
+  }
+  function jugada(x) {
+    if (!x || !KS[x.juego]) return;
+    const f = g(() => F.find((y) => y.uid === x.player), null); if (!f || f.id === yoK()) return;
+    const p = prefs(); if (!p.on || !p.juegos) return;
+    const id = f.id + '|' + x.juego, ahora = Date.now();
+    if (ahora - (FEEDV.get(id) || 0) < FEED_ENFRIA) return;
+    FEEDV.set(id, ahora);
+    enApp(f.id, x.juego, x.stake);
+  }
+  function enApp(k, q, cuanto) {
     const kd = KS[q];
     let box = document.getElementById('avt-av');
     if (!box) { box = document.createElement('div'); box.id = 'avt-av'; box.setAttribute('role', 'status'); box.setAttribute('aria-live', 'polite'); document.body.appendChild(box) }
     const el = document.createElement('div'); el.className = 'avt-a';
-    el.innerHTML = `${g(() => av(k, 'sm'), '')}<div class="avt-tx"><b data-notr>${esc(nombre(k))}</b> <span>está ${KS[q].t}</span></div>
+    el.innerHTML = `${g(() => av(k, 'sm'), '')}<div class="avt-tx"><b data-notr>${esc(nombre(k))}</b> <span>está ${KS[q].t}</span>${cuanto ? ` <i class="avt-c num">· ${esc(g(() => N(cuanto), String(cuanto)))}<span class="cn"></span></i>` : ''}</div>
       <button type="button" class="avt-ir" data-scr="${kd.scr}" data-avt-ir="${q}">Ir</button><button type="button" class="avt-x" data-avt-x aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
     box.appendChild(el); tr(el);
     while (box.children.length > MAX_AVISOS) box.firstElementChild.remove();
@@ -226,7 +246,7 @@
     const sw = (k, on, t, s, sub, off) => `<button type="button" class="aj-f anim-t avs-f ${on ? 'on' : ''} ${sub ? 'avs-sub' : ''} ${off ? 'avs-off' : ''}" data-avs="${k}" aria-pressed="${on}"><span class="aj-tx"><b>${t}</b><small>${s}</small></span><i></i></button>`;
     return `<section class="aj-s avs-s"><h3 class="lab">Avisos de actividad</h3>
       ${sw('on', p.on, 'Avisos de actividad', 'Te avisa cuando alguien empieza a jugar o a abrir cajas', false, false)}
-      ${sw('juegos', p.juegos, 'Juegos', 'Cara o cruz, crash y blackjack', true, !p.on)}
+      ${sw('juegos', p.juegos, 'Juegos', 'Cuando alguien empieza a jugar, con lo que apuesta', true, !p.on)}
       ${sw('cajas', p.cajas, 'Cajas', 'Abrir cajas y batallas', true, !p.on)}</section>`;
   }
   function cambiaPref(k, btn) {
@@ -278,5 +298,6 @@
     _sim(estado) { procesa((estado || []).map((x) => ({ k: x.k, q: x.q, desde: x.desde == null ? Date.now() : x.desde })), false); return this.ahora() },
     _yo: () => (yo ? { ...yo } : null),
     _haceAlgo: haceAlgo, _quita: quita,
+    _jugada: jugada,                 // SOLO PRUEBAS: finge una fila nueva de jg_feed { player, juego, stake }
   };
 })();

@@ -57,8 +57,7 @@
         <p class="mn-msg" data-msg></p>
         <span class="lab mn-lt">${t('Tabla de multiplicadores')}</span>
         <div class="mn-lad" data-lad></div>
-        <span class="lab mn-lt">${t('Últimas partidas')}</span>
-        <div class="mn-rec" data-rec></div>
+        <div class="mn-rec" data-ult></div>
       </div>`;
     engancha(el, saldo, () => boton());
     el.addEventListener('input', (e) => { if (e.target.matches('[data-mn-m]')) ponMinas(+e.target.value) });
@@ -154,10 +153,8 @@
       b.className = 'go'; b.disabled = S.ocupa; az.hidden = true;
     }
   }
-  function recientes() {
-    const r = (D.recientes || []).slice(0, 8);
-    html(el.querySelector('[data-rec]'), r.length ? r.map((x) => `<div class="mn-r ${x.estado === 'cobrada' ? 'w' : 'l'}">${J.av(x.player)}<span class="mn-rn"><b>${esc(J.nom(x.player))}</b><em>${x.minas} ${en() ? (x.minas === 1 ? 'mine' : 'mines') : (x.minas === 1 ? 'mina' : 'minas')} · ${x.n} ${en() ? 'open' : (x.n === 1 ? 'abierta' : 'abiertas')}</em></span><b class="num">${x.estado === 'cobrada' ? '×' + X(x.mult) : '<span class="mn-bm">✕</span>'}</b><b class="num ${x.estado === 'cobrada' ? 'win' : 'lose'}">${x.estado === 'cobrada' ? '+' + N(x.pago - x.stake) : '−' + N(x.stake)}</b></div>`).join('') : `<p class="mn-v">${t('Todavía no ha jugado nadie')}</p>`);
-  }
+  // las 5 ultimas jugadas de todos: el bloque comun (jx.js ultimas, db/077)
+  function recientes() { if (S.ult) S.ult.refresca() }
   function justo() {
     const p = partida(), f = el.querySelector('[data-fair]');
     if (!p || (!enJuego() && S.finVisto !== p.id)) { html(f, ''); return }
@@ -215,7 +212,8 @@
       txt(msg, en() ? `Mine! You lose ${N(r.partida.stake)}` : `¡Mina! Pierdes ${N(r.partida.stake)}`); msg.className = 'mn-msg lose';
       fin();
     } else if (r.partida.estado === 'cobrada') {
-      S.finVisto = r.partida.id; suena('cobrar'); pinta();
+      S.finVisto = r.partida.id; pinta();
+      gana(r.partida);
       txt(msg, en() ? `All safe tiles! ×${X(r.partida.mult)} · +${N(r.partida.pago)}` : `¡Todas las buenas! ×${X(r.partida.mult)} · +${N(r.partida.pago)}`); msg.className = 'mn-msg win';
       fin();
     } else { suena('ficha'); tablero(i); cabeza(); escalera(); boton(); justo(); txt(msg, ''); }
@@ -225,14 +223,16 @@
     S.ocupa = true; boton();
     try {
       const r = await J.rpc('minas_cobrar');
-      D = { ...D, partida: r.partida }; S.saldo = r.saldo; S.finVisto = r.partida.id; suena('cobrar');
-      S.ocupa = false; pinta();
+      D = { ...D, partida: r.partida }; S.saldo = r.saldo; S.finVisto = r.partida.id;
+      S.ocupa = false; pinta(); gana(r.partida);
       const msg = el.querySelector('[data-msg]');
       txt(msg, en() ? `Cashed out at ×${X(r.partida.mult)} · +${N(r.partida.pago)}` : `Te retiras en ×${X(r.partida.mult)} · +${N(r.partida.pago)}`); msg.className = 'mn-msg win';
       fin();
     } catch (e) { const m = msgErr(e, 'db/073'); aviso(m); J.toast(esc(m)) }
     finally { S.ocupa = false; boton() }
   }
+  // el momento de ganar: jingle y estallido de monedas con lo que te llevas limpio
+  function gana(p) { void p; suena('cobrar') }
   function fin() {
     if (J.ctx.refresh) setTimeout(() => J.ctx.refresh(), 400);
     if (hooks.rank) setTimeout(hooks.rank, 600);
@@ -245,10 +245,12 @@
       if (!el) crea();
       if (hueco && hueco !== el) hueco.replaceWith(el);
       if (S.saldo == null && c.saldo != null) S.saldo = c.saldo;
+      if (!S.ult) { S.ult = GM_JX.ultimas('minas', J); el.querySelector('[data-ult]').replaceWith(S.ult.el); S.ult.el.classList.add('mn-rec') }
+      S.ult.arranca();
       if (!S.on) { S.on = true; pinta(); carga(); return }
       if (Date.now() - S.ultima > 15000 && !S.ocupa) carga(); else el.querySelectorAll('[data-jx-saldo]').forEach((x) => (x.textContent = N(saldo())));
     },
-    para() { S.on = false },
+    para() { S.on = false; if (S.ult) S.ult.para() },
     ocupado: () => S.ocupa,
   };
 })();

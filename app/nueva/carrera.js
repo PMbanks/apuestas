@@ -73,10 +73,12 @@
           <div class="cb-lista" data-lista></div>
           <span class="lab cb-sec">${t('Ganadores')}</span>
           <div class="cb-hist" data-hist></div>
+          <div data-ult></div>
           <p class="cb-fair" data-fair></p>
         </div>
       </div>`;
     engancha(el, saldo, () => lista());
+    S.ult = GM_JX.ultimas('carrera', J); el.querySelector('[data-ult]').replaceWith(S.ult.el);
     clics(el, 'data-cb', (b) => apostar(+b.dataset.v));
     document.addEventListener('visibilitychange', () => { if (!document.hidden && S.on && visible()) carga(); else programa() });
     window.addEventListener('resize', () => { clearTimeout(S.rz); S.rz = setTimeout(() => { if (visible() && S.escena) { S.geo = null; montaEscena(S.escena, true) } }, 150) });
@@ -181,8 +183,8 @@
   /* ---------- la pista ---------- */
   function geo() {
     const p = el.querySelector('[data-pista]'), w = p.clientWidth || 360, h = p.clientHeight || 260;
-    const G = Math.round(Math.max(34, h * 0.17)), lh = (h - G - 12) / 6.45, pad = lh * 0.45, L = Math.max(1900, Math.round(w * 3));
-    return { w, h, G, lh, pad, L, x0: 70, x1: L - Math.max(170, w * 0.28), hh: Math.round(lh * 1.5), hw: Math.round(lh * 1.5 * 132 / 92) };
+    const G = Math.round(Math.max(64, h * 0.21)), lh = (h - G - 10) / 6.75, pad = lh * 0.75, L = Math.max(1900, Math.round(w * 3));
+    return { w, h, G, lh, pad, L, x0: 70, x1: L - Math.max(170, w * 0.28), hh: Math.round(lh * 1.45), hw: Math.round(lh * 1.45 * 132 / 92) };
   }
   function montaEscena(r, fuerza) {
     if (!r) return;
@@ -232,7 +234,8 @@
       if (mov !== !h.el.classList.contains('quieto')) h.el.classList.toggle('quieto', !mov);
       if (mov) {
         const speed = (P && P.slow && e > P.slow.a && e < realDe(P, P.slow.b)) ? TSLOW : 1;
-        h.ph = (h.ph || 0) + dt * Math.PI * 2 * (1.2 + v * 26) * speed;
+        const ph0 = h.ph || 0;
+        h.ph = ph0 + dt * Math.PI * 2 * (1.2 + v * 26) * speed;
         const f = h.ph, amp = Math.min(1, v * 14);
         for (const l of h.legs) {
           const off = { b1: 0, b2: 0.6, f1: 2.2, f2: 2.9 }[l.k], s = Math.sin(f + off);
@@ -246,6 +249,7 @@
     }
     // camara: sigue a los dos de delante (es una funcion de las posiciones, asi que va suave)
     ps.sort((a, b) => b.p - a.p);
+    S.lider = ps.length ? ps[0].n : 0;
     if (corre && P) {
       const lead = (ps[0].p * 2 + (ps[1] ? ps[1].p : ps[0].p)) / 3;
       camara(g.x0 + lead * (g.x1 - g.x0) - g.w * 0.64);
@@ -285,7 +289,12 @@
     const cobra = mias.filter((a) => a.caballo === P.orden[0]).reduce((s, a) => s + Math.floor(a.stake * a.cuota), 0), puso = mias.reduce((s, a) => s + a.stake, 0);
     const mio = mias.length ? `<p class="cb-pm ${cobra ? 'win' : 'lose'}">${cobra ? (en() ? `You collect ${N(cobra)}` : `Cobras ${N(cobra)}`) : (en() ? `You lose ${N(puso)}` : `Pierdes ${N(puso)}`)}${coin()}</p>` : '';
     html(el.querySelector('[data-podio]'), `<div class="cb-pd">${P.orden.slice(0, 3).map((n, i) => { const c = cab(r, n); return `<div class="cb-pp p${i + 1}">${seda(c, 'gr')}<b>${esc(c.nombre)}</b><small class="num">${en() ? ['1st', '2nd', '3rd'][i] : i + 1 + 'º'} · ×${X(c.cuota)}</small></div>` }).join('')}</div>${mio}`);
-    if (mias.length && S.sono[r.id] !== 2) { S.sono[r.id] = 2; suena(cobra ? 'cobrar' : 'perder'); if (J.ctx.refresh) setTimeout(() => J.ctx.refresh(), 2500); if (hooks.rank) setTimeout(hooks.rank, 2600) }
+    if (S.sono[r.id] !== 2 && S.ult) { setTimeout(() => S.ult.refresca(), 4000) }
+    if (mias.length && S.sono[r.id] !== 2) {
+      S.sono[r.id] = 2; const neto = cobra - puso;
+      suena(neto > 0 ? 'cobrar' : 'perder');
+      if (J.ctx.refresh) setTimeout(() => J.ctx.refresh(), 2500); if (hooks.rank) setTimeout(hooks.rank, 2600)
+    } else S.sono[r.id] = 2;
   }
   function frame() {
     S.raf = 0;
@@ -309,7 +318,7 @@
       // la misma ronda puede venir con estado nuevo (apuestas -> corre -> pagada): se guarda y se repinta
       const cambia = !S.escena || S.escena.id !== sc.id;
       if (cambia) { S.plan = null; montaEscena(sc) } else S.escena = sc;
-      el.dataset.f = sc.estado;
+      el.dataset.fase = sc.estado;
       if (sc.estado === 'corre' || sc.estado === 'pagada') { if (!S.raf) S.raf = requestAnimationFrame(frame) } else dibuja();
     }
     cuenta(); lista(); mias(); hist(); justo(sc);
@@ -317,11 +326,11 @@
   function cuenta() {
     const sc = S.escena; if (!sc || !D) return;
     const bar = el.querySelector('[data-bar] i');
-    if (sc.estado === 'espera') { estadoTxt(t('Apuesta para que salga la carrera'), t('La primera apuesta abre 30 segundos para todos')); bar.style.transform = 'scaleX(0)'; return }
+    if (sc.estado === 'espera') { const v = D.ventana || 12; estadoTxt(t('Apuesta para que salga la carrera'), en() ? `The first bet opens ${v} seconds for everyone` : `La primera apuesta abre ${v} segundos para todos`); bar.style.transform = 'scaleX(0)'; return }
     if (sc.estado === 'apuestas') {
       const left = Math.max(0, (ms(sc.cierra) - J.ahora()) / 1000);
       estadoTxt(`${t('Salen en')} ${Math.ceil(left)}`, (() => { const n = new Set((sc.apuestas || []).map((a) => a.player)).size; return en() ? `${n} ${n === 1 ? 'player' : 'players'} in` : `${n} ${n === 1 ? 'jugador dentro' : 'jugadores dentro'}` })(), left <= 5 ? 'pocos' : 'cd');
-      bar.style.transform = `scaleX(${(1 - left / (D.ventana || 30)).toFixed(3)})`;
+      bar.style.transform = `scaleX(${(1 - left / (D.ventana || 12)).toFixed(3)})`;
       return;
     }
   }
@@ -337,8 +346,8 @@
       const ap = (r.apuestas || []).filter((a) => a.caballo === c.n), suma = ap.reduce((s, a) => s + a.stake, 0);
       const quien = [...new Set(ap.map((a) => a.player))];
       const mio = ap.filter((a) => a.player === J.ctx.me).reduce((s, a) => s + a.stake, 0);
-      return `<div class="cb-row ${mio ? 'mio' : ''}">${seda(c)}<span class="cb-rn"><b>${esc(c.nombre)}</b>${c.cuota === fav ? `<em>${en() ? 'favourite' : 'favorito'}</em>` : ''}<i class="cb-pool"><u style="width:${(suma / tot * 100).toFixed(1)}%"></u></i></span>
-        <span class="cb-rq"><span class="cb-av">${quien.slice(0, 4).map((u) => J.av(u)).join('')}</span>${suma ? `<small class="num">${N(suma)}</small>` : ''}</span>
+      return `<div class="cb-row ${mio ? 'mio' : ''}">${seda(c)}<span class="cb-rn"><b>${esc(c.nombre)}</b>${c.cuota === fav ? `<em>${en() ? 'favourite' : 'favorito'}</em>` : ''}<i class="cb-pool"><u style="width:${(suma / tot * 100).toFixed(1)}%"></u></i>${quien.length ? `<span class="cb-quien">${quien.map((u) => { const st = ap.filter((a) => a.player === u).reduce((s2, a) => s2 + a.stake, 0); return `<span class="cb-qp ${u === J.ctx.me ? 'me' : ''}">${J.av(u)}<b>${esc(J.nom(u))}</b><i class="num">${N(st)}</i></span>` }).join('')}</span>` : ''}</span>
+        <span class="cb-rq">${suma ? `<small class="num">${N(suma)}${coin()}</small>` : ''}</span>
         <b class="num cb-cu">×${X(c.cuota)}</b>
         <button type="button" class="cb-go" data-cb data-v="${c.n}" ${abierta && !S.ocupa ? '' : 'disabled'}>${abierta ? `<span>${mio ? (en() ? 'More' : 'Más') : t('Apostar')}</span> <b class="num">${N(stake.v)}</b>` : t('En carrera')}</button></div>`;
     }).join(''));
@@ -397,10 +406,11 @@
       if (hueco && hueco !== el) hueco.replaceWith(el);
       if (S.saldo == null && c.saldo != null) S.saldo = c.saldo;
       if (S.escena && S.geo) { const g = geo(); if (g.w !== S.geo.w || g.h !== S.geo.h) montaEscena(S.escena, true) }
+      S.ult.arranca();
       if (!S.on) { S.on = true; J.escucha(carga); pinta(); carga(); return }
       if (Date.now() - S.ultima > 1500) carga(); else programa();
     },
-    para,
+    para() { para(); if (S.ult) S.ult.para() },
     ocupado: () => false,
     // para pruebas: la escena a un tiempo dado
     _d: () => ({ D, S }),

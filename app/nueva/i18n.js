@@ -351,7 +351,7 @@
     'Novedades': 'News', 'Nuevo': 'New', 'Todo lo nuevo de la app, con fotos': 'Everything new in the app', 'Ir a Partidos': 'Go to Matches', 'Ir a Inicio': 'Go to Home', 'Ver mis apuestas': 'See my bets', 'Ver las apuestas de todos': 'See everyone\'s bets',
     'Ir a la Liga': 'Go to the League', 'Ir al Chat': 'Go to Chat', 'Ir al Monedero': 'Go to Wallet', 'Ir a Juegos': 'Go to Games', 'Ver el directo': 'Watch live', 'Abrir Recompensas': 'Open Rewards', 'Todavía no hay novedades.': 'No news yet.',
     // juegos (JUEGOS-INTEGRAR.md, las que faltaban)
-    'Minas': 'Mines', 'Caballos': 'Horse race', 'Carrera de caballos': 'Horse race', 'Este juego no ha cargado: recarga la app': 'This game did not load: reload the app',
+    'Minas': 'Mines', 'Caballos': 'Horse race', 'Cuando alguien empieza a jugar, con lo que apuesta': 'When someone starts playing, with what they bet', 'Carrera de caballos': 'Horse race', 'Este juego no ha cargado: recarga la app': 'This game did not load: reload the app',
     'Crash': 'Crash', 'Blackjack': 'Blackjack', 'Contra': 'Against', 'cara': 'heads', 'cruz': 'tails', 'Máx': 'Max',
     'Retar por': 'Challenge for', 'ti': 'you', 'Retirada automática': 'Auto cash out', 'Últimas rondas': 'Last rounds', 'explotó': 'crashed', 'Nadie jugó esta ronda': 'Nobody played this round', 'Toca una ronda para ver quién jugó y dónde retiró': 'Tap a round to see who played and where they cashed out', 'Todavía nadie dentro': 'Nobody in yet', 'segundos': 'seconds',
     'Haz tu apuesta': 'Place your bet', 'Repartir por': 'Deal for', 'Otra mano por': 'Another hand for', 'Hoy te quedan': 'Today you have', 'por arriesgar': 'left to risk', 'Hoy ya has perdido 500. Vuelve mañana': 'You have already lost 500 today. Come back tomorrow',

@@ -12,7 +12,7 @@
     'Apuestas abiertas': 'Bets open', 'Apuesta para abrir una ronda': 'Bet to open a round', 'Todos juegan la misma ronda: la primera apuesta abre 25 segundos': 'Everyone plays the same round: the first bet opens 25 seconds',
     'Cerrando apuestas': 'Closing bets', 'Girando': 'Spinning', 'Nadie todavía': 'Nobody yet', 'En la ronda': 'In the round', 'Última ronda': 'Last round',
     'Últimos 100': 'Last 100', 'Ronda': 'Round', 'semilla': 'seed', 'comprobado': 'verified', 'El número va cerrado con este hash antes de apostar. Al girar sale la semilla: sha256(semilla:número) tiene que dar el hash.': 'The number is locked with this hash before anyone bets. When it spins the seed is revealed: sha256(seed:number) must give the hash.',
-    'Pon una cantidad': 'Enter an amount', 'segundos': 'seconds', 'Preparando la ruleta…': 'Getting the wheel ready…',
+    'Pon una cantidad': 'Enter an amount', 'Últimos resultados': 'Latest results', 'segundos': 'seconds', 'Preparando la ruleta…': 'Getting the wheel ready…',
   });
   const en = GM_JX.en;
   const ORDEN = [0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7];        // casillas en el sentido del reloj desde arriba
@@ -82,6 +82,7 @@
   function crea() {
     el = document.createElement('div');
     el.className = 'rl'; el.setAttribute('data-notr', '');
+    // PM 04-11: la rueda centrada y algo mas grande, y debajo los botones de color y la cantidad
     el.innerHTML = `
       <div class="rl-top">
         <div class="rl-wh">
@@ -94,17 +95,19 @@
         <div class="rl-info">
           <p class="rl-t" data-t></p>
           <p class="rl-s" data-s></p>
-          <div class="rl-hist" data-hist></div>
-          <p class="rl-cnt" data-cnt></p>
         </div>
       </div>
       <div class="rl-bet">
-        <div class="rl-amt" data-amt></div>
         <div class="rl-btns">${COLS.map((c) => `<button type="button" class="rl-b ${c}" data-rl="${c}"><span class="rl-bn">${t(c[0].toUpperCase() + c.slice(1))}</span><em>×${MULT[c]}</em><small>${c === 'verde' ? '0' : c === 'rojo' ? (en() ? '1 to 7' : '1 a 7') : (en() ? '8 to 14' : '8 a 14')}</small><b class="num" data-bt="${c}"></b></button>`).join('')}</div>
         <p class="jg-aviso" data-aviso></p>
+        <div class="rl-amt" data-amt></div>
       </div>
-      <div class="rl-cols" data-cols></div>
+      <div class="rl-low">
+        <div class="rl-cols" data-cols></div>
+        <div class="rl-der"><span class="lab">${t('Últimos resultados')}</span><div class="rl-hist" data-hist></div><p class="rl-cnt" data-cnt></p><div data-ult></div></div>
+      </div>
       <p class="rl-fair" data-fair></p>`;
+    S.ult = GM_JX.ultimas('ruleta', J); el.querySelector('[data-ult]').replaceWith(S.ult.el);
     el.querySelector('[data-amt]').innerHTML = cantidad(t, saldo());
     engancha(el, saldo, () => pintaBtns());
     clics(el, 'data-rl', (b) => apostar(b.dataset.rl));
@@ -142,7 +145,7 @@
     if (err) { txt(el.querySelector('[data-t]'), err); txt(el.querySelector('[data-s]'), ''); return }
     if (!D) { txt(el.querySelector('[data-t]'), t('Preparando la ruleta…')); return }
     const f = fase(D), r = D.ronda;
-    el.dataset.f = f;
+    el.dataset.fase = f;
     el.querySelectorAll('[data-jx-saldo]').forEach((x) => (x.textContent = N(saldo())));
     cuenta(); estado(f, r); hist(f, r); cols(f, r); pintaBtns(); justo(r);
     if (f !== 'giro' && f !== 'cerrando') { const a = anguloAhora(D); gira(a) }
@@ -152,7 +155,7 @@
   }
   function estado(f, r) {
     const T = el.querySelector('[data-t]'), Sx = el.querySelector('[data-s]');
-    if (f === 'idle') { txt(T, t('Apuesta para abrir una ronda')); txt(Sx, t('Todos juegan la misma ronda: la primera apuesta abre 25 segundos')); Sx.className = 'rl-s'; return }
+    if (f === 'idle') { const v = D.ventana || 12; txt(T, t('Apuesta para abrir una ronda')); txt(Sx, en() ? `Everyone plays the same round: the first bet opens ${v} seconds` : `Todos juegan la misma ronda: la primera apuesta abre ${v} segundos`); Sx.className = 'rl-s'; return }
     if (f === 'apuestas') { txt(T, t('Apuestas abiertas')); const n = jugadores(r); txt(Sx, n ? (en() ? `${n} ${n === 1 ? 'player' : 'players'} in` : `${n} ${n === 1 ? 'jugador dentro' : 'jugadores dentro'}`) : t('Nadie todavía')); Sx.className = 'rl-s'; return }
     if (f === 'cerrando') { txt(T, t('Cerrando apuestas')); txt(Sx, ''); return }
     if (f === 'giro') { txt(T, t('Girando')); txt(Sx, ''); Sx.className = 'rl-s'; return }
@@ -171,7 +174,7 @@
     if (f === 'apuestas') {
       left = Math.max(0, (ms(r.cierra) - J.ahora()) / 1000);
       txt(hub, String(Math.ceil(left))); txt(hs, t('segundos')); hub.className = 'num cd';
-      ring.style.strokeDashoffset = (C * (1 - left / (D.ventana || 25))).toFixed(1);
+      ring.style.strokeDashoffset = (C * (1 - left / (D.ventana || 12))).toFixed(1);
       ring.classList.toggle('pocos', left <= 5);
     } else {
       ring.style.strokeDashoffset = C.toFixed(1);
@@ -206,7 +209,7 @@
     el.querySelectorAll('[data-rl]').forEach((b) => {
       const c = b.dataset.rl, mio = r && (f === 'apuestas') ? (r.apuestas || []).filter((a) => a.color === c && a.player === J.ctx.me).reduce((a, x) => a + x.stake, 0) : 0;
       b.disabled = cerrado || S.ocupa;
-      txt(b.querySelector('[data-bt]'), mio ? (en() ? `yours ${N(mio)}` : `tuyo ${N(mio)}`) : (en() ? `+${N(stake.v)}` : `+${N(stake.v)}`));
+      txt(b.querySelector('[data-bt]'), cerrado ? t('Girando') : mio ? (en() ? `yours ${N(mio)}` : `tuyo ${N(mio)}`) : (en() ? `+${N(stake.v)}` : `+${N(stake.v)}`));
     });
   }
   function glow(f, r) {
@@ -238,7 +241,21 @@
     const d = el && el.querySelector('[data-rot]'); if (!d) return;
     d.style.transform = `rotate(${a.toFixed(2)}deg)`;
     const s = mod(Math.round(-a / 24), 15);
-    if (s !== S.slot) { if (S.slot >= 0) { S.kick = 1; const n = performance.now(); if (S.raf && n - S.tTick > 75) { S.tTick = n; suena('clic') } } S.slot = s }
+    if (s !== S.slot) {
+      if (S.slot >= 0 && S.raf) {
+        // un tic por casilla: rapido y suave al principio, mas fuerte y grave cuando frena (la tension del final)
+        S.kick = 1; const n = performance.now(), lento = 1 - Math.min(1, S.v || 0);
+        if (n - S.tTick > 75) { S.tTick = n; suena('clic') }
+      }
+      S.slot = s;
+    }
+  }
+  // velocidad de la rueda (0 parada, 1 a tope) para los efectos: estela, halo y tension
+  function efectos(d) {
+    const r = d && d.ronda, e = r ? (J.ahora() - ms(r.cierra)) / 1000 : 0;
+    const a1 = angulo(d, e), a0 = angulo(d, e - 0.05), v = Math.min(1, Math.abs(a1 - a0) / 0.05 / W0);
+    S.v = v;
+
   }
   function frame() {
     S.raf = 0;
@@ -246,19 +263,24 @@
     const f = fase(D);
     if (!el.isConnected) { if (S.on && (f === 'giro' || f === 'cerrando')) S.raf = requestAnimationFrame(frame); return }
     gira(anguloAhora(D));
+    if (f === 'giro' || f === 'cerrando') efectos(D);
     const p = el.querySelector('[data-ptr]');
     if (p) { p.style.transform = `rotate(${(-22 * S.kick).toFixed(1)}deg)`; S.kick *= 0.82 }
     if (f === 'giro' || f === 'cerrando') { S.raf = requestAnimationFrame(frame); return }
     if (p) p.style.transform = '';
+    S.v = 0;
     pinta();
   }
+  // la bola cae (para todos) y, si jugaste, el momento de ganar o perder: estallido con la cifra o temblor rojo
   function resultadoSuena(r) {
     S.sonado = r.id;
     const mias = (r.apuestas || []).filter((a) => a.player === J.ctx.me);
+    setTimeout(() => { if (S.ult) S.ult.refresca() }, 1800);
     if (!mias.length) return;
-    const gana = mias.some((a) => a.color === r.color);
-    suena(gana ? 'cobrar' : 'perder');
-    if (gana && J.ctx.refresh) setTimeout(() => J.ctx.refresh(), 1500);
+    const puso = mias.reduce((a, x) => a + x.stake, 0), cobra = mias.filter((a) => a.color === r.color).reduce((a, x) => a + x.stake * MULT[x.color], 0);
+    const neto = cobra - puso;
+    suena(neto > 0 ? 'cobrar' : 'perder');
+    if (cobra && J.ctx.refresh) setTimeout(() => J.ctx.refresh(), 1500);
   }
 
   /* ---------- apostar ---------- */
@@ -288,10 +310,11 @@
       if (!el) crea();
       if (hueco && hueco !== el) hueco.replaceWith(el);
       if (!S.ocupa && c.saldo != null && S.saldo == null) S.saldo = c.saldo;
+      if (S.ult) S.ult.arranca();
       if (!S.on) { S.on = true; J.escucha(carga); pinta(); carga(); return }
       if (Date.now() - S.ultima > 1500) carga(); else { pinta(); programa() }
     },
-    para,
-    ocupado: () => !!(D && fase(D) === 'giro'),
+    para() { para(); if (S.ult) S.ult.para() },
+    ocupado: () => false,
   };
 })();

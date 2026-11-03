@@ -87,7 +87,7 @@ begin
   if (select count(distinct x) from unnest(sc.orden) x) <> 6 then raise exception 'FALLO: el orden de llegada no tiene seis caballos distintos'; end if;
   r := carrera_apostar(v_gana, 100);                                                -- el primero acierta
   select * into ca from jg_carrera where id = ca.id;
-  if ca.estado <> 'apuestas' or ca.cierra < jg_ahora() + interval '25 seconds' then raise exception 'FALLO: la primera apuesta no abre 30 s'; end if;
+  if ca.estado <> 'apuestas' or ca.cierra < jg_ahora() + carrera_t_apuestas() - interval '5 seconds' then raise exception 'FALLO: la primera apuesta no abre su plazo'; end if;
   perform set_config('request.jwt.claims', format('{"sub":"%s","role":"authenticated"}', jug[2]), true);
   r := carrera_apostar(v_otro, 300);                                                -- el segundo no
   update jg_carrera set cierra = jg_ahora() - interval '1 second' where id = ca.id;
