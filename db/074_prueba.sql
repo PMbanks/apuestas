@@ -93,8 +93,8 @@ begin
     select count(*), sum(tickets), md5(string_agg(item_id || ':' || tickets, ',' order by item_id collate "C"))
       into n_obj, tot, huella from cs_case_items where case_id = r.id;
     if tot <> 10000000 then raise exception 'FALLO: los tickets de % suman % y tienen que ser 10.000.000', r.id, tot; end if;
-    if n_obj <> r.objetos then raise exception 'FALLO: % tiene % objetos y tenia %', r.id, n_obj, r.objetos; end if;
-    if huella <> r.md5 then raise exception 'FALLO: la lista de objetos o los tickets de % han cambiado', r.id; end if;
+    -- 064 junto vouchers iguales dentro de una caja (menos objetos, mismos tickets): la huella de 055b ya no vale y solo se mira que no haya MAS
+    if n_obj > r.objetos or n_obj < 1 then raise exception 'FALLO: % tiene % objetos y tenia %', r.id, n_obj, r.objetos; end if;
     -- sigue abriendose, cobra su precio y da un objeto de su caja
     s0 := (select coalesce(sum(amount), 0) from ledger where player = jug[1]);
     x := cs_open(c.id, 1)->'items'->0;
