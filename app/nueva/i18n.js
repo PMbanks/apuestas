@@ -342,7 +342,7 @@
     'Ir a la Liga': 'Go to the League', 'Ir al Chat': 'Go to Chat', 'Ir al Monedero': 'Go to Wallet', 'Ir a Juegos': 'Go to Games', 'Ver el directo': 'Watch live', 'Abrir Recompensas': 'Open Rewards', 'Todavía no hay novedades.': 'No news yet.',
     // juegos (JUEGOS-INTEGRAR.md, las que faltaban)
     'Crash': 'Crash', 'Blackjack': 'Blackjack', 'Contra': 'Against', 'cara': 'heads', 'cruz': 'tails', 'Máx': 'Max',
-    'Retar por': 'Challenge for', 'ti': 'you', 'Retirada automática': 'Auto cash out', 'Últimas rondas': 'Last rounds', 'Todavía nadie dentro': 'Nobody in yet', 'segundos': 'seconds',
+    'Retar por': 'Challenge for', 'ti': 'you', 'Retirada automática': 'Auto cash out', 'Últimas rondas': 'Last rounds', 'explotó': 'crashed', 'Nadie jugó esta ronda': 'Nobody played this round', 'Toca una ronda para ver quién jugó y dónde retiró': 'Tap a round to see who played and where they cashed out', 'Todavía nadie dentro': 'Nobody in yet', 'segundos': 'seconds',
     'Haz tu apuesta': 'Place your bet', 'Repartir por': 'Deal for', 'Otra mano por': 'Another hand for', 'Hoy te quedan': 'Today you have', 'por arriesgar': 'left to risk', 'Hoy ya has perdido 500. Vuelve mañana': 'You have already lost 500 today. Come back tomorrow',
     'Blackjack paga 3 a 2': 'Blackjack pays 3 to 2', 'Este juego está cerrado ahora mismo': 'This game is closed right now', 'La retirada automática va de ×1,01 a ×1000': 'Auto cash out goes from ×1.01 to ×1000', 'Tienes que entrar primero': 'You need to log in first', 'La apuesta mínima es 1': 'The minimum bet is 1', 'La apuesta máxima es 100.000': 'The maximum bet is 100,000',
     'Elige cara o cruz': 'Pick heads or tails', 'Elige a un colega': 'Pick a friend', 'Ya tienes 5 retos abiertos: retira alguno': 'You already have 5 open challenges: withdraw one', 'Ese reto no existe': 'That challenge does not exist', 'Ese reto ya no está abierto': 'That challenge is no longer open', 'No puedes aceptar tu propio reto': 'You cannot accept your own challenge',
@@ -546,7 +546,7 @@
     'Cancelar reto': 'Cancel challenge', '¿Seguro? Te devuelvo': 'Sure? You get back', 'Escribe cuánto': 'Type an amount', 'El reto máximo es 100.000': 'The maximum challenge is 100,000',
     '· si empatan y nadie va con el empate, perdéis los dos': '· if they draw and nobody backs the draw, you both lose', 'elige tu lado para ver lo que cobras': 'pick your side to see what you get',
     'Si aciertas cobras': 'If you are right you get', 'de la banca (cuota': 'from the bank (odds', 'de cada uno que entre en contra': 'from each one who joins against you',
-    'de tu rival si acepta': 'from your opponent if they accept', 'Si nadie entra en contra, se queda como una apuesta normal a esa cuota': 'If nobody joins against you, it stays as a normal bet at those odds',
+    'de tu rival si acepta': 'from your opponent if they accept', 'Si nadie entra en contra, la banca juega contra ti: tu apuesta cuenta igual, a esa cuota': 'If nobody joins against you, the house takes the other side: your bet still counts, at those odds',
     'Puedes cancelarlo mientras no entre nadie y no empiece el partido': 'You can cancel it while nobody has joined and the match has not started',
     'en juego entre vosotros · el que acierta cobra además su cuota de la banca': 'at stake between you · the winner also gets their odds from the bank',
     'tu apuesta · si alguien entra en contra, te llevas también lo suyo': 'your bet · if someone joins against you, you also take theirs', 'si acierta': 'if right', 'Te llevas si aciertas': 'You get if right', 'La mitad de tu saldo': 'Half your balance', 'Todo tu saldo (máximo 100.000)': 'All your balance (max 100,000)',
@@ -563,6 +563,10 @@
     'De 75 a 900 V-Bucks o una caja de CS2 para abrirla tú. Una tirada cada 3 días.': 'From 75 to 900 V-Bucks or a CS2 box to open yourself. One spin every 3 days.',
     'Estás en negativo (': 'You are below zero (', '): no puedes apostar hasta volver a tener saldo. La paga del lunes llega sola.': '): you cannot bet until you have a balance again. The Monday payday comes in by itself.',
     'No te queda saldo para apostar. La paga del lunes llega sola.': 'You have no balance left to bet. The Monday payday comes in by itself.',
+    // 070 (03-11): la paga del lunes se reclama a mano en Recompensas
+    'No te queda saldo para apostar. Reclama la paga del lunes en Recompensas.': 'You have no balance left to bet. Claim the Monday payday in Rewards.',
+    '): no puedes apostar hasta volver a tener saldo. Reclama la paga del lunes en Recompensas.': '): you cannot bet until you have a balance again. Claim the Monday payday in Rewards.',
+    'Hecha esta semana': 'Done this week', 'Sin saldo: reclama la paga del lunes en Recompensas': 'No balance: claim the Monday payday in Rewards',
     // Ficha de partido pro (01-11, fichapro.js)
     'Árbitro': 'Referee', 'Asistencia': 'Attendance', 'Hora local': 'Local time', 'Goles y tarjetas': 'Goals and cards', 'Titulares y cambios': 'Starters and subs', 'Suplentes': 'Substitutes',
     'Quinteto inicial': 'Starting five', 'Puntos, rebotes y asistencias': 'Points, rebounds and assists', 'Banquillo': 'Bench', 'Jugadores a seguir': 'Players to watch', 'Medias por partido de esta temporada': 'Per game averages this season',
@@ -783,7 +787,9 @@
     [/^Las (\d+) más baratas$/, 'The $1 cheapest'], [/^([\d.]+) fuera del filtro$/, '$1 outside the filter'], [/^¿Vender las ([\d.]+) por ([\d.,]+)\? Toca otra vez$/, 'Sell all $1 for $2? Tap again'], [/^([\d.]+) objetos$/, '$1 items'], [/^([\d.]+) skins$/, '$1 skins'],
     [/^Inventario de (.+)$/, "$1's inventory"], [/^Elegir las (\d+)$/, 'Select all $1'], [/^Ver los (\d+)$/, 'See all $1'], [/^Ver (\d+) más$/, 'Show $1 more'],
     // recompensas y ruleta nuevas (30-10)
-    [/^([\d.]+) V-Bucks cada día que lo reclames$/, '$1 V-Bucks every day you claim them'], [/^([\d.]+) cada uno, de lunes a miércoles · se lo lleva quien más gane$/, '$1 each, Monday to Wednesday · the biggest winner takes it'],
+    [/^([\d.]+) V-Bucks cada día que lo reclames$/, '$1 V-Bucks every day you claim them'], [/^([\d.]+) V-Bucks cada semana, reclamándola\. Si no la reclamas esa semana, se pierde$/, '$1 V-Bucks every week, if you claim it. If you do not claim it that week, it is gone'],
+    [/^Paga del lunes: \+([\d.]+) para cada uno\. Reclámala en Recompensas$/, 'Monday payday: +$1 for each. Claim it in Rewards'], [/^\+([\d.]+) de la paga del lunes$/, '+$1 from the Monday payday'],
+    [/ · reclámala en Recompensas$/, ' · claim it in Rewards'], [/ · reclamada esta semana$/, ' · claimed this week'], [/^Tienes ([\d.,]+)\. La paga del lunes se reclama en Recompensas\.$/, 'You have $1. Claim the Monday payday in Rewards.'], [/^([\d.]+) cada uno, de lunes a miércoles · se lo lleva quien más gane$/, '$1 each, Monday to Wednesday · the biggest winner takes it'],
     [/^(\d+) dentro$/, '$1 in'], [/^La siguiente tirada, el lunes · en (.+)$/, 'Next spin on Monday · in $1'], [/: la tienes en Cajas › Inventario$/, ': it is in Boxes › Inventory'],
     // mis apuestas estilo boleto (30-10)
     [/^última · (\d+) apuestas$/, 'last · $1 bets'],

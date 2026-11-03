@@ -10,7 +10,7 @@ const SP = { f: ['Fútbol', '../img/futbol.svg'], v: ['Valorant', '../img/valora
   r: ['Fórmula 1', 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" fill="#e10600"/><text x="32" y="41" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-style="italic" font-size="26" text-anchor="middle" fill="#fff">F1</text></svg>')] };   // NBA (nba.js, db/039) y F1 (f1.js, db/052)
 const DEP = ['f', 'v', 'c', 'u', 'b', 'r'];
 const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', tiempo: 'Tiempo en la app', trato: 'Trato entre amigos', mercado: 'Mercado', jackpot: 'Jackpot', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', ruleta_semana: 'Ruleta de premios', ruleta_global: 'Ruleta global', premio_semana: 'Premio de la semana', moneda: 'Cara o cruz', crash: 'Crash', ruleta: 'Ruleta', blackjack: 'Blackjack', plinko: 'Plinko', cashout: 'Cash out', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta' };
-let TIEMPO = null, CLAIM = null, BOTE = null, REACT = new Map(), POLLS = new Map(), CAMPEON = null;
+let TIEMPO = null, CLAIM = null, PAGA = null, BOTE = null, REACT = new Map(), POLLS = new Map(), CAMPEON = null;
 
 /* ---------- estado ---------- */
 let NOW = Date.now(), PAY = 0, WEEK0 = 0;
@@ -52,13 +52,14 @@ function nextMonday() {
 const COLS = 'id,sport,league,league_name,league_logo,stage,tag,venue,home,away,home_logo,away_logo,starts_at,status,score,winner,odds_1,odds_x,odds_2,odds_src,bo,details';
 async function load() {
   const from = new Date(Date.now() - 2 * DAY).toISOString(), to = new Date(Date.now() + 72 * DAY).toISOString();
-  const [st, ms, ch, ex, wh, ti, rm] = await Promise.all([
+  const [st, ms, ch, ex, wh, ti, , rm] = await Promise.all([
     db.rpc('get_state'),
     db.from('matches').select(COLS).gte('starts_at', from).lte('starts_at', to).neq('status', 'canceled').order('starts_at').limit(3000),
     db.from('chat').select('*').order('id', { ascending: false }).limit(150),
     db.rpc('get_extras'),
     db.from('wheel_spins').select('player,week,prize,label,amount,created_at').order('id', { ascending: false }).limit(40),
     db.rpc('time_status'),
+    db.rpc('paga_estado').then((r) => { PAGA = r.error ? null : r.data }, () => { PAGA = null }),   // db/070: la paga del lunes se reclama en Recompensas (sin 070 cargado, null: como antes)
     db.rpc('get_retos').then((r) => r, () => ({ error: 1 })),   // db/053: quien esta dentro de cada reto (con 053 sin cargar da error y los retos son de 2 como antes)
   ]);
   if (st.error) throw st.error;
@@ -941,7 +942,7 @@ function ficha(m) {
   else if (!sel) h += `<p class="hint">Elige ${ps.length > 2 ? '1, X o 2' : '1 o 2'} para apostar.</p>`;
   else {
     const o = po(m, S.sel.p), st = stakeNow(), pv = ((st / Math.max(1, me().s)) * 100).toFixed(1);
-    if (me().s < 1) h += `<p class="hint sin-saldo">${me().s < 0 ? `Estás en negativo (<span class="neg-s">${N(me().s)}</span>): no puedes apostar hasta volver a tener saldo.` : 'No te queda saldo para apostar.'} La paga del lunes llega sola.</p>`;
+    if (me().s < 1) h += `<p class="hint sin-saldo">${me().s < 0 ? `Estás en negativo (<span class="neg-s">${N(me().s)}</span>): no puedes apostar hasta volver a tener saldo.` : 'No te queda saldo para apostar.'} ${PAGA ? 'Reclama la paga del lunes en Recompensas.' : 'La paga del lunes llega sola.'}</p>`;
     else h += `<div class="stk"><span class="lab">Apuestas</span><b data-sv>${N(st)}${coin()}</b>
       <input type="range" id="stake" min="1" max="${Math.max(1, me().s)}" step="1" value="${st}" data-in style="--p:${pv}%" aria-label="Cuánto apuestas"><div class="chips">${chips()}</div></div>
       <div class="ret"><span>Si aciertas con <em>${esc(pn(m, S.sel.p))} ${O(o)}</em></span><b data-ret>${N(st * o)}${coin()}</b></div>
@@ -1097,7 +1098,7 @@ function duels() {
     return `<div class="du" data-goto="${m.id}"><div class="du-t"><b>${m.live ? 'EN VIVO' : CD(m.at)}</b><span>${m.live ? esc(m.score || '') : WD(m.at) + ' ' + HM(m.at)}</span></div>
       <div class="du-s">${ks.map((k) => `<div class="du-g">${k === 'X' ? '<span class="du-x">X</span>' : logo(m, k === '1' ? 'a' : 'b')}<div><strong>${esc(pn(m, k))}</strong><span>${g[k].map((w) => av(w.f, 'sm')).join('')}<em>${N(g[k].reduce((a, w) => a + w.stake, 0))}${coin()}</em></span></div></div>`).join('<i>vs</i>')}</div></div>`;
   }).join('');
-  return rows || `<p class="hint">Sin duelos a la vista.${VIS === 'kick' ? ' Se descubren al empezar cada partido.' : ''}</p>`;
+  return rows || `<p class="hint">Sin duelos a la vista.</p>`;
 }
 function betCard(f, b) {
   const m = byId(b.m), left = Date.parse(m.at) - NOW, fill = m.live ? 100 : Math.max(4, 100 - (left / (72 * 36e5)) * 100);
@@ -1183,7 +1184,7 @@ function colegas() {
   const abiertas = ALL.filter((b) => b.st === 'open' && byId(b.m));
   const partidos = [...new Set(abiertas.map((b) => b.m))].map(byId).sort((a, b) => (b.live - a.live) || Date.parse(a.at) - Date.parse(b.at));
   const hechas = ALL.filter((b) => (b.st === 'won' || b.st === 'lost') && byId(b.m)).sort((a, b) => Date.parse(b.set || b.at) - Date.parse(a.set || a.at)).slice(0, 12);
-  const ajustes = admin ? `<div class="ab-aj"><nav class="vis"><span class="lab">Apuesta del día</span><button class="chip ${DAILY_ON ? 'on' : ''}" data-daily="true">Con extra ×${O(DAILY_BONUS)}</button><button class="chip ${!DAILY_ON ? 'on' : ''}" data-daily="false">Sin extra</button></nav><nav class="vis"><span class="lab">Elecciones</span><button class="chip ${VIS === 'open' ? 'on' : ''}" data-vis="open">Visibles</button><button class="chip ${VIS === 'kick' ? 'on' : ''}" data-vis="kick">Ocultas hasta empezar</button></nav></div>` : '';
+  const ajustes = admin ? `<div class="ab-aj"><nav class="vis"><span class="lab">Apuesta del día</span><button class="chip ${DAILY_ON ? 'on' : ''}" data-daily="true">Con extra ×${O(DAILY_BONUS)}</button><button class="chip ${!DAILY_ON ? 'on' : ''}" data-daily="false">Sin extra</button></nav></div>` : '';
   const gente = rank.map((f, i) => {
     const op = openOf(f.id), inP = op.reduce((a, b) => a + b.stake, 0);
     return `<button class="ab-p ${f.me ? 'me' : ''}" data-prof="${f.id}" style="--c:var(--f-${f.id})">${av(f.id, 'xl')}<span class="ab-pn"><b>${esc(f.n)}</b><small>${i + 1}º · ${f.ac !== '·' ? f.ac + ' aciertos' : 'sin resueltas'}</small></span><span class="ab-ps num">${N(f.s)}${coin()}</span><span class="ab-pj">${op.length ? `${N(inP)}${coin()} en juego · ${op.length} ${op.length === 1 ? 'apuesta' : 'apuestas'}` : 'nada en juego'}</span></button>`;
@@ -1564,9 +1565,9 @@ function ruedaHtml() {
 function rwPend() {
   const rueda = !ruMia(me().uid);
   const tiempo = (TIEMPO?.tiers || []).filter((t) => !t.claimed && TIEMPO.minutes >= t.min).length;
-  return { diario: !!CLAIM && !CLAIM.today, rueda, rescate: puedeRescate(), tiempo };
+  return { diario: !!CLAIM && !CLAIM.today, paga: !!PAGA && PAGA.abierta && !PAGA.claimed, rueda, rescate: puedeRescate(), tiempo };
 }
-function rwBoton() { const p = rwPend(), n = [p.diario, p.rueda, p.rescate].filter(Boolean).length + p.tiempo;
+function rwBoton() { const p = rwPend(), n = [p.diario, p.paga, p.rueda, p.rescate].filter(Boolean).length + p.tiempo;
   return `<button class="claim ${n ? '' : 'nada'} ${S.rew ? 'on' : ''}" data-act="rw" aria-label="Recompensas">${IC_GIFT}<span>Recompensas</span>${n ? `<b>${n}</b>` : ''}</button>` }
 const IC_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 // PM, 30-10: premios por estar en la app (db/019): 30 min, 1 h y 2 h al dia. La app manda un latido por minuto a la vista
@@ -1605,6 +1606,7 @@ function pintaRw() {
     <div class="rw-l">
       ${window.GM_RGLOBAL ? GM_RGLOBAL.fila() : ''}
       ${tiempoHtml()}
+      ${PAGA ? `<div class="rw-r2"><span class="rw-t d"><span class="cn"></span></span><p><b>Paga del lunes</b><span>${N(PAGA.amount)} V-Bucks cada semana, reclamándola. Si no la reclamas esa semana, se pierde</span></p>${p.paga ? `<button class="go-s" data-act="claimweek">Reclamar</button>` : hecho('Hecha esta semana')}</div>` : ''}
       <div class="rw-r2"><span class="rw-t d"><span class="cn"></span></span><p><b>Premio diario</b><span>${N(CLAIM?.amount || 50)} V-Bucks cada día que lo reclames</span></p>${p.diario ? `<button class="go-s" data-act="claim">Reclamar</button>` : hecho('Hecho hoy')}</div>
       <div class="rw-r2"><span class="rw-t b">${IC_TICKET}</span><p><b>Bote de la semana</b><span>${BOTE?.pot ? `<i class="rw-pot">${N(BOTE.pot)}${coin()}</i> en el bote` : `Cada lunes, ${N(BOTE?.amount || 100)} de cada uno`} · se lo lleva quien más gane</span>${dentro.length ? `<span class="rw-av">${dentro.map((f) => av(f.id, 'sm')).join('')}<small>${dentro.length} dentro</small></span>` : ''}</p><button class="go-s res" data-apo-ir>Ver el bote</button></div>
       ${p.rescate ? `<div class="rw-r2"><span class="rw-t p">${IC_GIFT}</span><p><b>Rescate</b><span>Te has quedado a cero: ${N(CLAIM.rescue)} para seguir, una vez por semana</span></p><button class="go-s" data-act="rescue">Pedir</button></div>` : ''}
@@ -1625,7 +1627,7 @@ function monedero() {
   return `<div class="pad">
     <div class="w-hero">${coin('big')}
       <div><span class="lab">Tu saldo</span><div class="w-bal">${NS(me().s)}</div>
-        <p class="w-pay">Paga del lunes <b>+${N(WEEKLY)}</b> · se acumula</p>
+        <p class="w-pay">Paga del lunes <b>+${N(WEEKLY)}</b> · ${PAGA ? (PAGA.claimed ? 'reclamada esta semana' : 'reclámala en Recompensas') : 'se acumula'}</p>
         <div class="w-cd" data-cdpay>${fmtPay(PAY)}</div>
         <div class="wk7">${days.map((d, i) => `<i class="${i <= di ? 'on' : ''}"></i>`).join('')}${days.map((d, i) => `<span class="${i === di ? 'on' : ''}">${d}</span>`).join('')}</div>
       </div></div>
@@ -1984,7 +1986,7 @@ async function refresh() { try { await loadSeguro(); render() } catch (e) { toas
 let busy = false;
 async function placeBet() {
   const m = S.sel && byId(S.sel.m); if (!m || !isOpen(m) || busy) return;
-  const st = stakeNow(); if (st < 1) return toast(puedeRescate() ? 'Sin saldo: pide el rescate en Monedero' : CLAIM && !CLAIM.today ? 'Sin saldo: reclama el premio diario arriba' : 'Sin saldo: espera a la paga del lunes');
+  const st = stakeNow(); if (st < 1) return toast(puedeRescate() ? 'Sin saldo: pide el rescate en Monedero' : CLAIM && !CLAIM.today ? 'Sin saldo: reclama el premio diario arriba' : (PAGA && PAGA.abierta && !PAGA.claimed ? 'Sin saldo: reclama la paga del lunes en Recompensas' : 'Sin saldo: espera a la paga del lunes'));
   busy = true; const p = S.sel.p;
   const { data, error } = await db.rpc('place_bet', { p_match: m.id, p_pick: p, p_stake: st });
   busy = false;
@@ -2121,6 +2123,7 @@ document.addEventListener('click', async (e) => {
   if (d.act === 'rw') { S.rew = !S.rew; if (S.rew) S.nvp = false; return render() }
   if (d.tclaim) { const { data, error } = await db.rpc('claim_time_reward', { p_min: +d.tclaim }); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} por tu tiempo en la app`); return refresh() }
   if (d.act === 'rw-cajas') { S.rew = false; S.scr = 'cajas'; document.getElementById('view').scrollTop = 0; return render() }
+  if (d.act === 'claimweek') { const { data, error } = await db.rpc('claim_week'); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} de la paga del lunes`); return refresh() }
   if (d.act === 'claim') { const { data, error } = await db.rpc('claim_daily'); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} del premio diario`); return refresh() }
   if (d.act === 'rescue') { const { data, error } = await db.rpc('claim_rescue'); if (error) return toast(errMsg(error)); toast(`Rescate: +${N(data)}${coin()}`); return refresh() }
   if (d.act === 'poll') { S.pollForm = !S.pollForm; render(); if (S.pollForm) document.getElementById('poll-q')?.focus(); return }

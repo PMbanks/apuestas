@@ -195,7 +195,7 @@
     const cobras = !P.p || !o || st < 1 ? `<span class="nw"><span>Pones</span> <b class="num">${N(st)}</b>${g(() => coin(), '')}</span> <span>·</span> <span class="nw"><span>elige tu lado para ver lo que cobras</span></span>`
       : `<span class="nw"><span>Si aciertas cobras</span> <b class="num">${N(banca)}</b>${g(() => coin(), '')}</span> <span class="nw"><span>de la banca (cuota</span> <b class="num">${O(o)}</b><span>)</span></span>
          <span class="nw"><span>+</span> <b class="num">${N(st)}</b>${g(() => coin(), '')} <span>${P.to === 'any' ? 'de cada uno que entre en contra' : 'de tu rival si acepta'}</span></span>
-         <span class="rp-s2">Si nadie entra en contra, se queda como una apuesta normal a esa cuota</span>`;
+         <span class="rp-s2">Si nadie entra en contra, la banca juega contra ti: tu apuesta cuenta igual, a esa cuota</span>`;
     const html = `<div class="rp-f" data-pn="x"></div><section class="rp-c">
       <header><span class="lab">Retar</span><button type="button" class="rp-x" data-pn="x" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
       <p class="rp-m"><b data-notr>${esc(m.a)}</b> <i>vs</i> <b data-notr>${esc(m.b)}</b></p>
