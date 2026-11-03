@@ -68,6 +68,7 @@
   /* ---------- datos ---------- */
   async function cargaInv() {
     const c = ctx(); if (!c) return;
+    M.invT = Date.now();
     try {
       const { data, error } = await c.db.from('cs_inv').select('id,item_id,wear,fl,st,value,created_at').eq('player', c.me).eq('status', 'own')
         .order('value', { ascending: false }).order('id', { ascending: false }).limit(3000);
@@ -309,8 +310,13 @@
 
   async function mejorar() {
     const c = ctx(); if (!c || M.ocupado || M.fase === 'gira' || falta()) return;
+    // antes de pedir la mejora se vuelve a leer el inventario: lo que ya no esta (vendido, gastado en otra pestana) sale de lo puesto
+    M.ocupado = true;
+    const antes = M.sel.size; await cargaInv();
+    if (M.sel.size !== antes) { M.ocupado = false; pideTargets(); pinta(); return toast(L('Alguna skin ya no está en tu inventario: la he quitado. Revisa lo que pones', 'Some skin is no longer in your inventory: I took it out. Check what you put in')) }
     const t = M.tgt, ids = [...M.sel], vb = M.vb || 0;
-    M.ocupado = true; M.fase = 'idle'; M.res = null; pintaArriba();
+    if (!t || (!ids.length && vb < 1)) { M.ocupado = false; return pinta() }
+    M.fase = 'idle'; M.res = null; pintaArriba();
     let r;
     try {
       const { data, error } = await c.db.rpc('cs_upgrade', { p_ids: ids, p_vb: vb, p_item: t.id, p_wear: t.wear, p_st: !!t.st });
@@ -394,7 +400,14 @@
       if (nuevo || !M.inv) {
         pinta();
         Promise.all([cargaInv(), cargaUlt()]).then(() => { pideTargets(true); pinta() });
-      } else if (!anim && !(document.activeElement && el.contains(document.activeElement) && document.activeElement.matches('input'))) pinta();
+      } else {
+        const escribe = () => document.activeElement && el.contains(document.activeElement) && document.activeElement.matches('input');
+        if (!anim && !escribe()) pinta();
+        // PM 04-11: "las skins que me acaban de tocar no estan en el upgrader". El inventario solo se leia la primera vez: al volver a la
+        // pestana (o cuando Cajas repinta porque ha cambiado algo) se vuelve a leer, como mucho cada 2 s, para que entre lo que acaba de
+        // salir y salga lo vendido o gastado
+        if (!anim && M.fase !== 'gira' && Date.now() - (M.invT || 0) > 2000) cargaInv().then(() => { pideTargets(); if (!anim && !escribe()) pinta() });
+      }
     },
     estado: () => ({ fase: M.fase, girando: !!anim }),
   };
