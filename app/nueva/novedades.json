@@ -2,6 +2,17 @@
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
   {
+   "id": "ultimos-drops-0311",
+   "fecha": "2026-11-03",
+   "hora": "23:00",
+   "titulo": "Los últimos drops, en vivo",
+   "texto": "En Cajas salen los 7 últimos drops buenos de todos (Clasificado o mejor, también en batallas). Cuando sale otro entra por la derecha y el más viejo se va. Pasa el ratón o toca uno para ver de qué caja salió y quién la abrió.",
+   "titulo_en": "Latest drops, live",
+   "texto_en": "Boxes now shows the last 7 good drops from everyone (Classified or better, battles too). When a new one lands it slides in from the right and the oldest leaves. Hover or tap one to see which box it came from and who opened it.",
+   "img": "novedades/ultimos-drops.webp",
+   "ir": "cajas"
+  },
+  {
    "id": "parlay-mismo-partido-0211",
    "fecha": "2026-11-02",
    "hora": "07:30",

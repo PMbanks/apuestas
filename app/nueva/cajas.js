@@ -43,7 +43,7 @@
   let ctx = null, root = null;
   const S = { tab: 'abrir', cat: GRUPOS.some((g) => g[0] === lee('cj-cat')) ? lee('cj-cat') : 'cs2', caja: null, n: 1, rapido: lee('cj-rapido') === '1', vel: ['0', '1', '2'].includes(lee('cj-vel')) ? lee('cj-vel') : lee('cj-rapido') === '1' ? '1' : '0', auto: false, tiras: null, tirasK: '', tirasC: null, fase: 'idle', prueba: false, quien: null, sel: new Set(), ancla: null, anclaOn: true, bat: null, nueva: null, res: null, sure: null, rep: null, espTodo: null,
     orden: ['valor', 'nuevas', 'rareza'].includes(lee('cj-orden')) ? lee('cj-orden') : 'valor', fR: null, fC: null, invN: INV_PASO, pag: 0 };
-  const D = { cases: null, caja: new Map(), items: new Map(), st: null, bats: new Map(), err: null, hechas: null, cajasDe: new Map() };
+  const D = { buenos: null, cases: null, caja: new Map(), items: new Map(), st: null, bats: new Map(), err: null, hechas: null, cajasDe: new Map() };
   let anim = null, pendiente = false, cargando = null, otraVez = false, ultima = 0, ocupado = false;
 
   /* ---------- utilidades ---------- */
@@ -182,6 +182,16 @@
     } catch { D.hechas = { local: true } }
   }
   // cs_owned: lo que tiene cada uno sin abrir (status own). Si la tabla aun no esta, nada
+  // lo ultimo bueno (Clasificado, Encubierto o ★) de todos, tambien lo que sale en las batallas: cs_inv se puede leer entero
+  // (politica cs_inv_read, is_player). Si falla, se usa el feed de cs_state (solo cajas sueltas).
+  async function cargaBuenos() {
+    try {
+      const { data, error } = await ctx.db.from('cs_inv').select('id,item_id,value,case_id,battle_id,opened_by,created_at,cs_items!inner(rarity)')
+        .in('cs_items.rarity', ['cla', 'cov', 'esp']).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(FD_N);
+      if (error) throw error;
+      return (data || []).map((r) => ({ id: r.id, item: r.item_id, value: r.value, case: r.case_id, battle: r.battle_id, by: r.opened_by, at: r.created_at }));
+    } catch { return null }
+  }
   async function cargaMias(quien) {
     try {
       const { data, error } = await ctx.db.from('cs_owned').select('id,case_id,source,created_at').eq('player', quien).eq('status', 'own').order('created_at', { ascending: true });
@@ -198,8 +208,9 @@
         // PM 01-11 "si, abrelas": Lujo abierta otra vez con las 16 cajas nuevas (db/046). Cosmeticos sigue fuera (Mercado en mantenimiento)
         if (!D.cases) D.cases = ((await rpc('cs_cases')) || []).filter((c) => catDe(c) !== 'cosmeticos');
         const st = await rpc('cs_state', { p_player: S.quien || ctx.me });
-        await asegura([...st.inv, ...st.feed].map((i) => i.item));
-        D.st = st; D.err = null;
+        const bu = await cargaBuenos();
+        await asegura([...st.inv, ...st.feed, ...(bu || [])].map((i) => i.item));
+        D.st = st; D.buenos = bu; D.err = null;
         await cargaMias(ctx.me);
         if (S.quien && S.quien !== ctx.me) await cargaMias(S.quien);
         if (S.caja) await cargaCaja(S.caja);
@@ -208,6 +219,7 @@
       } catch (e) { D.err = msgErr(e) }
       ultima = Date.now(); cargando = null;
       pinta();
+      if (!D.err) fdSync();
       if (otraVez) { otraVez = false; cargar(true) }
     })();
     return cargando;
@@ -369,6 +381,7 @@
     root.innerHTML = vista();
     // los botones que piden confirmacion (cancelar, salir, vender) se ponen en rojo mientras esperan el segundo toque,
     // tambien el de la batalla abierta
+    ponFeed();
     armados(root);
     indexa();
     traduce(root);
@@ -517,14 +530,95 @@
         <span class="ca-ct">${n.top ? `<em data-notr>${esc(n.top)}</em>` : ''}<b data-notr>${esc(n.main)}</b></span><span class="ca-cv">${f.desde ? '<i>desde</i>' : ''}${N(f.v || 0)}${coin()}</span></div>`;
     }).join('')}</div></section>`;
   }
-  function vFeed() {
-    const f = D.st.feed; if (!f.length) return '';
-    return `<section class="cj-feed-s"><header class="cj-sec-h"><h3>Lo último que ha salido</h3></header><div class="cj-feed">${f.map((i) => {
-      const x = item(i.item), { main } = nombre(x), top = nombre(x).top || (esLujo(x.id) ? caja(i.case).name || '' : '');
-      return `<div class="cj-fd" style="--c:${color(x.rarity)}" title="${esc(x.name)}"><span class="cj-fd-img">${pic(x.image, 256)}</span>
-        <span class="cj-fd-n" data-notr>${top ? `<em>${esc(top)}</em>` : ''}${esc(main)}</span>
-        <span class="cj-fd-b">${av(i.by, 'sm')}<span class="cj-fd-v">${N(i.value)}${coin()}</span></span></div>`;
-    }).join('')}</div></section>`;
+  /* ----- lo ultimo bueno que ha salido: una tira viva de 7 ----- */
+  // PM 03-11: "que salgan los ultimos 7 buenos drops y se vaya moviendo: cuando toca algo bueno otra vez y sea la 8a vez, el numero 1 se
+  // cambia de lugar y todos se mueven un lado mas para darle espacio al drop 8; y si pasas el mouse por arriba que salga que caja fue".
+  // Bueno = Clasificado, Encubierto o ★ (lo que cs_state ya manda en feed: rareza cla, cov o esp, sacado de una caja, sin batallas).
+  // El mas viejo a la izquierda y el nuevo entra por la derecha. La tira es un nodo fijo (FD.el) que la pantalla vuelve a colgar en cada
+  // repintado, asi que la animacion no se corta. Llega en vivo: abrir una caja toca pulse, la app recarga y cargar() llama a fdSync().
+  const FD_N = 7, FD_ESPERA = 3600;   // lo que saca otro espera a que acabe su ruleta en directo (cajas-vivo.js), para no chafarsela
+  const FD = { el: null, list: [], cola: [], t: 0, mov: false, sx: 0 };
+  const fdObjetivo = () => (D.st ? (D.buenos || D.st.feed).slice(0, FD_N).reverse() : []);
+  function fdTile(i) {
+    const x = item(i.item), n = nombre(x), c = caja(i.case), top = n.top || (esLujo(x.id) || catDe(c) === 'lujo' ? c.name || '' : '');
+    return `<div class="cj-fd" data-id="${esc(i.id)}" style="--c:${color(x.rarity)}" tabindex="0"><span class="cj-fd-img">${pic(x.image, 256)}</span>
+        <span class="cj-fd-n" data-notr>${top ? `<em>${esc(top)}</em>` : ''}${x.rarity === 'esp' && n.top ? '★ ' : ''}${esc(n.main)}</span>
+        <span class="cj-fd-b">${av(i.by, 'sm')}<span class="cj-fd-v">${N(i.value)}${coin()}</span></span>
+        <span class="cj-fd-tip">${c.image ? `<span class="cj-fd-ti">${pic(c.image, 256)}</span>` : ''}${c.name ? `<span class="lab">${i.battle ? 'En batalla' : 'Salió de'}</span><b data-notr>${esc(c.name)}</b>` : ''}<span class="cj-fd-q"><span>Lo abrió</span><i data-notr>${esc(jug(i.by).n)}</i></span></span></div>`;
+  }
+  function fdAlFinal() { const e = FD.el; if (e && e.isConnected) e.scrollLeft = e.scrollWidth - e.clientWidth + FD.sx }
+  function fdLlena(list) {
+    FD.list = list.slice(); if (!FD.el) return;
+    FD.el.innerHTML = FD.list.map(fdTile).join('');
+    traduce(FD.el); fdAlFinal();
+  }
+  // tocar (movil) o pasar el raton (PC, por CSS) ensena de que caja salio y quien la abrio
+  function fdToque(e) {
+    const k = e.target.closest('.cj-fd'); if (!k) return;
+    const on = !k.classList.contains('ver');
+    FD.el.querySelectorAll('.cj-fd.ver').forEach((x) => x.classList.remove('ver'));
+    k.classList.toggle('ver', on);
+  }
+  document.addEventListener('click', (e) => { if (FD.el && !FD.el.contains(e.target)) FD.el.querySelectorAll('.cj-fd.ver').forEach((x) => x.classList.remove('ver')) });
+  function vFeed() { return fdObjetivo().length ? '<section class="cj-feed-s"><header class="cj-sec-h"><h3>Lo último que ha salido</h3></header><div data-cjfeed></div></section>' : '' }
+  // despues de cada repintado: la tira de siempre en su hueco (y en el sitio del scroll en el que estaba)
+  function ponFeed() {
+    const h = root && root.querySelector('[data-cjfeed]'); if (!h) return;
+    if (!FD.el) {
+      FD.el = document.createElement('div'); FD.el.className = 'cj-feed';
+      FD.el.addEventListener('click', fdToque);
+      FD.el.addEventListener('scroll', () => { if (!FD.mov) FD.sx = Math.min(0, FD.el.scrollLeft - (FD.el.scrollWidth - FD.el.clientWidth)) }, { passive: true });
+    }
+    if (!FD.list.length) fdLlena(fdObjetivo());
+    h.replaceWith(FD.el); fdAlFinal();
+  }
+  // tras cada carga: lo que ha entrado nuevo se pone en cola y entra de uno en uno; si no cuadra (o es la primera vez), se pinta tal cual
+  function fdSync() {
+    const obj = fdObjetivo(), ids = obj.map((i) => i.id).join();
+    if (!FD.list.length) { FD.cola = []; clearTimeout(FD.t); return fdLlena(obj) }
+    const ya = new Set([...FD.list, ...FD.cola.map((q) => q.i)].map((i) => i.id)), nuevos = obj.filter((i) => !ya.has(i.id));
+    const esperado = [...FD.list, ...FD.cola.map((q) => q.i), ...nuevos].slice(-FD_N).map((i) => i.id).join();
+    if (esperado !== ids) { FD.cola = []; clearTimeout(FD.t); return fdLlena(obj) }
+    const ahora = Date.now();
+    for (const i of nuevos) FD.cola.push({ i, at: ctx && i.by !== ctx.me ? ahora + FD_ESPERA : ahora });
+    fdSigue();
+  }
+  function fdSigue() {
+    clearTimeout(FD.t);
+    if (FD.mov || !FD.cola.length) return;
+    const w = FD.cola[0].at - Date.now();
+    if (w > 0) { FD.t = setTimeout(fdSigue, w); return }
+    fdEntra(FD.cola.shift().i);
+  }
+  // la entrada: el nuevo aparece por la derecha, los demas se corren un sitio a la izquierda y el mas viejo se va (FLIP con animate())
+  function fdEntra(i) {
+    const el = FD.el, sale = FD.list.length >= FD_N ? FD.list[0] : null;
+    const anima = el && el.isConnected && !document.hidden && !document.documentElement.classList.contains('sin-anim') && typeof el.animate === 'function';
+    FD.list = [...FD.list, i].slice(-FD_N);
+    if (!anima) { fdLlena(FD.list); return fdSigue() }
+    FD.mov = true;
+    const caja0 = el.getBoundingClientRect(), antes = new Map([...el.children].map((k) => [k.dataset.id, k.getBoundingClientRect()]));
+    const viejo = sale && el.querySelector(`.cj-fd[data-id="${CSS.escape(String(sale.id))}"]`);
+    if (viejo) {
+      const r = antes.get(String(sale.id));
+      viejo.classList.add('sale'); viejo.classList.remove('ver');
+      Object.assign(viejo.style, { position: 'absolute', left: `${r.left - caja0.left + el.scrollLeft}px`, top: `${r.top - caja0.top + el.scrollTop}px`, width: `${r.width}px` });
+    }
+    const t = document.createElement('div'); t.innerHTML = fdTile(i); const nuevo = t.firstElementChild;
+    nuevo.classList.add('nuevo'); traduce(nuevo);
+    el.appendChild(nuevo);
+    fdAlFinal();
+    const ease = 'cubic-bezier(.2,.8,.2,1)';
+    for (const k of el.children) {
+      if (k === nuevo || k === viejo) continue;
+      const a = antes.get(k.dataset.id); if (!a) continue;
+      const dx = a.left - k.getBoundingClientRect().left;
+      if (Math.abs(dx) > 0.5) k.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration: 620, easing: ease });
+    }
+    if (viejo) viejo.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-28px) scale(.86)' }], { duration: 420, easing: 'ease-in', fill: 'forwards' });
+    nuevo.animate([{ opacity: 0, transform: 'translateX(46px) scale(.82)' }, { opacity: 1, transform: 'none' }], { duration: 640, delay: 140, easing: ease, fill: 'backwards' });
+    setTimeout(() => { if (viejo) viejo.remove(); FD.mov = false; fdSigue() }, 820);
+    setTimeout(() => nuevo.classList.remove('nuevo'), 2600);
   }
 
   /* ----- inventario ----- */
