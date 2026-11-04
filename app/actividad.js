@@ -181,7 +181,7 @@
     const id = k + '|' + q, ahora = Date.now();
     if (ahora - (AVISADO.get(id) || 0) < ENFRIA) return;
     AVISADO.set(id, ahora);
-    enApp(k, q);
+    if (!(kd.grp === 'juegos' && window.GM_AVISOJUEGO)) enApp(k, q);        // los juegos los avisa avisos-juego.js (04-11, jg_feed de db/077)
     // el aviso del sistema (solo sale con la app de fondo y con permiso): lo decide avisa() de app.js
     g(() => { const en = window.GM_LANG && GM_LANG.get() === 'en'; avisa(nombre(k) + (en ? ' is ' + kd.e : ' está ' + kd.t), en ? 'Tap to join in' : 'Entra a verlo') });
     avisaPush(k, q);

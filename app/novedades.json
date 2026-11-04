@@ -1,6 +1,7 @@
 {
  "_como": "Novedades de la app (boton Novedades de arriba y pantalla Novedades). Para anadir una, copia una entrada arriba del todo con un id nuevo. fecha AAAA-MM-DD y hora HH:MM (hora de Madrid). img: ruta dentro de app/img (por ejemplo novedades/cajas.webp o lujo/rolex-daytona.webp) o una URL entera; puede ser una lista de hasta 3 para un montaje (el panel usa la primera). ir (opcional): partidos, apuestas, colegas, liga, cajas, chat, monedero, juegos, directo, recompensas. Opcional: titulo_en y texto_en para el ingles. Titulo de pocas palabras y texto de una linea.",
  "entradas": [
+  {"id": "avisos-juego-0411", "fecha": "2026-11-04", "hora": "01:10", "titulo": "Avisos cuando alguien juega", "texto": "Si tienes la app abierta, te sale un aviso cuando alguien empieza a jugar a un juego, con su nombre y lo que pone. Tócalo y vas a ese juego.", "titulo_en": "Alerts when someone plays", "texto_en": "With the app open, you get an alert when someone starts a game, with their name and the amount. Tap it to go to that game.", "img": "novedades/avisos-juego.webp", "ir": "juegos"},
   {
    "id": "paga-reclamar-0411",
    "fecha": "2026-11-04",
