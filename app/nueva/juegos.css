@@ -504,3 +504,11 @@ button.jg-rr{width:100%;text-align:left;background:none;border:0;border-top:1px 
 .jg-rw>.jg-rr{grid-template-columns:62px minmax(0,1fr) auto}
 .jg-rd{display:none;flex-wrap:wrap;gap:6px 14px;padding:2px 0 10px 14px;font:500 12px var(--mono);color:var(--soft)}
 .jg-rw.open>.jg-rd{display:flex}
+
+/* PM 04-11: las 5 ultimas jugadas del blackjack van bajo la mesa; en escritorio ancho (pagina sin scroll) la mesa conserva su alto y el escenario hace scroll */
+@media (min-width:1360px){
+  .jg-g.jg-gbjm .jg-stage{overflow-y:auto;scrollbar-width:none;overscroll-behavior:contain}
+  .jg-g.jg-gbjm .jg-stage::-webkit-scrollbar{display:none}
+  .jg-g.jg-gbjm .jg-stage .bjm{flex:1 0 auto}
+}
+.jg-gbjm [data-ult="blackjack"] .jx-ult,.jg-gbjm .jx-ult{margin-top:26px}

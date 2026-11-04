@@ -190,6 +190,7 @@
     if (S.juego === 'moneda' && refs.coin) refs.coin.style.transform = moPose(S.mo.lado === 'cara' ? 0 : 180);
     if (S.juego === 'crash') { crFilasFx(); crFrame(true); crLoop() }
     if (S.juego === 'blackjack') bjPost();
+    ultPost();
     if (MOD[S.juego]) modPost();
   }
   function paraLoops() { cancelAnimationFrame(crRaf); clearTimeout(crPoll); crRaf = crPoll = 0 }
@@ -316,6 +317,7 @@
   A.tab = ({ v }) => {
     if (S.juego === v) return;
     if (S.juego === 'blackjack' && window.GM_BJMESA) GM_BJMESA.para();
+    ultPara();
     if (mod(S.juego)) mod(S.juego).para();
     S.juego = v; guarda('jg-juego', v); paraLoops(); sigs.v = null;
     pinta(); cargar();
@@ -416,8 +418,7 @@
     const abiertos = `<span class="lab jg-sec">Retos abiertos${ajenos.length ? ` <b class="jg-cnt">${ajenos.length}</b>` : ''}</span>` +
       (ajenos.length ? ajenos.slice(0, 4).map(filaAjena).join('') : '<p class="jg-vacio">Ahora no hay ningún reto abierto. Crea uno y espera a que alguien lo acepte.</p>') +
       (mios.length ? `<span class="lab jg-sec">Tus retos esperando</span>${mios.slice(0, 4).map(filaMia).join('')}<p class="jg-nota">Si nadie acepta en 24 horas, te devuelvo lo que pusiste.</p>` : '');
-    const ultimos = d.recientes.length ? `<span class="lab jg-sec">Últimos</span>${d.recientes.slice(0, 4).map((a) => { const perd = a.ganador === a.creador ? a.rival : a.creador;
-      return fila('', av(a.ganador), `<b>${esc(nom(a.ganador))}</b> <span>${a.ganador === ctx.me ? 'le ganas a' : 'le gana a'}</span> <b>${esc(perd === ctx.me ? 'ti' : nom(perd))}</b><em>${lado2(a.salio)}</em>`, `<b class="num win">+${N(a.stake)}</b>`) }).join('')}` : '';
+    const ultimos = '<div data-ult="moneda"></div>';
     return `<section class="jg-g">
       <div class="jg-stage jg-mo">
         <p class="jg-how">Pones una cantidad y eliges cara o cruz. Quien acepte pone lo mismo, se lanza la moneda y el que acierte se lleva todo.</p>
@@ -793,7 +794,7 @@
   /* =====================================================================
      BLACKJACK: una sola mesa compartida (PM, 01-11). La pinta y la juega bjmesa.js (db/040); aqui solo se le deja su hueco.
      ===================================================================== */
-  const vBj = () => `<section class="jg-g jg-gbjm"><div class="jg-stage"><div data-bjm-hueco></div></div></section>`;
+  const vBj = () => `<section class="jg-g jg-gbjm"><div class="jg-stage"><div data-bjm-hueco></div><div data-ult="blackjack"></div></div></section>`;
   function bjPost() {
     const h = root.querySelector("[data-bjm-hueco]");
     if (h && window.GM_BJMESA) GM_BJMESA.montar(h, ctx, { rank: () => cargaRank() });
@@ -808,6 +809,24 @@
     if (h && m) m.montar(h, ctx, { rank: () => cargaRank() });
     else if (h && !m) h.outerHTML = '<p class="jg-err">Este juego no ha cargado: recarga la app</p>';
   }
+
+  /* ---------- las 5 ultimas jugadas de todos en Cara o cruz y Blackjack (PM 04-11): el mismo bloque que usan ruleta, minas y caballos (jx.js, jg_ultimas) ---------- */
+  const ULT = {};
+  function ultPost() {
+    const h = root && root.querySelector('[data-ult]'), j = h && h.dataset.ult;
+    if (!h || !window.GM_JX) return;
+    if (!ULT[j]) { const J = GM_JX.juego(j); ULT[j] = { J, u: GM_JX.ultimas(j, J) } }
+    ULT[j].J.ctx = ctx;
+    h.replaceWith(ULT[j].u.el); ULT[j].u.arranca();
+  }
+  const ultPara = () => Object.values(ULT).forEach((x) => x.u.para());
+  // cada vez que alguien pone dinero en un juego llega un aviso en tiempo real (avisos-juego.js, jg_feed): la lista de ese juego se pone al dia
+  window.addEventListener('gm:jg-aviso', (e) => {
+    const j = e.detail && e.detail.juego;
+    if (!root || !root.isConnected || document.hidden || j !== S.juego) return;
+    if (ULT[j]) setTimeout(() => ULT[j].u.refresca(), 1500);
+    if (j === 'moneda') { clearTimeout(tCarga); tCarga = setTimeout(cargar, 300 + Math.random() * 400) }
+  });
 
   /* ---------- la app llama a esto ---------- */
   window.GM_JUEGOS = {
