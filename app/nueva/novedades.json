@@ -13,6 +13,17 @@
    "ir": "juegos"
   },
   {
+   "id": "tickets-batallas-0511",
+   "fecha": "2026-11-05",
+   "hora": "00:30",
+   "titulo": "Tickets en batallas",
+   "texto": "En las batallas, la ruleta de cada jugador también puede parar en un Ticket Dorado o de Diamante: solo esa vuelve a girar y la ronda espera a que acabe.",
+   "titulo_en": "Tickets in battles",
+   "texto_en": "In battles, the reel of each player can also stop on a Golden or Diamond Ticket: only that reel spins again and the round waits for it.",
+   "img": "novedades/tickets-batallas.webp",
+   "ir": "cajas"
+  },
+  {
    "id": "recompensas-tiempo-0411",
    "fecha": "2026-11-04",
    "hora": "22:30",
@@ -22,28 +33,6 @@
    "texto_en": "Each reward shows what you get, when it is ready with a live countdown and when it is gone if you do not claim it. Up top, the gift tells you when something is ready.",
    "img": "novedades/recompensas-tiempo.webp",
    "ir": "recompensas"
-  },
-  {
-   "id": "tickets-cajas-0411",
-   "fecha": "2026-11-04",
-   "hora": "21:30",
-   "titulo": "Ticket Dorado y Ticket de Diamante",
-   "texto": "A veces la tira para en un ticket y vuelve a girar solo esa línea. El Dorado sale entre lo malo y lo medianamente bueno de la caja; el de Diamante, mucho más raro, solo con lo bueno. También en las batallas.",
-   "titulo_en": "Golden Ticket and Diamond Ticket",
-   "texto_en": "Sometimes the strip stops on a ticket and only that line spins again. The Golden one lands on something bad or fairly good from the box; the Diamond one, much rarer, only on the good stuff. In battles too.",
-   "img": "novedades/tickets-cajas.webp",
-   "ir": "cajas"
-  },
-  {
-   "id": "ver-en-directo-0411",
-   "fecha": "2026-11-04",
-   "hora": "21:30",
-   "titulo": "Ver en directo",
-   "texto": "En los partidos de CS2 y Valorant que se están jugando sale un botón Ver en directo que te lleva a la emisión oficial en Twitch o YouTube, mejor en español o inglés.",
-   "titulo_en": "Watch live",
-   "texto_en": "Live CS2 and Valorant matches now have a Watch live button that takes you to the official Twitch or YouTube broadcast, preferably in Spanish or English.",
-   "img": "novedades/ver-en-directo.webp",
-   "ir": "partidos"
   },
   {
    "id": "caballos-mejores-0411",
@@ -66,6 +55,28 @@
    "texto_en": "Tap your seat or Leave seat. Before the deal you get your bet back; with a hand in play, you finish it and leave right after.",
    "img": "novedades/levantarse-mesa.webp",
    "ir": "juegos"
+  },
+  {
+   "id": "tickets-cajas-0411",
+   "fecha": "2026-11-04",
+   "hora": "21:30",
+   "titulo": "Ticket Dorado y Ticket de Diamante",
+   "texto": "A veces la tira para en un ticket y vuelve a girar solo esa línea. El Dorado sale entre lo malo y lo medianamente bueno de la caja; el de Diamante, mucho más raro, solo con lo bueno. También en las batallas.",
+   "titulo_en": "Golden Ticket and Diamond Ticket",
+   "texto_en": "Sometimes the strip stops on a ticket and only that line spins again. The Golden one lands on something bad or fairly good from the box; the Diamond one, much rarer, only on the good stuff. In battles too.",
+   "img": "novedades/tickets-cajas.webp",
+   "ir": "cajas"
+  },
+  {
+   "id": "ver-en-directo-0411",
+   "fecha": "2026-11-04",
+   "hora": "21:30",
+   "titulo": "Ver en directo",
+   "texto": "En los partidos de CS2 y Valorant que se están jugando sale un botón Ver en directo que te lleva a la emisión oficial en Twitch o YouTube, mejor en español o inglés.",
+   "titulo_en": "Watch live",
+   "texto_en": "Live CS2 and Valorant matches now have a Watch live button that takes you to the official Twitch or YouTube broadcast, preferably in Spanish or English.",
+   "img": "novedades/ver-en-directo.webp",
+   "ir": "partidos"
   },
   {
    "id": "avisos-juego-0411",
@@ -149,17 +160,6 @@
    "ir": "cajas"
   },
   {
-   "id": "batallas-mas-0311",
-   "fecha": "2026-11-03",
-   "hora": "23:20",
-   "titulo": "Batallas de 3, 4 y 6, y modo Crazy",
-   "texto": "Las batallas de cajas ya admiten 3, 4 o 6 jugadores todos contra todos y equipos 2v2v2 y 3v3. Y hay un modo nuevo, Crazy: gana el lado que saque menos valor.",
-   "titulo_en": "Battles of 3, 4 and 6, and Crazy mode",
-   "texto_en": "Box battles now take 3, 4 or 6 players free for all and 2v2v2 and 3v3 teams. And there is a new mode, Crazy: the side with the lowest total wins.",
-   "img": "novedades/batallas-mas.webp",
-   "ir": "cajas"
-  },
-  {
    "id": "crash-quien-jugo-0311",
    "fecha": "2026-11-03",
    "hora": "23:26",
@@ -169,6 +169,17 @@
    "texto_en": "In Games > Crash, tap (or hover) one of the latest rounds to see who played and where each one cashed out, with what they won or lost. Rounds nobody played only show the max.",
    "img": "novedades/crash-quien-jugo.webp",
    "ir": "juegos"
+  },
+  {
+   "id": "batallas-mas-0311",
+   "fecha": "2026-11-03",
+   "hora": "23:20",
+   "titulo": "Batallas de 3, 4 y 6, y modo Crazy",
+   "texto": "Las batallas de cajas ya admiten 3, 4 o 6 jugadores todos contra todos y equipos 2v2v2 y 3v3. Y hay un modo nuevo, Crazy: gana el lado que saque menos valor.",
+   "titulo_en": "Battles of 3, 4 and 6, and Crazy mode",
+   "texto_en": "Box battles now take 3, 4 or 6 players free for all and 2v2v2 and 3v3 teams. And there is a new mode, Crazy: the side with the lowest total wins.",
+   "img": "novedades/batallas-mas.webp",
+   "ir": "cajas"
   },
   {
    "id": "ultimos-drops-0311",
@@ -182,17 +193,6 @@
    "ir": "cajas"
   },
   {
-   "id": "parlay-mismo-partido-0211",
-   "fecha": "2026-11-02",
-   "hora": "07:30",
-   "titulo": "Combinadas del mismo partido",
-   "texto": "En una combinada ya puedes meter varias apuestas del mismo partido (hasta 3), siempre que no se contradigan. La cuota se ajusta un poco por ir del mismo partido.",
-   "titulo_en": "Same game parlays",
-   "texto_en": "You can now put several picks from the same match in a parlay (up to 3), as long as they do not contradict each other. The odds get a small adjustment for being from the same match.",
-   "img": "novedades/parlay-mismo-partido.webp",
-   "ir": "partidos"
-  },
-  {
    "id": "retos-banca-0211",
    "fecha": "2026-11-02",
    "hora": "07:31",
@@ -202,6 +202,17 @@
    "texto_en": "A challenge is now a normal bet at the current odds plus whatever your rival puts in: if you win, you get both. If nobody joins, it stays as a normal bet. You pick the amount and can cancel it until someone joins.",
    "img": "novedades/retos-banca.webp",
    "ir": "colegas"
+  },
+  {
+   "id": "parlay-mismo-partido-0211",
+   "fecha": "2026-11-02",
+   "hora": "07:30",
+   "titulo": "Combinadas del mismo partido",
+   "texto": "En una combinada ya puedes meter varias apuestas del mismo partido (hasta 3), siempre que no se contradigan. La cuota se ajusta un poco por ir del mismo partido.",
+   "titulo_en": "Same game parlays",
+   "texto_en": "You can now put several picks from the same match in a parlay (up to 3), as long as they do not contradict each other. The odds get a small adjustment for being from the same match.",
+   "img": "novedades/parlay-mismo-partido.webp",
+   "ir": "partidos"
   },
   {
    "id": "avisos-movil-0211",
@@ -215,17 +226,6 @@
    "ir": "ajustes"
   },
   {
-   "id": "ahora-mismo-0211",
-   "fecha": "2026-11-02",
-   "hora": "07:20",
-   "titulo": "Ahora mismo",
-   "texto": "Ves en Inicio quién está jugando o abriendo cajas, con un punto en Juegos y Cajas, y te avisamos cuando alguien empieza. Lo apagas en Ajustes.",
-   "titulo_en": "Right now",
-   "texto_en": "See on Home who is playing or opening boxes, with a dot on Games and Boxes, and get an alert when someone starts. Turn it off in Settings.",
-   "img": "novedades/ahora-mismo.webp",
-   "ir": "juegos"
-  },
-  {
    "id": "inventario-rapido-0211",
    "fecha": "2026-11-02",
    "hora": "07:21",
@@ -235,6 +235,17 @@
    "texto_en": "Select several inventory items at once: drag to mark many (or press and hold on mobile), use Shift for a range, and the shortcuts for the cheapest, under a price or by rarity, then sell them together.",
    "img": "novedades/seleccion-rapida.webp",
    "ir": "cajas"
+  },
+  {
+   "id": "ahora-mismo-0211",
+   "fecha": "2026-11-02",
+   "hora": "07:20",
+   "titulo": "Ahora mismo",
+   "texto": "Ves en Inicio quién está jugando o abriendo cajas, con un punto en Juegos y Cajas, y te avisamos cuando alguien empieza. Lo apagas en Ajustes.",
+   "titulo_en": "Right now",
+   "texto_en": "See on Home who is playing or opening boxes, with a dot on Games and Boxes, and get an alert when someone starts. Turn it off in Settings.",
+   "img": "novedades/ahora-mismo.webp",
+   "ir": "juegos"
   },
   {
    "id": "ajusta-foto-0211",
@@ -281,17 +292,6 @@
    "ir": "ajustes"
   },
   {
-   "id": "cajas-empire-0211",
-   "fecha": "2026-11-02",
-   "hora": "04:40",
-   "titulo": "Cajas de lujo de EmpireDrop",
-   "texto": "Las cajas de lujo ahora son las de EmpireDrop: los mismos objetos, los mismos precios y las mismas probabilidades, con la foto de cada producto. La caja de tecnología ya trae las Nvidia, la Xbox y el micro de HyperX. Hay 35 cajas nuevas de tecnología, relojes, moda, motor e inversión.",
-   "titulo_en": "EmpireDrop luxury boxes",
-   "texto_en": "The luxury boxes are now the EmpireDrop ones: the same items, prices and odds, with a photo of every product. The tech box now has the Nvidia cards, the Xbox and the HyperX mic. There are 35 new boxes for tech, watches, fashion, motors and investments.",
-   "img": "novedades/cajas-empire.webp",
-   "ir": "cajas"
-  },
-  {
    "id": "alarmas-0211",
    "fecha": "2026-11-02",
    "hora": "04:41",
@@ -301,6 +301,17 @@
    "texto_en": "You can now set an alarm on a match: 5, 15, 30 or 60 minutes before, or when it starts. Also on your pending bets, so you never miss one. Your alarms are in Settings and ring while the app is open.",
    "img": "novedades/alarmas.webp",
    "ir": "partidos"
+  },
+  {
+   "id": "cajas-empire-0211",
+   "fecha": "2026-11-02",
+   "hora": "04:40",
+   "titulo": "Cajas de lujo de EmpireDrop",
+   "texto": "Las cajas de lujo ahora son las de EmpireDrop: los mismos objetos, los mismos precios y las mismas probabilidades, con la foto de cada producto. La caja de tecnología ya trae las Nvidia, la Xbox y el micro de HyperX. Hay 35 cajas nuevas de tecnología, relojes, moda, motor e inversión.",
+   "titulo_en": "EmpireDrop luxury boxes",
+   "texto_en": "The luxury boxes are now the EmpireDrop ones: the same items, prices and odds, with a photo of every product. The tech box now has the Nvidia cards, the Xbox and the HyperX mic. There are 35 new boxes for tech, watches, fashion, motors and investments.",
+   "img": "novedades/cajas-empire.webp",
+   "ir": "cajas"
   },
   {
    "id": "f1-0211",
@@ -824,19 +835,6 @@
    "texto_en": "Once a match starts, its page shows live odds that move with the score. The bet stays under review until the next update: if a goal or map happened right as you bet, it is voided and refunded. Up to 1,000 per match."
   },
   {
-   "id": "combinadas-todos-0015",
-   "fecha": "2026-10-31",
-   "hora": "00:15",
-   "titulo": "Combinadas de todos",
-   "texto": "Las combinadas salen en Apuestas de todos y en el perfil de cada uno, con cuántas ha hecho, ganado y perdido. Discord también avisa de combinadas y de apuestas canceladas en directo. En inglés, los números salen como 1,808 y 18.08.",
-   "img": [
-    "novedades/combinadas-todos.webp"
-   ],
-   "ir": "colegas",
-   "titulo_en": "Everyone's parlays",
-   "texto_en": "Parlays show up in All bets and on each profile, with how many were made, won and lost. Discord also announces parlays and bets cancelled live. In English, numbers now read 1,808 and 18.08."
-  },
-  {
    "id": "combinadas-0030",
    "fecha": "2026-10-31",
    "hora": "00:30",
@@ -848,6 +846,19 @@
    "ir": "partidos",
    "titulo_en": "Parlays",
    "texto_en": "Add 2 or more odds to the slip and choose Parlay: one bet, the odds multiply and you win if they all win. A void match counts as 1. You can cancel until the first one starts."
+  },
+  {
+   "id": "combinadas-todos-0015",
+   "fecha": "2026-10-31",
+   "hora": "00:15",
+   "titulo": "Combinadas de todos",
+   "texto": "Las combinadas salen en Apuestas de todos y en el perfil de cada uno, con cuántas ha hecho, ganado y perdido. Discord también avisa de combinadas y de apuestas canceladas en directo. En inglés, los números salen como 1,808 y 18.08.",
+   "img": [
+    "novedades/combinadas-todos.webp"
+   ],
+   "ir": "colegas",
+   "titulo_en": "Everyone's parlays",
+   "texto_en": "Parlays show up in All bets and on each profile, with how many were made, won and lost. Discord also announces parlays and bets cancelled live. In English, numbers now read 1,808 and 18.08."
   },
   {
    "id": "cancelar-apuesta-2355",
