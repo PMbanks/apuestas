@@ -65,9 +65,9 @@
   // PM 01-11: "si alguien se ha metido en una bet o hay algun challenge que salga arriba para meterse, que se vea facil meterse":
   // arriba de la pantalla del partido, quien ha apostado y los retos de ese partido con su boton de unirse
   function arriba(m) {
-    const cs = retos(m.id), bs = g(() => whoOn(m.id), []);
-    if (!cs && !bs.length) return '';
-    const dentro = bs.length ? `<div class="ac-quien"><span class="lab">Quién está dentro</span><div class="ac-qs">${bs.map((x) => `<span class="ac-q1">${cara(x.f)}<b data-notr>${esc(g(() => fr(x.f).n, '·'))}</b>${x.p ? `<i data-notr>${esc(g(() => pn(m, x.p), ''))}</i>` : ''}<em class="num">${N(x.stake)}${g(() => coin(), '')}</em></span>`).join('')}</div></div>` : '';
+    const cs = retos(m.id), bs = g(() => whoOn(m.id), []), cb = g(() => (window.GM_QUIEN ? GM_QUIEN.combosDe(m.id) : []), []);
+    if (!cs && !bs.length && !cb.length) return '';
+    const dentro = bs.length || cb.length ? `<div class="ac-quien"><span class="lab">Quién está dentro</span><div class="ac-qs">${bs.map((x) => `<span class="ac-q1">${cara(x.f)}<b data-notr>${esc(g(() => fr(x.f).n, '·'))}</b>${x.p ? `<i data-notr>${esc(g(() => pn(m, x.p), ''))}</i>` : ''}<em class="num">${N(x.stake)}${g(() => coin(), '')}</em></span>`).join('')}${cb.map((x) => x.ls.map((l) => `<span class="ac-q1">${cara(x.k)}<b data-notr>${esc(g(() => fr(x.k).n, '·'))}</b><i data-notr>${esc(g(() => pn(m, l.pick), ''))}</i><em class="num">${N(x.c.stake)}${g(() => coin(), '')}</em><small class="qn-cb">Combinada</small></span>`).join('')).join('')}</div></div>` : '';
     return `<section class="ac ac-top" aria-label="Quién está dentro">${dentro}${cs ? `<div class="ac-lista">${cs}</div>` : ''}</section>`;
   }
   window.GM_ACTIVOS = { html, lista, retos, arriba };

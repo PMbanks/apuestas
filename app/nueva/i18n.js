@@ -403,7 +403,7 @@
     // ruleta Todos y apuestas en vivo (30-10)
     'aún no ha girado': 'has not spun yet', '▲ Vas ganando': '▲ Winning', '▼ Vas perdiendo': '▼ Losing',
     // vista del partido en vivo (30-10)
-    'Ver el stream aquí': 'Watch the stream here', 'Ocultar el stream': 'Hide the stream', 'o en': 'or on', 'Verlo en': 'Watch on', 'No hay una emisión que se pueda ver dentro de la app.': 'There is no stream that can play inside the app.', 'en vivo': 'live',
+    'Ver en directo': 'Watch live', 'Emisión oficial': 'Official broadcast', 'Ver el stream aquí': 'Watch the stream here', 'Ocultar el stream': 'Hide the stream', 'o en': 'or on', 'Verlo en': 'Watch on', 'No hay una emisión que se pueda ver dentro de la app.': 'There is no stream that can play inside the app.', 'en vivo': 'live',
     // animaciones (30-10)
     'Animaciones': 'Animations', 'Animaciones encendidas': 'Animations on', 'Animaciones apagadas': 'Animations off',
     // fichas: ver todos y todo sobre el equipo (30-10)
@@ -907,6 +907,7 @@
     [/^Cuota de la combinada$/, 'Parlay odds'], [/^Importe de la combinada$/, 'Parlay stake'], [/^Apuestas$/, 'You bet'], [/^Cobrarías si aciertas las (\d+)$/, 'Payout if all $1 win'],
     [/^Apostar combinada de (\d+)$/, 'Place parlay of $1'], [/^Apostando la combinada…$/, 'Placing the parlay…'], [/^Ha entrado la combinada$/, 'Parlay placed'],
     [/^Una combinada lleva (\d+) partidos como máximo$/, 'A parlay takes $1 matches at most'], [/^Pon un importe$/, 'Enter an amount'], [/^para apostarlo$/, 'to bet it'],
+    [/^(Ver en directo|Emisión oficial) · (.+)$/, (m, a, r) => (a === 'Ver en directo' ? 'Watch live' : 'Official broadcast') + ' · ' + r.replace(/ (en|·) (\S+)$/, (x, w, l) => (w === 'en' ? ' in ' : ' · ') + (({ inglés: 'English', español: 'Spanish', portugués: 'Portuguese', francés: 'French', alemán: 'German', ruso: 'Russian', chino: 'Chinese', japonés: 'Japanese', coreano: 'Korean', turco: 'Turkish', polaco: 'Polish', italiano: 'Italian', árabe: 'Arabic', tailandés: 'Thai', vietnamita: 'Vietnamese' })[l] || l))],
     [/^Combinada de (\d+)$/, 'Parlay of $1'], [/^cuota ([\d,]+) · ([\d.]+)$/, 'odds $1 · $2'], [/^Combinadas$/, 'Parlays'], [/^(\d+) de (\d+) acertados$/, '$1 of $2 won'],
     [/^Acertado$/, 'Won'], [/^Fallado$/, 'Lost'], [/^Anulado: cuenta como 1$/, 'Void: counts as 1'], [/^Cancelar combinada$/, 'Cancel parlay'],
     [/^COBRADA$/, 'PAID'], [/^PERDIDA$/, 'LOST'], [/^DEVUELTA$/, 'REFUNDED'], [/^Combinada cancelada: te devuelvo$/, 'Parlay cancelled: you get back'],
