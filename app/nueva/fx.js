@@ -222,6 +222,14 @@ function centro(el) {
   return { x: innerWidth / 2, y: innerHeight / 2, r: null };
 }
 
+// o.at (opcional): donde sale el numero (+/-), si no debe tapar lo que hay en el centro de o.el. Un elemento o un punto {x, y} de pantalla
+function sitio(o, c) {
+  const a = o && o.at;
+  if (!a) return c;
+  if (a.getBoundingClientRect) return centro(a);
+  return isFinite(a.x) && isFinite(a.y) ? { x: +a.x, y: +a.y, r: null } : c;
+}
+
 function texto(cls, str, c) {
   const d = document.createElement('div');
   d.className = 'fx-pop ' + cls + (quieto() ? ' fx-q' : '');
@@ -306,7 +314,7 @@ function gana_(importe, o = {}) {
   try {
     const el = o && o.el;
     const c = centro(el);
-    texto('fx-gana', '+' + fmt(importe), c);
+    texto('fx-gana', '+' + fmt(importe), sitio(o, c));
     if (!quieto()) {
       chorro(c, innerWidth < 600 ? 44 : 70);
       if (el && el.classList) {
@@ -323,7 +331,7 @@ function pierde_(importe, o = {}) {
   try {
     const el = o && o.el;
     const c = centro(el);
-    texto('fx-pierde', '−' + fmt(importe), c);
+    texto('fx-pierde', '−' + fmt(importe), sitio(o, c));
     if (!quieto()) {
       const f = document.createElement('div');
       f.className = 'fx-flash';

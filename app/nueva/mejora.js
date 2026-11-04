@@ -8,7 +8,9 @@
 (function () {
   const MIN_X = 1.25, MAX_X = 100, MAX_SKINS = 20, EDGE = 0.95, TOPE = 0.76;
   const PRESETS = [1.5, 2, 3, 5, 10];
-  const PASO = 40;               // skins del inventario que se pintan de cada vez
+  // PM 04-11: "que no haya tantos cuadrados ... que haya tambien paginas". Inventario y objetivos van por paginas de 3 filas: las columnas
+  // salen del ancho (4 a 1440, 2 en el movil: 12 y 6 por pagina), con flechas, numeros, flechas del teclado y deslizar el dedo
+  const FILAS = 3, TILE_MIN = 120, HUECO = 10;
   const DUR = 5600;              // lo que tarda la aguja (PM 04-11: mas lento y con mas suspense al final)
   const ASENTAR = 520;           // el ultimo rebote: se pasa un pelo y vuelve
   const VUELTAS = 5;
@@ -16,7 +18,7 @@
   const WEAR_EN = ['Factory New', 'Minimal Wear', 'Field-Tested', 'Well-Worn', 'Battle-Scarred'];
 
   let U = null, el = null;
-  const M = { sel: new Set(), vb: 0, mult: 2, tgt: null, q: '', lista: null, listaK: '', cargaT: 0, inv: null, invN: PASO, fase: 'idle', res: null,
+  const M = { sel: new Set(), vb: 0, mult: 2, tgt: null, q: '', lista: null, listaK: '', cargaT: 0, inv: null, iP: 0, tP: 0, cols: 0, fase: 'idle', res: null,
     ang: 0, ocupado: false, ult: null, err: null, base: true, aviso: '', ini: 0 };
   let anim = null, tTimer = 0;
 
@@ -66,6 +68,18 @@
     const s = m.match(/^No tienes saldo suficiente: te quedan ([\d.]+)$/);
     return s ? `Not enough balance: you have ${s[1].replace(/\./g, ',')} left` : m;
   }
+
+  function medida() {
+    const w = (el && el.clientWidth) || 0;
+    let cols = 4;
+    if (w) {
+      const una = matchMedia('(max-width:860px)').matches, colW = una ? w : (w - 56) / 2;
+      cols = Math.max(2, Math.min(5, Math.floor((colW + HUECO) / (TILE_MIN + HUECO))));
+    }
+    M.cols = cols;
+    return { cols, per: cols * FILAS };
+  }
+  const tgtK = (t) => `${t.id}|${t.wear == null ? '' : t.wear}|${t.st ? 1 : 0}`;
 
   /* ---------- datos ---------- */
   async function cargaInv() {
@@ -117,6 +131,7 @@
         let l = data || [];
         // sin buscar: los 60 mas cercanos al valor buscado, de menos a mas
         if (!M.q) { const obj = stake() * M.mult; l = l.slice().sort((x, y) => Math.abs(x.value - obj) - Math.abs(y.value - obj)).slice(0, 36).sort((x, y) => x.value - y.value) }
+        if (k !== M.listaK) { const i = M.tgt ? l.findIndex((x) => tgtK(x) === M.tgt.k) : -1; M.tP = i >= 0 ? Math.floor(i / medida().per) : 0 }
         M.lista = l; M.listaK = k; M.err = null;
       } catch (e) { if (n === M.cargaT) { M.lista = []; M.listaK = k; M.err = msgErr(e) } }
       pintaLista();
@@ -210,7 +225,7 @@
     return `<${tag} class="cj-it mj-it ${ex.on ? 'on' : ''}" style="--c:${color(it.rarity)}" ${ex.v != null ? `data-mj="${ex.a}" data-v="${esc(ex.v)}"` : ''} title="${esc(it.name)}">
       <span class="cj-it-img">${pic(it.image)}</span>
       <span class="cj-it-t">${n.top ? `<span class="lab">${esc(n.top)}</span>` : ''}<b>${it.rarity === 'esp' && n.top ? '★ ' : ''}${esc(n.main)}</b>
-        ${ex.meta ? `<em>${ex.meta}</em>` : ''}<span class="v">${N(ex.valor)}${coin()}</span></span></${tag}>`;
+        ${ex.meta ? `<em>${ex.meta}</em>` : ''}<span class="v">${N(ex.valor)}${coin()}${ex.pc || ''}</span></span></${tag}>`;
   }
   const meta = (w, st, lujo) => `${st ? '<i class="cj-st">StatTrak</i>' : ''}${w != null ? `<span>${wear(w)}</span>` : lujo ? '' : `<span>${L('Sin desgaste', 'No wear')}</span>`}`;
   const esLujo = (id) => (U ? U.esLujo(id) : false);
@@ -252,9 +267,7 @@
     if (!M.inv) return `<p class="hint">${L('Cargando tu inventario…', 'Loading your inventory…')}</p>`;
     if (!M.inv.length) return `<p class="hint">${L('No tienes skins. Puedes mejorar solo con V-Bucks.', 'You have no skins. You can upgrade with V-Bucks only.')}</p>`;
     const off = M.fase === 'gira' || M.ocupado;
-    const ls = M.inv.slice(0, M.invN);
-    return `<div class="mj-grid">${ls.map((i) => { const it = info(i.item_id); return tile(it, { a: off ? 'nada' : 'pon', v: i.id, on: M.sel.has(i.id), valor: i.value, meta: meta(i.wear, i.st, esLujo(i.item_id)) }) }).join('')}</div>
-      ${M.inv.length > M.invN ? `<button class="chip mj-mas" data-mj="mas">${L(`Ver más (${N(M.inv.length - M.invN)})`, `See more (${N(M.inv.length - M.invN)})`)}</button>` : ''}`;
+    return paginas('i', M.inv, (i) => { const it = info(i.item_id); return tile(it, { a: off ? 'nada' : 'pon', v: i.id, on: M.sel.has(i.id), valor: i.value, meta: meta(i.wear, i.st, esLujo(i.item_id)) }) });
   }
   function vTargets() {
     const st = stake(), s = sliderDeMult(M.mult);
@@ -273,11 +286,37 @@
     else if (!M.lista) cuerpo = `<p class="hint">${L('Buscando…', 'Searching…')}</p>`;
     else if (!M.lista.length && M.err) cuerpo = `<p class="hint mj-err">${esc(M.err)}</p>`;
     else if (!M.lista.length) cuerpo = `<p class="hint">${M.q ? L('Nada con ese nombre entre ×1,25 y ×100 de lo que pones.', 'Nothing with that name between ×1.25 and ×100 of what you put in.') : L('Nada en ese rango: mueve el riesgo.', 'Nothing in that range: move the risk.')}</p>`;
-    else cuerpo = `<div class="mj-grid">${M.lista.map((t) => {
-      const k = `${t.id}|${t.wear == null ? '' : t.wear}|${t.st ? 1 : 0}`, on = M.tgt && M.tgt.k === k;
-      return tile(t, { a: 'tgt', v: k, on, valor: t.value, meta: meta(t.wear, t.st, esLujo(t.id)) + `<span class="mj-pc">${pct(chanceDe(st, t.value))}</span>` });
-    }).join('')}</div>`;
+    else cuerpo = paginas('t', M.lista, (t) => {
+      const k = tgtK(t), on = M.tgt && M.tgt.k === k;
+      return tile(t, { a: 'tgt', v: k, on, valor: t.value, meta: meta(t.wear, t.st, esLujo(t.id)), pc: `<span class="mj-pc">${pct(chanceDe(st, t.value))}</span>` });
+    });
     return cuerpo;
+  }
+  function paginas(z, xs, f) {
+    const { cols, per } = medida(), pags = Math.max(1, Math.ceil(xs.length / per)), kp = z === 'i' ? 'iP' : 'tP';
+    const p = M[kp] = Math.max(0, Math.min(M[kp] || 0, pags - 1)), ls = xs.slice(p * per, (p + 1) * per);
+    const hueco = '<div class="cj-it mj-it mj-hueco" aria-hidden="true"><span class="cj-it-img"></span><span class="cj-it-t"><span class="lab">&nbsp;</span><b>&nbsp;</b><em>&nbsp;</em><span class="v">&nbsp;</span></span></div>';
+    return `<div class="mj-pgz" data-mj-z="${z}"><div class="mj-grid" style="--cols:${cols}">${ls.map(f).join('')}${pags > 1 ? hueco.repeat(per - ls.length) : ''}</div>${pager(z, p, pags)}</div>`;
+  }
+  function pager(z, p, pags) {
+    if (pags <= 1) return '';
+    const nums = [];
+    for (let i = 0; i < pags; i++) if (i === 0 || i === pags - 1 || Math.abs(i - p) <= 1) nums.push(i); else if (nums[nums.length - 1] !== -1) nums.push(-1);
+    const b = (i, cls, txt, lab) => `<button class="${cls}" data-mj="pg" data-z="${z}" data-v="${i}" ${i < 0 || i >= pags ? 'disabled' : ''} ${lab ? `aria-label="${lab}"` : ''} ${i === p && !cls.includes('cj-pg') ? 'aria-current="page"' : ''}>${txt}</button>`;
+    return `<nav class="cj-pager mj-pager" aria-label="${L('Páginas', 'Pages')}">
+      ${b(p - 1, 'cj-pg prev', '', L('Anterior', 'Previous'))}
+      ${nums.map((i) => (i < 0 ? '<span>…</span>' : b(i, i === p ? 'on' : '', i + 1))).join('')}
+      ${b(p + 1, 'cj-pg next', '', L('Siguiente', 'Next'))}</nav>`;
+  }
+  // cambiar de pagina: solo se rehace esa rejilla; con el teclado el foco sigue en el paginador (o en la primera de la pagina)
+  function irPag(z, v, foco) {
+    const kp = z === 'i' ? 'iP' : 'tP', antes = M[kp];
+    M[kp] = Math.max(0, v || 0);
+    if (z === 't') pintaLista(); else pinta();
+    if (M[kp] === antes) return;
+    const zona = el && el.querySelector(`[data-mj-z="${z}"]`); if (!zona) return;
+    if (foco === 'pager') { const b = zona.querySelector('.mj-pager button.on'); if (b) b.focus() }
+    else if (foco === 'tile') { const b = zona.querySelector('.mj-grid [data-mj]'); if (b) b.focus() }
   }
   const buscaTxt = () => (stake() ? L(`Buscando cerca de ${N(stake() * M.mult)}`, `Looking around ${N(stake() * M.mult)}`) : '');
   function vUlt() {
@@ -377,7 +416,10 @@
     M.fase = 'fin';
     pinta();
     const w = el && el.querySelector('.mj-wheel');
-    if (fx()) { if (r.won) fx().gana(r.target_value, { el: w }); else fx().pierde(r.stake_value, { el: w }) }
+    // el numero que sale (+ al ganar, que sube; menos al perder, que baja) iba en el centro de la rueda y tapaba "Has ganado":
+    // ahora sale en el borde de arriba o de abajo de la rueda y se aleja del texto
+    const wr = w && w.getBoundingClientRect(), at = wr && wr.width ? { x: wr.left + wr.width / 2, y: wr.top + wr.height * (r.won ? 0.1 : 0.9) } : null;
+    if (fx()) { if (r.won) fx().gana(N(r.target_value), { el: w, at }); else fx().pierde(N(r.stake_value), { el: w, at }) }
     else if (r.won) sonido({ tipo: 'caja-final', rareza: t.rarity || 'cla' }); else sonido('perder');
     try { if (U.recarga) U.recarga() } catch {}
     try { if (c.refresh) await c.refresh() } catch {}
@@ -391,7 +433,7 @@
     const b = e.target.closest('[data-mj]');
     if (!b || !el || !el.contains(b) || b.disabled) return;
     const a = b.dataset.mj, v = b.dataset.v;
-    if (a !== 'saltar' && a !== 'nada' && M.fase === 'fin') { M.fase = 'idle'; M.res = null }
+    if (a !== 'saltar' && a !== 'nada' && a !== 'pg' && M.fase === 'fin') { M.fase = 'idle'; M.res = null }
     switch (a) {
       case 'pon': {
         const id = +v;
@@ -399,7 +441,7 @@
         else { if (M.sel.size >= MAX_SKINS) return toast(L('Como mucho 20 skins a la vez', 'At most 20 skins at a time')); M.sel.add(id) }
         pideTargets(); return pinta();
       }
-      case 'mas': M.invN += PASO; return pinta();
+      case 'pg': return irPag(b.dataset.z, +v, e.detail === 0 ? 'pager' : null);
       case 'vb+': M.vb = Math.max(0, (M.vb || 0) + (+v || 0)); pideTargets(); return pinta();
       case 'limpia': M.sel.clear(); M.vb = 0; pideTargets(); return pinta();
       case 'x': M.mult = +v; guarda('mj-mult', String(M.mult)); pideTargets(true); return pinta();
@@ -432,6 +474,35 @@
       pideTargets();
     }
   }
+  document.addEventListener('keydown', (e) => {
+    if (!el || e.altKey || e.ctrlKey || e.metaKey) return;
+    const z = e.target.closest && e.target.closest('[data-mj-z]'); if (!z || !el.contains(z)) return;
+    const k = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (!k) return;
+    const kp = z.dataset.mjZ === 'i' ? 'iP' : 'tP', sig = z.querySelector(k > 0 ? '.mj-pager .next' : '.mj-pager .prev');
+    if (!sig || sig.disabled) return;
+    e.preventDefault(); irPag(z.dataset.mjZ, M[kp] + k, e.target.closest('.mj-pager') ? 'pager' : 'tile');
+  });
+  let toque = null;
+  document.addEventListener('touchstart', (e) => {
+    const g = e.target.closest && e.target.closest('[data-mj-z] .mj-grid');
+    toque = g && el && el.contains(g) && e.touches.length === 1 ? { z: g.parentNode.dataset.mjZ, x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+  }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (!toque) return;
+    const t = e.changedTouches[0], dx = t.clientX - toque.x, dy = t.clientY - toque.y, z = toque.z; toque = null;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    const zona = el && el.querySelector(`[data-mj-z="${z}"]`), sig = zona && zona.querySelector(dx < 0 ? '.mj-pager .next' : '.mj-pager .prev');
+    if (sig && !sig.disabled) irPag(z, (z === 'i' ? M.iP : M.tP) + (dx < 0 ? 1 : -1));
+  }, { passive: true });
+  // al cambiar el ancho (girar el movil, ventana) cambian las columnas y lo que cabe en cada pagina
+  let rzT = 0;
+  window.addEventListener('resize', () => {
+    clearTimeout(rzT);
+    rzT = setTimeout(() => {
+      if (!el || !el.isConnected || anim) return;
+      const antes = M.cols; if (medida().cols !== antes) pinta();
+    }, 160);
+  });
   document.addEventListener('click', onClick);
   document.addEventListener('input', onInput);
 

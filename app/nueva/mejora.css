@@ -85,11 +85,15 @@
 .mj-col-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:22px}
 .mj-col-h h3{font:800 24px/1.1 var(--disp);letter-spacing:-.025em}
 .mj-col-h span{font:12px var(--mono);color:var(--dim);text-align:right}
-.mj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:22px 10px}
+.mj-grid{display:grid;grid-template-columns:repeat(var(--cols,4),minmax(0,1fr));gap:22px 10px;touch-action:pan-y}
 .mj-it{cursor:pointer}
 .mj-it .cj-it-img{aspect-ratio:4/3}
-.mj-it em .mj-pc{color:var(--win);font-weight:600}
-.mj-mas{display:flex;margin:24px auto 0}
+/* la probabilidad va junto al valor (una linea menos por cuadro: caben 3 filas y el paginador en la pantalla) */
+.mj-it .mj-pc{margin-left:8px;font:600 12px var(--mono);color:var(--win)}
+/* paginas (PM 04-11): el paginador es el de las batallas de Cajas (.cj-pager); la ultima pagina se rellena con huecos invisibles
+   para que el paginador no salte */
+.mj-hueco{visibility:hidden;pointer-events:none}
+.mj .mj-pager{margin-top:22px}
 .mj-risk{display:flex;flex-direction:column;gap:14px;margin-bottom:26px}
 .mj-risk-h{display:flex;align-items:baseline;justify-content:space-between;font:12px var(--mono);color:var(--dim)}
 .mj-risk-h b{font:600 26px/1 var(--mono);letter-spacing:-.04em;color:var(--acc)}
@@ -138,10 +142,11 @@
   .mj-wheel{width:min(280px,82vw)}
   .cj .mj-go{width:100%}
   .mj-pick{grid-template-columns:minmax(0,1fr);gap:50px;margin-top:50px}
-  .mj-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 8px}
-  .mj-grid .cj-it b{font-size:12px}
-  .mj-grid .cj-it em{font-size:10px}
+  .mj-grid{gap:14px 12px}
   .mj-col-h h3{font-size:20px}
+  /* en el movil 2 columnas de 3 filas (6 por pagina) con letra normal; la foto algo mas baja para que la pagina y sus flechas quepan en la pantalla */
+  .mj-it .cj-it-img{aspect-ratio:16/10}
+  .mj-it .cj-it-t{margin-top:8px}
   .mj-ult li{grid-template-columns:auto minmax(0,1fr) auto;gap:10px}
   .mj-u-r{grid-column:3}
   .mj-u-x{display:none}
