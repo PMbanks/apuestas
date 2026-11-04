@@ -71,7 +71,7 @@ async function load() {
     if (!r.error) rows = rows.concat(r.data);
   }
   WHEEL = wh.error ? null : wh.data || [];
-  TIEMPO = ti.error ? null : ti.data || null;
+  TIEMPO = ti.error ? null : ti.data || null; TIEMPO_AT = Date.now();
   build(st.data, rows, (ch.data || []).reverse(), ex.error ? null : { ...ex.data, retos: rm && !rm.error && rm.data && typeof rm.data === 'object' ? rm.data : null });
   avisos();
 }
@@ -1537,7 +1537,7 @@ function ruLoop() {
   const pin = document.getElementById('ru-pin'); if (pin) pin.style.transform = `rotate(${RU_P.toFixed(2)}deg)`;
   if (!RU) return;
   if (Date.now() - RU.t0 < RU_DUR) return requestAnimationFrame(ruLoop);
-  const r = RU; RU = null; S.ruRot = r.to; S.ruGira = false; S.ruWin = r.res.prize; S.ruRes = r.res; S.ruCel = Date.now();
+  const r = RU; RU = null; S.ruRot = r.to; S.ruGira = false; S.rwRuFoco = true; S.ruWin = r.res.prize; S.ruRes = r.res; S.ruCel = Date.now();
   { const b = document.getElementById('rueda')?.getBoundingClientRect(); confeti(b ? b.left + b.width / 2 : undefined, b ? b.top + b.height * 0.3 : undefined) }
   toast(r.res.box ? `${esc(r.res.label)}: la tienes en Cajas › Inventario` : `Ruleta: <b>${esc(r.res.label)}</b>`);
   setTimeout(() => { if (S.rew) render() }, 4200);
@@ -1565,7 +1565,7 @@ function ruedaSvg(gana) {
     <circle cx="${C}" cy="${C}" r="119" fill="url(#ru-oro)"/><circle cx="${C}" cy="${C}" r="106.5" class="ru-in"/>${luces}${seg}${rayas}
     <circle cx="${C}" cy="${C}" r="28" fill="url(#ru-hub)"/><circle cx="${C}" cy="${C}" r="22.5" class="ru-hc"/></svg>`;
 }
-function ruedaHtml() {
+function ruedaHtml(compacto) {
   const mio = ruMia(me().uid);
   if (!CAJAS_L) cargaCasos();
   // si ya giraste esta semana, la rueda se queda con tu premio debajo de la aguja
@@ -1581,10 +1581,10 @@ function ruedaHtml() {
     <div class="ru-w ${RU ? 'gira' : ''} ${cel ? 'celebra' : ''}"><span class="ru-glow"></span>${ruedaSvg(gana)}
       <span class="ru-pin"><svg id="ru-pin" viewBox="0 0 32 46" style="transform:rotate(${RU_P.toFixed(2)}deg)"><path d="M16 44C10 30 3 22 3 14a13 13 0 0 1 26 0c0 8-7 16-13 30z" class="ru-pa"/><circle cx="16" cy="14" r="5" class="ru-pc"/></svg></span>
       ${mio || RU ? `<span class="ru-hub"><span class="cn"></span></span>` : `<button class="ru-hub can" data-act="girar" aria-label="Girar">GIRAR</button>`}</div>
-    <span class="lab">Tu ruleta · cada 3 días</span>
-    <h3>${RU ? 'Girando…' : mio ? (cel ? '¡Premio!' : 'Ya has girado') : 'Una tirada gratis'}</h3>
-    <p>${RU ? 'Mira dónde para la aguja' : mio ? `<span data-notr>${en() ? `Next spin ${ruSigTxt()}` : `La siguiente, ${ruSigTxt()}`}</span>` : 'De 75 a 900 V-Bucks o una caja de CS2 para abrirla tú. Una tirada cada 3 días.'}</p>
-    ${mio || RU ? '' : '<button class="ru-go" data-act="girar">Girar la ruleta</button>'}
+    ${compacto ? '' : '<span class="lab">Tu ruleta · cada 3 días</span>'}
+    ${compacto && !RU && !mio ? '' : `<h3>${RU ? 'Girando…' : mio ? (cel ? '¡Premio!' : 'Ya has girado') : 'Una tirada gratis'}</h3>
+    <p>${RU ? 'Mira dónde para la aguja' : mio ? `<span data-notr>${en() ? `Next spin ${ruSigTxt()}` : `La siguiente, ${ruSigTxt()}`}</span>` : 'De 75 a 900 V-Bucks o una caja de CS2 para abrirla tú. Una tirada cada 3 días.'}</p>`}
+    ${mio || RU || compacto ? '' : '<button class="ru-go" data-act="girar">Girar la ruleta</button>'}
     ${premio}
     <div class="ru-todos ${S.ruTodos ? 'abre' : ''}"><button class="ru-tb" data-act="ru-todos" aria-expanded="${!!S.ruTodos}"><span class="ru-tav">${F.map((f) => av(f.id, 'sm')).join('')}</span><b>Todos</b><small>${F.filter((f) => ruMia(f.uid)).length} de ${F.length} han girado</small><i>${S.ruTodos ? '▴' : '▾'}</i></button>
       ${S.ruTodos ? `<div class="ru-tl">${F.map((f) => { const w = ruMia(f.uid); return `<span class="${w ? '' : 'no'}">${av(f.id, 'sm')}<b>${esc(f.n)}</b><em>${w ? esc(w.label) : 'aún no ha girado'}</em></span>` }).join('')}</div>` : ''}</div>
@@ -1596,20 +1596,144 @@ function rwPend() {
   const tiempo = (TIEMPO?.tiers || []).filter((t) => !t.claimed && TIEMPO.minutes >= t.min).length;
   return { diario: !!CLAIM && !CLAIM.today, paga: !!PAGA && PAGA.abierta && !PAGA.claimed, rueda, rescate: puedeRescate(), tiempo };
 }
-function rwBoton() { const p = rwPend(), n = [p.diario, p.paga, p.rueda, p.rescate].filter(Boolean).length + p.tiempo;
-  return `<button class="claim ${n ? '' : 'nada'} ${S.rew ? 'on' : ''}" data-act="rw" aria-label="Recompensas">${IC_GIFT}<span>Recompensas</span>${n ? `<b>${n}</b>` : ''}</button>` }
+// el numero de cosas por reclamar (cabecera, Más y su punto en menu.js)
+function rwCuenta() { const p = rwPend(); return [p.diario, p.paga, p.rueda, p.rescate].filter(Boolean).length + p.tiempo }
 const IC_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-// PM, 30-10: premios por estar en la app (db/019): 30 min, 1 h y 2 h al dia. La app manda un latido por minuto a la vista
+// PM, 30-10: premios por estar en la app (db/019): 30 min, 1 h y 2 h al dia (y 3 h desde 047). La app manda un latido por minuto a la vista
 const IC_RELOJ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
 const minTxt = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ' ' + (m % 60) + ' min' : ''}` : `${m} min`);
-function tiempoHtml() {
-  if (!TIEMPO?.tiers?.length) return '';
-  const ts = [...TIEMPO.tiers].sort((a, b) => a.min - b.min), mins = TIEMPO.minutes || 0, n = ts.length;
-  // cada tramo en el centro de su columna; la barra avanza a trozos entre tramo y tramo
-  const at = (i) => ((i + 0.5) / n) * 100, pos = (m) => { let a = 0, x0 = 0; for (let i = 0; i < n; i++) { const b = at(i); if (m <= ts[i].min) return x0 + (b - x0) * (m - a) / (ts[i].min - a); a = ts[i].min; x0 = b } return 100 }, pc = pos(mins);
-  return `<div class="rw-tiempo"><div class="rw-th"><span class="rw-t r">${IC_RELOJ}</span><p><b>Tiempo en la app</b><span>Hoy llevas <i>${minTxt(mins)}</i> · cuenta mientras la tienes abierta y a la vista</span></p></div>
-    <div class="rw-tb"><span class="rw-tf" style="width:${pc.toFixed(1)}%"></span>${ts.map((t, i) => `<i class="${t.claimed ? 'hecho' : mins >= t.min ? 'listo' : ''}" style="left:${at(i).toFixed(1)}%"></i>`).join('')}</div>
-    <div class="rw-tt" style="--n:${ts.length}">${ts.map((t) => `<div class="${t.claimed ? 'hecho' : mins >= t.min ? 'listo' : ''}"><b>+${N(t.amt)}${coin()}</b><small>${minTxt(t.min)}</small>${t.claimed ? `<em class="rw-ok">${IC_OK}Cobrado</em>` : mins >= t.min ? `<button class="go-s" data-tclaim="${t.min}">Reclamar</button>` : `<em>faltan ${minTxt(t.min - mins)}</em>`}</div>`).join('')}</div></div>`;
+
+/* ---------- Recompensas (PM, 04-11: "las recompensas de tiempo casi que no se ven, hazlo diferentes y mas bonito y mas entendible") ----------
+   Cada recompensa con su nombre, lo que te llevas, cuando esta lista, Reclamar cuando toca y lo que pasa si no la reclamas. Arriba lo
+   que hay para reclamar ahora, luego lo que viene (lo mas cercano primero) y al final lo automatico del lunes (ruleta global y bote).
+   Las cuentas atras van vivas sin repintar la app: cada segundo solo cambia el texto de los [data-rwcd] (rwTic) y el ancho de las barras
+   [data-rwp1]. Si una cuenta que cambia de estado llega a cero ([data-rwfin]: medianoche, lunes, periodo de la ruleta) se recargan los datos. */
+const T2 = (es, en_) => (en() ? en_ : es);
+let TIEMPO_AT = Date.now(), RW_FIN = null;
+const rwIc = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const RWI = {
+  diario: rwIc('<circle cx="12" cy="12" r="3.8"/><path d="M12 3.2v2.2M12 18.6v2.2M3.2 12h2.2M18.6 12h2.2M5.8 5.8l1.5 1.5M16.7 16.7l1.5 1.5M5.8 18.2l1.5-1.5M16.7 7.3l1.5-1.5"/>'),
+  paga: rwIc('<rect x="3.8" y="5.2" width="16.4" height="14.6" rx="2.2"/><path d="M3.8 9.8h16.4M8.4 3.4v3.6M15.6 3.4v3.6"/><path d="M9.6 14.6l1.8 1.8 3.4-3.6"/>'),
+  ruleta: rwIc('<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M3.5 12h17M6 6l12 12M18 6L6 18" opacity=".55"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/>'),
+  global: rwIc('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 3.6 5.4 3.6 8.5s-1.1 5.9-3.6 8.5c-2.5-2.6-3.6-5.4-3.6-8.5S9.5 6.1 12 3.5z"/>'),
+  rescate: rwIc('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.8"/><path d="M6 6l3.3 3.3M18 6l-3.3 3.3M6 18l3.3-3.3M18 18l-3.3-3.3"/>'),
+};
+// la proxima medianoche de Madrid (lo de cada dia se reinicia ahi; Madrid siempre cambia de dia en una hora en punto)
+function rwNoche(t = Date.now()) { const h0 = Math.floor(t / 36e5) * 36e5; for (let h = 1; h <= 26; h++) if (HM(h0 + h * 36e5) === '00:00') return h0 + h * 36e5; return t + DAY }
+const rwCd = (t) => fmtPay(t);
+// cuando es, dicho como lo diria uno: a medianoche, mañana a las 9:00, el lunes a las 00:00
+function rwCuando(t) {
+  const dia = (x) => Date.parse(DK(x).split('/').reverse().join('-')), dd = Math.round((dia(t) - dia(Date.now())) / DAY), h = HM(t);
+  if (dd <= 0) return T2(`hoy a las ${h}`, `today at ${h}`);
+  if (dd === 1) return h === '00:00' ? T2('a medianoche', 'at midnight') : T2(`mañana a las ${h}`, `tomorrow at ${h}`);
+  const wd = new Intl.DateTimeFormat(en() ? 'en-GB' : 'es-ES', { timeZone: TZ, weekday: 'long' }).format(new Date(t));
+  return T2(`el ${wd} a las ${h}`, `on ${wd} at ${h}`);
+}
+// cada recompensa: id, icono y tono, cada cuanto (k), nombre (n), que te llevas (q), cantidad (amt o amtTxt), si esta lista, cuando se
+// pierde si esta lista (fin), cuando vuelve si no (cuando) y desde cuando corre (desde, para la barra), el boton y lo que pasa si no la reclamas
+function rwLista(sinAuto) {
+  const p = rwPend(), ahora = Date.now(), noche = rwNoche(ahora), out = [], per = ruPer(), mio = ruMia(me().uid);
+  const lab = (l) => String(l || '').replace(/^Caja gratis: /, T2('Caja gratis: ', 'Free box: '));
+  out.push({ id: 'ruleta', ic: RWI.ruleta, tono: 'az', k: T2('Cada 3 días', 'Every 3 days'), n: T2('Tu ruleta', 'Your wheel'),
+    q: T2('Una tirada gratis: de 75 a 900 o una caja de CS2 para abrirla tú', 'One free spin: 75 to 900 or a CS2 box to open yourself'),
+    amtTxt: T2('hasta 900', 'up to 900'), listo: p.rueda, fin: per.sigT, cuando: per.sigT, desde: per.iniT,
+    boton: '<button class="rwx-go" data-act="girar">' + T2('Girar la ruleta', 'Spin the wheel') + '</button>',
+    pierde: T2('Si no giras antes, esta tirada se pierde', 'Spin before then or this one is gone'),
+    hecho: mio ? T2(`Te tocó ${lab(mio.label)}`, `You got ${lab(mio.label)}`) : '' });
+  if (TIEMPO?.tiers?.length) {
+    const ts = [...TIEMPO.tiers].sort((a, b) => a.min - b.min), mins = TIEMPO.minutes || 0;
+    const ya = ts.filter((t) => !t.claimed && mins >= t.min), sig = ts.find((t) => mins < t.min), uno = ya[0];
+    out.push({ id: 'tiempo', ic: IC_RELOJ, tono: 'rosa', k: T2('Cada día · con la app abierta', 'Every day · with the app open'), n: T2('Tiempo en la app', 'Time in the app'),
+      q: T2(`Premios al llegar a ${ts.map((t) => minTxt(t.min)).join(', ')} en el día. Hoy llevas <b class="num">${minTxt(mins)}</b>`, `Rewards at ${ts.map((t) => minTxt(t.min)).join(', ')} in a day. Today you have <b class="num">${minTxt(mins)}</b>`),
+      amt: ya.length ? ya.reduce((a, t) => a + t.amt, 0) : sig ? sig.amt : null, listo: ya.length > 0, fin: noche,
+      cuando: sig ? TIEMPO_AT + (sig.min - mins) * 6e4 : noche, aprox: !!sig, desde: null,   // la linea de tramos ya hace de barra
+      sig: ya.length && sig ? T2(`El siguiente, +${N(sig.amt)} al llegar a ${minTxt(sig.min)}`, `Next one, +${N(sig.amt)} at ${minTxt(sig.min)}`) : '',
+      boton: uno ? `<button class="rwx-go" data-tclaim="${uno.min}">${T2('Reclamar', 'Claim')} +${N(uno.amt)}${coin()}<small>${minTxt(uno.min)}</small></button>` : '',
+      pierde: T2('Lo que no reclames hoy se pierde a medianoche', 'Whatever you do not claim today is gone at midnight'),
+      hecho: !sig && !ya.length ? T2('Todo cobrado hoy. Mañana vuelve a contar', 'All claimed today. It counts again tomorrow') : '',
+      extra: rwTramos(ts, mins) });
+  }
+  if (PAGA && PAGA.abierta) {
+    const hasta = Date.parse(PAGA.hasta) || PAY;
+    out.push({ id: 'paga', ic: RWI.paga, tono: 'verde', k: T2('Cada lunes', 'Every Monday'), n: T2('Paga del lunes', 'Monday pay'),
+      q: T2('Tu paga de la semana. No llega sola: hay que reclamarla', 'Your weekly pay. It does not arrive by itself: you claim it'),
+      amt: PAGA.amount, listo: p.paga, fin: hasta, cuando: hasta, desde: hasta - 7 * DAY,
+      boton: `<button class="rwx-go" data-act="claimweek">${T2('Reclamar', 'Claim')} +${N(PAGA.amount)}${coin()}</button>`,
+      pierde: T2('Si no la reclamas esta semana, se pierde', 'If you do not claim it this week, it is gone'),
+      hecho: p.paga ? '' : T2('Reclamada esta semana', 'Claimed this week') });
+  } else if (!sinAuto) {
+    out.push({ id: 'paga', auto: true, ic: RWI.paga, tono: 'verde', k: T2('Cada lunes · llega sola', 'Every Monday · arrives by itself'), n: T2('Paga del lunes', 'Monday pay'),
+      q: T2('Tu paga de la semana entra sola en tu saldo', 'Your weekly pay goes straight into your balance'), amt: WEEKLY, cuando: PAY, desde: PAY - 7 * DAY, cdLab: T2('Llega en', 'Arrives in') });
+  }
+  if (CLAIM) {
+    out.push({ id: 'diario', ic: RWI.diario, tono: 'oro', k: T2('Cada día', 'Every day'), n: T2('Premio diario', 'Daily reward'),
+      q: T2('Un regalo cada día que entras y lo reclamas', 'A gift every day you come in and claim it'),
+      amt: CLAIM.amount || 50, listo: p.diario, fin: noche, cuando: noche, desde: noche - DAY,
+      boton: `<button class="rwx-go" data-act="claim">${T2('Reclamar', 'Claim')} +${N(CLAIM.amount || 50)}${coin()}</button>`,
+      pierde: T2('Si no lo reclamas hoy, se pierde a medianoche', 'If you do not claim it today, it is gone at midnight'),
+      hecho: p.diario ? '' : T2('Reclamado hoy', 'Claimed today') });
+  }
+  if (p.rescate) {
+    out.push({ id: 'rescate', ic: RWI.rescate, tono: 'verde', k: T2('Una vez por semana', 'Once a week'), n: T2('Rescate', 'Top up'),
+      q: T2('Te has quedado a cero: una ayuda para seguir jugando', 'You are down to zero: a hand to keep playing'),
+      amt: CLAIM.rescue || 100, listo: true, fin: PAY,
+      boton: `<button class="rwx-go" data-act="rescue">${T2('Pedir', 'Claim')} +${N(CLAIM.rescue || 100)}${coin()}</button>`,
+      pierde: T2('Solo si no tienes apuestas en juego', 'Only with no bets in play') });
+  }
+  if (sinAuto) return out;
+  const RG = window.GM_RGLOBAL ? (GM_RGLOBAL.carga(), GM_RGLOBAL.datos()) : null, rga = +(RG && RG.amount) || 1000;
+  const rgu = RG && RG.ultima, gw = rgu ? F.find((f) => f.uid === rgu.player) : null, esta = rgu && rgu.week === RG.week;
+  out.push({ id: 'global', auto: true, ic: RWI.global, tono: 'oro', k: T2('Cada lunes · automática', 'Every Monday · automatic'), n: T2('Ruleta global', 'Global wheel'),
+    q: T2(`${N(rga)} para uno de todos, al azar. No hay que hacer nada`, `${N(rga)} for one of everyone, at random. Nothing to do`),
+    amt: rga, cuando: PAY, desde: PAY - 7 * DAY,
+    extra: gw ? `<div class="rwx-x rwx-fila"><span>${T2(esta ? 'Esta semana' : 'La última', esta ? 'This week' : 'Last one')}</span>${av(gw.id, 'sm')}<b>${esc(gw.n)}</b><i class="num">+${N(+rgu.amount || rga)}</i>${coin()}<button class="rwx-lk" data-rg-ver>${T2('Ver', 'Watch')}</button></div>` : '' });
+  const dentro = Object.keys(BOTE?.players || {}).map((u) => F.find((f) => f.uid === u)).filter(Boolean);
+  out.push({ id: 'bote', auto: true, ic: IC_TICKET, tono: 'az', k: T2('Cada lunes · automático', 'Every Monday · automatic'), n: T2('Bote de la semana', 'Weekly pot'),
+    q: T2(`Cada lunes todos ponen ${N(BOTE?.amount || 100)}. Se lo lleva quien más gane esa semana`, `Every Monday everyone puts in ${N(BOTE?.amount || 100)}. The biggest winner of the week takes it`),
+    amt: BOTE?.pot || null, cuando: PAY, desde: PAY - 7 * DAY, cdLab: T2('Se reparte en', 'Paid out in'),
+    extra: `<div class="rwx-x rwx-fila">${dentro.length ? `<span class="rw-av">${dentro.map((f) => av(f.id, 'sm')).join('')}</span><small>${T2(`${dentro.length} dentro`, `${dentro.length} in`)}</small>` : ''}<button class="rwx-lk" data-apo-ir>${T2('Ver el bote', 'See the pot')}</button></div>` });
+  return out;
+}
+// lo proximo que se puede reclamar (cabecera y Más cuando no hay nada)
+function rwProximo() { const l = rwLista(true).filter((x) => !x.listo && x.cuando > Date.now()).sort((a, b) => a.cuando - b.cuando); return l[0] || null }
+// los tramos del tiempo en la app en una linea: cada uno en su sitio, lo cobrado en verde y lo que esta listo brillando
+function rwTramos(ts, mins) {
+  const n = ts.length, at = (i) => ((i + 0.5) / n) * 100;
+  const pos = (m) => { let a = 0, x0 = 0; for (let i = 0; i < n; i++) { const b = at(i); if (m <= ts[i].min) return x0 + (b - x0) * (m - a) / (ts[i].min - a); a = ts[i].min; x0 = b } return 100 };
+  const est = (t) => (t.claimed ? 'hecho' : mins >= t.min ? 'listo' : '');
+  return `<div class="rwx-x rwx-tr" style="--n:${n}"><div class="rwx-tb"><span class="rwx-tf" style="width:${pos(mins).toFixed(1)}%"></span>${ts.map((t, i) => `<i class="${est(t)}" style="left:${at(i).toFixed(1)}%">${t.claimed ? IC_OK : ''}</i>`).join('')}</div>
+    <div class="rwx-tt">${ts.map((t) => `<div class="${est(t)}"><b>+${N(t.amt)}${coin()}</b><small>${minTxt(t.min)}</small><em>${t.claimed ? T2('cobrado', 'claimed') : mins >= t.min ? T2('listo', 'ready') : T2(`faltan ${minTxt(t.min - mins)}`, `${minTxt(t.min - mins)} to go`)}</em></div>`).join('')}</div></div>`;
+}
+function rwItem(x) {
+  const amt = x.amt != null ? `<b class="rwx-amt">+${N(x.amt)}${coin()}</b>` : x.amtTxt ? `<b class="rwx-amt txt">${esc(x.amtTxt)}</b>` : '<span></span>';
+  const pc = (a, b) => (Math.max(0, Math.min(1, (Date.now() - a) / (b - a))) * 100).toFixed(1);
+  let st;
+  if (x.listo) {
+    st = `<div class="rwx-st">${x.boton || ''}<p class="rwx-fin">${x.pierde ? `<span>${x.pierde}</span>` : ''}${x.fin ? `<span class="rwx-qd">${T2('Quedan', 'Time left')} <b data-rwcd="${x.fin}" data-rwfin>${rwCd(x.fin)}</b></span>` : ''}</p>${x.sig ? `<p class="rwx-sg">${x.sig}</p>` : ''}</div>`;
+  } else {
+    const cd = x.cuando > Date.now() ? `<p class="rwx-cd"><small>${x.cdLab ? x.cdLab : x.auto ? T2('El sorteo en', 'Draw in') : x.aprox ? T2('El siguiente en', 'Next one in') : T2('Disponible en', 'Ready in')}</small><b class="${x.aprox ? 'aprox' : ''}" data-rwcd="${x.cuando}"${x.aprox ? '' : ' data-rwfin'}>${rwCd(x.cuando)}</b><span>${x.aprox ? T2('con la app abierta y a la vista', 'with the app open and on screen') : rwCuando(x.cuando)}</span></p>` : '';
+    st = `<div class="rwx-st">${x.hecho ? `<p class="rwx-ok">${IC_OK}<span>${x.hecho}</span></p>` : ''}${cd}${x.desde && x.cuando > x.desde ? `<span class="rwx-bar"><i data-rwp0="${x.desde}" data-rwp1="${x.cuando}" style="width:${pc(x.desde, x.cuando)}%"></i></span>` : ''}${x.id === 'ruleta' ? `<button class="rwx-lk" data-act="rw-ru">${S.rwRuVer ? T2('Ocultar la ruleta', 'Hide the wheel') : T2('Ver la ruleta', 'Show the wheel')}</button>` : ''}</div>`;
+  }
+  const rueda = x.id === 'ruleta' && (x.listo || RU || S.rwRuVer) ? `<div class="rwx-x">${ruedaHtml(true)}</div>` : '';
+  return `<article class="rwx-i ${x.listo ? 'listo' : x.auto ? 'auto' : 'espera'}" data-rw="${x.id}">
+    <span class="rwx-ic t-${x.tono}">${x.ic}</span>
+    <div class="rwx-b"><span class="rwx-k">${esc(x.k)}</span><h4 class="rwx-n">${esc(x.n)}</h4><p class="rwx-q">${x.q}</p></div>${amt}
+    ${x.listo ? rueda + st : st + rueda}${x.extra || ''}</article>`;
+}
+// cada segundo: el texto de las cuentas atras y las barras, nada mas
+function rwTic() {
+  const ahora = Date.now(); let fin = false;
+  for (const e of document.querySelectorAll('[data-rwcd]')) {
+    const t = +e.dataset.rwcd; if (!t) continue;
+    const s = rwCd(t); if (e.textContent !== s) e.textContent = s;
+    if (t <= ahora && e.hasAttribute('data-rwfin')) { e.removeAttribute('data-rwfin'); fin = true }
+  }
+  for (const e of document.querySelectorAll('[data-rwp1]')) { const a = +e.dataset.rwp0, b = +e.dataset.rwp1; e.style.width = (Math.max(0, Math.min(1, (ahora - a) / (b - a))) * 100).toFixed(1) + '%' }
+  if (fin && !RW_FIN) RW_FIN = setTimeout(() => { RW_FIN = null; refresh() }, 1500);
+}
+function rwBoton() {
+  const n = rwCuenta(), sig = n ? null : rwProximo();
+  return `<button class="claim ${n ? '' : 'nada'} ${S.rew ? 'on' : ''}" data-act="rw" aria-label="Recompensas">${IC_GIFT}<span>Recompensas</span>${n ? `<b>${n}</b>` : sig ? `<i class="rw-cdp" data-rwcd="${sig.cuando}"${sig.aprox ? '' : ' data-rwfin'}>${rwCd(sig.cuando)}</i>` : ''}</button>`;
 }
 let LATIDO = null;
 function latido() {
@@ -1617,7 +1741,7 @@ function latido() {
   const uno = async () => {
     if (document.visibilityState !== 'visible') return;
     const { data, error } = await db.rpc('heartbeat'); if (error || typeof data !== 'number' || !TIEMPO) return;
-    const antes = rwPend().tiempo; TIEMPO.minutes = data;
+    const antes = rwPend().tiempo; TIEMPO.minutes = data; TIEMPO_AT = Date.now();
     if (rwPend().tiempo !== antes || S.rew) render();
   };
   uno(); LATIDO = setInterval(uno, 60000);
@@ -1627,21 +1751,24 @@ function pintaRw() {
   if (!S.rew) { if (el) el.remove(); return }
   const nuevo = !el;
   if (!el) { el = document.createElement('div'); el.id = 'rw'; document.body.appendChild(el) }
-  const p = rwPend(), dentro = Object.keys(BOTE?.players || {}).map((u) => F.find((f) => f.uid === u)).filter(Boolean);
-  const hecho = (t) => `<em class="rw-ok">${IC_OK}${t}</em>`;
-  el.innerHTML = `<div class="rw-fondo" data-act="rw"></div><aside class="rw2 ${nuevo ? 'abre' : ''}" role="dialog" aria-label="Recompensas">
+  const sc = el.querySelector('aside')?.scrollTop || 0;   // el repintado de cada minuto no te sube arriba
+  const L = rwLista(), ya = L.filter((x) => x.listo), vienen = L.filter((x) => !x.listo && !x.auto).sort((a, b) => a.cuando - b.cuando), auto = L.filter((x) => x.auto);
+  ya.sort((a, b) => (a.id === 'ruleta') - (b.id === 'ruleta') || a.fin - b.fin);   // la ruleta (grande) la ultima; las demas, la que antes se pierde primero
+  const total = ya.reduce((a, x) => a + (x.amt || 0), 0), conRueda = ya.some((x) => x.id === 'ruleta'), prox = vienen.filter((x) => x.cuando > Date.now())[0];
+  const resumen = ya.length
+    ? `<div class="rwx-sum hay"><span class="rwx-sn">${ya.length}</span><p><b>${ya.length === 1 ? T2('Una lista para reclamar', 'One ready to claim') : T2(`${ya.length} listas para reclamar`, `${ya.length} ready to claim`)}</b><span>${total ? `<i class="num">+${N(total)}</i>${coin()} ` : ''}${conRueda ? (total ? T2('y una tirada de ruleta ', 'and a wheel spin ') : T2('Una tirada de ruleta ', 'A wheel spin ')) : ''}${T2('esperándote. Lo que no reclames a tiempo se pierde', 'waiting for you. What you do not claim in time is gone')}</span></p></div>`
+    : `<div class="rwx-sum"><span class="rwx-sn ok">${IC_OK}</span><p><b>${T2('Todo reclamado', 'All claimed')}</b><span>${prox ? `${T2('Lo próximo', 'Next up')}: ${esc(prox.n)} ${T2('en', 'in')} <b class="${prox.aprox ? 'aprox' : ''}" data-rwcd="${prox.cuando}">${rwCd(prox.cuando)}</b>` : ''}</span></p></div>`;
+  el.innerHTML = `<div class="rw-fondo" data-act="rw"></div><aside class="rw2 rwx ${nuevo ? 'abre' : ''}" role="dialog" aria-label="Recompensas">
     <header><span class="rw-gi">${IC_GIFT}</span><h2>Recompensas</h2><button class="rw-x" data-act="rw" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
-    ${ruedaHtml()}
-    <div class="rw-l">
-      ${window.GM_RGLOBAL ? GM_RGLOBAL.fila() : ''}
-      ${tiempoHtml()}
-      ${PAGA ? `<div class="rw-r2"><span class="rw-t d"><span class="cn"></span></span><p><b>Paga del lunes</b><span>${N(PAGA.amount)} V-Bucks cada semana, reclamándola. Si no la reclamas esa semana, se pierde</span></p>${p.paga ? `<button class="go-s" data-act="claimweek">Reclamar</button>` : hecho('Hecha esta semana')}</div>` : ''}
-      <div class="rw-r2"><span class="rw-t d"><span class="cn"></span></span><p><b>Premio diario</b><span>${N(CLAIM?.amount || 50)} V-Bucks cada día que lo reclames</span></p>${p.diario ? `<button class="go-s" data-act="claim">Reclamar</button>` : hecho('Hecho hoy')}</div>
-      <div class="rw-r2"><span class="rw-t b">${IC_TICKET}</span><p><b>Bote de la semana</b><span>${BOTE?.pot ? `<i class="rw-pot">${N(BOTE.pot)}${coin()}</i> en el bote` : `Cada lunes, ${N(BOTE?.amount || 100)} de cada uno`} · se lo lleva quien más gane</span>${dentro.length ? `<span class="rw-av">${dentro.map((f) => av(f.id, 'sm')).join('')}<small>${dentro.length} dentro</small></span>` : ''}</p><button class="go-s res" data-apo-ir>Ver el bote</button></div>
-      ${p.rescate ? `<div class="rw-r2"><span class="rw-t p">${IC_GIFT}</span><p><b>Rescate</b><span>Te has quedado a cero: ${N(CLAIM.rescue)} para seguir, una vez por semana</span></p><button class="go-s" data-act="rescue">Pedir</button></div>` : ''}
-    </div>
+    ${resumen}
+    ${ya.length ? `<h3 class="rwx-h listo">${T2('Para reclamar ahora', 'Ready to claim')}</h3>${ya.map(rwItem).join('')}` : ''}
+    ${vienen.length ? `<h3 class="rwx-h">${T2('Lo que viene', 'Coming up')}</h3>${vienen.map(rwItem).join('')}` : ''}
+    ${auto.length ? `<h3 class="rwx-h">${T2('Automáticas · cada lunes, sin hacer nada', 'Automatic · every Monday, nothing to do')}</h3>${auto.map(rwItem).join('')}` : ''}
   </aside>`;
   if (window.GM_LANG) GM_LANG.traduce(el);
+  if (sc) el.querySelector('aside').scrollTop = sc;
+  // tras girar, la ruleta pasa de Para reclamar a Lo que viene: se vuelve a poner a la vista con su premio
+  if (S.rwRuFoco && !RU) { S.rwRuFoco = false; el.querySelector('#rueda')?.scrollIntoView({ block: 'center' }) }
   if (RU) requestAnimationFrame(ruLoop);
 }
 
@@ -1978,7 +2105,7 @@ function render() {
   document.getElementById('lang').innerHTML = `<button type="button" class="rail-aj ${S.scr === 'ajustes' ? 'on' : ''}" data-scr="ajustes"><svg viewBox="0 0 24 24">${SCREENS.ajustes[2]}</svg>Ajustes</button>`;
   const [t, sub] = S.scr === 'perfil' ? ['Perfil', ''] : SCREENS[S.scr];
   pintaRw(); pintaNv(); pintaVivoYo(); pintaEq();
-  document.getElementById('top').innerHTML = `<h1>${S.scr === 'colegas' ? '<span class="t-l">Apuestas de todos</span><span class="t-s">Todos</span>' : t}</h1>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}<span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>${M.some((x) => x.live) ? `<button class="dv-btn ${S.scr === 'directo' ? 'on' : ''}" data-scr="directo"><i></i>Directo <b>${M.filter((x) => x.live).length}</b></button>` : ''}${nvBoton()}${rwBoton()}<span class="onl ${S.onl ? 'abre' : ''}" data-onl>${onlineHtml()}</span><span class="bal"><span class="num ${(lastBal ?? me().s) < 0 ? 'neg-s' : ''}">${N(lastBal ?? me().s)}</span>${coin()}</span><button class="mo-btn ${S.scr === 'monedero' ? 'on' : ''}" data-scr="monedero" aria-label="Monedero" title="Monedero"><svg viewBox="0 0 24 24">${SCREENS.monedero[2]}</svg></button><button class="aj-btn ${S.scr === 'ajustes' ? 'on' : ''}" data-scr="ajustes" aria-label="Ajustes" title="Ajustes"><svg viewBox="0 0 24 24">${SCREENS.ajustes[2]}</svg></button>`;
+  document.getElementById('top').innerHTML = `<h1>${S.scr === 'colegas' ? '<span class="t-l">Apuestas de todos</span><span class="t-s">Todos</span>' : t}</h1>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}${PAGA && PAGA.abierta && !PAGA.claimed ? `<button class="pay rw-pay" data-act="rw">${T2('Tu paga', 'Your pay')} · <b>${T2('reclámala', 'claim it')}</b></button>` : `<span class="pay">+${N(WEEKLY)} V-Bucks el lunes · <b data-cdpay>${fmtPay(PAY)}</b></span>`}${M.some((x) => x.live) ? `<button class="dv-btn ${S.scr === 'directo' ? 'on' : ''}" data-scr="directo"><i></i>Directo <b>${M.filter((x) => x.live).length}</b></button>` : ''}${nvBoton()}${rwBoton()}<span class="onl ${S.onl ? 'abre' : ''}" data-onl>${onlineHtml()}</span><span class="bal"><span class="num ${(lastBal ?? me().s) < 0 ? 'neg-s' : ''}">${N(lastBal ?? me().s)}</span>${coin()}</span><button class="mo-btn ${S.scr === 'monedero' ? 'on' : ''}" data-scr="monedero" aria-label="Monedero" title="Monedero"><svg viewBox="0 0 24 24">${SCREENS.monedero[2]}</svg></button><button class="aj-btn ${S.scr === 'ajustes' ? 'on' : ''}" data-scr="ajustes" aria-label="Ajustes" title="Ajustes"><svg viewBox="0 0 24 24">${SCREENS.ajustes[2]}</svg></button>`;
   photoCss();
   if (window.GM_MERCADO) GM_MERCADO.aplicaCosmeticos(mkCtx());
   const vw = document.getElementById('view'), cambia = vw.dataset.vista !== S.scr;
@@ -2109,7 +2236,7 @@ document.addEventListener('click', async (e) => {
     if (S.ruGira || RU) return; S.ruGira = true;
     const { data, error } = await db.rpc('spin_wheel'); S.ruGira = false; if (error) { render(); return toast(errMsg(error)) }
     const from = S.ruRot || 0, fin = -(RU_A[data.prize] + RU_W[data.prize] / 2) + (Math.random() - .5) * RU_W[data.prize] * 0.66, giro = (((fin - from) % 360) + 360) % 360;
-    S.ruWin = null; S.ruRes = null; S.ruCel = null; RU = { t0: Date.now(), from, to: from + 360 * 6 + giro, res: data }; render(); requestAnimationFrame(ruLoop);
+    S.rwRuVer = true; S.ruWin = null; S.ruRes = null; S.ruCel = null; RU = { t0: Date.now(), from, to: from + 360 * 6 + giro, res: data }; render(); requestAnimationFrame(ruLoop);
     return;
   }
   if (d.act === 'bracket') { S.brk = true; S.side = null; document.querySelector('.det')?.scrollTo?.(0, 0); return render() }
@@ -2150,7 +2277,8 @@ document.addEventListener('click', async (e) => {
   if (d.eqtab) { if (S.eqp) { S.eqp.tab = d.eqtab; S.eqp.pag = 0 } return render() }
   if (d.eqpg != null && t.matches('[data-eqpg]')) { if (S.eqp) S.eqp.pag = +d.eqpg; return render() }
   if (d.act === 'ru-todos') { S.ruTodos = !S.ruTodos; return render() }
-  if (d.act === 'rw') { S.rew = !S.rew; if (S.rew) S.nvp = false; return render() }
+  if (d.act === 'rw') { S.rew = !S.rew; if (S.rew) S.nvp = false; else if (!RU) S.rwRuVer = false; return render() }
+  if (d.act === 'rw-ru') { S.rwRuVer = !S.rwRuVer; return render() }
   if (d.tclaim) { const { data, error } = await db.rpc('claim_time_reward', { p_min: +d.tclaim }); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} por tu tiempo en la app`); return refresh() }
   if (d.act === 'rw-cajas') { S.rew = false; S.scr = 'cajas'; document.getElementById('view').scrollTop = 0; return render() }
   if (d.act === 'claimweek') { const { data, error } = await db.rpc('claim_week'); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} de la paga del lunes`); return refresh() }
@@ -2260,7 +2388,7 @@ function live() {
   let ticks = 0;
   setInterval(() => { if (document.hidden) return; ticks++; if (ticks % 5 === 0) return refresh(); if (!document.activeElement?.matches('input,textarea')) render() }, 60000);
   // la cuenta atras de la paga con segundos: solo cambia ese texto
-  setInterval(() => { if (document.hidden) return; const t = fmtPay(PAY); document.querySelectorAll('[data-cdpay]').forEach((e) => (e.textContent = t)); if (Date.now() > PAY) refresh() }, 1000);
+  setInterval(() => { if (document.hidden) return; const t = fmtPay(PAY); document.querySelectorAll('[data-cdpay]').forEach((e) => (e.textContent = t)); rwTic(); if (Date.now() > PAY) refresh() }, 1000);
   // marcadores en directo: cada minuto, ESPN da el marcador de los partidos en juego (solo con Partidos en pantalla)
   setInterval(async () => {
     if (document.hidden || S.scr !== 'partidos') return;

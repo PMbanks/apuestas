@@ -23,7 +23,7 @@
   // lo que espera en los avisos: novedades sin ver, recompensas por reclamar y resultados nuevos (la campanita de ganado.js)
   const avisos = () => {
     const nov = g(() => novSinVer(), 0);
-    const rw = g(() => { const p = rwPend(); return [p.diario, p.rueda, p.rescate, p.bote].filter(Boolean).length + (p.tiempo || 0) }, 0);
+    const rw = g(() => rwCuenta(), 0);   // lo mismo que el boton de arriba (con la paga del lunes, 04-11)
     const res = !!document.querySelector('#top .gnd-b.hay');
     const chat = g(() => unread(), 0);   // mensajes del chat sin leer: punto en Más y fila Chat en la hoja
     return { nov, rw, res, chat, hay: !!(nov || rw || res || chat) };
@@ -60,11 +60,11 @@
       <h2 class="lab">Avisos</h2><div class="mas-l">
         ${fila('data-scr="chat"', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">${P_CHAT}</svg>`, 'Chat', av.chat ? `<b class="mas-bd">${av.chat > 99 ? '99+' : av.chat}</b>` : '')}
         ${fila('data-act="nvp"', IC_NUEVO, 'Novedades', av.nov ? `<b class="mas-bd az">${av.nov}</b>` : '')}
-        ${fila('data-act="rw"', IC_GIFT, 'Recompensas', av.rw ? `<b class="mas-bd">${av.rw}</b>` : '')}
+        ${fila('data-act="rw"', IC_GIFT, 'Recompensas', av.rw ? `<b class="mas-bd">${av.rw}</b>` : ((x) => (x ? `<i class="mas-cd" data-rwcd="${x.cuando}"${x.aprox ? '' : ' data-rwfin'}></i>` : ''))(g(() => rwProximo(), null)))}
         ${fila('data-mas-res', IC_BELL, 'Resultados', av.res ? '<b class="mas-bd ve">Nuevos</b>' : '')}
       </div>`;
     const c = h.querySelector('.mas-c'), k = html + g(() => GM_LANG.get(), '');
-    if (c.dataset.k !== k) { c.dataset.k = k; c.innerHTML = html; tr(h) }
+    if (c.dataset.k !== k) { c.dataset.k = k; c.innerHTML = html; tr(h); g(() => rwTic()) }   // la cuenta atras de Recompensas se rellena sola cada segundo
   }
   function abre(v) {
     ABIERTA = !!v && movil();

@@ -2389,3 +2389,103 @@ html[data-moneda="vp"] .cn{background-image:url(../img/monedas/vp.png)}
 .lvc-h .row-tv{margin-left:auto}
 .lvc-h em{white-space:nowrap}
 .lvc-h .lvc-dot{flex:none}
+
+/* ===== Recompensas (04-11, PM: "las recompensas de tiempo casi que no se ven, hazlo diferentes y mas bonito y mas entendible") =====
+   resumen arriba, luego Para reclamar ahora, Lo que viene y Automaticas; cada una con lo que te llevas, la cuenta atras y lo que pasa si no la reclamas */
+.rw2.rwx{width:min(500px,calc(100vw - 24px));padding-bottom:16px}
+.rwx-sum{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:16px;margin-top:16px;padding-bottom:20px;border-bottom:1px solid var(--hair)}
+.rwx-sn{display:grid;place-items:center;min-width:60px;height:60px;padding:0 12px;border-radius:999px;background:linear-gradient(180deg,var(--acc2),var(--acc));color:#141008;font:800 32px/1 var(--disp);letter-spacing:-.04em;box-shadow:0 10px 30px rgba(242,193,78,.3)}
+.rwx-sn.ok{background:rgba(43,212,125,.14);color:var(--win);box-shadow:none}
+.rwx-sn.ok svg{width:28px;height:28px}
+.rwx-sum p>b{display:block;font:800 21px/1.15 var(--disp);letter-spacing:-.02em}
+.rwx-sum p>span{display:block;margin-top:6px;font:13px/1.5 var(--sans);color:var(--mute)}
+.rwx-sum i.num{font:600 14px var(--mono);font-style:normal;color:var(--acc)}
+.rwx-sum .cn{--s:13px;margin-right:2px}
+.rwx-sum [data-rwcd]{font:600 13px var(--mono);color:var(--ink);font-variant-numeric:tabular-nums}
+.rwx-h{margin:24px 0 0;font:500 11px/1.3 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.rwx-h.listo{color:var(--acc)}
+.rwx-i{display:grid;grid-template-columns:44px minmax(0,1fr) auto;column-gap:14px;align-items:start;padding:16px 0 18px;border-bottom:1px solid var(--hair)}
+.rwx-i:last-of-type{border-bottom:0}
+.rwx-h+.rwx-i{padding-top:12px}
+.rwx-ic{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:rgba(242,193,78,.14);color:var(--acc)}
+.rwx-ic svg{width:21px;height:21px}
+.rwx-ic.t-az{background:rgba(75,105,255,.16);color:#8fa3ff}
+.rwx-ic.t-rosa{background:rgba(204,100,150,.16);color:#e58ab4}
+.rwx-ic.t-verde{background:rgba(43,212,125,.13);color:var(--win)}
+.rwx-i.listo .rwx-ic{box-shadow:0 0 0 4px rgba(242,193,78,.1),0 0 22px rgba(242,193,78,.28)}
+.rwx-i.auto .rwx-ic{opacity:.85}
+.rwx-k{display:block;font:500 10.5px/1.3 var(--mono);letter-spacing:.13em;text-transform:uppercase;color:var(--dim)}
+.rwx-i.listo .rwx-k{color:var(--acc)}
+.rwx-n{margin-top:3px;font:800 18px/1.15 var(--disp);letter-spacing:-.02em}
+.rwx-q{margin-top:4px;font:12.5px/1.45 var(--sans);color:var(--mute)}
+.rwx-q b.num{font:600 12.5px var(--mono);color:var(--ink)}
+.rwx-amt{display:flex;align-items:center;padding-top:15px;font:600 19px var(--mono);letter-spacing:-.03em;color:var(--soft);white-space:nowrap;font-variant-numeric:tabular-nums}
+.rwx-amt .cn{--s:17px;margin-left:5px}
+.rwx-i.listo .rwx-amt{color:var(--acc);font-size:22px}
+.rwx-i.auto .rwx-amt{color:var(--mute)}
+.rwx-amt.txt,.rwx-i.listo .rwx-amt.txt{font:600 12px var(--mono);color:var(--mute);letter-spacing:.02em}
+.rwx-i.listo .rwx-amt.txt{color:var(--acc)}
+.rwx-st,.rwx-x{grid-column:2/-1;min-width:0}
+.rwx-st{margin-top:12px}
+.rwx-go{display:inline-flex;align-items:center;gap:7px;padding:11px 22px;border-radius:999px;background:linear-gradient(180deg,var(--acc2),var(--acc));color:#141008;font:800 14px var(--sans);box-shadow:0 8px 24px rgba(242,193,78,.25);transition:transform .15s var(--ease),filter .15s}
+.rwx-go:hover{filter:brightness(1.06);transform:translateY(-1px)}
+.rwx-go:active{transform:scale(.97)}
+.rwx-go .cn{--s:15px;margin-left:1px}
+.rwx-go small{margin-left:4px;font:600 11px var(--mono);opacity:.65}
+.rwx-fin{display:flex;flex-wrap:wrap;gap:3px 12px;margin-top:10px;font:12.5px/1.45 var(--sans);color:#f2a27f}
+.rwx-qd{color:var(--mute);white-space:nowrap}
+.rwx-qd b{font:600 12.5px var(--mono);color:var(--ink);font-variant-numeric:tabular-nums}
+.rwx-sg{margin-top:6px;font:12px/1.45 var(--sans);color:var(--mute)}
+.rwx-cd{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 10px}
+.rwx-cd small{flex-basis:100%;font:500 10.5px/1.3 var(--mono);letter-spacing:.13em;text-transform:uppercase;color:var(--dim)}
+.rwx-cd b{font:600 24px/1.2 var(--mono);letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums}
+.rwx-i.auto .rwx-cd b{font-size:18px;color:var(--soft)}
+.rwx-cd b.aprox::before,.rwx-sum b.aprox::before{content:"≈ ";color:var(--dim)}
+.rwx-cd span{font:12.5px var(--sans);color:var(--mute)}
+.rwx-bar{display:block;height:3px;margin-top:10px;border-radius:2px;background:rgba(255,255,255,.07);overflow:hidden}
+.rwx-bar i{display:block;height:100%;border-radius:2px;background:linear-gradient(90deg,rgba(242,193,78,.25),var(--acc));transition:width 1s linear}
+.rwx-ok{display:flex;align-items:center;gap:7px;margin-bottom:10px;font:600 13px var(--sans);color:var(--win)}
+.rwx-ok svg{flex:none;width:15px;height:15px}
+.rwx-lk{margin-top:10px;font:700 13px var(--sans);color:var(--acc)}
+.rwx-lk:hover{color:var(--acc2)}
+.rwx-fila{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;margin-top:12px;font:12.5px var(--sans);color:var(--mute)}
+.rwx-fila b{color:var(--ink);font-weight:700}
+.rwx-fila i.num{font:600 12.5px var(--mono);font-style:normal;color:var(--acc)}
+.rwx-fila .cn{--s:12px;margin-left:-3px}
+.rwx-fila .rwx-lk{margin:0 0 0 auto}
+.rwx-fila .rw-av{margin:0!important}
+.rwx-i .ru-hero{padding:6px 0 4px}
+.rwx-i.listo .ru-hero{padding-top:14px}
+/* los tramos del tiempo en la app */
+.rwx-tr{margin-top:16px}
+.rwx-tb{position:relative;height:6px;margin:0 2px;border-radius:3px;background:rgba(255,255,255,.08)}
+.rwx-tf{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:linear-gradient(90deg,#e58ab4,var(--acc))}
+.rwx-tb i{position:absolute;top:50%;display:grid;place-items:center;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:var(--bg2);box-shadow:inset 0 0 0 2px rgba(255,255,255,.2)}
+.rwx-tb i.listo{background:var(--acc);box-shadow:0 0 0 4px rgba(242,193,78,.2),0 0 14px rgba(242,193,78,.55)}
+.rwx-tb i.hecho{background:var(--win);box-shadow:none;color:#0b1a12}
+.rwx-tb i svg{width:11px;height:11px}
+.rwx-tt{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:6px;margin-top:12px}
+.rwx-tt>div{display:grid;justify-items:center;gap:2px;text-align:center}
+.rwx-tt b{display:flex;align-items:center;font:600 14px var(--mono);letter-spacing:-.02em;color:var(--soft)}
+.rwx-tt b .cn{--s:12px;margin-left:3px}
+.rwx-tt small{font:11px var(--mono);color:var(--dim)}
+.rwx-tt em{font:11px/1.3 var(--sans);font-style:normal;color:var(--dim)}
+.rwx-tt .listo b,.rwx-tt .listo em{color:var(--acc)}
+.rwx-tt .hecho b{color:var(--mute)}
+.rwx-tt .hecho em{color:var(--win)}
+/* fuera del panel: la pastilla de arriba dice cuanto falta si no hay nada; la paga lista se anuncia en la cabecera */
+.claim .rw-cdp{font:500 11.5px var(--mono);font-style:normal;color:var(--mute);font-variant-numeric:tabular-nums}
+.top .rw-pay{color:var(--acc);font-weight:600}
+.top .rw-pay:hover{color:var(--acc2)}
+.mas-cd{flex:none;font:500 11.5px var(--mono);font-style:normal;color:var(--dim);font-variant-numeric:tabular-nums}
+@media (min-width:861px) and (max-width:1320px){.top .claim .rw-cdp{display:none}}
+@media (max-width:860px){
+  /* en el movil el regalo vuelve a la cabecera cuando hay algo para reclamar */
+  .top .claim:not(.nada){display:inline-flex;flex:none;padding:7px;margin:0;gap:5px}
+  .top .claim:not(.nada) span{display:none}
+  .rwx-n{font-size:17px}
+  .rwx-i{column-gap:12px}
+  .rwx-cd b{font-size:22px}
+  .rwx-i.listo .rwx-amt{font-size:19px}
+}
+html.sin-anim .rwx-bar i{transition:none}
