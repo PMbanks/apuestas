@@ -3,6 +3,11 @@
 // funcion del tiempo del servidor (empieza en la posicion donde paro la ronda anterior y acaba en el numero que dio la base), asi que
 // todos ven la misma rueda en el mismo sitio aunque entren a mitad. El numero va cerrado con un hash desde que se abre la ronda.
 // juegos.js deja un hueco [data-jx-hueco] en la pestana Ruleta y llama a GM_RULETA.montar(hueco, ctx, { rank }).
+// PM 04-11 ("hay como un cuadrado alrededor, no me gusta; que los sonidos esten mejores y se vea mejor"): fuera el brillo cuadrado del giro
+// (fx-giro sobre un div cuadrado); la rueda es un cuenco quieto con su pista y una cabeza que gira, y una BOLA que se lanza contra el giro,
+// rueda por la pista, baja, rebota en los trastes y se mete en la casilla que dijo la base. La bola tambien es una funcion del tiempo del
+// servidor (sale de la casilla de la ronda anterior), asi que todos la ven igual. Sonido de bola rodando (fx.rueda), trastes, la caida en
+// la casilla y fichas al apostar (fx.js).
 'use strict';
 (function () {
   const { N, esc, coin, quieto, ms, suena, dic, msgErr, clics, cantidad, engancha, stake, txt, html, fx } = GM_JX;
@@ -20,10 +25,12 @@
   const MULT = { rojo: 2, negro: 2, verde: 14 };
   const COLS = ['rojo', 'verde', 'negro'];
   const TA = 1.0, W0 = 720, TB = 6.4, TGIRO = TA + TB;                       // arranque, frenada y lo que dura en pantalla (la base paga a los 8 s)
+  const TL = TGIRO - 1.4, RT = 140, RP = 106;                                 // la bola cae en la casilla 1,4 s antes de que pare la rueda; radio de la pista y de las casillas (sobre 320)
   const C = 2 * Math.PI * 70;
 
   let el = null, hooks = {}, D = null, err = null;
-  const S = { on: false, tPoll: 0, tPlazo: 0, tic: 0, raf: 0, cargando: false, otra: false, ocupa: false, saldo: null, ultima: 0, kick: 0, slot: -1, tTick: 0, sonado: 0, fx: 0, verif: {} };
+  const S = { on: false, tPoll: 0, tPlazo: 0, tic: 0, raf: 0, cargando: false, otra: false, ocupa: false, saldo: null, ultima: 0, sonado: 0, fx: 0, verif: {},
+    k: 0, traste: null, cayo: 0, rueda: null, sGira: 0 };
 
   const saldo = () => (S.saldo != null ? S.saldo : J.ctx ? J.ctx.saldo : 0);
   const visible = () => !!(el && el.isConnected && !document.hidden);
@@ -67,16 +74,33 @@
   }
 
   /* ---------- la rueda ---------- */
+  const pt = (a, rad) => [(160 + rad * Math.sin((a * Math.PI) / 180)).toFixed(2), (160 - rad * Math.cos((a * Math.PI) / 180)).toFixed(2)];
+  // el cuenco (no gira): aro oscuro con filete dorado y la pista inclinada por donde rueda la bola
+  function cuencoSvg() {
+    return `<svg viewBox="0 0 320 320" aria-hidden="true"><defs>
+      <radialGradient id="rlg-pista" cx="50%" cy="50%" r="50%"><stop offset="80%" stop-color="#0c0e12"/><stop offset="87%" stop-color="#1f242d"/><stop offset="93%" stop-color="#2d333e"/><stop offset="100%" stop-color="#13161b"/></radialGradient>
+      <linearGradient id="rlg-oro" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe3a0"/><stop offset=".45" stop-color="#b88a2e"/><stop offset=".7" stop-color="#f2c14e"/><stop offset="1" stop-color="#8a6420"/></linearGradient>
+      <linearGradient id="rlg-luz" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".09"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+      <circle cx="160" cy="160" r="160" fill="#101217"/><circle cx="160" cy="160" r="153" fill="url(#rlg-pista)"/>
+      <circle cx="160" cy="160" r="153" fill="none" stroke="url(#rlg-oro)" stroke-width="2.4"/><circle cx="160" cy="160" r="133.5" fill="none" stroke="rgba(242,193,78,.28)" stroke-width="1"/>
+      <path d="M160 7a153 153 0 0 1 132 76A153 153 0 0 0 28 83A153 153 0 0 1 160 7Z" fill="url(#rlg-luz)"/></svg>`;
+  }
+  // la cabeza que gira: casillas con su numero, trastes dorados entre ellas y el cono del centro
   function discoSvg() {
-    const R = 150, r0 = 104, c = 160, pt = (a, rad) => [(c + rad * Math.sin((a * Math.PI) / 180)).toFixed(2), (c - rad * Math.cos((a * Math.PI) / 180)).toFixed(2)];
-    let g = '';
+    const R = 132, r0 = 97;
+    let g = '', tr = '', nums = '';
     ORDEN.forEach((n, i) => {
-      const [x0, y0] = pt(i * 24 - 12, R), [x1, y1] = pt(i * 24 + 12, R), [x2, y2] = pt(i * 24 + 12, r0), [x3, y3] = pt(i * 24 - 12, r0), [tx, ty] = pt(i * 24, (R + r0) / 2 + 2);
-      g += `<path class="rl-w ${colorDe(n)}" d="M${x0} ${y0}A${R} ${R} 0 0 1 ${x1} ${y1}L${x2} ${y2}A${r0} ${r0} 0 0 0 ${x3} ${y3}Z"/><text class="rl-wn" x="${tx}" y="${ty}" transform="rotate(${i * 24} ${tx} ${ty})" text-anchor="middle" dominant-baseline="central">${n}</text>`;
-      const [lx0, ly0] = pt(i * 24 - 12, R), [lx1, ly1] = pt(i * 24 - 12, r0);
-      g += `<line class="rl-sep" x1="${lx0}" y1="${ly0}" x2="${lx1}" y2="${ly1}"/>`;
+      const [x0, y0] = pt(i * 24 - 12, R), [x1, y1] = pt(i * 24 + 12, R), [x2, y2] = pt(i * 24 + 12, r0), [x3, y3] = pt(i * 24 - 12, r0), [tx, ty] = pt(i * 24, 121.5);
+      g += `<path class="rl-w ${colorDe(n)}" d="M${x0} ${y0}A${R} ${R} 0 0 1 ${x1} ${y1}L${x2} ${y2}A${r0} ${r0} 0 0 0 ${x3} ${y3}Z"/>`;
+      nums += `<text class="rl-wn" x="${tx}" y="${ty}" transform="rotate(${i * 24} ${tx} ${ty})" text-anchor="middle" dominant-baseline="central">${n}</text>`;
+      const [lx0, ly0] = pt(i * 24 - 12, R + 1), [lx1, ly1] = pt(i * 24 - 12, r0 - 1);
+      tr += `<line x1="${lx0}" y1="${ly0}" x2="${lx1}" y2="${ly1}"/>`;
+      const [dx, dy] = pt(i * 24, 86);
+      if (i % 3 === 0) tr += `<circle cx="${dx}" cy="${dy}" r="2.2" class="rl-rombo"/>`;
     });
-    return `<svg viewBox="0 0 320 320" aria-hidden="true"><circle class="rl-rim" cx="160" cy="160" r="157"/>${g}<circle class="rl-in" cx="160" cy="160" r="${r0}"/></svg>`;
+    return `<svg viewBox="0 0 320 320" aria-hidden="true"><defs><radialGradient id="rlg-cono" cx="50%" cy="45%" r="55%"><stop offset="0" stop-color="#262b35"/><stop offset=".75" stop-color="#14171d"/><stop offset="1" stop-color="#0b0d11"/></radialGradient></defs>
+      <circle cx="160" cy="160" r="${R + 0.5}" class="rl-fondo"/>${g}<g class="rl-sep">${tr}</g>${nums}
+      <circle cx="160" cy="160" r="${r0 - 1}" fill="url(#rlg-cono)" stroke="url(#rlg-oro)" stroke-width="2.6"/><circle cx="160" cy="160" r="${R + 0.5}" fill="none" stroke="rgba(242,193,78,.55)" stroke-width="1.2"/></svg>`;
   }
 
   function crea() {
@@ -87,11 +111,13 @@
       <div class="rl-top">
         <div class="rl-ronda" data-ronda></div>
         <div class="rl-wh">
+          <div class="rl-halo" aria-hidden="true"></div>
+          <div class="rl-bowl">${cuencoSvg()}</div>
           <div class="rl-disc" data-rot>${discoSvg()}</div>
           <svg class="rl-hubsvg" viewBox="0 0 320 320" aria-hidden="true"><circle class="rl-rt" cx="160" cy="160" r="70"/><circle class="rl-rp" data-ring cx="160" cy="160" r="70" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}"/></svg>
           <div class="rl-hub"><b class="num" data-hub></b><small data-hubs></small></div>
-          <div class="rl-ptr" data-ptr><i></i></div>
           <div class="rl-glow" data-glow></div>
+          <div class="rl-bola" data-bola><i></i></div>
         </div>
         <div class="rl-info">
           <p class="rl-t" data-t></p>
@@ -112,7 +138,8 @@
     el.querySelector('[data-amt]').innerHTML = cantidad(t, saldo());
     engancha(el, saldo, () => pintaBtns());
     clics(el, 'data-rl', (b) => apostar(b.dataset.rl));
-    document.addEventListener('visibilitychange', () => { if (!document.hidden && S.on && visible()) carga(); else programa() });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && S.on && visible()) carga(); else { programa(); paraRueda() } });
+    window.addEventListener('resize', () => { S.k = 0; if (D && visible()) pintaBola() });
   }
 
   /* ---------- datos ---------- */
@@ -149,7 +176,7 @@
     el.dataset.fase = f;
     el.querySelectorAll('[data-jx-saldo]').forEach((x) => (x.textContent = N(saldo())));
     cuenta(); estado(f, r); hist(f, r); cols(f, r); pintaBtns(); justo(r);
-    if (f !== 'giro' && f !== 'cerrando') { const a = anguloAhora(D); gira(a) }
+    if (f !== 'giro' && f !== 'cerrando') { const a = anguloAhora(D); gira(a); pintaBola(); el.querySelector('.rl-wh').classList.remove('gira') }
     glow(f, r);
     if (f === 'fin' && r && S.sonado !== r.id && J.ahora() - ms(r.cierra) < (TGIRO + 3) * 1000) resultadoSuena(r);
     if ((f === 'giro' || f === 'cerrando') && !S.raf) S.raf = requestAnimationFrame(frame);
@@ -197,10 +224,12 @@
   }
   function hist(f, r) {
     const oculta = (f === 'giro' || f === 'cerrando') && r ? r.id : null;
-    const h = (D.historial || []).filter((x) => x.id !== oculta).slice(0, 20);
-    html(el.querySelector('[data-hist]'), h.map((x, i) => `<span class="${colorDe(x.n)} ${i === 0 ? 'nuevo' : ''}">${x.n}</span>`).join(''));
+    const h = (D.historial || []).filter((x) => x.id !== oculta).slice(0, 18);
+    html(el.querySelector('[data-hist]'), h.map((x, i) => `<span class="${colorDe(x.n)} ${i === 0 ? 'nuevo' : ''}" style="--i:${i}">${x.n}</span>`).join(''));
     const c = D.cuenta || {}, tot = (c.rojo || 0) + (c.negro || 0) + (c.verde || 0);
-    html(el.querySelector('[data-cnt]'), tot ? `<span class="lab">${t('Últimos 100')}</span> <i class="rojo"></i>${c.rojo} <i class="negro"></i>${c.negro} <i class="verde"></i>${c.verde}` : '');
+    const pc = (k) => Math.round(((c[k] || 0) / (tot || 1)) * 100);
+    html(el.querySelector('[data-cnt]'), tot ? `<span class="lab">${t('Últimos 100')}</span><span class="rl-bar">${['rojo', 'negro', 'verde'].map((k) => `<i class="${k}" style="flex:${c[k] || 0}"></i>`).join('')}</span>`
+      + `<span class="rl-leg">${['rojo', 'negro', 'verde'].map((k) => `<span class="${k}"><b class="num">${c[k] || 0}</b> ${t(k)} <small class="num">${pc(k)} %</small></span>`).join('')}</span>` : '');
   }
   // las tres columnas: quien ha puesto que en esta ronda (en la de antes, con lo que cobro)
   function cols(f, r) {
@@ -252,42 +281,80 @@
   function gira(a) {
     const d = el && el.querySelector('[data-rot]'); if (!d) return;
     d.style.transform = `rotate(${a.toFixed(2)}deg)`;
-    const s = mod(Math.round(-a / 24), 15);
-    if (s !== S.slot) {
-      if (S.slot >= 0 && S.raf) {
-        // un tic por casilla: rapido y suave al principio, mas fuerte y grave cuando frena (la tension del final)
-        S.kick = 1; const n = performance.now(), lento = 1 - Math.min(1, S.v || 0);
-        if (n - S.tTick > (lento > 0.6 ? 0 : 60)) { S.tTick = n; fx('sonido', 'tick') }
-      }
-      S.slot = s;
-    }
   }
-  // velocidad de la rueda (0 parada, 1 a tope) para los efectos: estela, halo y tension
-  function efectos(d) {
-    const r = d && d.ronda, e = r ? (J.ahora() - ms(r.cierra)) / 1000 : 0;
-    const a1 = angulo(d, e), a0 = angulo(d, e - 0.05), v = Math.min(1, Math.abs(a1 - a0) / 0.05 / W0);
-    S.v = v;
-    if (r && e >= 0 && S.sGira !== r.id) { S.sGira = r.id; fx('sonido', 'giro'); fx('giro', el.querySelector('.rl-wh'), true) }
 
+  /* ---------- la bola ---------- */
+  const suave = (x) => x * x * (3 - 2 * x);
+  // la ronda anterior (de su casilla sale la bola)
+  function previa(d) {
+    const r = d.ronda;
+    return (d.historial || []).filter((x) => !r || x.id < r.id).sort((a, b) => b.id - a.id)[0] || null;
+  }
+  // donde esta la bola a los e segundos de cerrar: angulo en pantalla (grados, desde arriba) y radio (sobre 320). Se lanza contra el giro desde
+  // la casilla de la ronda anterior, da vueltas por la pista, baja rebotando en los trastes y a los TL s se queda en la casilla del numero
+  function bolaT(d, e) {
+    const r = d.ronda, A = angulo(d, e), h = previa(d), iP = h ? ORDEN.indexOf(h.n) : 0;
+    if (e <= 0) return { a: A + iP * 24, r: RP, w: 0, dl: 0 };
+    const conoce = r.n != null, i = conoce ? ORDEN.indexOf(r.n) : iP, base = 360 * 9;
+    const D0 = conoce ? base + mod((iP - i) * 24 - base, 360) : base;
+    const u = Math.min(1, e / TL);
+    if (u >= 1) { const e2 = e - TL; return { a: A + i * 24 + 3.2 * Math.sin(e2 * 15) * Math.exp(-e2 * 4.5), r: RP + 1.5 * Math.exp(-e2 * 6) * Math.abs(Math.sin(e2 * 22)), w: 1, dl: 0 } }
+    let dl = D0 * (1 - u) * (1 - u), rr = RT, w = 0;
+    if (u < 0.07) rr = RP + (RT - RP) * suave(u / 0.07);
+    if (u > 0.6) {
+      w = (u - 0.6) / 0.4;
+      dl += 40 * Math.sin(5 * Math.PI * w) * w * (1 - w);                                // los golpes contra los trastes
+      rr = RT - (RT - RP) * suave(Math.min(1, w / 0.7)) + (w > 0.5 ? 7 * Math.abs(Math.sin((4 * Math.PI * (w - 0.5)) / 0.5)) * ((1 - w) / 0.5) : 0);
+    }
+    return { a: A + i * 24 + dl, r: rr, w, dl };
+  }
+  function bolaAhora(d) {
+    const r = d && d.ronda, f = fase(d);
+    if (r && (f === 'giro' || f === 'cerrando')) return bolaT(d, (J.ahora() - ms(r.cierra)) / 1000);
+    if (r && r.n != null && (f === 'fin' || f === 'idle')) return { a: rest(r.n, r.id) + ORDEN.indexOf(r.n) * 24, r: RP };
+    const h = d ? previa(d) : null;
+    return h ? { a: rest(h.n, h.id) + ORDEN.indexOf(h.n) * 24, r: RP } : { a: 0, r: RP };
+  }
+  function pintaBola(b) {
+    const n = el && el.querySelector('[data-bola]'); if (!n || !D) return;
+    b = b || bolaAhora(D);
+    if (!S.k) { const w = el.querySelector('.rl-wh').clientWidth; S.k = w ? w / 320 : 0; if (!S.k) return }
+    n.style.transform = `rotate(${b.a.toFixed(2)}deg) translate3d(0,${(-b.r * S.k).toFixed(1)}px,0)`;
+    n.firstElementChild.style.transform = `rotate(${(-b.a).toFixed(1)}deg)`;               // la luz de la bola no gira con ella
+  }
+  function paraRueda() { if (S.rueda) { try { S.rueda.para() } catch {} S.rueda = null } }
+  // sonido y halo mientras gira: la bola rueda (mas fuerte cuanto mas corre), golpea los trastes al bajar y cae en la casilla
+  function efectos(d, b) {
+    const r = d && d.ronda; if (!r) return;
+    const e = (J.ahora() - ms(r.cierra)) / 1000;
+    if (e >= 0 && S.sGira !== r.id) {
+      S.sGira = r.id; el.querySelector('.rl-wh').classList.add('gira');
+      if (e < TL - 0.5) { if (e < 1.5) fx('sonido', 'lanza'); paraRueda(); S.rueda = fx('rueda') || null }      // quien entra a mitad oye rodar la bola, sin el lanzamiento
+    }
+    if (e < TL) {
+      const b0 = bolaT(d, e - 0.04), v = Math.min(1, Math.abs(b.a - b0.a) / 0.04 / 1000);
+      if (S.rueda) S.rueda.vel(v * (1 - 0.85 * (b.w || 0)));
+      if (b.w > 0) { const k = Math.floor(b.dl / 24); if (S.traste != null && k !== S.traste) fx('sonido', 'traste'); S.traste = k } else S.traste = null;
+    } else if (S.cayo !== r.id && r.n != null) {
+      S.cayo = r.id; paraRueda(); S.traste = null;
+      if (e < TL + 1) fx('sonido', 'bolaCae');
+      el.querySelector('.rl-wh').classList.remove('gira');
+    }
   }
   function frame() {
     S.raf = 0;
     if (!el || !D) return;
     const f = fase(D);
-    if (!el.isConnected) { if (S.on && (f === 'giro' || f === 'cerrando')) S.raf = requestAnimationFrame(frame); return }
+    if (!el.isConnected) { if (S.on && (f === 'giro' || f === 'cerrando')) S.raf = requestAnimationFrame(frame); else paraRueda(); return }
     gira(anguloAhora(D));
-    if (f === 'giro' || f === 'cerrando') efectos(D);
-    const p = el.querySelector('[data-ptr]');
-    if (p) { p.style.transform = `rotate(${(-22 * S.kick).toFixed(1)}deg)`; S.kick *= 0.82 }
-    if (f === 'giro' || f === 'cerrando') { S.raf = requestAnimationFrame(frame); return }
-    if (p) p.style.transform = '';
-    S.v = 0; fx('giro', el.querySelector('.rl-wh'), false);
+    const b = bolaAhora(D); pintaBola(b);
+    if (f === 'giro' || f === 'cerrando') { efectos(D, b); S.raf = requestAnimationFrame(frame); return }
+    paraRueda(); el.querySelector('.rl-wh').classList.remove('gira');
     pinta();
   }
-  // la bola cae (para todos) y, si jugaste, el momento de ganar o perder: estallido con la cifra o temblor rojo
+  // si jugaste, el momento de ganar o perder: estallido con la cifra o temblor rojo (la bola ya cayo y sono)
   function resultadoSuena(r) {
     S.sonado = r.id;
-    fx('sonido', 'bola');
     const mias = (r.apuestas || []).filter((a) => a.player === J.ctx.me);
     setTimeout(() => { if (S.ult) S.ult.refresca() }, 1800);
     if (!mias.length) return;
@@ -307,7 +374,7 @@
     S.ocupa = true; txt(av, ''); pintaBtns();
     try {
       const r = await J.rpc('ruleta_apostar', { p_color: c, p_stake: stake.v });
-      S.saldo = r.saldo; suena('ficha');
+      S.saldo = r.saldo; fx('sonido', 'ficha');
       if (J.ctx.refresh) J.ctx.refresh();
     } catch (e) { const m = msgErr(e, 'db/073'); txt(av, m); J.toast(esc(m)) }
     finally { S.ocupa = false; await carga(); if (hooks.rank) hooks.rank() }
@@ -316,6 +383,7 @@
   function para() {
     S.on = false;
     clearTimeout(S.tPoll); clearTimeout(S.tPlazo); clearTimeout(S.tPlazo2); clearInterval(S.tic); cancelAnimationFrame(S.raf); S.raf = 0; S.tic = 0;
+    paraRueda();
     J.calla();
   }
 
