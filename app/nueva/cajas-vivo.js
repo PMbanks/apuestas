@@ -2,12 +2,15 @@
 // Va por Supabase Realtime (broadcast, canal 'cajas-vivo'): no toca la base ni guarda nada.
 // Dos cosas de cajas.js (las dos marcadas "// en directo"):
 //   gm:cajas-montada  { db, me }  al montar la pantalla Cajas: de aqui sale el cliente de Supabase que ya usa la app.
-//   gm:caja-abierta   { quien, nombre, caja, cajaNombre, items:[{n,r,i,l,v}], pool:[{r,i,l}] }  al abrir una caja (r rareza, i imagen, l lujo, v valor).
+//   gm:caja-abierta   { quien, nombre, caja, cajaNombre, items:[{n,r,i,l,v,t?,tp?}], pool:[{r,i,l}] }  al abrir una caja (r rareza, i imagen, l lujo, v valor).
+//   Con ticket (db/081): t = 'oro' o 'diamante' y tp = lo que pasa por la tira al volver a girar. Esa fila para en el ticket, espera y vuelve
+//   a girar sola hasta lo que ha salido (como en la pantalla de quien abre); las demas filas no se tocan.
 // La tira se pinta fuera de la pantalla Cajas (en el body), asi que aunque la app repinte no se pierde.
 // Todo lo que llega por la red se trata como no fiable: texto escapado, imagenes solo de dos sitios, rarezas de una lista.
 'use strict';
 (function () {
   const CANAL = 'cajas-vivo', G = 46, TOTAL = 54, MAX_FILAS = 3, MAX_TARJETAS = 3;
+  const TK = { oro: ['Ticket Dorado', '#f5c542'], diamante: ['Ticket de Diamante', '#7fe3ff'] };
   const RAR = { esp: ['Especial', '#e4ae39'], cov: ['Encubierto', '#eb4b4b'], cla: ['Clasificado', '#d32ce6'], res: ['Restringido', '#8847ff'], mil: ['Grado militar', '#4b69ff'] };
   const IMG_OK = /^https:\/\/(community\.akamai\.steamstatic\.com|pmbanks\.github\.io)\//;
   const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -39,7 +42,8 @@
   function limpia(p) {
     if (!p || typeof p !== 'object') return null;
     const it = (x) => ({ r: RAR[x && x.r] ? x.r : 'mil', i: img(x && x.i), l: x && x.l ? 1 : 0 });
-    const items = (Array.isArray(p.items) ? p.items : []).slice(0, 10).map((x) => ({ ...it(x), n: corta(x && x.n, 80), v: Math.max(0, Math.min(1e9, +(x && x.v) || 0)) }));
+    const items = (Array.isArray(p.items) ? p.items : []).slice(0, 10).map((x) => ({ ...it(x), n: corta(x && x.n, 80), v: Math.max(0, Math.min(1e9, +(x && x.v) || 0)),
+      t: x && TK[x.t] ? x.t : null, tp: (Array.isArray(x && x.tp) ? x.tp : []).slice(0, 20).map(it) }));
     if (!items.length) return null;
     const pool = (Array.isArray(p.pool) ? p.pool : []).slice(0, 40).map(it);
     return { quien: corta(p.quien, 60), nombre: corta(p.nombre, 40) || 'Alguien', caja: corta(p.cajaNombre, 60), items, pool: pool.length ? pool : items.map(it) };
@@ -52,7 +56,11 @@
   }
 
   /* ---------- la tira ---------- */
-  const carta = (x) => (x.r === 'esp' && !x.l ? '<div class="cv-k esp"><span>★</span></div>' : `<div class="cv-k" style="--c:${RAR[x.r][1]}">${x.i ? `<img src="${esc(x.i)}" alt="" decoding="async">` : ''}</div>`);
+  // el ticket: el mismo billete que en cajas.js (estrella el Dorado, gema el de Diamante)
+  const sello = (t) => (t === 'diamante' ? '<path class="tk-g" d="M61 31l7-9h14l7 9-14 22z"/><path class="tk-l" d="M61 31h28M68 22l4 9 3 22M82 22l-4 9-3 22"/>'
+    : '<path class="tk-g" d="M75 20l4.1 11.3 12.1.4-9.5 7.4 3.3 11.6L75 44l-10 6.7 3.3-11.6-9.5-7.4 12.1-.4z"/>');
+  const ticket = (t) => `<div class="cv-k tk tk-${t}" style="--c:${TK[t][1]};--tk:${TK[t][1]}" title="${TK[t][0]}"><svg class="tk-svg" viewBox="0 0 120 76" aria-hidden="true"><path class="tk-b" d="M8 6h104a4 4 0 0 1 4 4v16a12 12 0 0 0 0 24v16a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V50a12 12 0 0 0 0-24V10a4 4 0 0 1 4-4z"/><path class="tk-s" d="M10 12h100v14H10z"/><path class="tk-d" d="M34 12v52"/>${sello(t)}</svg></div>`;
+  const carta = (x) => (x.tk ? ticket(x.tk) : x.r === 'esp' && !x.l ? '<div class="cv-k esp"><span>★</span></div>' : `<div class="cv-k" style="--c:${RAR[x.r][1]}">${x.i ? `<img src="${esc(x.i)}" alt="" decoding="async">` : ''}</div>`);
   const aleatoria = (pool) => pool[(Math.random() * pool.length) | 0];
   let contenedor = null;
   function sitio() {
@@ -61,14 +69,25 @@
     document.body.appendChild(contenedor);
     return contenedor;
   }
-  function gira(fila, p, it, dur) {
-    const cartas = [];
-    for (let i = 0; i < TOTAL; i++) cartas.push(i === G ? it : aleatoria(p.pool));
-    fila.innerHTML = `<div class="cv-strip"><div class="cv-track">${cartas.map(carta).join('')}</div><i class="cv-mark"></i></div>`;
-    const tira = fila.firstElementChild, pista = tira.firstElementChild, k = pista.children[G], w = tira.clientWidth;
-    if (!w || quieto()) { pista.style.transform = 'none'; k.classList.add('gana'); return Promise.resolve() }
-    const dx = k.offsetLeft + k.offsetWidth / 2 - w / 2 + (Math.random() - 0.5) * k.offsetWidth * 0.5;
-    return pista.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${-dx}px)` }], { duration: dur, easing: 'cubic-bezier(.08,.6,.12,1)', fill: 'forwards' }).finished.then(() => k.classList.add('gana'), () => k.classList.add('gana'));
+  // una vuelta de la tira: de la carta 'desde' (0: el principio) a la G, con desvio (sin desvio si para en un ticket)
+  function vuelta(fila, cartas, dur, desde, desvio) {
+    fila.innerHTML = `<div class="cv-strip ${fila.dataset.tk ? 'tk-on tk-' + fila.dataset.tk : ''}"><div class="cv-track">${cartas.map(carta).join('')}</div><i class="cv-mark"></i></div>`;
+    const tira = fila.firstElementChild, pista = tira.firstElementChild, k = pista.children[G], k0 = pista.children[desde], w = tira.clientWidth;
+    if (!w || quieto()) { pista.style.transform = `translateX(${-(k.offsetLeft + k.offsetWidth / 2 - w / 2)}px)`; k.classList.add('gana'); return Promise.resolve() }
+    const x0 = desde ? k0.offsetLeft + k0.offsetWidth / 2 - w / 2 : 0, dx = k.offsetLeft + k.offsetWidth / 2 - w / 2 + (desvio ? (Math.random() - 0.5) * k.offsetWidth * 0.5 : 0);
+    return pista.animate([{ transform: `translateX(${-x0}px)` }, { transform: `translateX(${-dx}px)` }], { duration: dur, easing: 'cubic-bezier(.08,.6,.12,1)', fill: 'forwards' }).finished.then(() => k.classList.add('gana'), () => k.classList.add('gana'));
+  }
+  async function gira(fila, p, it, dur) {
+    if (!it.t) return vuelta(fila, Array.from({ length: TOTAL }, (_, i) => (i === G ? it : aleatoria(p.pool))), dur, 0, true);
+    // con ticket: para en el ticket, espera y vuelve a girar solo esta fila con lo de su monton
+    fila.dataset.tk = it.t;
+    await vuelta(fila, Array.from({ length: TOTAL }, (_, i) => (i === G ? { tk: it.t } : aleatoria(p.pool))), dur, 0, false);
+    if (!fila.isConnected) return;
+    fila.firstElementChild.classList.add('tk-pop');
+    await new Promise((ok) => setTimeout(ok, quieto() ? 0 : 900));
+    if (!fila.isConnected) return;
+    const tp = it.tp && it.tp.length ? it.tp : p.pool;
+    await vuelta(fila, Array.from({ length: TOTAL }, (_, i) => (i === G ? it : i === 3 ? { tk: it.t } : aleatoria(tp))), Math.round(dur * 0.7), 3, true);
   }
   function tarjeta(p) {
     const caja = sitio();
@@ -116,6 +135,14 @@
 .cv-k.esp{--c:#e4ae39;background:radial-gradient(closest-side,rgba(228,174,57,.38),transparent)}
 .cv-k.esp span{font:800 38px/1 var(--disp);color:#ffd77a;text-shadow:0 0 20px rgba(228,174,57,.75)}
 .cv-k.gana{z-index:1;transform:scale(1.07);box-shadow:inset 0 -3px 0 var(--c),0 0 0 2px var(--c),0 0 24px color-mix(in srgb,var(--c) 55%,transparent)}
+.cv-k.tk{background:radial-gradient(closest-side,color-mix(in srgb,var(--tk) 30%,transparent),transparent);box-shadow:inset 0 -3px 0 var(--tk)}
+.cv-k .tk-svg{width:82%;height:62%}
+.cv-k .tk-b{fill:var(--tk)}.cv-k .tk-s{fill:rgba(255,255,255,.3)}.cv-k .tk-d{fill:none;stroke:rgba(0,0,0,.32);stroke-width:2;stroke-dasharray:4 4}
+.cv-k.tk-oro .tk-g{fill:#7a4b00}.cv-k.tk-diamante .tk-g{fill:#0b3c66}.cv-k .tk-l{fill:none;stroke:rgba(255,255,255,.75);stroke-width:1.4}
+.cv-strip.tk-on{box-shadow:inset 0 2px 0 color-mix(in srgb,var(--tk) 70%,transparent),inset 0 -2px 0 color-mix(in srgb,var(--tk) 70%,transparent)}
+.cv-strip.tk-oro{--tk:#f5c542}.cv-strip.tk-diamante{--tk:#7fe3ff}
+.cv-strip.tk-pop .cv-k.tk.gana{animation:cv-late .5s cubic-bezier(.2,.9,.3,1.4) both}
+@keyframes cv-late{45%{transform:scale(1.16)}to{transform:scale(1.07)}}
 .cv-mark{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--acc);box-shadow:0 0 12px rgba(242,193,78,.9);pointer-events:none}
 .cv-res{display:flex;align-items:baseline;gap:8px;margin-top:12px;font:500 13px var(--sans);color:var(--soft);animation:cv-in .3s var(--ease)}
 .cv-res[hidden]{display:none}

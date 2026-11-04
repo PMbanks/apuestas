@@ -335,18 +335,10 @@ button.cj-seat:hover{background:rgba(242,193,78,.16);color:var(--acc)}
 
 /* crear una batalla */
 .cj-new{max-width:1000px;margin:0 auto;text-align:center}
-.cj-new-h{display:flex;flex-direction:column;align-items:center;gap:14px}
-.cj-new-h h2{font:800 clamp(34px,4.4vw,54px)/.95 var(--disp);letter-spacing:-.04em}
-.cj-modes{display:flex;justify-content:center;gap:12px;margin-top:38px}
-.cj-mode{display:flex;flex-direction:column;align-items:center;gap:12px;width:156px;padding:20px 0 18px;border-radius:22px;background:rgba(255,255,255,.035);color:var(--mute);transition:background .15s,color .15s}
-.cj-mode:hover{color:var(--ink)}
-.cj-mode.on{background:rgba(242,193,78,.11);color:var(--ink)}
-.cj-mode b{font:500 24px/1 var(--mono);letter-spacing:-.04em}
 .cj-mode-d{display:flex;align-items:center;gap:4px;height:14px}
 .cj-mode-d i{width:12px;height:12px;border-radius:50%;background:currentColor;opacity:.8}
-.cj-mode.on .cj-mode-d i{background:var(--acc);opacity:1}
+.nv-mode.on .cj-mode-d i{background:var(--acc);opacity:1}
 .cj-mode-d em{margin:0 6px;font:500 9px var(--mono);font-style:normal;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
-.cj-new .cj-sec-h{margin:64px 0 24px}
 .cj-pk-h{margin:30px 0 16px;font:500 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
 .cj-pick{display:flex;flex-wrap:wrap;justify-content:center;gap:12px 8px}
 .cj-pk{display:flex;flex-direction:column;align-items:center;width:122px;min-width:0;padding:10px 6px 12px;border-radius:18px;transition:background .15s}
@@ -503,8 +495,6 @@ button.cj-seat:hover{background:rgba(242,193,78,.16);color:var(--acc)}
   .cj-side-n b{font-size:13px}
   .cj .cj-avs .av.md{width:30px;height:30px;font-size:10px}
   .cj-seat{width:30px;height:30px}
-  .cj-modes{margin-top:28px}
-  .cj-mode{width:132px}
   .cj-pick{gap:6px 4px}
   .cj-pk{width:calc((100% - 8px) / 3)}
   .cj-pk-img,.cj-pk-img img{width:84px;height:63px}
@@ -887,11 +877,6 @@ html.cj-pintando,html.cj-pintando *{-webkit-user-select:none;user-select:none;cu
 .cj-side.m>.num{font-size:14px}
 .cj-side.m .cj-crown{width:12px;height:9px}
 /* crear: los siete formatos y la regla */
-.cj-modes{flex-wrap:wrap;max-width:980px;margin-left:auto;margin-right:auto;gap:10px}
-.cj-mode{width:128px;gap:10px;padding:18px 0 16px}
-.cj-mode b{font-size:22px}
-.cj-mode small{font:500 11px var(--sans);color:var(--dim)}
-.cj-mode.on small{color:var(--soft)}
 .cj-mode-d{gap:5px}
 .cj-mode-d>span{display:flex;gap:3px}
 .cj-mode-d.multi{gap:8px}
@@ -961,10 +946,6 @@ html.cj-pintando,html.cj-pintando *{-webkit-user-select:none;user-select:none;cu
   .cj-vs.multi .cj-avs>*+*{margin-left:-11px}
   .cj-bt-m b.w small{font-size:10px}
   .cj-bt-m b.l{font-size:15px}
-  .cj-modes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:26px}
-  .cj-mode{width:auto;padding:14px 2px 12px;gap:8px;border-radius:18px}
-  .cj-mode b{font-size:17px}
-  .cj-mode small{font-size:10px}
   .cj-mode-d,.cj-mode-d.multi{gap:4px}
   .cj-mode-d>span{gap:2px}
   .cj-mode-d i{width:7px;height:7px}
@@ -1044,4 +1025,163 @@ html.sin-anim .gd,html.sin-anim .gd.sale{animation:none}
   .gd-cs{gap:10px}
   .gd-t{font-size:10px;letter-spacing:.18em}
   .ca-tiras .gd-n{display:none}
+}
+
+/* Tickets (db/081): la tira para en un ticket y vuelve a girar sola. Dorado (estrella, brillo lento) y Diamante (gema, destellos rapidos).
+   Todo pasa DENTRO de su tira o su ruleta: nada tapa la pantalla, las demas lineas, Saltar ni los menus. */
+.tk-oro{--tk:#f5c542;--tk2:#7a4b00}
+.tk-diamante{--tk:#7fe3ff;--tk2:#0b3c66}
+.tk-svg{display:block;width:100%;height:100%;overflow:visible}
+.tk-svg .tk-b{fill:var(--tk)}
+.tk-svg .tk-s{fill:rgba(255,255,255,.3)}
+.tk-svg .tk-d{fill:none;stroke:rgba(0,0,0,.32);stroke-width:2;stroke-dasharray:4 4}
+.tk-svg .tk-g{fill:var(--tk2)}
+.tk-svg .tk-l{fill:none;stroke:rgba(255,255,255,.75);stroke-width:1.4}
+/* la carta del ticket en la tira de abrir */
+.ca .cj-k.tk{background:radial-gradient(70% 60% at 50% 42%,color-mix(in srgb,var(--tk) 34%,transparent),transparent 72%),#1d212b;box-shadow:inset 0 -4px 0 var(--tk),0 0 0 1.5px color-mix(in srgb,var(--tk) 55%,transparent)}
+.ca .cj-k.tk .cj-k-i{display:grid;place-items:center}
+.ca .cj-k.tk .cj-k-i .tk-svg{position:absolute;inset:6% 4%;width:92%;height:88%;filter:drop-shadow(0 6px 14px color-mix(in srgb,var(--tk) 45%,transparent))}
+.ca .cj-k.tk b{color:var(--tk);white-space:normal;text-align:center;line-height:1.1}
+.ca .cj-k.tk .tk-x{font:600 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}
+.ca .cj-k.tk.gana{box-shadow:inset 0 -4px 0 var(--tk),0 0 0 2px var(--tk),0 0 40px color-mix(in srgb,var(--tk) 65%,transparent)}
+.ca-tiras.n3 .cj-k.tk b,.ca-tiras.n4 .cj-k.tk b,.ca-tiras.n5 .cj-k.tk b{display:none}
+.ca-tiras.n4 .cj-k.tk .tk-x,.ca-tiras.n5 .cj-k.tk .tk-x{display:none}
+/* la tira con ticket: se tine de su color; al pararse en el ticket late; al volver a girar lleva su brillo */
+.ca .cj-strip.tk-on{box-shadow:inset 0 2px 0 color-mix(in srgb,var(--tk) 70%,transparent),inset 0 -2px 0 color-mix(in srgb,var(--tk) 70%,transparent)}
+.ca .cj-strip.tk-pop,.ca .cj-strip.tk-gira{background:radial-gradient(38% 150% at 50% 50%,color-mix(in srgb,var(--tk) 30%,transparent),transparent 80%),var(--bg2)}
+.ca .cj-strip.tk-pop .cj-k.tk.gana{animation:tkLate .55s cubic-bezier(.2,.9,.3,1.4) both}
+.ca .cj-strip.tk-pop.tk-diamante .cj-k.tk.gana{animation:tkGema .7s cubic-bezier(.2,.9,.3,1.4) both}
+.ca .cj-strip.tk-gira::after,.ca .cj-strip.tk-pop::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(105deg,transparent 35%,color-mix(in srgb,var(--tk) 22%,transparent) 50%,transparent 65%) 0 0/250% 100%;animation:tkBrillo 1.8s linear infinite}
+.ca .cj-strip.tk-diamante.tk-gira::after,.ca .cj-strip.tk-diamante.tk-pop::after{background:
+  radial-gradient(2px 2px at 18% 30%,#fff,transparent),radial-gradient(2px 2px at 72% 22%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 78%,#fff,transparent),radial-gradient(2px 2px at 88% 66%,#fff,transparent),
+  linear-gradient(105deg,transparent 35%,rgba(127,227,255,.26) 50%,transparent 65%) 0 0/250% 100%;animation:tkBrillo .9s linear infinite,tkChispa .6s steps(2) infinite}
+.ca .cj-strip.tk-on.fin{background:radial-gradient(34% 150% at 50% 50%,color-mix(in srgb,var(--c) 34%,transparent),transparent 78%),radial-gradient(60% 160% at 50% 50%,color-mix(in srgb,var(--tk) 14%,transparent),transparent 80%),var(--bg2)}
+@keyframes tkLate{0%{transform:scale(1)}45%{transform:scale(1.14)}100%{transform:scale(1.06)}}
+@keyframes tkGema{0%{transform:scale(1) rotate(0)}40%{transform:scale(1.16) rotate(-3deg)}70%{transform:scale(1.04) rotate(2deg)}100%{transform:scale(1.07) rotate(0)}}
+@keyframes tkBrillo{from{background-position:120% 0}to{background-position:-120% 0}}
+@keyframes tkChispa{50%{opacity:.55}}
+/* lo que ha salido con ticket */
+.ca-gd.tk-oro b,.ca-gd.tk-diamante b{background:color-mix(in srgb,var(--tk) 18%,transparent);color:var(--tk)}
+/* los tickets de la caja, encima de su contenido */
+.ca-tks{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 26px;margin:-12px auto 26px}
+.ca-tk{display:grid;grid-template-columns:44px auto;align-items:center;column-gap:10px;row-gap:1px;text-align:left}
+.ca-tk .tk-svg{grid-row:1/3;width:44px;height:28px}
+.ca-tk-n{display:flex;align-items:baseline;gap:8px}
+.ca-tk b{font:700 14px var(--sans);color:var(--tk)}
+.ca-tk .num{font:500 13px var(--mono);color:var(--ink)}
+.ca-tk em{font:12px var(--sans);font-style:normal;color:var(--dim)}
+/* en las batallas: la carta del ticket en la ruleta, la ruleta que vuelve a girar y lo que sale */
+.bv-k.tk{position:relative;gap:2px;padding:6px 8px;background:radial-gradient(70% 70% at 50% 45%,color-mix(in srgb,var(--tk) 32%,transparent),transparent 74%),#1d212b;box-shadow:inset 0 -3px 0 var(--tk)}
+.bv-k.tk .tk-svg{width:auto;height:calc(var(--rkh,92px) * .52)}
+.bv-k.tk b{font:700 10px/1.1 var(--sans);color:var(--tk);text-align:center}
+.bv-reel.tk-on{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--tk) 70%,transparent);background:radial-gradient(closest-side,color-mix(in srgb,var(--tk) 22%,transparent),transparent),var(--bg2)}
+.bv-reel.tk-pop .bv-k.tk.gana{animation:tkLate .55s cubic-bezier(.2,.9,.3,1.4) both;box-shadow:inset 0 -3px 0 var(--tk),0 0 0 2px var(--tk),0 0 26px color-mix(in srgb,var(--tk) 60%,transparent)}
+.bv-reel.tk-pop.tk-diamante .bv-k.tk.gana{animation:tkGema .7s cubic-bezier(.2,.9,.3,1.4) both}
+.bv-reel.tk-on::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,transparent 35%,color-mix(in srgb,var(--tk) 18%,transparent) 50%,transparent 65%) 0 0/100% 250%;animation:tkBrilloV 1.8s linear infinite}
+.bv-reel.tk-on.tk-diamante::after{animation-duration:.9s}
+.bv-reel.ya.tk-on:not(.tk-pop)::after{animation:none;opacity:0}
+@keyframes tkBrilloV{from{background-position:0 120%}to{background-position:0 -120%}}
+.bv-it.tk{box-shadow:inset 0 -2px 0 var(--c),0 0 0 1.5px var(--tk),0 0 14px color-mix(in srgb,var(--tk) 40%,transparent)}
+.bv-gdt.tk-oro{color:#f5c542}
+.bv-gdt.tk-diamante{color:#7fe3ff}
+.bv-arena.mini .bv-k.tk b{display:none}
+html.sin-anim .ca .cj-strip.tk-gira::after,html.sin-anim .ca .cj-strip.tk-pop::after,html.sin-anim .bv-reel.tk-on::after{animation:none;opacity:0}
+@media (max-width:860px){
+  /* Saltar pequeno en la esquina: nunca encima de la carta del centro */
+  .ca-tiras .cj-skip{top:8px;right:8px;padding:5px 11px;font-size:11px}
+  .ca-tks{flex-direction:column;align-items:flex-start;gap:12px;width:fit-content;max-width:100%;margin-top:-18px}
+  .ca .cj-k.tk .tk-x{display:none}
+}
+
+/* crear batalla (PM 04-11: "para crear se tiene que scrollear mucho"): modo y regla en una fila, las cajas con buscador y paginas a la izquierda
+   y la batalla (rondas, coste, Crear) siempre a la vista a la derecha; en el movil esa parte es una barra pegada abajo */
+.cj.cj-nv-on{padding-top:16px;padding-bottom:36px}
+.cj-nv-on .cj-tabs{margin-bottom:12px}
+.cj-nv-on .cj-tab{font-size:25px}
+.nvx{max-width:1180px;margin:0 auto;text-align:left}
+.nv-h{display:flex;align-items:center;flex-wrap:wrap;gap:4px 20px;margin-bottom:12px}
+.nv-h .cj-back{margin:0;height:30px}
+.nv-h h2{font:800 clamp(26px,2.6vw,32px)/1 var(--disp);letter-spacing:-.035em}
+.nv-h .cj-lead{flex:1 1 280px;max-width:none;font-size:13px;color:var(--mute);text-align:left;text-wrap:pretty}
+.nv-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 24px;margin-bottom:12px}
+.nv-modes{display:flex;gap:6px}
+.nv-mode{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;flex:none;min-width:84px;height:54px;padding:0 12px;border-radius:16px;background:rgba(255,255,255,.035);color:var(--mute);transition:background .15s,color .15s}
+.nv-mode:hover{color:var(--ink)}
+.nv-mode.on{background:rgba(242,193,78,.11);color:var(--ink)}
+.nv-mode b{font:500 17px/1 var(--mono);letter-spacing:-.04em}
+.nv-mode .cj-mode-d{gap:5px;height:10px}
+.nv-mode .cj-mode-d i{width:8px;height:8px}
+.nv-mode .cj-mode-d>span{gap:2px}
+.nv-mode .cj-mode-d.multi{gap:6px}
+.nv-mode .cj-mode-d em{margin:0 2px;font-size:8px}
+.nv-top .cj-regla{flex-direction:row;align-items:center;gap:14px;margin:0}
+.nv-top .cj-regla-t{font-size:12px}
+.nv-body{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:0 36px;align-items:start}
+.nv-pick{min-width:0}
+.nv-q{width:100%;height:40px;padding:0 18px;border:0;border-radius:999px;background:rgba(255,255,255,.06);color:var(--ink);font:14px var(--sans)}
+.nv-q:focus{outline:2px solid var(--acc);outline-offset:1px}
+.nv-q::placeholder{color:var(--dim)}
+.nv-grp{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 2px}
+.nv-grp button{flex:none;height:30px;padding:0 13px;border-radius:999px;font:600 12px var(--sans);color:var(--mute);white-space:nowrap;transition:color .15s,background .15s}
+.nv-grp button:hover{color:var(--ink)}
+.nv-grp button.on{background:rgba(255,255,255,.11);color:var(--ink)}
+.nv-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;margin-top:6px}
+.nv-grid .cj-pk{width:auto;padding:8px 4px 9px}
+.nv-grid .cj-pk-img{width:100%;height:62px}
+.nv-grid .cj-pk-img img{width:84px;height:62px}
+.nv-grid .cj-pk-img img.foto{width:76px;height:56px}
+.nv-grid .cj-pk-n{margin-top:5px}
+.nv-pager{margin-top:6px}
+.nv-pager button{height:36px}
+.nv-vacio{padding:50px 0;text-align:center}
+.nv-go{position:sticky;top:16px;align-items:stretch;gap:12px;margin:0;padding:16px 16px 18px;border-radius:22px;background:rgba(255,255,255,.035);text-align:left}
+.nv-sel{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.nv-n{font:500 13px var(--mono);color:var(--soft)}
+.nv-n em{font-style:normal;color:var(--dim)}
+.nv-rounds{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));justify-content:stretch;gap:4px;min-height:0}
+.nv-rounds .cj-rnd{width:auto}
+.nv-rounds .cj-rnd img{width:100%;height:38px}
+.nv-sin{grid-column:1/-1;font-size:12px;line-height:1.5}
+.nv-go .cj-new-sum{justify-content:flex-start}
+.nv-go .cj-new-sum b{font-size:24px}
+.nv-go .go{width:100%;min-width:0;height:52px}
+@media (max-width:1179px){
+  .nv-body{grid-template-columns:minmax(0,1fr) 270px;gap:0 24px}
+  .nv-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .nv-rounds{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media (max-width:860px){
+  .cj.cj-nv-on{padding:12px 16px 0}
+  .cj-nv-on .cj-tabs{gap:18px;margin-bottom:8px}
+  .cj-nv-on .cj-tab{font-size:19px;padding-bottom:9px}
+  .nv-h{gap:2px 14px;margin-bottom:8px}
+  .nv-h h2{font-size:24px}
+  .nv-h .cj-lead{display:none}
+  .nv-top{flex-direction:column;align-items:stretch;gap:8px;margin-bottom:8px}
+  .nv-modes{margin:0 -16px;padding:0 16px;overflow-x:auto;scrollbar-width:none}
+  .nv-modes::-webkit-scrollbar{display:none}
+  .nv-mode{min-width:70px;height:48px;padding:0 10px;gap:5px}
+  .nv-mode b{font-size:15px}
+  .nv-top .cj-regla{justify-content:space-between;gap:10px}
+  .nv-top .cj-regla-t{flex:1;min-width:0;font-size:11px;line-height:1.35}
+  .nv-body{display:block}
+  .nv-q{height:38px}
+  .nv-grp{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:6px -16px 0;padding:0 16px}
+  .nv-grp::-webkit-scrollbar{display:none}
+  .nv-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .nv-grid .cj-pk{padding:6px 2px 7px}
+  .nv-grid .cj-pk-img{height:56px}
+  .nv-grid .cj-pk-img img{width:76px;height:56px}
+  .nv-grid .cj-pk-img img.foto{width:68px;height:50px}
+  .nv-pager{margin-top:2px}
+  .nv-go{position:sticky;bottom:0;top:auto;z-index:4;gap:8px;margin:6px -16px 0;padding:8px 16px calc(10px + env(safe-area-inset-bottom,0px));border-radius:0;background:var(--bg);box-shadow:0 -10px 18px -6px var(--bg)}
+  .nv-sel{display:none}
+  .nv-rounds{display:flex;overflow-x:auto;scrollbar-width:none;gap:4px}
+  .nv-rounds::-webkit-scrollbar{display:none}
+  .nv-rounds .cj-rnd{flex:none;width:44px}
+  .nv-rounds .cj-rnd img{height:28px}
+  .nv-sin{font-size:11px}
+  .nv-go .cj-new-sum{display:none}
+  .nv-go .go{height:46px}
 }
