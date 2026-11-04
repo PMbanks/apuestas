@@ -46,15 +46,22 @@
 .mj-mid{display:flex;flex-direction:column;align-items:center;gap:18px}
 .mj-wheel{position:relative;width:min(360px,100%);aspect-ratio:1}
 .mj-wheel svg{display:block;width:100%;height:100%;overflow:visible}
-.mj-ticks line{stroke:rgba(255,255,255,.16);stroke-width:1}
-.mj-ring{fill:none;stroke:rgba(255,255,255,.07);stroke-width:16}
-.mj-arc{fill:none;stroke:var(--win);stroke-width:16;filter:drop-shadow(0 0 8px rgba(43,212,125,.45));transition:stroke-dasharray .35s var(--ease)}
-.mj-wheel.lost .mj-arc{stroke:color-mix(in srgb,var(--win) 55%,#1d2129);filter:none}
+/* PM 04-11: rueda mas limpia (sin las marcas de fuera): disco con degradado, pista fina, zona verde con brillo y aguja propia */
+.mj-disco{fill:url(#mj-disco);stroke:rgba(255,255,255,.06);stroke-width:1}
+.mj-ring{fill:none;stroke:rgba(255,255,255,.06);stroke-width:14}
+.mj-ring-in{fill:none;stroke:rgba(255,255,255,.05);stroke-width:1}
+.mj-zona{transform-origin:100px 100px;transform-box:view-box}
+.mj-arc{fill:none;stroke:url(#mj-verde);stroke-width:14;transition:stroke-dasharray .35s var(--ease)}
+.mj-wheel.mueve{cursor:grab;touch-action:none;outline:none;border-radius:50%}
+.mj-wheel.mueve.arrastra{cursor:grabbing}
+.mj-wheel.mueve:focus-visible .mj-ring{stroke:rgba(93,242,163,.22)}
+.mj-wheel.mueve:hover .mj-arc{stroke-width:16}
+.mj-wheel.lost .mj-arc{stroke:color-mix(in srgb,var(--win) 45%,#1d2129);filter:none}
 .mj-needle{transform-origin:100px 100px;transform-box:view-box}
-.mj-needle path{fill:var(--ink);filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
-.mj-needle line{stroke:rgba(244,242,236,.5);stroke-width:2;stroke-linecap:round}
-.mj-wheel.won .mj-needle path{fill:var(--win)}
-.mj-wheel.lost .mj-needle path{fill:var(--lose)}
+.mj-needle line{stroke:rgba(244,242,236,.85);stroke-width:2.2;stroke-linecap:round;filter:drop-shadow(0 0 3px rgba(0,0,0,.6))}
+.mj-needle path{fill:#f4f2ec;filter:drop-shadow(0 3px 5px rgba(0,0,0,.55))}
+.mj-wheel.won .mj-needle path,.mj-wheel.won .mj-needle line{fill:var(--win);stroke:var(--win)}
+.mj-wheel.lost .mj-needle path,.mj-wheel.lost .mj-needle line{fill:var(--lose);stroke:var(--lose)}
 .mj-c{position:absolute;inset:26%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;pointer-events:none}
 .mj-p{font:600 clamp(28px,3.2vw,40px)/1 var(--mono);letter-spacing:-.05em;color:var(--ink)}
 .mj-p.dim{color:var(--dim)}

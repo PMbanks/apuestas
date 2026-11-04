@@ -9,14 +9,15 @@
   const MIN_X = 1.25, MAX_X = 100, MAX_SKINS = 20, EDGE = 0.95, TOPE = 0.76;
   const PRESETS = [1.5, 2, 3, 5, 10];
   const PASO = 40;               // skins del inventario que se pintan de cada vez
-  const DUR = 4200;              // lo que tarda la aguja
+  const DUR = 5600;              // lo que tarda la aguja (PM 04-11: mas lento y con mas suspense al final)
+  const ASENTAR = 520;           // el ultimo rebote: se pasa un pelo y vuelve
   const VUELTAS = 5;
   const WEAR_ES = ['Recién fabricado', 'Casi nuevo', 'Algo desgastado', 'Bastante desgastado', 'Deplorable'];
   const WEAR_EN = ['Factory New', 'Minimal Wear', 'Field-Tested', 'Well-Worn', 'Battle-Scarred'];
 
   let U = null, el = null;
   const M = { sel: new Set(), vb: 0, mult: 2, tgt: null, q: '', lista: null, listaK: '', cargaT: 0, inv: null, invN: PASO, fase: 'idle', res: null,
-    ang: 0, ocupado: false, ult: null, err: null, base: true, aviso: '' };
+    ang: 0, ocupado: false, ult: null, err: null, base: true, aviso: '', ini: 0 };
   let anim = null, tTimer = 0;
 
   /* ---------- utilidades ---------- */
@@ -24,6 +25,7 @@
   const L = (es, eng) => (en() ? eng : es);
   const lee = (k) => { try { return localStorage.getItem(k) } catch { return null } };
   const guarda = (k, v) => { try { localStorage.setItem(k, v) } catch {} };
+  { const v = parseFloat(lee('mj-ini')); if (v >= 0 && v < 1) M.ini = v }   // donde dejo la zona verde la ultima vez
   const ctx = () => (U && U.ctx()) || null;
   const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const N = (x) => String(Math.round(x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, en() ? ',' : '.');
@@ -139,33 +141,70 @@
 
   /* ---------- pintar ---------- */
   const W = 200, R0 = 84, C = 2 * Math.PI * R0;
+  // PM 04-11: la zona verde se puede mover (arrastrando o con las flechas). Empieza en M.ini (fraccion de vuelta desde arriba, en el
+  // sentido de las agujas del reloj) y mide la probabilidad; la aguja para en la tirada. Se gana si la tirada cae dentro (db/079).
+  const iniDe = () => (M.res && (M.fase === 'gira' || M.fase === 'fin') ? +(M.res.start || 0) : M.ini);
+  const vueltaTxt = (f) => dec(((f % 1) + 1) % 1 * 100, 2);
   function rueda() {
     const st = stake(), t = M.tgt, fin = M.fase === 'fin' && M.res, gira = M.fase === 'gira';
     const p = M.res && (gira || fin) ? +M.res.chance : t ? chanceDe(st, t.value) : 0;
     const x = M.res && (gira || fin) ? M.res.target_value / M.res.stake_value : t && st ? t.value / st : 0;
-    const marcas = Array.from({ length: 40 }, (_, i) => { const a = (i / 40) * 2 * Math.PI, r1 = i % 5 ? 96 : 94, r2 = 99;
-      return `<line x1="${(100 + r1 * Math.sin(a)).toFixed(2)}" y1="${(100 - r1 * Math.cos(a)).toFixed(2)}" x2="${(100 + r2 * Math.sin(a)).toFixed(2)}" y2="${(100 - r2 * Math.cos(a)).toFixed(2)}"/>` }).join('');
+    const ini = iniDe(), mueve = !gira && !M.ocupado && !fin;
     let centro;
     if (fin) {
       const g = !!M.res.won;
       centro = `<b class="mj-res ${g ? 'win' : 'lose'}">${g ? L('Has ganado', 'You won') : L('Has perdido', 'You lost')}</b>
-        <span class="mj-roll">${L('Tirada', 'Roll')} ${dec(M.res.roll * 100, 2)} · ${L('ganabas por debajo de', 'you needed under')} ${dec(M.res.chance * 100, 2)}</span>`;
+        <span class="mj-roll">${L('Tirada', 'Roll')} ${dec(M.res.roll * 100, 2)} · ${L('zona verde de', 'green zone from')} ${vueltaTxt(ini)} ${L('a', 'to')} ${vueltaTxt(ini + p)}</span>`;
     } else if (gira) {
       centro = `<b class="mj-p">${pct(p)}</b><span class="mj-x">${xTxt(x)}</span>`;
     } else {
       centro = p ? `<b class="mj-p">${pct(p)}</b><span class="mj-x">${xTxt(x)} · ${L('probabilidad', 'chance')}</span>` : `<b class="mj-p dim">0 %</b><span class="mj-x">${L('probabilidad', 'chance')}</span>`;
     }
-    return `<div class="mj-wheel ${gira ? 'gira' : ''} ${fin ? (M.res.won ? 'won' : 'lost') : ''}">
+    return `<div class="mj-wheel ${gira ? 'gira' : ''} ${fin ? (M.res.won ? 'won' : 'lost') : ''} ${mueve && p ? 'mueve' : ''}" data-mj-rueda ${mueve && p ? `tabindex="0" role="slider" aria-label="${L('Zona verde: arrastra o usa las flechas', 'Green zone: drag or use the arrow keys')}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(ini * 100)}"` : ''}>
       <svg viewBox="0 0 ${W} ${W}" aria-hidden="true">
-        <g class="mj-ticks">${marcas}</g>
+        <defs>
+          <radialGradient id="mj-disco" cx="50%" cy="42%" r="62%"><stop offset="0" stop-color="#262b36"/><stop offset=".75" stop-color="#171a21"/><stop offset="1" stop-color="#121419"/></radialGradient>
+          <linearGradient id="mj-verde" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5df2a3"/><stop offset="1" stop-color="#15b86a"/></linearGradient>
+          <filter id="mj-luz" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <circle class="mj-disco" cx="100" cy="100" r="${R0 + 13}"/>
         <circle class="mj-ring" cx="100" cy="100" r="${R0}"/>
-        <circle class="mj-arc" cx="100" cy="100" r="${R0}" stroke-dasharray="${(C * p).toFixed(3)} ${C.toFixed(3)}" transform="rotate(-90 100 100)"/>
-        <g class="mj-needle" data-mj-needle style="transform:rotate(${M.ang.toFixed(3)}deg)"><path d="M100 8 L106 30 L94 30 Z"/><line x1="100" y1="30" x2="100" y2="44"/></g>
+        <circle class="mj-ring-in" cx="100" cy="100" r="${R0 - 11}"/>
+        <g data-mj-zona style="transform:rotate(${(ini * 360).toFixed(3)}deg)" class="mj-zona">
+          <circle class="mj-arc" cx="100" cy="100" r="${R0}" stroke-dasharray="${(C * p).toFixed(3)} ${C.toFixed(3)}" transform="rotate(-90 100 100)" filter="url(#mj-luz)"/>
+        </g>
+        <g class="mj-needle" data-mj-needle style="transform:rotate(${M.ang.toFixed(3)}deg)">
+          <line x1="100" y1="${100 - R0 + 13}" x2="100" y2="${100 - R0 - 9}"/>
+          <path d="M100 ${100 - R0 + 4} L94.5 ${100 - R0 - 12} Q100 ${100 - R0 - 16} 105.5 ${100 - R0 - 12} Z"/>
+        </g>
       </svg>
       <div class="mj-c">${centro}</div>
       ${gira ? `<button class="mj-skip" data-mj="saltar">${L('Saltar', 'Skip')}</button>` : ''}
     </div>`;
   }
+  // mover la zona: solo cambia su giro (sin repintar la rueda entera) y se recuerda en este aparato
+  function ponIni(v) {
+    M.ini = ((v % 1) + 1) % 1;
+    const z = el && el.querySelector('[data-mj-zona]'); if (z) z.style.transform = `rotate(${(M.ini * 360).toFixed(3)}deg)`;
+    const w = el && el.querySelector('[data-mj-rueda]'); if (w) w.setAttribute('aria-valuenow', Math.round(M.ini * 100));
+    guarda('mj-ini', M.ini.toFixed(6));
+  }
+  const angDe = (w, e) => { const r = w.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2); return ((Math.atan2(dx, -dy) / (2 * Math.PI)) + 1) % 1 };
+  let arrastre = null;
+  document.addEventListener('pointerdown', (e) => {
+    const w = e.target.closest && e.target.closest('.mj-wheel.mueve'); if (!w || !el || !el.contains(w) || e.target.closest('button')) return;
+    arrastre = { w, d: angDe(w, e) - M.ini, id: e.pointerId };
+    try { w.setPointerCapture(e.pointerId) } catch {}
+    w.classList.add('arrastra'); e.preventDefault();
+  });
+  document.addEventListener('pointermove', (e) => { if (arrastre && e.pointerId === arrastre.id) ponIni(angDe(arrastre.w, e) - arrastre.d) });
+  const suelta = (e) => { if (!arrastre || (e && e.pointerId !== arrastre.id)) return; arrastre.w.classList.remove('arrastra'); arrastre = null };
+  document.addEventListener('pointerup', suelta); document.addEventListener('pointercancel', suelta);
+  document.addEventListener('keydown', (e) => {
+    const w = e.target.closest && e.target.closest('.mj-wheel.mueve'); if (!w || !el || !el.contains(w)) return;
+    const k = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[e.key]; if (!k) return;
+    e.preventDefault(); ponIni(M.ini + k * (e.shiftKey ? 1 / 360 : 1 / 72));
+  });
   function tile(it, ex) {
     const n = nombre(it), tag = ex.v != null ? 'button' : 'div';
     return `<${tag} class="cj-it mj-it ${ex.on ? 'on' : ''}" style="--c:${color(it.rarity)}" ${ex.v != null ? `data-mj="${ex.a}" data-v="${esc(ex.v)}"` : ''} title="${esc(it.name)}">
@@ -206,7 +245,7 @@
     return `<section class="mj-mid">${rueda()}
       <button class="go mj-go" data-mj="mejorar" ${bloq ? 'disabled' : ''}>${M.ocupado && !gira ? `<span>${L('Un momento…', 'One moment…')}</span>` : gira ? `<span>${L('Girando…', 'Spinning…')}</span>`
         : `<span>${L('Mejorar', 'Upgrade')}</span>${t && st && !f ? `<b>${pct(chanceDe(st, t.value))}</b>` : ''}`}</button>
-      <p class="mj-why">${!M.base ? L('Mejorar aún no está en la base.', 'The upgrader is not in the database yet.') : f && !gira ? esc(f) : L('Lo verde es tu probabilidad exacta y la aguja para donde dice la tirada del servidor. La casa se queda un 5 %.', 'The green part is your exact chance and the needle stops where the server roll says. The house keeps 5 %.')}</p>
+      <p class="mj-why">${!M.base ? L('Mejorar aún no está en la base.', 'The upgrader is not in the database yet.') : f && !gira ? esc(f) : L('Lo verde es tu probabilidad exacta: arrástralo a donde quieras de la rueda. La aguja para donde dice la tirada del servidor. La casa se queda un 5 %.', 'The green part is your exact chance: drag it anywhere on the wheel. The needle stops where the server roll says. The house keeps 5 %.')}</p>
     </section>`;
   }
   function vInv() {
@@ -287,22 +326,27 @@
   }
 
   /* ---------- la rueda ---------- */
-  const ease = (t) => 1 - Math.pow(1 - t, 4);
+  // frenada larga: quinta potencia (la cola dura mucho) y al final un rebote corto
+  const ease = (t) => 1 - Math.pow(1 - t, 5);
+  const fx = () => window.GMFX || null;
   function gira(roll) {
     return new Promise((ok) => {
-      const a0 = M.ang % 360, fin = VUELTAS * 360 + roll * 360, total = fin - a0, ini = performance.now();
+      const a0 = M.ang % 360, fin = VUELTAS * 360 + roll * 360, sobra = 0.6 + Math.random() * 0.9, total = fin + sobra - a0, ini = performance.now();
       const sinAnim = document.documentElement.classList.contains('sin-anim');
-      let seg = Math.floor(a0 / 30);
+      let seg = Math.floor(a0 / 15);
       anim = { saltar: sinAnim };
+      const pon = () => { const n = el && el.querySelector('[data-mj-needle]'); if (n) n.style.transform = `rotate(${M.ang.toFixed(3)}deg)` };
       const paso = (now) => {
-        const t = anim.saltar ? 1 : Math.min(1, (now - ini) / DUR);
-        M.ang = a0 + total * ease(t);
-        const n = el && el.querySelector('[data-mj-needle]');
-        if (n) n.style.transform = `rotate(${M.ang.toFixed(3)}deg)`;
-        const s = Math.floor(M.ang / 30);
-        if (s !== seg && !anim.saltar) { seg = s; sonido('caja-tic') }
-        if (t < 1) requestAnimationFrame(paso);
-        else { M.ang = fin % 360 + 0; anim = null; ok() }
+        const e = now - ini;
+        if (anim.saltar) { M.ang = fin % 360; pon(); anim = null; return ok() }
+        if (e < DUR) M.ang = a0 + total * ease(e / DUR);
+        else { const k = Math.min(1, (e - DUR) / ASENTAR); M.ang = fin + sobra * (1 - (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2)) }
+        pon();
+        // un tic por cada 15 grados: rapido al principio y cada vez mas espaciado
+        const s = Math.floor(M.ang / 15);
+        if (s !== seg) { seg = s; if (fx()) fx().sonido('tick'); else sonido('caja-tic') }
+        if (e < DUR + ASENTAR) requestAnimationFrame(paso);
+        else { M.ang = fin % 360; pon(); anim = null; ok() }
       };
       requestAnimationFrame(paso);
     });
@@ -319,7 +363,7 @@
     M.fase = 'idle'; M.res = null; pintaArriba();
     let r;
     try {
-      const { data, error } = await c.db.rpc('cs_upgrade', { p_ids: ids, p_vb: vb, p_item: t.id, p_wear: t.wear, p_st: !!t.st });
+      const { data, error } = await c.db.rpc('cs_upgrade', { p_ids: ids, p_vb: vb, p_item: t.id, p_wear: t.wear, p_st: !!t.st, p_start: M.ini });
       if (error) throw error;
       r = data;
     } catch (e) { M.ocupado = false; toast(esc(msgErr(e))); pinta(); return }
@@ -331,8 +375,10 @@
     pinta();
     await gira(+r.roll);
     M.fase = 'fin';
-    if (r.won) sonido({ tipo: 'caja-final', rareza: t.rarity || 'cla' }); else sonido('perder');
     pinta();
+    const w = el && el.querySelector('.mj-wheel');
+    if (fx()) { if (r.won) fx().gana(r.target_value, { el: w }); else fx().pierde(r.stake_value, { el: w }) }
+    else if (r.won) sonido({ tipo: 'caja-final', rareza: t.rarity || 'cla' }); else sonido('perder');
     try { if (U.recarga) U.recarga() } catch {}
     try { if (c.refresh) await c.refresh() } catch {}
     await Promise.all([cargaInv(), cargaUlt()]);
