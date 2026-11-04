@@ -25,6 +25,9 @@
     'Se abre sola en cuanto se llena. En Crazy el lado que saque menos valor se lleva todas las skins.': 'It opens by itself as soon as it fills up. In Crazy the side with the lowest total takes every skin.',
     'Van empatados': 'All square', 'Elige 1v1, 2v2, 3, 4 o 6 jugadores, 2v2v2 o 3v3': 'Pick 1v1, 2v2, 3, 4 or 6 players, 2v2v2 or 3v3', 'Elige Normal o Crazy': 'Pick Normal or Crazy',
     'Giro Dorado': 'Golden Spin', 'Sube': 'Up', 'Baja': 'Down', 'Se queda': 'Stays',
+    // Tickets de las cajas (04-11, cajas.js y cajas-vivo.js, db/081)
+    'Ticket Dorado': 'Golden Ticket', 'Ticket de Diamante': 'Diamond Ticket', 'Giro extra': 'Extra spin',
+    'Vuelve a girar entre lo malo y lo medianamente bueno': 'Spins again between the bad and the fairly good', 'Vuelve a girar solo con lo bueno': 'Spins again with only the good stuff',
     // Mejorar (03-11, mejora.js, db/071): la pestana y el movimiento del monedero; el resto de la pantalla ya se pinta en su idioma
     'Mejorar': 'Upgrader', 'Mejora': 'Upgrade',
     // Combinada con varias del mismo partido (02-11, boleto.js, db/067)
@@ -647,7 +650,7 @@
     [/^([\d.,]+) contra (.+) · se llevan? las (\d+) skins$/, (m, a, r, n) => `${a} vs ${r.replace(/ y /g, ' and ')} · takes all ${n} skins`],
     [/^Va ganando (.+) por ([\d.,]+)$/, (m, q, n) => `${q.replace(/ y /g, ' and ')} ${/ y |, /.test(q) ? 'lead' : 'leads'} by ${n}`],
     [/^Gana (.+) y ([^,]+)$/, (m, a, b) => `${a} and ${b} win`], [/^Contra (.+) y ([^,]+)$/, 'Against $1 and $2'],
-    [/^antes ([\d.,]+)$/, 'was $1'], [/ · Giro Dorado$/, ' · Golden Spin'],
+    [/^antes ([\d.,]+)$/, 'was $1'], [/ · Giro Dorado$/, ' · Golden Spin'], [/ · Ticket Dorado$/, ' · Golden Ticket'], [/ · Ticket de Diamante$/, ' · Diamond Ticket'],
     // retos contra la banca (02-11, db/066): chat y monedero; van primero para que las reglas viejas de retos no las trocen
     [/^Reto ganado a (.+): lo que puso el rival$/, 'Challenge won against $1: what your opponent put in'],
     [/^Reto ganado: (.+?) contra (.+?) · (.+)$/, (m, a, b, r) => `Challenge won: ${a} against ${b.replace(/ y /g, ' and ')} · ${r}`],

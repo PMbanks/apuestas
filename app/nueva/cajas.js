@@ -50,6 +50,13 @@
   const fmtTxt = (m) => (libre({ mode: m }) ? `${eqDe({ mode: m })} jugadores` : m);
   // Giro Dorado (db/075): lo decide la base; aqui solo se ensena. La prueba gratis lo imita con la misma probabilidad
   const GD_PCT = 4, GD_DUR = [1800, 1000, 550], GD_HOLD = [650, 380, 200];
+  // Tickets (db/081, PM 04-11): la tira para en un ticket en vez de en un objeto, espera y vuelve a girar SOLO esa linea con lo que puede
+  // salir de esa caja. Dorado: entre lo malo y lo medianamente bueno. Diamante (mas raro): solo lo bueno. Lo decide la base; aqui se ensena.
+  // Sin db/081 cargada la base sigue mandando el Giro Dorado viejo ({orig, up, down, won}) y se ensena como antes.
+  const TK = { oro: { n: 'Ticket Dorado', c: '#f5c542' }, diamante: { n: 'Ticket de Diamante', c: '#7fe3ff' } };
+  const TK_HOLD = [1100, 600, 300], TK_DUR = [3800, 1500, 750];          // parado en el ticket y la vuelta de esa linea (Normal, Rapido, Ultra)
+  const TKB_HOLD = [1000, 500, 280], TKB_SPIN = [2600, 1100, 600];       // lo mismo en las batallas
+  const TK_DEF = { oro: 4, diamante: 0.2, sube: 40 };                    // la prueba gratis si la base aun no contesta cs_giro_info
 
   /* ---------- estado ---------- */
   let ctx = null, root = null;
@@ -168,6 +175,8 @@
     const c = await rpc('cs_case', { p_case: id });
     for (const it of c.items) D.items.set(it.id, it);
     c.por = {}; for (const it of c.items) (c.por[it.rarity] = c.por[it.rarity] || []).push(it);
+    // las probabilidades de los tickets en esta caja (db/081); sin 081 no hay y se sigue como antes
+    try { c.giro = await rpc('cs_giro_info', { p_case: id }) } catch { c.giro = null }
     D.caja.set(id, c);
     return c;
   }
@@ -458,23 +467,25 @@
     const cs = [];
     // que no salgan dos cartas iguales seguidas (ni a una de distancia) si la caja tiene de donde elegir
     // con Giro Dorado la tira frena en lo que salio de la caja (orig); el giro lo cambia despues por lo que se queda
-    const o = inv && inv.bonus && inv.bonus.orig ? inv.bonus.orig : inv;
+    // con ticket (db/081) frena en el ticket, justo en el centro; luego vuelve a girar solo esa linea
+    const o = inv && inv.bonus && inv.bonus.orig ? inv.bonus.orig : inv, tk = esTk(inv) ? inv.bonus.tipo : null;
     for (let i = 0; i < TOTAL; i++) {
-      if (i === G && inv) { cs.push({ x: item(o.item), v: o.value }); continue }
+      if (i === G && inv) { cs.push(tk ? { tk } : { x: item(o.item), v: o.value }); continue }
       let x = relleno(info);
-      for (let k = 0; k < 12 && cs.slice(-2).some((c) => c.x.id === x.id); k++) x = relleno(info);
+      for (let k = 0; k < 12 && cs.slice(-2).some((c) => c.x && c.x.id === x.id); k++) x = relleno(info);
       cs.push({ x, v: valorDe(x) });
     }
-    return { cs, j: inv ? (Math.random() - 0.5) * 0.6 : 0, premio: inv || null, col: o ? color(item(o.item).rarity) : null };
+    return { cs, j: inv && !tk ? (Math.random() - 0.5) * 0.6 : 0, premio: inv || null, tk, col: tk ? TK[tk].c : o ? color(item(o.item).rarity) : null };
   }
   function kcard(t, gana) {
+    if (t.tk) return tkCard(t.tk, gana);
     const { x, v } = t, n = nombre(x), sinFoto = x.rarity === 'esp' && !esLujo(x.id) && !x.image;
     return `<div class="cj-k ${gana ? 'gana' : ''}" style="--c:${color(x.rarity)}"><span class="cj-k-i">${sinFoto ? '<i class="cj-k-star">★</i>' : pic(x.image, 256, '', true)}</span>
       ${n.top ? `<em data-notr>${esc(n.top)}</em>` : ''}<b data-notr>${esc(n.main)}</b><span class="cj-k-v">${N(v)}${coin()}</span></div>`;
   }
   function vTira(t, modo, c) {
     const fin = modo === 'fin', col = t.col || (t.premio ? color(item(t.premio.item).rarity) : color('mil'));
-    return `<div class="cj-strip ${fin ? 'fin' : ''}" style="--i:${fin ? G : INI};--j:${fin ? t.j.toFixed(3) : 0};--c:${col}"><div class="cj-track">${t.cs.map((k, i) => kcard(k, fin && i === G)).join('')}</div><i class="cj-mark"></i></div>`;
+    return `<div class="cj-strip ${fin ? 'fin' : ''} ${t.tk ? `tk-on tk-${t.tk}` : ''}" style="--i:${fin ? G : INI};--j:${fin ? t.j.toFixed(3) : 0};--c:${col}"><div class="cj-track">${t.cs.map((k, i) => kcard(k, fin && i === G)).join('')}</div><i class="cj-mark"></i></div>`;
   }
   // las tiras: paradas con la caja en medio, girando (cj-spin: sonidos.js la oye) o ya paradas en el premio
   function vEscena(c, info) {
@@ -552,7 +563,10 @@
       } else for (const it of list) filas.push({ it, v: tipico(it), pct: pn[r] * (it.weight || 100) / wsum });
     }
     filas.sort((a, b) => (b.v || 0) - (a.v || 0));
-    return `<section class="cj-cont ca-cont"><header class="cj-sec-h"><h3>Contenido de la caja</h3></header><div class="ca-grid">${filas.map((f) => {
+    // los tickets de esta caja (db/081): con que probabilidad sale cada uno
+    const g = info.giro, tks = g && (+g.oro > 0 || +g.diamante > 0) ? `<div class="ca-tks">${[['oro', g.oro, 'Vuelve a girar entre lo malo y lo medianamente bueno'], ['diamante', g.diamante, 'Vuelve a girar solo con lo bueno']].filter((x) => +x[1] > 0)
+      .map(([k, p, t]) => `<span class="ca-tk tk-${k}" style="--tk:${TK[k].c}">${tkSvg(k)}<span class="ca-tk-n"><b>${TK[k].n}</b><span class="num">${pctTxt(+p / 100)}</span></span><em>${t}</em></span>`).join('')}</div>` : '';
+    return `<section class="cj-cont ca-cont"><header class="cj-sec-h"><h3>Contenido de la caja</h3></header>${tks}<div class="ca-grid">${filas.map((f) => {
       const x = f.it, n = nombre(x);
       return `<div class="ca-c" style="--c:${color(x.rarity)}" title="${esc(x.name)}"><span class="ca-pct">${pctTxt(f.pct)}</span><span class="ca-ci">${pic(x.image, 256)}</span>
         <span class="ca-ct">${n.top ? `<em data-notr>${esc(n.top)}</em>` : ''}<b data-notr>${esc(n.main)}</b></span><span class="ca-cv">${f.desde ? '<i>desde</i>' : ''}${N(f.v || 0)}${coin()}</span></div>`;
@@ -718,7 +732,7 @@
   // al 50 %. Lo decide la base al abrir la caja y lo guarda en cs_inv.bonus ({orig, up, down, won}); aqui solo se ensena: un selector
   // dorado que salta de uno a otro cada vez mas despacio y para en el que toco. Respeta la velocidad (Normal, Rapido, Ultra) y Saltar.
   const gdDur = () => GD_DUR[+S.vel] || GD_DUR[0];
-  const gdTag = (i) => (!i || !i.bonus || !i.bonus.orig ? '' : `<span class="ca-gd ${i.bonus.won ? 'sube' : 'baja'}"><b>Giro Dorado</b><i>${i.bonus.won ? '▲' : i.bonus.down && i.bonus.down.keep ? '=' : '▼'}</i><em>antes ${N(i.bonus.orig.value)}</em></span>`);
+  const gdTag = (i) => (esTk(i) ? `<span class="ca-gd tk-${i.bonus.tipo}"><b>${TK[i.bonus.tipo].n}</b></span>` : !i || !i.bonus || !i.bonus.orig ? '' : `<span class="ca-gd ${i.bonus.won ? 'sube' : 'baja'}"><b>Giro Dorado</b><i>${i.bonus.won ? '▲' : i.bonus.down && i.bonus.down.keep ? '=' : '▼'}</i><em>antes ${N(i.bonus.orig.value)}</em></span>`);
   function gdCarta(o, lado) {
     const x = item(o.item), n = nombre(x), sinFoto = x.rarity === 'esp' && !esLujo(x.id) && !x.image, t = lado === 'sube' ? 'Sube' : o.keep ? 'Se queda' : 'Baja';
     return `<div class="gd-c ${lado}" style="--c:${color(x.rarity)}"><span class="gd-p"><i>${lado === 'sube' ? '▲' : o.keep ? '=' : '▼'}</i><span>${t}</span><b>50 %</b></span>
@@ -781,6 +795,93 @@
     dn = dn.length ? al(dn) : cand.filter((c) => c.value < v).sort((a, b) => b.value - a.value)[0];
     const orig = { item: i.item, value: v };
     return { orig, up, down: dn || { ...orig, keep: true }, won: Math.random() < 0.5 };
+  }
+
+  /* ----- Tickets: Ticket Dorado y Ticket de Diamante (db/081) ----- */
+  // bonus = {tipo: 'oro'|'diamante', lado: 'malo'|'medio'|'bueno', desde, hasta}; desde/hasta: entre que valores medios va lo que pasa por
+  // la tira al volver a girar (el Dorado: lo malo y lo medianamente bueno; el Diamante: solo lo bueno). Lo que sale ya viene en la pieza.
+  function esTk(i) { return !!(i && i.bonus && TK[i.bonus.tipo]) }
+  // lo que vale de media un objeto si sale (igual que cs_ev de db/081): el desgaste como en el juego y StatTrak el 10 %
+  function evDe(it) {
+    if (!it || !it.price) return 0;
+    const pw = it.minf == null ? [1, 0, 0, 0, 0] : probW(+it.minf, +it.maxf), pst = it.st ? 0.1 : 0, p = (k) => Math.max(1, it.price[k] == null ? 1 : +it.price[k]);
+    let ev = 0; for (let w = 0; w < 5; w++) if (pw[w] > 0) ev += pw[w] * ((1 - pst) * p(w) + pst * p(5 + w));
+    return ev;
+  }
+  // el peso de cada objeto dentro de la caja (como cs_roll): sus tickets o, en CS2, el de su rareza por su peso
+  function qDe(info, it) {
+    if (conTickets(info)) return +it.tickets || 0;
+    const PESO = D.cases && D.cases.some((c) => c.cat != null) ? PESO_012 : PESO_007, l = info.por[it.rarity] || [it];
+    return (PESO[it.rarity] || 1) * (it.weight || 100) / (l.reduce((a, x) => a + (x.weight || 100), 0) || 1);
+  }
+  // lo que pasa por la tira al volver a girar
+  function montonTk(info, bo) {
+    if (!info || !info.items) return [];
+    const tk = conTickets(info), lo = +bo.desde || 0, hi = bo.hasta == null ? Infinity : +bo.hasta;
+    return info.items.filter((it) => (!tk || it.tickets != null) && (() => { const e = evDe(it); return e >= lo && e <= hi })());
+  }
+  // el ticket: un billete con su sello (estrella el Dorado, diamante el de Diamante). Sin degradados con id: se pinta igual repetido
+  const tkSello = (tipo) => (tipo === 'diamante'
+    ? '<path class="tk-g" d="M61 31l7-9h14l7 9-14 22z"/><path class="tk-l" d="M61 31h28M68 22l4 9 3 22M82 22l-4 9-3 22"/>'
+    : '<path class="tk-g" d="M75 20l4.1 11.3 12.1.4-9.5 7.4 3.3 11.6L75 44l-10 6.7 3.3-11.6-9.5-7.4 12.1-.4z"/>');
+  const tkSvg = (tipo) => `<svg class="tk-svg" viewBox="0 0 120 76" aria-hidden="true"><path class="tk-b" d="M8 6h104a4 4 0 0 1 4 4v16a12 12 0 0 0 0 24v16a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V50a12 12 0 0 0 0-24V10a4 4 0 0 1 4-4z"/>
+    <path class="tk-s" d="M10 12h100v14H10z"/><path class="tk-d" d="M34 12v52"/>${tkSello(tipo)}</svg>`;
+  // la carta del ticket en la tira (--c dorado: sonidos.js la oye como lo mejor y suena el premio grande)
+  const tkCard = (tipo, gana) => `<div class="cj-k tk tk-${tipo} ${gana ? 'gana' : ''}" style="--c:#e4ae39;--tk:${TK[tipo].c}"><span class="cj-k-i">${tkSvg(tipo)}</span><b>${TK[tipo].n}</b><span class="cj-k-v tk-x">Giro extra</span></div>`;
+  // el sonido de la tira al pasar cartas, mientras se mueve (la vuelta del ticket no la sigue sonidos.js)
+  function tkTics(track, kw) {
+    let idx = -1, vivo = true;
+    (function marco() {
+      if (!vivo || !track.isConnected) return;
+      const m = getComputedStyle(track).transform, tx = m && m !== 'none' ? new DOMMatrix(m).m41 : 0, i = Math.floor(-tx / (kw || 1));
+      if (i !== idx) { if (idx !== -1) suena({ tipo: 'caja-tic', vol: 0.8 }); idx = i }
+      requestAnimationFrame(marco);
+    })();
+    return () => { vivo = false };
+  }
+  const suena = (detail) => { try { window.dispatchEvent(new CustomEvent('gm:sonido', { detail })) } catch {} };
+  // sin animacion (o la tira ya no esta): la carta del centro pasa a ser lo que ha salido
+  function tkFinTira(t, inv) { t.cs[G] = { x: item(inv.item), v: inv.value }; t.col = color(item(inv.item).rarity) }
+  // la tira ha parado en el ticket: brilla, espera y vuelve a girar sola, del ticket a lo que ha salido. Las demas tiras no se tocan
+  async function tkEnTira(strip, t, inv, info) {
+    const v = +S.vel, tipo = inv.bonus.tipo;
+    if (!strip || !strip.isConnected) { tkFinTira(t, inv); return }
+    strip.classList.add('tk-pop');
+    suena(tipo === 'diamante' ? 'cobrar' : 'clic');
+    await espera(TK_HOLD[v]);
+    if (!strip.isConnected) { tkFinTira(t, inv); return }
+    // la tira nueva: el ticket donde se para (INI) y lo que ha salido en G; en medio, solo lo de su monton
+    const pool = montonTk(info, inv.bonus), al = () => (pool.length ? pool[(Math.random() * pool.length) | 0] : item(inv.item)), cs = [];
+    for (let i = 0; i < TOTAL; i++) {
+      if (i === G) { cs.push({ x: item(inv.item), v: inv.value }); continue }
+      if (i === INI) { cs.push({ tk: tipo }); continue }
+      let x = al(); for (let k = 0; k < 8 && cs.slice(-2).some((c) => c.x && c.x.id === x.id); k++) x = al();
+      cs.push({ x, v: valorDe(x) });
+    }
+    t.cs = cs; t.j = (Math.random() - 0.5) * 0.6; t.col = color(item(inv.item).rarity);
+    const track = strip.firstElementChild;
+    for (const a of track.getAnimations()) { try { a.cancel() } catch {} }
+    track.innerHTML = cs.map((c) => kcard(c, false)).join(''); traduce(track);
+    strip.classList.remove('fin', 'tk-pop'); strip.classList.add('tk-gira');
+    const k0 = track.children[INI], calla = tkTics(track, k0 ? k0.offsetWidth + (parseFloat(getComputedStyle(track).columnGap) || 0) : 1);
+    await gira(strip, t, anim && anim.saltar ? 1 : TK_DUR[v]);
+    calla();
+    strip.classList.remove('tk-gira'); strip.style.setProperty('--c', t.col);
+    suena({ tipo: 'caja-final', rareza: item(inv.item).rarity, vol: 0.7 });
+  }
+  // la prueba gratis lo imita (sin base) con las probabilidades de la caja (cs_giro_info) y los mismos montones
+  function tkFalso(info) {
+    const g = info.giro || TK_DEF, r = Math.random() * 100, P = (caja(info.id).price || info.price || 1);
+    let tipo = null, bo = null;
+    if (r < +g.oro) { tipo = 'oro'; bo = { tipo, lado: Math.random() * 100 < +g.sube ? 'medio' : 'malo', desde: 0, hasta: g.hasta != null ? +g.hasta : Math.floor(3 * P) } }
+    else if (r - g.oro < +g.diamante) { tipo = 'diamante'; bo = { tipo, lado: 'bueno', desde: g.desde != null ? +g.desde : Math.ceil(1.5 * P), hasta: null } }
+    if (!bo) return null;
+    const tk = conTickets(info), todos = info.items.filter((it) => !tk || it.tickets != null).map((it) => ({ it, e: evDe(it) }));
+    let l = bo.lado === 'malo' ? todos.filter((o) => o.e < P) : bo.lado === 'medio' ? todos.filter((o) => o.e >= P && o.e <= bo.hasta) : todos.filter((o) => o.e >= bo.desde);
+    if (!l.length) { const s = todos.slice().sort((a, b) => a.e - b.e); l = [bo.lado === 'malo' ? s[0] : bo.lado === 'medio' ? s.find((o) => o.e >= P) || s[s.length - 1] : s[s.length - 1]] }
+    const tot = l.reduce((a, o) => a + qDe(info, o.it), 0); let x = Math.random() * tot, pick = l[l.length - 1].it;
+    for (const o of l) { x -= qDe(info, o.it); if (x < 0) { pick = o.it; break } }
+    return { item: pick.id, value: valorDe(pick), bonus: bo };
   }
 
   /* ----- batallas ----- */
@@ -906,17 +1007,24 @@
   let REP = null, repRaf = 0;
   const RD = () => (S.rapido ? 1700 : 4600), SPIN = () => (quieto() ? 1 : S.rapido ? 1150 : 3500);
   const gdRep = () => gdDur() + (GD_HOLD[+S.vel] || GD_HOLD[0]);
-  const conGd = (b, r) => b.drops.some((d) => d.round === r && d.inv && d.inv.bonus);
-  // donde va la repeticion a los e ms: ronda, tiempo dentro de ella, si ya ha frenado, el Giro Dorado (ms desde que empieza) y si ya acabo
+  const conGd = (b, r) => b.drops.some((d) => d.round === r && d.inv && d.inv.bonus && d.inv.bonus.orig);
+  // tickets (db/081): la ruleta del sitio para en el ticket, espera y vuelve a girar sola; las de los demas sitios se quedan paradas
+  const tkHold = () => TKB_HOLD[+S.vel] || TKB_HOLD[0], tkSpin = () => (quieto() ? 1 : TKB_SPIN[+S.vel] || TKB_SPIN[0]), tkRep = () => tkHold() + tkSpin();
+  const conTk = (b, r) => b.drops.some((d) => d.round === r && esTk(d.inv));
+  // donde va la repeticion a los e ms: ronda, tiempo dentro de ella, si ya ha frenado, el Giro Dorado (ms desde que empieza), el ticket
+  // (ms desde que ha parado en el: hasta tkHold quieto, luego vuelve a girar) y si ya acabo
   function reloj(b, e) {
     const n = b.cases.length; let ini = 0;
     for (let r = 1; r <= n; r++) {
-      const gd = conGd(b, r), dur = RD() + (gd ? gdRep() : 0), t = e - ini;
-      if (t < dur || r === n) return { r, t, landed: t >= SPIN(), gd: gd && t >= SPIN() && t < SPIN() + gdRep() ? t - SPIN() : null, gdOk: !gd || t >= SPIN() + gdRep(), fin: t >= dur };
+      const gd = conGd(b, r), tk = conTk(b, r), dur = RD() + (gd ? gdRep() : 0) + (tk ? tkRep() : 0), t = e - ini;
+      if (t < dur || r === n) return { r, t, landed: t >= SPIN(), gd: gd && t >= SPIN() && t < SPIN() + gdRep() ? t - SPIN() : null, gdOk: !gd || t >= SPIN() + gdRep(),
+        tk: tk && t >= SPIN() ? t - SPIN() : null, tkOk: !tk || t >= SPIN() + tkRep(), fin: t >= dur };
       ini += dur;
     }
-    return { r: n, t: 0, landed: true, gd: null, gdOk: true, fin: true };
+    return { r: n, t: 0, landed: true, gd: null, gdOk: true, tk: null, tkOk: true, fin: true };
   }
+  // la fase del ticket en la ronda de ahora: n (no hay o aun gira), h (parado en el ticket), s (vuelve a girar), ok (ya ha salido)
+  const tkFase = (ph) => (ph.tk == null ? 'n' : ph.tkOk ? 'ok' : ph.tk < tkHold() ? 'h' : 's');
   // el tamano de las ruletas: en el movil, con 3 columnas, cartas mas bajas
   const movil = () => !!(window.matchMedia && window.matchMedia('(max-width:860px)').matches);
   const colsDe = (b) => (!movil() ? tamDe(b) : libre(b) ? (eqDe(b) === 4 ? 2 : 3) : teDe(b) === 1 ? 2 : teDe(b));
@@ -932,28 +1040,33 @@
     for (const k of hay) { if (x < RELLENO[k]) { r = k; break } x -= RELLENO[k] }
     const l = info.por[r]; return l[(rnd() * l.length) | 0];
   }
-  const kCard = (it, gana) => it.rarity === 'esp' && !esLujo(it.id) && !it.image ? `<div class="bv-k esp ${gana ? 'gana' : ''}"><span>★</span></div>` : `<div class="bv-k ${gana ? 'gana' : ''}" style="--c:${color(it.rarity)}">${pic(it.image, 256, '', true)}</div>`;
+  const kCard = (it, gana) => it.tk ? `<div class="bv-k tk tk-${it.tk} ${gana ? 'gana' : ''}" style="--c:${TK[it.tk].c};--tk:${TK[it.tk].c}">${tkSvg(it.tk)}<b>${TK[it.tk].n}</b></div>` : it.rarity === 'esp' && !esLujo(it.id) && !it.image ? `<div class="bv-k esp ${gana ? 'gana' : ''}"><span>★</span></div>` : `<div class="bv-k ${gana ? 'gana' : ''}" style="--c:${color(it.rarity)}">${pic(it.image, 256, '', true)}</div>`;
   // la ruleta de un sitio en una ronda: p de 0 (parada arriba) a 1 (frenada en el premio). antes: con Giro Dorado, aun en lo que salio
-  function reel(b, r, seat, p, g, ya, antes) {
+  // tk: 'para' = la ruleta frena en el ticket (sin desvio, justo en la raya); 'vuelve' = la vuelta del ticket, que empieza con el ticket en
+  // la raya (carta 1) y frena en lo que ha salido, solo con lo de su monton (data-rs: bucle() la mueve); 'fin' = ya parada en lo que salio
+  function reel(b, r, seat, p, g, ya, antes, tk) {
     const d = b.drops.find((x) => x.round === r && x.seat === seat);
     if (!d) return `<div class="bv-reel"></div>`;
-    const info = D.caja.get(b.cases[r - 1]), rnd = sem(b.id * 1009 + r * 31 + seat * 7), o = antes && d.inv.bonus ? d.inv.bonus.orig : d.inv, win = item(o.item), cs = [];
-    for (let i = 0; i < KN + 3; i++) cs.push(i === KN ? win : rellenoS(info, rnd) || win);
-    const fin = KN * (g.kh + g.gap) - (g.win - g.kh) / 2 + (rnd() - 0.5) * g.kh * 0.45, y = fin * (1 - Math.pow(1 - p, 4));
-    return `<div class="bv-reel ${ya ? 'ya' : ''}" style="--c:${color(win.rarity)}"><div class="bv-track" data-tr="${seat}" data-fin="${fin.toFixed(1)}" style="transform:translateY(${(-y).toFixed(1)}px)">${cs.map((it, i) => kCard(it, i === KN)).join('')}</div><i class="bv-line"></i></div>`;
+    const info = D.caja.get(b.cases[r - 1]), rnd = sem(b.id * 1009 + r * 31 + seat * 7 + (tk === 'vuelve' || tk === 'fin' ? 5 : 0)), o = antes && d.inv.bonus && d.inv.bonus.orig ? d.inv.bonus.orig : d.inv, cs = [];
+    const win = tk === 'para' ? { tk: d.inv.bonus.tipo, rarity: 'esp' } : item(o.item), pool = tk === 'vuelve' || tk === 'fin' ? montonTk(info, d.inv.bonus) : null;
+    for (let i = 0; i < KN + 3; i++) cs.push(i === KN ? win : pool && i === 1 ? { tk: d.inv.bonus.tipo } : pool && pool.length ? pool[(rnd() * pool.length) | 0] : rellenoS(info, rnd) || item(d.inv.item));
+    const paso = g.kh + g.gap, centra = (g.win - g.kh) / 2, j = (rnd() - 0.5) * g.kh * 0.45, fin = KN * paso - centra + (tk === 'para' ? 0 : j);
+    const y0 = tk === 'vuelve' ? paso - centra : 0, y = y0 + (fin - y0) * (1 - Math.pow(1 - p, 4)), col = win.tk ? TK[win.tk].c : color(win.rarity);
+    return `<div class="bv-reel ${ya ? 'ya' : ''} ${tk ? `tk-on tk-${d.inv.bonus.tipo}` : ''} ${tk === 'para' && ya ? 'tk-pop' : ''}" style="--c:${col}"><div class="bv-track" ${tk === 'vuelve' ? `data-rs="${seat}" data-y0="${y0.toFixed(1)}"` : `data-tr="${seat}"`} data-fin="${fin.toFixed(1)}" style="transform:translateY(${(-y).toFixed(1)}px)">${cs.map((it, i) => kCard(it, i === KN)).join('')}</div><i class="bv-line"></i></div>`;
   }
   function bvIt(d, nuevo, antes) {
-    const o = antes ? d.inv.bonus.orig : d.inv, x = item(o.item), gd = d.inv.bonus && !antes;
-    return `<span class="bv-it ${nuevo ? 'nuevo' : ''} ${gd ? 'gd' : ''}" style="--c:${color(x.rarity)}" title="${esc(x.name)}${gd ? ' · Giro Dorado' : ''}">${x.rarity === 'esp' && !x.image ? '<b>★</b>' : pic(x.image, 128)}<em>${N(o.value)}</em></span>`;
+    const o = antes ? d.inv.bonus.orig : d.inv, x = item(o.item), tk = esTk(d.inv) ? d.inv.bonus.tipo : null, gd = d.inv.bonus && !antes && !tk;
+    return `<span class="bv-it ${nuevo ? 'nuevo' : ''} ${gd ? 'gd' : ''} ${tk ? 'tk tk-' + tk : ''}" style="--c:${color(x.rarity)}${tk ? ';--tk:' + TK[tk].c : ''}" title="${esc(x.name)}${gd ? ' · Giro Dorado' : tk ? ' · ' + TK[tk].n : ''}">${x.rarity === 'esp' && !x.image ? '<b>★</b>' : pic(x.image, 128)}<em>${N(o.value)}</em></span>`;
   }
   function vBat() {
     const b = D.bats.get(S.bat), atras = '<button class="cj-back" data-cj="batallas">Batallas</button>';
     if (!b) return atras + `<p class="hint">${D.err ? esc(D.err) : 'Cargando batalla…'}</p>`;
     const ne = eqDe(b), te = teDe(b), tam = ne * te, n = b.cases.length, rep = !!(REP && REP.id === b.id), cz = loca(b), g = geo(b);
     const ph = rep ? reloj(b, Date.now() - REP.t0) : null, rNow = rep ? ph.r : n + 1, landed = rep && ph.landed;
-    const visible = (d) => b.status === 'done' && (!rep || d.round < rNow || (d.round === rNow && landed));
+    // con ticket en la ronda de ahora, lo que sale no se ve (ni cuenta) hasta que acaba su vuelta
+    const visible = (d) => b.status === 'done' && (!rep || d.round < rNow || (d.round === rNow && landed && (!esTk(d.inv) || ph.tkOk)));
     // con Giro Dorado en la ronda de ahora, hasta que acaba se ve (y cuenta) lo que salio, no lo que se queda
-    const antes = (d) => rep && d.round === rNow && !!d.inv.bonus && !ph.gdOk;
+    const antes = (d) => rep && d.round === rNow && !!(d.inv.bonus && d.inv.bonus.orig) && !ph.gdOk;
     const val = (d) => (antes(d) ? d.inv.bonus.orig.value : d.inv.value);
     const dr = (st) => b.drops.filter((d) => d.seat === st && visible(d)).sort((x, y) => x.round - y.round);
     const tot = (st) => dr(st).reduce((a, d) => a + val(d), 0);
@@ -981,8 +1094,12 @@
       if (!x) return `<div class="bv-col vacio">${b.status === 'open' && !dentro && ctx.saldo >= b.cost ? `<button class="bv-join" data-cj="unir" data-v="${b.id}|${st}"><b>+</b><span>Unirme aquí</span><em>${N(b.cost)}${coin()}</em></button>` : '<span class="bv-free">Libre</span>'}</div>`;
       const j = jug(x.player), ds = dr(st), mejor = ds.reduce((a, d) => (!a || d.inv.value > a.inv.value ? d : a), null);
       const dNow = rep ? b.drops.find((d) => d.round === rNow && d.seat === st) : null;
-      const stage = rep ? (dNow && dNow.inv.bonus && ph.gd != null ? `<div class="bv-gdw">${gdHtml(dNow.inv.bonus, 'v')}</div>` : reel(b, rNow, st, landed ? 1 : Math.min(1, Math.max(0, ph.t / SPIN())), g, landed, !ph.gdOk))
-        : fin && mejor ? `<div class="bv-best" style="--c:${color(item(mejor.inv.item).rarity)}">${pic(item(mejor.inv.item).image, 360)}<span>${esc(partes(item(mejor.inv.item)).join(' | '))}</span><b>${N(mejor.inv.value)}${coin()}</b>${mejor.inv.bonus ? '<i class="bv-gdt">Giro Dorado</i>' : ''}</div>` : '';
+      const p0 = landed ? 1 : Math.min(1, Math.max(0, ph ? ph.t / SPIN() : 1)), tf = ph ? tkFase(ph) : 'n', tkNow = rep && dNow && esTk(dNow.inv);
+      const stage = rep ? (dNow && dNow.inv.bonus && dNow.inv.bonus.orig && ph.gd != null ? `<div class="bv-gdw">${gdHtml(dNow.inv.bonus, 'v')}</div>`
+        : tkNow && (tf === 'n' || tf === 'h') ? reel(b, rNow, st, p0, g, landed, false, 'para')
+        : tkNow && tf === 's' ? reel(b, rNow, st, Math.min(1, (ph.tk - tkHold()) / tkSpin()), g, false, false, 'vuelve')
+        : reel(b, rNow, st, p0, g, landed, !ph.gdOk, tkNow ? 'fin' : null))
+        : fin && mejor ? `<div class="bv-best" style="--c:${color(item(mejor.inv.item).rarity)}">${pic(item(mejor.inv.item).image, 360)}<span>${esc(partes(item(mejor.inv.item)).join(' | '))}</span><b>${N(mejor.inv.value)}${coin()}</b>${esTk(mejor.inv) ? `<i class="bv-gdt tk-${mejor.inv.bonus.tipo}">${TK[mejor.inv.bonus.tipo].n}</i>` : mejor.inv.bonus ? '<i class="bv-gdt">Giro Dorado</i>' : ''}</div>` : '';
       return `<div class="bv-col ${fin ? (t === b.winner ? 'win' : 'lose') : rep && lider === t ? 'va' : ''}" style="--pc:var(--f-${esc(j.color)})">
         <div class="bv-p">${av(x.player, 'xl')}<b>${esc(j.n)}</b><span class="bv-tot"><span class="num">${N(tot(st))}</span>${coin()}</span></div>
         ${stage}<div class="bv-haul">${ds.map((d) => bvIt(d, rep && d.round === rNow, antes(d))).join('')}</div></div>`;
@@ -1022,8 +1139,10 @@
     if (!c || !info) return false;
     let items;
     if (prueba) items = Array.from({ length: n }, () => {
+      // con db/081 (la caja contesta cs_giro_info) la prueba imita los tickets; sin ella, el Giro Dorado viejo
+      if (info.giro) { const tk = tkFalso(info); if (tk) return { id: 0, status: 'prueba', ...tk } }
       const x = relleno(info), i = { id: 0, item: x.id, value: valorDe(x), status: 'prueba' };
-      const bo = Math.random() * 100 < GD_PCT ? gdFalso(info, i) : null;
+      const bo = !info.giro && Math.random() * 100 < GD_PCT ? gdFalso(info, i) : null;
       if (bo) { const f = bo.won ? bo.up : bo.down; Object.assign(i, { item: f.item, value: f.value, bonus: bo }) }
       return i;
     });
@@ -1038,16 +1157,16 @@
       try { r = mia ? await rpc('cs_open_owned', { p_id: mia }) : await rpc('cs_open', { p_case: c.id, p_n: n }) } catch (e) { ocupado = false; pinta(); avisa(esc(msgErr(e))); return false }
       ocupado = false;
       items = r.items;
-      try { const f = (x) => ({ r: x.rarity, i: src(x.image, 256), l: esLujo(x.id) ? 1 : 0 }); window.dispatchEvent(new CustomEvent('gm:caja-abierta', { detail: { quien: ctx.me, nombre: jug(ctx.me).n, caja: c.id, cajaNombre: c.name, items: r.items.map((i) => ({ ...f(item(i.item)), n: item(i.item).name, v: i.value })), pool: Array.from({ length: 24 }, () => f(relleno(info))) } })) } catch {}   // en directo (cajas-vivo.js)
+      try { const f = (x) => ({ r: x.rarity, i: src(x.image, 256), l: esLujo(x.id) ? 1 : 0 }); window.dispatchEvent(new CustomEvent('gm:caja-abierta', { detail: { quien: ctx.me, nombre: jug(ctx.me).n, caja: c.id, cajaNombre: c.name, items: r.items.map((i) => ({ ...f(item(i.item)), n: item(i.item).name, v: i.value, ...(esTk(i) ? { t: i.bonus.tipo, tp: montonTk(info, i.bonus).sort(() => Math.random() - 0.5).slice(0, 16).map(f) } : {}) })), pool: Array.from({ length: 24 }, () => f(relleno(info))) } })) } catch {}   // en directo (cajas-vivo.js)
       if (mia) D.cajasDe.set(ctx.me, mias().filter((o) => o.id !== mia));
       // la imagen grande del premio se va bajando mientras gira
-      for (const i of r.items) for (const o of [i, ...(i.bonus ? [i.bonus.up, i.bonus.down] : [])]) { const im = new Image(); im.decoding = 'async'; im.src = src(item(o.item).image, 256) }
+      for (const i of r.items) for (const o of [i, ...(i.bonus && i.bonus.orig ? [i.bonus.up, i.bonus.down] : [])]) { const im = new Image(); im.decoding = 'async'; im.src = src(item(o.item).image, 256) }
     }
     const animar = !sinAnim();
     S.res = null; S.sure = null; S.prueba = !!prueba;
     S.tiras = items.map((inv) => nuevaTira(info, inv)); S.tirasK = ''; S.tirasC = c.id;
     // sin animaciones el Giro Dorado no se ensena: la tira queda directamente en lo que se queda
-    if (!animar) items.forEach((inv, i) => { if (inv.bonus) gdFinTira(null, S.tiras[i], inv) });
+    if (!animar) items.forEach((inv, i) => { if (esTk(inv)) tkFinTira(S.tiras[i], inv); else if (inv.bonus) gdFinTira(null, S.tiras[i], inv) });
     S.fase = animar ? 'gira' : 'fin';
     anim = { anims: [], saltar: false };
     pinta(true);    // las tiras con su sitio, ya con el premio dentro
@@ -1057,8 +1176,11 @@
       const v = +S.vel;
       await Promise.all(strips.map((s, i) => gira(s, S.tiras[i], DUR[v] + i * PASO[v])));
       // Giro Dorado: en las tiras que lo llevan, en cuanto frenan (todas a la vez)
-      const conGiro = items.map((inv, i) => (inv.bonus ? i : -1)).filter((i) => i >= 0);
+      const conGiro = items.map((inv, i) => (inv.bonus && inv.bonus.orig ? i : -1)).filter((i) => i >= 0);
       if (conGiro.length) { await espera(GD_HOLD[v]); await Promise.all(conGiro.map((i) => gdEnTira(strips[i], S.tiras[i], items[i]))) }
+      // tickets (db/081): solo las lineas que han parado en un ticket vuelven a girar, todas a la vez; las demas se quedan como estan
+      const conTk = items.map((inv, i) => (esTk(inv) ? i : -1)).filter((i) => i >= 0);
+      if (conTk.length) await Promise.all(conTk.map((i) => tkEnTira(strips[i], S.tiras[i], items[i], info)));
       await espera(FIN[v]);
     } else {
       const top = items.reduce((a, i) => (i.value > a.value ? i : a), items[0]);
@@ -1105,11 +1227,24 @@
       if (!b || S.bat !== REP.id || S.tab !== 'batallas') { REP = null; S.rep = null; return }
       const ph = reloj(b, Date.now() - REP.t0);
       if (ph.fin) return termina();
-      const key = `${ph.r}|${ph.landed}|${ph.gd != null}|${ph.gdOk}`;
-      if (key !== REP.key || !root.querySelector('[data-tr],[data-gd]')) { REP.key = key; pinta(true) }
+      const tf = tkFase(ph), key = `${ph.r}|${ph.landed}|${ph.gd != null}|${ph.gdOk}|${tf}`;
+      if (key !== REP.key || !root.querySelector('[data-tr],[data-gd],[data-rs]')) {
+        // el ticket: al pararse en el suena; al acabar su vuelta, el premio de lo que ha salido
+        if (tf === 'h' && !REP.key.endsWith('|h')) suena('cobrar');
+        if (tf === 'ok' && REP.key.endsWith('|s')) { const ds = (D.bats.get(REP.id) || { drops: [] }).drops.filter((d) => d.round === ph.r && esTk(d.inv)); const m = ds.reduce((a, d) => Math.max(a, ORDEN.length - 1 - ORDEN.indexOf(item(d.inv.item).rarity)), 0); suena({ tipo: 'caja-final', rareza: ORDEN[ORDEN.length - 1 - m], vol: 0.7 }) }
+        REP.key = key; pinta(true);
+      }
       else if (!ph.landed) {
         const k = 1 - Math.pow(1 - Math.min(1, ph.t / SPIN()), 4);
         root.querySelectorAll('[data-tr]').forEach((tr) => { tr.style.transform = `translateY(${(-(+tr.dataset.fin) * k).toFixed(1)}px)` });
+      }
+      else if (tf === 's') {
+        // solo las ruletas con ticket vuelven a girar; con un tic cada vez que pasa una carta
+        const k = 1 - Math.pow(1 - Math.min(1, (ph.tk - tkHold()) / tkSpin()), 4);
+        root.querySelectorAll('[data-rs]').forEach((tr, i) => {
+          const y0 = +tr.dataset.y0, y = y0 + (+tr.dataset.fin - y0) * k; tr.style.transform = `translateY(${(-y).toFixed(1)}px)`;
+          if (i === 0) { const c = tr.firstElementChild, paso = c ? c.offsetHeight + (parseFloat(getComputedStyle(tr).rowGap) || 0) : 0, idx = paso ? Math.floor(y / paso) : 0; if (REP.tic !== idx) { if (REP.tic != null) suena({ tipo: 'caja-tic', vol: 0.8 }); REP.tic = idx } }
+        });
       }
       // el Giro Dorado de los sitios que lo tienen en esta ronda; el sonido del final, una vez por ronda
       if (ph.gd != null) {
