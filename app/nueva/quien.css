@@ -289,3 +289,9 @@ html.sin-anim .rc,html.sin-anim .rc::after,html.sin-anim .rc-vs,html.sin-anim .r
 /* PM 02-11: "el vs que sale en el medio parece cortado, la s": el degradado recortado al texto en cursiva se comia la cola de la s; caja con holgura */
 .rc-vs{display:inline-block;padding:.04em .16em .08em .06em;line-height:1.12;overflow:visible}
 .rc-vs.s{padding:0 .1em}
+
+/* combinadas dentro de "Quien esta dentro": una marca discreta, sin caja */
+.qn-cb{font:600 9.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--rt-t);opacity:.85;white-space:nowrap}
+.qn-q small.qn-cb{display:block;margin-top:1px}
+.ac-q1 .qn-cb{margin-left:-2px}
+.d-fr .st .qn-cb{margin-left:4px}

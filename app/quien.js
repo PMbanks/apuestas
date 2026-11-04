@@ -14,15 +14,21 @@
   const retosDe = (mid) => g(() => CH.filter((c) => c.m === mid && abierto(c)), []);
   const apuestasDe = (mid) => g(() => whoOn(mid), []);
   const nom = (k) => (k ? esc(g(() => fr(k).n, '·')) : '');
+  // Combinadas (PM 04-11: "las parlays tambien cuentan como apuestas para que salga quien esta dentro"): una combinada abierta con
+  // una pata sin resolver en este partido cuenta como estar dentro, igual que una apuesta suelta. Las carga combinadas.js (GM_CMB,
+  // las de todos, solo lectura); si aun no han llegado o el servidor no las tiene, es como si no hubiera ninguna.
+  const combosDe = (mid) => g(() => ((window.GM_CMB && GM_CMB.todas()) || []).filter((c) => c.status === 'open' && (c.combo_legs || []).some((l) => l.match_id === mid && !l.result))
+    .map((c) => ({ c, k: g(() => kDe(c.player)), ls: (c.combo_legs || []).filter((l) => l.match_id === mid && !l.result), n: (c.combo_legs || []).length || 1 })).filter((x) => x.k), []);
 
   function gente(mid) {
     const s = [], add = (k) => { if (k && !s.includes(k)) s.push(k) };
     for (const b of apuestasDe(mid)) add(b.f);
+    for (const x of combosDe(mid)) add(x.k);
     for (const c of retosDe(mid)) { for (const x of g(() => GM_RETOS.pl(c), [{ k: c.from }, { k: c.to }])) add(x.k); add(c.to) }
     return s;
   }
   // lo que hay puesto: apuestas sueltas y retos (los dos lados si ya esta aceptado)
-  const dinero = (mid) => apuestasDe(mid).reduce((a, b) => a + b.stake, 0) + retosDe(mid).reduce((a, c) => a + c.stake * g(() => GM_RETOS.pl(c).length, c.st === 'accepted' ? 2 : 1), 0);
+  const dinero = (mid) => apuestasDe(mid).reduce((a, b) => a + b.stake, 0) + combosDe(mid).reduce((a, x) => a + x.c.stake / x.n, 0) + retosDe(mid).reduce((a, c) => a + c.stake * g(() => GM_RETOS.pl(c).length, c.st === 'accepted' ? 2 : 1), 0);
   const hay = (mid) => gente(mid).length > 0;
   // < 0 si a va antes que b
   const ord = (a, b) => gente(b.id).length - gente(a.id).length || dinero(b.id) - dinero(a.id);
@@ -52,8 +58,8 @@
   }
   // pie de la tarjeta de la tira En directo de Partidos
   function vivoPie(m) {
-    const ws = apuestasDe(m.id), tot = ws.reduce((a, w) => a + w.stake, 0), rs = retosDe(m.id);
-    const l1 = ws.length ? `<span class="lvc-avs">${caras(m.id)}</span><span>${ws.length} ${ws.length === 1 ? 'apuesta' : 'apuestas'} · ${N(tot)}${coin()} en juego</span>` : '';
+    const ws = apuestasDe(m.id), cb = combosDe(m.id), tot = ws.reduce((a, w) => a + w.stake, 0) + cb.reduce((a, x) => a + x.c.stake / x.n, 0), nb = ws.length + cb.length, rs = retosDe(m.id);
+    const l1 = nb ? `<span class="lvc-avs">${caras(m.id)}</span><span>${nb} ${nb === 1 ? 'apuesta' : 'apuestas'} · ${N(tot)}${coin()} en juego</span>` : '';
     const c0 = rs[0], [A, B] = c0 ? ladosDe(c0) : [];
     const l2 = rs.length ? `<span class="qn-lv"><b class="qn-tag"><span>Reto</span> ${nvmDe(c0)}</b>${carasG(A.ks, 'sm')}<span data-notr>${nomsG(A.ks)}</span><i>contra</i>${carasG(B.ks, 'sm')}<span ${B.ks.length ? 'data-notr' : ''}>${nomsG(B.ks)}</span></span>` : '';
     return `${l1 || (rs.length ? '' : '<span class="lvc-nadie">Nadie ha apostado</span>')}${l2}`;
@@ -98,6 +104,8 @@
     if (!b.p) return `<div class="qn-pl oc"><span class="qn-pe">${lockSvg}</span><span class="qn-pt"><b>Apuesta oculta</b><small>${N(b.stake)}${coin()} <span>· se ve a las ${g(() => HM(m.at), '')}</span></small></span></div>`;
     return `<div class="qn-pl"><span class="qn-pe">${escudoDe(m, b.p)}</span><span class="qn-pt"><b ${b.p === 'X' ? '' : 'data-notr'}>${esc(pn(m, b.p))}</b><small>${esMk(b.p) && !solo ? '<span>Mercado</span> <i>·</i> ' : ''}${N(b.stake)}${coin()} <i>→</i> ${N(b.stake * b.o)}${coin()}</small></span><span class="qn-po">${O(b.o)}</span></div>`;
   };
+  // una pata de una combinada: el escudo de lo que eligio, el pick con la cuota de la pata y, debajo, de cuantas es y lo que paga entera
+  const lineaCombo = (m, x) => x.ls.map((l) => `<div class="qn-pl"><span class="qn-pe">${escudoDe(m, l.pick)}</span><span class="qn-pt"><b ${l.pick === 'X' ? '' : 'data-notr'}>${esc(g(() => pn(m, l.pick), l.pick))}</b><small><span>Combinada de ${x.n}</span> <i>·</i> ${N(x.c.stake)}${coin()} <i>→</i> ${N(x.c.stake * x.c.odds)}${coin()}</small></span><span class="qn-po">${O(l.odds)}</span></div>`).join('');
   const lineaReto = (m, c, k) => {
     const pl = g(() => GM_RETOS.pl(c), []), yo = pl.find((x) => x.k === k);
     const otros = pl.filter((x) => x.k !== k).map((x) => x.k), nv = nvmDe(c), bote = g(() => GM_RETOS.bote(c), c.stake * 2);
@@ -111,8 +119,10 @@
     const m = g(() => byId(mid)); if (!m) return '';
     const bs = apuestasDe(mid).filter((b) => b.f === k);
     const rs = retosDe(mid).filter((c) => g(() => GM_RETOS.pl(c), []).some((x) => x.k === k) || (c.to === k && c.st === 'pending'));
+    const cb = combosDe(mid).filter((x) => x.k === k);
     const sec = [];
     if (bs.length) sec.push(`<div class="qn-sc"><span class="lab">${bs.every((b) => b.p && esMk(b.p)) ? 'Mercado' : 'Apuesta suelta'}</span>${bs.map((b) => lineaApuesta(m, b, bs.every((x) => x.p && esMk(x.p)))).join('')}</div>`);
+    if (cb.length) sec.push(`<div class="qn-sc"><span class="lab">${cb.length > 1 ? 'Combinadas' : 'Combinada'}</span>${cb.map((x) => lineaCombo(m, x)).join('')}</div>`);
     for (const c of rs) sec.push(`<div class="qn-sc">${lineaReto(m, c, k)}</div>`);
     if (!sec.length) sec.push('<div class="qn-sc"><p class="qn-nada">Nada abierto en este partido</p></div>');
     return `<div class="qn-ph" data-prof="${esc(k)}">${sinTitulo(cara(k, 'xl'))}<span class="qn-pn"><b data-notr>${nom(k)}</b><span data-notr>${esc(g(() => m.a + ' vs ' + m.b, ''))}</span></span></div>
@@ -241,15 +251,30 @@
     const gana = x.p ? `${N(x.stake)} <i>→</i> <b>${N(x.stake * x.o)}</b>` : `${N(x.stake)}`;
     return `<div class="qn-b" style="--c:var(--f-${x.f})">${cara(x.f, 'xl')}<span class="qn-q"><b data-notr>${nom(x.f)}</b>${x.p ? `<em data-notr>${esc(pn(m, x.p))} <i>·</i> ${O(x.o)}</em>` : '<em>Apuesta oculta</em>'}</span><span class="qn-d">${gana}${coin()}</span></div>`;
   }
+  function combo(m, x) {
+    return x.ls.map((l) => `<div class="qn-b" style="--c:var(--f-${x.k})">${cara(x.k, 'xl')}<span class="qn-q"><b data-notr>${nom(x.k)}</b><em data-notr>${esc(g(() => pn(m, l.pick), l.pick))} <i>·</i> ${O(l.odds)}</em><small class="qn-cb">Combinada de ${x.n}</small></span><span class="qn-d">${N(x.c.stake)} <i>→</i> <b>${N(x.c.stake * x.c.odds)}</b>${coin()}</span></div>`).join('');
+  }
+  // para "Amigos en este partido" (app.js): las lineas de las combinadas de k en este partido
+  function comboSt(m, k) {
+    return combosDe(m.id).filter((x) => x.k === k).map((x) => x.ls.map((l) => `<span class="st rev">${esc(g(() => pn(m, l.pick), l.pick))} ${O(l.odds)} · ${N(x.c.stake)}${coin()} <span class="qn-cb">Combinada de ${x.n}</span></span>`).join(' '));
+  }
   function bloque(m) {
+    const cb = combosDe(m.id).slice().sort((a, b) => b.c.stake - a.c.stake);
     const bs = apuestasDe(m.id).slice().sort((a, b) => b.stake - a.stake), rs = retosDe(m.id).slice().sort((a, b) => (a.st === 'accepted' ? 0 : 1) - (b.st === 'accepted' ? 0 : 1) || b.stake - a.stake);
     const k = gente(m.id), tot = dinero(m.id);
     if (!k.length) return `<section class="qn qn-vacio"><div class="qn-h"><span class="lab">Quién está dentro</span></div><p class="hint">Nadie ha apostado a este partido.</p></section>`;
     return `<section class="qn"><div class="qn-h"><span class="lab">Quién está dentro</span><span class="qn-t"><span>${k.length} ${k.length === 1 ? 'amigo' : 'amigos'}</span><i>·</i><b>${N(tot)}${coin()}</b></span></div>
       ${rs.map((c) => cartaReto(c, { sinPartido: true })).join('')}
-      ${bs.length ? `<div class="qn-bs">${bs.map((x) => apuesta(m, x)).join('')}</div>` : ''}
+      ${bs.length || cb.length ? `<div class="qn-bs">${bs.map((x) => apuesta(m, x)).join('')}${cb.map((x) => combo(m, x)).join('')}</div>` : ''}
     </section>`;
   }
 
-  window.GM_QUIEN = { cartaReto, gente, hay, ord, dia, caras, retoLinea, vivoPie, fila, centro, previa, bloque, retosDe };
+    // las combinadas de todos llegan despues del primer pintado (y cada 30 s como mucho): se piden al abrir Directo o Partidos y, al llegar
+  // algo nuevo, se repinta la pantalla (como hace Inicio)
+  const pantalla = () => g(() => S.scr, '');
+  function pide() { if (window.GM_CMB && ['directo', 'partidos', 'inicio'].includes(pantalla())) g(() => GM_CMB.carga()) }
+  setInterval(pide, 4000); setTimeout(pide, 1500);
+  addEventListener('gm:cmb-datos', () => { if (['directo', 'partidos'].includes(pantalla()) && !document.activeElement?.matches('input,textarea') && !pv) g(() => render()) });
+
+  window.GM_QUIEN = { combosDe, comboSt, cartaReto, gente, hay, ord, dia, caras, retoLinea, vivoPie, fila, centro, previa, bloque, retosDe };
 })();
