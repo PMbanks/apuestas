@@ -5,6 +5,13 @@
 // es siempre el mismo (como el de Juegos): aunque Juegos o la app repinten, las cartas ya puestas y sus animaciones siguen.
 // Directo: bjm_pulso por Supabase Realtime (cualquier cambio de la mesa) + un temporizador al vencer cada plazo (la llamada a
 // bjm_estado es la que hace avanzar la ronda) + un sondeo corto de respaldo. Todo para cuando la mesa no se ve.
+// Levantarse (PM 04-11: "que se pueda quitar en la mesa"): con el boton de abajo o tocando tu asiento. Si aun no se ha repartido, te
+// levantas al momento y la base te devuelve lo apostado (bjm_levantarse, db/048). Si tienes una mano en juego NO se abandona: queda
+// apuntado y te levantas en cuanto acaba la mano (la juegas tu o se planta sola si se acaba tu tiempo, y cobras lo que toque, como
+// cualquiera). Asi nadie pierde una mano por irse ni deja colgada la ronda. Si cierras la app, la base te levanta al minuto (db/040).
+// Fluidez (PM 04-11: "que este mas fluido"): los controles se parchean (no se rehacen con innerHTML), los textos cambian el nodo de
+// texto, lo que ya se sabe se pinta antes de que conteste la base (apostar, quitar, plantarse, levantarse) y al pedir carta sale ya
+// una carta boca abajo que se da la vuelta cuando llega. Un estado igual al que ya se ve no repinta nada.
 'use strict';
 (function () {
   const SUIT = ['♠', '♥', '♦', '♣'], RANK = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -14,7 +21,8 @@
   let ctx = null, el = null, hooks = {}, D = null, err = null;
   const T = { off: 0 };
   const S = { stake: Math.max(1, parseInt(lee('bj-stake'), 10) || 10), ocupa: false, aviso: '', anim: 0, pend: null, chan: null, on: false,
-    tPoll: 0, tPlazo: 0, tRt: 0, tic: 0, ultima: 0, cargando: false, otra: false, ctlSig: '', dn: null, pd: 0, saldo: null, refrescar: false, turnoVisto: null };
+    tPoll: 0, tPlazo: 0, tRt: 0, tic: 0, ultima: 0, cargando: false, otra: false, ctlSig: '', dn: null, pd: 0, saldo: null, refrescar: false, turnoVisto: null,
+    firma: '', opt: false, salir: false, saliendo: false, ph: null, chip: 0, tChip: 0, med: '' };
   let V = { ronda: null, seats: {}, banca: [], tapada: false };                    // lo que ya esta pintado (para animar solo lo nuevo)
 
   /* ---------- utilidades ---------- */
@@ -93,9 +101,11 @@
         <div class="bjm-hw"><div class="bjm-hand" data-h></div><span class="bjm-pill num" data-v></span></div>
         <div class="bjm-spot"><span class="bjm-chs" data-ch></span><b class="bjm-amt num" data-a></b></div>
         <button class="bjm-who" data-bjm="sit" data-v="${s}" aria-label="Asiento ${s}"><span class="bjm-avw"><svg class="bjm-ring" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22.5"/></svg><span class="bjm-av" data-av></span><b class="bjm-nb num" data-nb></b></span><span class="bjm-nm" data-n data-notr></span></button>
+        <button class="bjm-chip" data-bjm="salir" data-chip hidden>Levantarse</button>
       </div>`;
     }
     el.innerHTML = `<div class="bjm-felt" data-felt>
+        <div class="bjm-luz" data-luz aria-hidden="true"></div>
         <div class="bjm-shoe" data-shoe aria-hidden="true"><i></i><i></i><i></i><i></i></div>
         <div class="bjm-dealer"><div class="bjm-dl"><span class="lab">Banca</span><b class="num" data-dv></b></div><div class="bjm-hand bjm-dh" data-dh></div></div>
         <div class="bjm-mid" data-mid><svg class="bjm-arc" viewBox="0 0 600 44" preserveAspectRatio="xMidYMin meet" aria-hidden="true"><defs><path id="bjm-arco" d="M30 8 Q300 44 570 8"/></defs><text><textPath href="#bjm-arco" startOffset="50%" text-anchor="middle">Blackjack paga 3 a 2 · La banca se planta en 17</textPath></text></svg><div class="bjm-cd" data-cd><svg viewBox="0 0 64 64" aria-hidden="true"><circle class="bjm-cd-b" cx="32" cy="32" r="29"/><circle class="bjm-cd-f" data-cdr cx="32" cy="32" r="29"/></svg><b class="num" data-cdn></b></div>
@@ -158,12 +168,27 @@
     const lim = viva ? ms(r.estado === 'apuestas' ? r.cierra : r.plazo) : 0;
     if (lim) S.tPlazo = setTimeout(carga, Math.max(150, lim - ahora() + 250 + Math.random() * 400));
   }
-  function recibe(d) {
-    if (S.anim > 0) { S.pend = d; return }                                       // se pinta al acabar lo que se esta moviendo
-    const antes = D;
+  const firma = (d) => JSON.stringify(d, (k, v) => (k === 'now' ? undefined : v)) + fase(d);
+  // opt: lo pinta el propio navegador antes de que conteste la base (se corrige con lo que conteste)
+  function recibe(d, opt) {
+    if (S.anim > 0) { if (!opt) S.pend = d; return }                            // se pinta al acabar lo que se esta moviendo
+    const antes = D, f = opt ? '' : firma(d);
+    if (!opt && antes && !S.opt && f === S.firma) { D = d; if (S.saldo == null || !S.refrescar) S.saldo = d.saldo; centro(); pintaCtl(); sale(); return }
+    S.firma = f; S.opt = !!opt;
     D = d;
-    if (S.saldo == null || !S.refrescar) S.saldo = d.saldo;
+    if (!opt && (S.saldo == null || !S.refrescar)) S.saldo = d.saldo;
     pinta(d, !antes);
+    sale();
+  }
+  // tienes una mano que aun se esta jugando (ya repartida y la ronda sin acabar)
+  const enJuego = (d) => !!(d && d.ronda && d.ronda.estado === 'turnos' && misManos(d).length);
+  // te ibas a levantar al acabar la mano: en cuanto acaba (y se ha visto el resultado), te levantas
+  function sale() {
+    if (!S.salir || S.saliendo || S.ocupa || S.anim > 0 || S.refrescar || !D || !visible()) return;
+    if (!misAsientos(D).length) { S.salir = false; pintaCtl(); return }
+    if (enJuego(D)) return;
+    S.saliendo = true;
+    Promise.resolve(accion('levantarse', null)).finally(() => { S.saliendo = false; S.salir = false; pintaCtl() });
   }
 
   /* ---------- pintar ---------- */
@@ -176,7 +201,33 @@
     el.querySelector('[data-ctl]').innerHTML = '';
     S.ctlSig = '';
   }
-  function setTxt(n, t, cls) { if (!n) return; if (n._t !== t) { n._t = t; n.textContent = t; tr(n) } if (cls !== undefined && n._c !== cls) { n._c = cls; n.className = cls } }
+  // un texto nuevo cambia el nodo de texto que ya hay (no quita ni pone nodos: asi el navegador no recalcula toda la pagina)
+  function setTxt(n, t, cls) {
+    if (!n) return;
+    if (n._t !== t) { n._t = t; const f = n.firstChild; if (f && f.nodeType === 3 && !f.nextSibling && t) f.nodeValue = t; else n.textContent = t; tr(n) }
+    if (cls !== undefined && n._c !== cls) { n._c = cls; n.className = cls }
+  }
+  // deja un nodo como el html nuevo con los mismos nodos donde se puede: solo cambian atributos y textos
+  function parchea(box, h) {
+    const nuevo = document.createElement('div'); nuevo.innerHTML = h; tr(nuevo);
+    igual(box, nuevo);
+  }
+  function igual(a, b) {
+    const ca = a.childNodes, cb = [...b.childNodes];
+    for (let i = 0; i < cb.length; i++) {
+      const x = ca[i], y = cb[i];
+      if (!x) { a.appendChild(y); continue }
+      if (x.nodeType !== y.nodeType || x.nodeName !== y.nodeName || (x.nodeType === 1 && x.getAttribute('data-bjm') !== y.getAttribute('data-bjm'))) { a.replaceChild(y, x); continue }
+      if (x.nodeType === 3) { if (x.nodeValue !== y.nodeValue) x.nodeValue = y.nodeValue; continue }
+      if (x.nodeType !== 1) continue;
+      x._t = undefined; x._c = undefined; x._h = undefined;                       // las cachitas de setTxt/setHtml ya no valen
+      for (const at of [...x.attributes]) if (!y.hasAttribute(at.name)) x.removeAttribute(at.name);
+      for (const at of [...y.attributes]) if (x.getAttribute(at.name) !== at.value) { if (at.name === 'value' && x === document.activeElement) continue; x.setAttribute(at.name, at.value); if (at.name === 'value' && 'value' in x) x.value = at.value }
+      if ('disabled' in x && x.disabled !== y.hasAttribute('disabled')) x.disabled = y.hasAttribute('disabled');
+      igual(x, y);
+    }
+    while (ca.length > cb.length) a.removeChild(a.lastChild);
+  }
   function setHtml(n, h) { if (!n) return; if (n._h !== h) { n._h = h; n.innerHTML = h; tr(n) } }
 
   // ancho de carta segun el sitio que hay: asientos ocupados anchos, libres estrechos
@@ -193,13 +244,17 @@
       const hmax = Math.max(34, Math.floor(((felt.clientHeight || 520) - 286) / 3.0));
       cw = Math.min(cw, hmax); dw = Math.min(dw, Math.round(hmax * 1.14));
     }
-    felt.style.setProperty('--cw', cw + 'px');
-    felt.style.setProperty('--dw', dw + 'px');
-    felt.style.setProperty('--sw', Math.round(sw) + 'px');
-    felt.classList.toggle('bjm-dos', filas === 2);
-    felt.classList.toggle('bjm-movil', mv);
-    felt.classList.toggle('bjm-chica', cw < 48);
-    requestAnimationFrame(() => { const mid = el.querySelector('[data-mid]'); if (mid) felt.classList.toggle('bjm-apretada', mid.clientHeight < 100) });
+    const k = [cw, dw, Math.round(sw), filas, mv, w, felt.clientHeight].join('|');
+    if (k !== S.med) {                                                            // las variables del tapete afectan a todos sus hijos: solo si cambian
+      S.med = k;
+      felt.style.setProperty('--cw', cw + 'px');
+      felt.style.setProperty('--dw', dw + 'px');
+      felt.style.setProperty('--sw', Math.round(sw) + 'px');
+      felt.classList.toggle('bjm-dos', filas === 2);
+      felt.classList.toggle('bjm-movil', mv);
+      felt.classList.toggle('bjm-chica', cw < 48);
+      requestAnimationFrame(() => { const mid = el.querySelector('[data-mid]'); if (mid) felt.classList.toggle('bjm-apretada', mid.clientHeight < 100) });
+    }
     return { cw, dw, sw };
   }
   // las cartas de una mano se pisan lo justo para caber en su asiento
@@ -215,7 +270,7 @@
     const manos = rid ? d.manos : [], sinAnim = inicial || quieto();
     const { cw, dw, sw } = medidas(d);
     // ronda nueva o mesa sin ronda: fuera las cartas de antes
-    if (V.ronda !== rid) { barre(!sinAnim && V.ronda != null); V = { ronda: rid, seats: {}, banca: [], tapada: false } }
+    if (V.ronda !== rid) { barre(!sinAnim && V.ronda != null); V = { ronda: rid, seats: {}, banca: [], tapada: false }; S.ph = null }
     const antes = new Map();
     if (!sinAnim) el.querySelectorAll('.bjm-card').forEach((c) => antes.set(c, c.getBoundingClientRect()));
     asientos(d, manos, f, sinAnim);
@@ -224,7 +279,12 @@
     for (const m of manos) {
       const seat = el.querySelector(`.bjm-seat[data-s="${m.asiento}"]`), hand = seat.querySelector('[data-h]');
       const prev = V.seats[m.asiento] || [];
-      m.cartas.forEach((c, i) => { if (i >= prev.length) { const e = cartaEl(c); hand.appendChild(e); nuevas.push({ e, s: m.asiento, i }) } });
+      m.cartas.forEach((c, i) => {
+        if (i < prev.length) return;
+        const ph = S.ph;
+        if (ph && ph.s === m.asiento && ph.n === i && ph.e.isConnected) { S.ph = null; destapa(ph.e, c, sinAnim ? 0 : Math.max(0, ph.t + VUELO - Date.now()), sinAnim); return }
+        const e = cartaEl(c); hand.appendChild(e); nuevas.push({ e, s: m.asiento, i });
+      });
       V.seats[m.asiento] = m.cartas.slice();
       ajusta(hand, cw, m.cartas.length, Math.max(cw, sw - 10));
     }
@@ -292,7 +352,7 @@
           S.refrescar = false; S.saldo = D ? D.saldo : S.saldo;
           try { pintaCtl(true); if (ctx.refresh) ctx.refresh(); S.rankRonda = d.ronda && d.ronda.id; if (hooks.rank) hooks.rank() } catch (e) { console.warn('bjmesa', e) }
         }
-        if (S.pend && S.anim === 0) { const p = S.pend; S.pend = null; recibe(p) }
+        if (S.pend && S.anim === 0) { const p = S.pend; S.pend = null; recibe(p) } else sale();
       }, dur);
     } else {
       if (hayFin) resultados(d, manos, false, !inicial);
@@ -345,24 +405,29 @@
     for (let s = 1; s <= NA; s++) if (!mv || ocup.includes(s) || manos.some((x) => x.asiento === s)) vis.push(s);
     for (let s = 1; s <= NA; s++) {
       const seat = el.querySelector(`.bjm-seat[data-s="${s}"]`), a = d.asientos.find((x) => x.asiento === s), m = manos.find((x) => x.asiento === s);
-      const m0 = manos.find((x) => x.asiento === s), yo = (a && a.player === ctx.me) || (!a && m0 && m0.player === ctx.me), turno = r && r.estado === 'turnos' && r.turno === s && f === 'turnos';
+      const m0 = manos.find((x) => x.asiento === s), ido = !a && !!m0 && f === 'fin';   // se levanto y su mano ya acabo: el asiento queda libre
+      const yo = (a && a.player === ctx.me) || (!a && !ido && m0 && m0.player === ctx.me), turno = r && r.estado === 'turnos' && r.turno === s && f === 'turnos';
       const k = vis.indexOf(s), mid = (vis.length - 1) / 2, dist = vis.length > 1 ? Math.abs(k - mid) / Math.max(1, mid) : 0;
       seat.style.setProperty('--y', (mv ? 0 : -Math.round(dist * dist * 34)) + 'px');
       seat.hidden = k < 0;
       const dueno = a ? a.player : (m0 ? m0.player : '');                                // sin asiento pero con mano viva: sigue siendo de quien la jugo
-      seat.classList.toggle('libre', !dueno); seat.classList.toggle('yo', !!yo); seat.classList.toggle('turno', !!turno);
+      seat.classList.toggle('libre', !dueno); seat.classList.toggle('yo', !!yo); seat.classList.toggle('turno', !!turno); seat.classList.toggle('ido', ido);
       seat.classList.toggle('activa', !!(turno && yo));
       const nb = seat.querySelector('[data-nb]'), orden = ordenMio(d);
       setTxt(nb, yo && orden.length > 1 ? String(orden.indexOf(s) + 1) : '');
       seat.classList.toggle('con', !!m); seat.classList.toggle('fuera', !!(a && !m && f === 'turnos'));
       const who = seat.querySelector('.bjm-who');
-      who.disabled = !!dueno && (!yo || !a);
-      who.dataset.bjm = a ? (yo ? 'yo' : 'nada') : dueno ? 'nada' : 'sit';
+      who.disabled = !!dueno && (!yo || !a) && !ido;
+      const que = a ? (yo ? 'yo' : 'nada') : dueno && !ido ? 'nada' : 'sit';
+      if (who.dataset.bjm !== que) who.dataset.bjm = que;
+      // tu asiento: al tocarlo sale debajo "Levantarse" unos segundos
+      const chip = seat.querySelector('[data-chip]'), verChip = !!(yo && a && S.chip === s);
+      if (chip.hidden === verChip) { chip.hidden = !verChip; if (verChip) setTxt(chip, enJuego(d) ? 'Levantarse al acabar' : 'Levantarse') }
       const avEl = seat.querySelector('[data-av]'), nm = seat.querySelector('[data-n]');
-      const pk = dueno;
-      if (avEl._p !== pk) { avEl._p = pk; avEl.innerHTML = dueno ? av(dueno) : '<span class="bjm-plus">+</span>' }
+      const pk = ido ? '' : dueno;
+      if (avEl._p !== pk) { avEl._p = pk; avEl.innerHTML = pk ? av(pk) : '<span class="bjm-plus">+</span>' }
       nm.toggleAttribute('data-notr', !!dueno && !yo);
-      setTxt(nm, dueno ? nom(dueno) : 'Libre');
+      setTxt(nm, dueno && !ido ? nom(dueno) : 'Libre');
       // la apuesta en su circulo
       const ch = seat.querySelector('[data-ch]'), amt = seat.querySelector('[data-a]');
       const tot = m ? m.total : 0;
@@ -418,7 +483,8 @@
   }
   function brillo(fuerte, asiento) {
     const felt = el.querySelector('[data-felt]'), s = el.querySelector(`.bjm-seat[data-s="${asiento}"]`);
-    felt.animate([{ filter: 'brightness(1)' }, { filter: `brightness(${fuerte ? 1.32 : 1.16})` }, { filter: 'brightness(1)' }], { duration: 900 });
+    const luz = el.querySelector('[data-luz]');
+    if (luz) luz.animate([{ opacity: 0 }, { opacity: fuerte ? 1 : 0.6 }, { opacity: 0 }], { duration: 900, easing: 'ease-out' });
     const fr = felt.getBoundingClientRect(), sr = s ? s.getBoundingClientRect() : null;
     confeti(felt, { n: fuerte ? 110 : 50, x: sr ? sr.left - fr.left + sr.width / 2 : null, y: sr ? sr.top - fr.top + sr.height * 0.4 : null, cols: fuerte ? ['#f2c14e', '#ffdc85', '#fff'] : undefined });
   }
@@ -566,8 +632,14 @@
       const tope = todas && !puedeOtra ? (mios.length >= max ? `<p class="bjm-note">Ya tienes ${max} manos</p>` : '<p class="bjm-note">La mesa está llena</p>') : '';
       der = `<div class="bjm-acc">${principal}${nota}${otra}${tope}</div>`;
     }
-    const pie = `<div class="bjm-pie">${miasHtml(d)}<div class="bjm-pd">${sentado ? `<button class="bjm-lev" data-bjm="levantarse" ${S.ocupa ? 'disabled' : ''}>Levantarse</button>` : ''}<span class="bjm-cnt"><b class="num">${d.asientos.length}</b> <span>de 7 asientos</span></span></div></div>`;
+    const pie = `<div class="bjm-pie">${miasHtml(d)}<div class="bjm-pd">${sentado ? salirHtml(d) : ''}<span class="bjm-cnt"><b class="num">${d.asientos.length}</b> <span>de 7 asientos</span></span></div></div>`;
     return `${arriba}<div class="bjm-row">${izq ? `<div class="bjm-l">${izq}</div>` : ''}${der}</div><p class="jg-aviso bjm-aviso" data-aviso>${esc(S.aviso)}</p>${pie}`;
+  }
+  // levantarse: al momento si no tienes mano en juego (lo apostado sin repartir se devuelve); con mano en juego, al acabarla
+  function salirHtml(d) {
+    if (S.salir) return `<div class="bjm-salir"><p><b>Te levantas al acabar la mano</b><span>Juegas la mano y cobras lo que toque</span></p><button class="bjm-lev q" data-bjm="quedarse">Me quedo</button></div>`;
+    const vuelve = fase(d) === 'apuestas' ? misManos(d).reduce((a, m) => a + m.total, 0) : 0;
+    return `<div class="bjm-salir"><button class="bjm-lev" data-bjm="salir" ${S.ocupa ? 'disabled' : ''}>${enJuego(d) ? 'Levantarse al acabar la mano' : 'Levantarse'}</button>${vuelve ? `<span class="bjm-sv">Te devolvemos <b class="num">${N(vuelve)}</b></span>` : ''}</div>`;
   }
   function pintaCtl(fuerza) {
     if (!el || !D || err) return;
@@ -575,7 +647,7 @@
     if (foco && box.contains(foco) && foco.matches('input')) return;            // escribiendo la cantidad: no se toca
     const h = ctlHtml(D), sig = h + '|' + saldo();
     if (!fuerza && sig === S.ctlSig) return;
-    S.ctlSig = sig; box.innerHTML = h; tr(box); tic();
+    S.ctlSig = sig; parchea(box, h); tic();
   }
   function goN() { el.querySelectorAll('[data-bjm-n]').forEach((e) => (e.textContent = N(S.stake))) }
 
@@ -584,6 +656,13 @@
     const a = b.dataset.bjm;
     if (a === 'q') return cantidad(b.dataset.v);
     if (a === 'nada') return;
+    // tu asiento: enseña (o esconde) "Levantarse" debajo unos segundos
+    if (a === 'yo') { const s = +(b.dataset.v || b.closest('.bjm-seat').dataset.s); S.chip = S.chip === s ? 0 : s; clearTimeout(S.tChip); if (S.chip) S.tChip = setTimeout(() => { S.chip = 0; if (D) asientos(D, D.ronda && fase(D) !== 'espera' ? D.manos : [], fase(D), true) }, 4000); if (D) asientos(D, D.ronda && fase(D) !== 'espera' ? D.manos : [], fase(D), true); return }
+    if (a === 'quedarse') { S.salir = false; pintaCtl(); return }
+    if (a === 'salir') { S.chip = 0; if (D && enJuego(D)) { S.salir = true; pintaCtl(); if (D) asientos(D, D.manos, fase(D), true); return } return accion('levantarse', b) }
+    return accion(a, b);
+  }
+  async function accion(a, b) {
     if (S.ocupa) return;
     const fn = { apostar: 'bjm_apostar', otra: 'bjm_otra_mano', quitar: 'bjm_quitar', sit: 'bjm_sentarse', levantarse: 'bjm_levantarse', pedir: 'bjm_pedir', plantar: 'bjm_plantarse', doblar: 'bjm_doblar' }[a];
     if (!fn) return;
@@ -594,8 +673,13 @@
       args = { p_stake: S.stake };
     }
     if (a === 'sit') args = { p_asiento: +b.dataset.v };                       // un asiento libre: te sientas (otra mano mas, hasta 3)
-    if (a === 'quitar' && b.dataset.v) args = { p_asiento: +b.dataset.v };
-    S.ocupa = true; S.aviso = ''; pintaCtl(true);
+    if (a === 'quitar' && b && b.dataset.v) args = { p_asiento: +b.dataset.v };
+    S.ocupa = true; S.aviso = '';
+    if (b && b.isConnected) b.classList.add('pulsado');
+    const prev = S.saldo;
+    try { if (S.anim === 0 && D) { const o = optimista(a, args); if (o) recibe(o, true) } } catch (e) { console.warn('bjmesa', e) }
+    if (a === 'pedir' || a === 'doblar') boca(a);
+    pintaCtl();
     const t0 = Date.now();
     try {
       const { data, error } = await ctx.db.rpc(fn, args);
@@ -604,8 +688,59 @@
       S.saldo = data.saldo; S.ocupa = false;
       recibe(data);
       if (a === 'apostar' || a === 'otra' || a === 'quitar' || a === 'doblar' || a === 'levantarse') { if (ctx.refresh && !S.anim) ctx.refresh() }
-    } catch (e) { S.ocupa = false; falla(e); carga() }
-    finally { S.ocupa = false; pintaCtl() }
+    } catch (e) {
+      S.ocupa = false; S.saldo = prev;
+      if (S.ph) { S.ph.e.remove(); S.ph = null }
+      if (S.opt) { S.firma = ''; S.opt = false }
+      falla(e); carga();
+    }
+    finally { S.ocupa = false; if (b) b.classList.remove('pulsado'); pintaCtl() }
+  }
+  // lo que la base va a contestar y ya se sabe: se pinta al momento (si la base dice otra cosa, se corrige al contestar)
+  function optimista(a, args) {
+    const d = JSON.parse(JSON.stringify(D)), me = ctx.me, f = fase(d), ahoraIso = new Date(ahora()).toISOString();
+    const libre = () => { for (let s = 1; s <= NA; s++) if (!d.asientos.some((x) => x.asiento === s)) return s; return null };
+    if (a === 'apostar' || a === 'otra') {
+      if (f !== 'espera' && f !== 'fin' && f !== 'apuestas') return null;
+      const enRonda = f === 'apuestas' ? d.manos.filter((m) => m.player === me).map((m) => m.asiento) : [];
+      let s = a === 'apostar' ? (d.mios || []).find((x) => !enRonda.includes(x)) : null;
+      if (s == null) { s = libre(); if (s == null) return null; d.asientos.push({ asiento: s, player: me }); d.asientos.sort((x, y) => x.asiento - y.asiento); d.mios = [...(d.mios || []), s].sort((x, y) => x - y) }
+      if (f !== 'apuestas') { d.ronda = { id: 'yo', estado: 'apuestas', cierra: new Date(ahora() + (d.cfg.apuestas || 12) * 1000).toISOString(), repartida: null, turno: null, plazo: null, fin_at: null, banca: [], tapada: false, valor_banca: 0 }; d.manos = [] }
+      d.manos.push({ asiento: s, player: me, stake: args.p_stake, total: args.p_stake, cartas: [], valor: 0, estado: 'apuesta', doblada: false, auto: false, resultado: null, pago: 0 });
+      d.manos.sort((x, y) => x.asiento - y.asiento);
+      S.saldo = saldo() - args.p_stake;
+      return d;
+    }
+    if (a === 'quitar' && f === 'apuestas') {
+      const fuera = d.manos.filter((m) => m.player === me && (args.p_asiento == null || m.asiento === args.p_asiento));
+      S.saldo = saldo() + fuera.reduce((x, m) => x + m.total, 0);
+      d.manos = d.manos.filter((m) => !fuera.includes(m));
+      if (!d.manos.length) d.ronda = null;
+      return d;
+    }
+    if (a === 'levantarse' && !enJuego(d)) {
+      if (f === 'apuestas') { const mias = d.manos.filter((m) => m.player === me); S.saldo = saldo() + mias.reduce((x, m) => x + m.total, 0); d.manos = d.manos.filter((m) => m.player !== me); if (!d.manos.length) d.ronda = null }
+      d.asientos = d.asientos.filter((x) => x.player !== me); d.mios = []; d.yo = null;
+      return d;
+    }
+    if (a === 'plantar' && f === 'turnos') {
+      const m = d.manos.find((x) => x.asiento === d.ronda.turno && x.player === me); if (!m) return null;
+      m.estado = 'plantada';
+      const sig = d.manos.find((x) => x.asiento > m.asiento && x.estado === 'juega');
+      if (sig) { d.ronda.turno = sig.asiento; d.ronda.plazo = new Date(ahora() + (d.cfg.turno || 15) * 1000).toISOString() }
+      return d;
+    }
+    return null;
+  }
+  // pedir o doblar: la carta sale ya boca abajo hacia tu mano y se da la vuelta cuando la base dice cual es
+  function boca(a) {
+    if (!D || S.anim > 0 || quieto()) return;
+    const m = turnoMio(D); if (!m || m.estado !== 'juega') return;
+    const seat = el.querySelector(`.bjm-seat[data-s="${m.asiento}"]`), hand = seat && seat.querySelector('[data-h]'); if (!hand) return;
+    const e = cartaEl(null); hand.appendChild(e);
+    const { cw, sw } = medidas(D); ajusta(hand, cw, m.cartas.length + 1, Math.max(cw, sw - 10));
+    vuela(e, 0, false); setTimeout(() => suena('carta'), 80);
+    S.ph = { s: m.asiento, n: m.cartas.length, e, t: Date.now() };
   }
   function cantidad(v) {
     const sal = Math.max(0, saldo());
