@@ -14,7 +14,7 @@
     'Elige cuántas minas y cuánto pones. Cada casilla buena sube el multiplicador; retírate antes de pisar una mina.': 'Pick how many mines and how much you bet. Every safe tile raises the multiplier; cash out before you hit a mine.',
     'Abre una casilla': 'Open a tile', 'Pon una cantidad': 'Enter an amount', 'Preparando el tablero…': 'Getting the board ready…', 'Todavía no ha jugado nadie': 'Nobody has played yet',
     'Las minas se deciden al empezar y quedan cerradas con este hash. Al acabar sale la semilla: sha256(semilla:casillas) tiene que dar el hash.': 'The mines are decided when you start and locked with this hash. When the game ends the seed is revealed: sha256(seed:tiles) must give the hash.',
-    'Tabla de multiplicadores': 'Multiplier table',
+    'Tabla de multiplicadores': 'Multiplier table', 'Cobrado': 'Cashed out', 'Mina': 'Mine',
   });
 
   let el = null, hooks = {}, D = null, err = null;
@@ -55,8 +55,8 @@
         </div>
         <div class="mn-board" data-board>${celdas}<div class="mn-flash" data-flash></div></div>
         <p class="mn-msg" data-msg></p>
-        <span class="lab mn-lt">${t('Tabla de multiplicadores')}</span>
-        <div class="mn-lad" data-lad></div>
+        <div class="mn-lt"><span class="lab">${t('Tabla de multiplicadores')}</span><span class="mn-lt2 num" data-ltk></span></div>
+        <div class="mn-lad" data-lad><div class="mn-lad-in" data-ladin></div></div>
         <div class="mn-rec" data-ult></div>
       </div>`;
     engancha(el, saldo, () => boton());
@@ -135,12 +135,40 @@
     const nx = k < 25 - m ? mult(m, k + 1) : null;
     txt(el.querySelector('[data-nx]'), nx && !fin ? '×' + X(nx) : '·');
   }
+  // PM 05-11 ("hazlo mas bonito"): la tabla es una pista de pasos, uno por casilla buena, con el color del multiplicador como en el
+  // crash (blanco, oro, naranja, verde, cian). El paso en el que estas brilla con lo que cobras si te retiras; el siguiente late con lo
+  // que cobrarias; la pista se desliza sola hasta el paso actual. Al acabar se queda como acabo (cobrado o la mina en el paso siguiente).
+  const PARADAS = [[1, [244, 242, 236]], [2, [242, 193, 78]], [5, [255, 140, 56]], [10, [43, 212, 125]], [30, [77, 224, 255]]];
+  function colorX(m) {
+    let i = 0; while (i < PARADAS.length - 2 && m >= PARADAS[i + 1][0]) i++;
+    const [a, ca] = PARADAS[i], [b, cb] = PARADAS[i + 1], u = Math.min(1, Math.max(0, (m - a) / (b - a)));
+    return 'rgb(' + ca.map((v, j) => Math.round(v + (cb[j] - v) * u)).join(',') + ')';
+  }
   function escalera() {
-    const p = partida(), cur = enJuego(), m = cur ? p.minas : S.m, k = cur ? p.abiertas.length : 0, max = Math.min(25 - m, 24);
+    const p = partida(), cur = enJuego(), fin = !!(p && !cur && S.finVisto === p.id && p.minas === S.m);
+    const m = cur || fin ? p.minas : S.m, k = cur || fin ? p.abiertas.length : 0, max = Math.min(25 - m, 24), st = cur || fin ? p.stake : stake.v;
+    const boom = fin && p.boom != null;
     let h = '';
-    for (let i = 1; i <= max; i++) h += `<span class="${i <= k ? 'ok' : i === k + 1 && cur ? 'sig' : ''}"><small>${i}</small><b class="num">×${X(mult(m, i))}</b></span>`;
-    const L = el.querySelector('[data-lad]');
-    if (html(L, h)) { const s = L.querySelector('.sig') || L.querySelector('.ok:last-of-type'); if (s) L.scrollLeft = Math.max(0, s.offsetLeft - L.clientWidth / 2) }
+    for (let i = 1; i <= max; i++) {
+      const x = mult(m, i), ahora = (cur || (fin && !boom)) && i === k, sig = cur && i === k + 1, pum = boom && i === k + 1;
+      const cls = (i <= k ? 'ok' : '') + (ahora ? ' cur' : '') + (sig ? ' sig' : '') + (pum ? ' boom' : '') + (fin ? ' fin' : '');
+      const tag = ahora ? t(fin ? 'Cobrado' : 'Si te retiras') : sig ? t('Siguiente casilla') : pum ? t('Mina') : '';
+      const pay = ahora ? N(fin ? p.pago : Math.floor(st * x)) : sig ? N(Math.floor(st * x)) : '';
+      h += `<div class="mn-st ${cls}" style="--c:${colorX(x)}"><i class="mn-tag">${tag}</i><span class="mn-dot"><b class="num">${pum ? '✕' : i}</b></span><b class="num mn-sx">×${X(x)}</b>${pay ? `<em class="num">${pay}${coin()}</em>` : ''}</div>`;
+    }
+    txt(el.querySelector('[data-ltk]'), cur || fin ? (en() ? `${k} of ${max}` : `${k} de ${max}`) : (en() ? `up to ×${X(mult(m, max))}` : `hasta ×${X(mult(m, max))}`));
+    html(el.querySelector('[data-ladin]'), h); centra();
+  }
+  // lleva la pista al paso actual: se desliza con transform (se queda aunque la app descuelgue y vuelva a colgar el nodo); si la pista
+  // aun no tiene ancho (nodo fuera de la pagina), lo hace el ResizeObserver en cuanto lo tenga
+  function centra() {
+    const L = el && el.querySelector('[data-lad]'), I = L && L.firstElementChild; if (!I) return;
+    if (!L._ro && window.ResizeObserver) { L._ro = new ResizeObserver(() => centra()); L._ro.observe(L) }
+    if (!L.clientWidth) return;
+    const s = I.querySelector('.cur') || I.querySelector('.sig') || I.querySelector('.boom');
+    const x = s ? Math.max(0, Math.min(I.scrollWidth - L.clientWidth, Math.round(s.offsetLeft + s.offsetWidth / 2 - L.clientWidth / 2))) : 0;
+    const tr = `translate3d(${-x}px,0,0)`;
+    if (I.style.transform !== tr) I.style.transform = tr;
   }
   function boton() {
     const b = el.querySelector('[data-mn="go"]'), az = el.querySelector('[data-mn="azar"]'), p = partida();
@@ -244,7 +272,7 @@
     montar(hueco, c, h) {
       J.ctx = c; hooks = h || {};
       if (!el) crea();
-      if (hueco && hueco !== el) hueco.replaceWith(el);
+      if (hueco && hueco !== el) { hueco.replaceWith(el); centra() }
       if (S.saldo == null && c.saldo != null) S.saldo = c.saldo;
       if (!S.ult) { S.ult = GM_JX.ultimas('minas', J); el.querySelector('[data-ult]').replaceWith(S.ult.el); S.ult.el.classList.add('mn-rec') }
       S.ult.arranca();
