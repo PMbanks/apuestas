@@ -25,6 +25,7 @@
     'Mejores ganadores': 'Best winners', 'Cobrado entre apostado': 'Paid out over staked', 'Esta semana': 'This week', 'Siempre': 'All time',
     'Mejores cuotas acertadas': 'Longest odds landed', 'Nadie ha ganado todavía': 'Nobody has won yet', 'cuota más alta': 'longest odds', 'Cargando…': 'Loading…',
     'La cuota más alta que ha acertado cada uno': 'The longest odds each player has landed', 'Ganó con la cuota más alta': 'Won at the longest odds',
+    'cobras': 'pays', 'Últimas 12 carreras': 'Last 12 races', 'Más': 'More', 'Última': 'Latest',
   });
   const DIST = 1200, TSLOW = 0.3;
 
@@ -70,6 +71,7 @@
         <div class="cb-flash" data-flash></div>
         <div class="cb-cdw" data-cdw></div>
         <div class="cb-podio" data-podio></div>
+        <div class="cb-vig"></div>
       </div>
       <div class="cb-abajo">
         <div class="cb-side">
@@ -79,11 +81,11 @@
           <div class="cb-mias" data-mias></div>
         </div>
         <div class="cb-main">
-          <div class="cb-lh"><span class="lab" data-lt></span><span class="cb-lt2" data-lt2></span></div>
+          <div class="cb-lh"><h3 class="cb-h" data-lt></h3><span class="cb-lt2 num" data-lt2></span></div>
           <div class="cb-lista" data-lista></div>
-          <span class="lab cb-sec">${t('Ganadores')}</span>
+          <div class="cb-lh cb-sec"><h3 class="cb-h">${t('Ganadores')}</h3><span class="cb-lt2">${t('Últimas 12 carreras')}</span></div>
           <div class="cb-hist" data-hist></div>
-          <div class="cb-mejw"><div class="cb-lh cb-sec"><span class="lab">${t('Mejores ganadores')}</span><span class="cb-lt2" data-mejs></span></div><div class="cb-mej" data-mej></div></div>
+          <div class="cb-mejw"><div class="cb-lh cb-sec"><h3 class="cb-h">${t('Mejores ganadores')}</h3><span class="cb-lt2" data-mejs></span></div><div class="cb-mej" data-mej></div></div>
           <div data-ult></div>
           <p class="cb-fair" data-fair></p>
         </div>
@@ -301,7 +303,7 @@
     const mias = (r.apuestas || []).filter((a) => a.player === J.ctx.me);
     const cobra = mias.filter((a) => a.caballo === P.orden[0]).reduce((s, a) => s + Math.floor(a.stake * a.cuota), 0), puso = mias.reduce((s, a) => s + a.stake, 0);
     const mio = mias.length ? `<p class="cb-pm ${cobra ? 'win' : 'lose'}">${cobra ? (en() ? `You collect ${N(cobra)}` : `Cobras ${N(cobra)}`) : (en() ? `You lose ${N(puso)}` : `Pierdes ${N(puso)}`)}${coin()}</p>` : '';
-    html(el.querySelector('[data-podio]'), `<div class="cb-pd">${P.orden.slice(0, 3).map((n, i) => { const c = cab(r, n); return `<div class="cb-pp p${i + 1}">${seda(c, 'gr')}<b>${esc(c.nombre)}</b><small class="num">${en() ? ['1st', '2nd', '3rd'][i] : i + 1 + 'º'} · ×${X(c.cuota)}</small></div>` }).join('')}</div>${mio}`);
+    html(el.querySelector('[data-podio]'), `<div class="cb-pd">${P.orden.slice(0, 3).map((n, i) => { const c = cab(r, n); return `<div class="cb-pp p${i + 1}"><i class="cb-pl num">${en() ? ['1st', '2nd', '3rd'][i] : i + 1 + 'º'}</i>${seda(c, 'gr')}<b>${esc(c.nombre)}</b><small class="num">×${X(c.cuota)}</small></div>` }).join('')}</div>${mio}`);
     if (S.sono[r.id] !== 2 && S.ult) { setTimeout(() => S.ult.refresca(), 4000); setTimeout(() => mejores(true), 4200) }
     if (mias.length && S.sono[r.id] !== 2) {
       S.sono[r.id] = 2; const neto = cobra - puso;
@@ -362,23 +364,28 @@
     txt(el.querySelector('[data-lt2]'), `${t('Carrera')} ${r.id}`);
     const tot = (r.apuestas || []).reduce((s, a) => s + a.stake, 0) || 1;
     const fav = Math.min(...(r.caballos || []).map((c) => c.cuota)), alta = Math.max(...(r.caballos || []).map((c) => c.cuota));
+    // PM 05-11: cada caballo es una tarjeta con su color: nombre, cuota grande, quien va con el (el bote de cada caballo es la linea de
+    // abajo, en su color) y el boton con lo que cobras si gana.
     html(el.querySelector('[data-lista]'), (r.caballos || []).map((c) => {
       const ap = (r.apuestas || []).filter((a) => a.caballo === c.n), suma = ap.reduce((s, a) => s + a.stake, 0);
       const quien = [...new Set(ap.map((a) => a.player))];
       const mio = ap.filter((a) => a.player === J.ctx.me).reduce((s, a) => s + a.stake, 0);
-      return `<div class="cb-row ${mio ? 'mio' : ''}">${seda(c)}<span class="cb-rn"><b>${esc(c.nombre)}</b>${c.cuota === fav ? `<em>${en() ? 'favourite' : 'favorito'}</em>` : c.cuota === alta ? `<em class="alta">${t('cuota más alta')}</em>` : ''}<i class="cb-pool"><u style="width:${(suma / tot * 100).toFixed(1)}%"></u></i>${quien.length ? `<span class="cb-quien">${quien.map((u) => { const st = ap.filter((a) => a.player === u).reduce((s2, a) => s2 + a.stake, 0); return `<span class="cb-qp ${u === J.ctx.me ? 'me' : ''}">${J.av(u)}<b>${esc(J.nom(u))}</b><i class="num">${N(st)}</i></span>` }).join('')}</span>` : ''}</span>
-        <span class="cb-rq">${suma ? `<small class="num">${N(suma)}${coin()}</small>` : ''}</span>
-        <b class="num cb-cu ${c.cuota === alta ? 'alta' : ''}">×${X(c.cuota)}</b>
-        <button type="button" class="cb-go" data-cb data-v="${c.n}" ${abierta && !S.ocupa ? '' : 'disabled'}>${abierta ? `<span>${mio ? (en() ? 'More' : 'Más') : t('Apostar')}</span> <b class="num">${N(stake.v)}</b>` : t('En carrera')}</button></div>`;
+      const tag = c.cuota === fav ? `<em>${en() ? 'favourite' : 'favorito'}</em>` : c.cuota === alta ? `<em class="alta">${t('cuota más alta')}</em>` : '';
+      const gente = quien.map((u) => { const st = ap.filter((a) => a.player === u).reduce((s2, a) => s2 + a.stake, 0); return `<span class="cb-qp ${u === J.ctx.me ? 'me' : ''}">${J.av(u)}<b>${esc(J.nom(u))}</b><i class="num">${N(st)}</i></span>` }).join('');
+      return `<div class="cb-row ${mio ? 'mio' : ''} ${c.cuota === alta ? 'alta' : ''}" style="--c1:${c.color};--c2:${c.color2}">${seda(c, 'md')}<span class="cb-rn"><b>${esc(c.nombre)}</b>${tag}</span>
+        <span class="cb-rq"><b class="num cb-cu">×${X(c.cuota)}</b>${suma ? `<small class="num">${N(suma)}${coin()}</small>` : ''}</span>
+        <span class="cb-quien">${gente}</span>
+        <button type="button" class="cb-go" data-cb data-v="${c.n}" ${abierta && !S.ocupa ? '' : 'disabled'}>${abierta ? `<span class="cb-gl">${mio ? t('Más') : t('Apostar')} <b class="num">${N(stake.v)}</b></span><span class="cb-gp">${t('cobras')} <b class="num">${N(Math.floor(stake.v * c.cuota))}</b></span>` : `<span class="cb-gl">${t('En carrera')}</span>`}</button>
+        <i class="cb-pool"><u style="width:${(suma / tot * 100).toFixed(1)}%"></u></i></div>`;
     }).join(''));
   }
   function mias() {
     const r = D.ronda, ap = (r && r.apuestas || []).filter((a) => a.player === J.ctx.me);
-    html(el.querySelector('[data-mias]'), ap.length ? `<span class="lab">${t('Tus apuestas')}</span>${ap.map((a) => { const c = cab(r, a.caballo); return `<div class="cb-mi">${seda(c)}<span>${esc(c.nombre)}</span><b class="num">${N(a.stake)}</b><i class="num">→ ${N(Math.floor(a.stake * a.cuota))}</i></div>` }).join('')}` : '');
+    html(el.querySelector('[data-mias]'), ap.length ? `<span class="lab">${t('Tus apuestas')}</span>${ap.map((a) => { const c = cab(r, a.caballo); return `<div class="cb-mi" style="--c1:${c.color}">${seda(c)}<span>${esc(c.nombre)}<small class="num">×${X(a.cuota)}</small></span><b class="num">${N(a.stake)}</b><i class="num">→ ${N(Math.floor(a.stake * a.cuota))}</i></div>` }).join('')}` : '');
   }
   function hist() {
     const h = (D.historial || []).slice(0, 12), top = h.length ? Math.max(...h.map((x) => +x.caballo.cuota || 0)) : 0;
-    html(el.querySelector('[data-hist]'), h.length ? h.map((x) => { const es = +x.caballo.cuota === top && top >= 5; return `<span class="cb-hw ${es ? 'cb-tope' : ''}" title="${esc(x.caballo.nombre)} ×${X(x.caballo.cuota)}${es ? ' · ' + esc(t('Ganó con la cuota más alta')) : ''}">${seda(x.caballo)}<small class="num">×${X(x.caballo.cuota)}</small></span>` }).join('') : `<p class="cb-v">${t('Nadie ha apostado todavía')}</p>`);
+    html(el.querySelector('[data-hist]'), h.length ? h.map((x, i) => { const es = +x.caballo.cuota === top && top >= 5; return `<span class="cb-hw ${es ? 'cb-tope' : ''} ${i ? '' : 'ult'}" title="${esc(x.caballo.nombre)} ×${X(x.caballo.cuota)}${es ? ' · ' + esc(t('Ganó con la cuota más alta')) : ''}"><i>${i ? '' : t('Última')}</i>${seda(x.caballo, 'md')}<small class="num">×${X(x.caballo.cuota)}</small><em>${esc(x.caballo.nombre)}</em></span>` }).join('') : `<p class="cb-v">${t('Nadie ha apostado todavía')}</p>`);
   }
   function justo(r) {
     const p = el.querySelector('[data-fair]');
@@ -427,16 +434,16 @@
     let h = `<div class="cb-per">${['semana', 'siempre'].map((k) => `<button type="button" data-cbm="${k}" class="${M.per === k ? 'on' : ''}">${t(k === 'semana' ? 'Esta semana' : 'Siempre')}</button>`).join('')}</div>`;
     if (!d) h += `<p class="cb-v">${t('Cargando…')}</p>`;
     else if (d.tipo === 'ratio') {
-      const l = d.ratio.slice(0, 8);
-      h += l.length ? l.map((x, i) => `<div class="cb-mr ${x.player === me ? 'me' : ''} ${x.apuestas < 3 ? 'poco' : ''}"><b class="num cb-mrk">${i + 1}</b>${J.av(x.player)}<span class="cb-mrn"><b>${esc(J.nom(x.player))}</b><em class="num">${en()
+      const l = d.ratio.slice(0, 8), top = Math.max(1, ...l.map((x) => +x.ratio || 0));
+      h += l.length ? `<div class="cb-mrs">${l.map((x, i) => `<div class="cb-mr ${x.player === me ? 'me' : ''} ${x.apuestas < 3 ? 'poco' : ''}"><b class="num cb-mrk ${i < 3 ? 'm' + (i + 1) : ''}">${i + 1}</b>${J.av(x.player)}<span class="cb-mrn"><b>${esc(J.nom(x.player))}</b><em class="num">${en()
           ? `${N(x.cobrado)} back from ${N(x.apostado)} · ${x.aciertos} of ${x.apuestas} won${x.mejor_cuota ? ' · best ×' + X(x.mejor_cuota) : ''}`
-          : `cobra ${N(x.cobrado)} de ${N(x.apostado)} · ${x.aciertos} de ${x.apuestas} acertadas${x.mejor_cuota ? ' · mejor ×' + X(x.mejor_cuota) : ''}`}</em></span><b class="num cb-rt ${x.ratio >= 1 ? 'win' : x.ratio > 0 ? '' : 'lose'}">×${X(x.ratio)}</b></div>`).join('')
+          : `cobra ${N(x.cobrado)} de ${N(x.apostado)} · ${x.aciertos} de ${x.apuestas} acertadas${x.mejor_cuota ? ' · mejor ×' + X(x.mejor_cuota) : ''}`}</em><i class="cb-mbar ${x.ratio >= 1 ? 'win' : ''}"><u style="width:${Math.max(2, Math.min(100, (+x.ratio || 0) / top * 100)).toFixed(1)}%"></u></i></span><b class="num cb-rt ${x.ratio >= 1 ? 'win' : x.ratio > 0 ? '' : 'lose'}">×${X(x.ratio)}</b></div>`).join('')}</div>`
         : `<p class="cb-v">${t('Nadie ha ganado todavía')}</p>`;
       const ac = (d.aciertos || []).slice(0, 5);
-      if (ac.length) h += `<span class="lab cb-sec2">${t('Mejores cuotas acertadas')}</span>` + ac.map((a) => `<div class="cb-ma ${a.player === me ? 'me' : ''}">${seda({ n: a.n, color: a.color || cab(D && D.ronda, a.n).color, color2: a.color2 || cab(D && D.ronda, a.n).color2 })}<span class="cb-mrn"><b>${esc(a.caballo)}</b><em>${J.av(a.player)}<span>${esc(J.nom(a.player))}</span><span class="num">${N(a.stake)} → ${N(a.pago)}</span></em></span><b class="num cb-rt win">×${X(a.cuota)}</b></div>`).join('');
+      if (ac.length) h += `<h4 class="cb-h2">${t('Mejores cuotas acertadas')}</h4><div class="cb-mas">` + ac.map((a) => { const cc = { n: a.n, color: a.color || cab(D && D.ronda, a.n).color, color2: a.color2 || cab(D && D.ronda, a.n).color2 }; return `<div class="cb-ma ${a.player === me ? 'me' : ''}" style="--c1:${cc.color}">${seda(cc, 'md')}<span class="cb-mrn"><b>${esc(a.caballo)}</b><em>${J.av(a.player)}<span>${esc(J.nom(a.player))}</span></em><em class="num">${N(a.stake)} → ${N(a.pago)}</em></span><b class="num cb-rt">×${X(a.cuota)}</b></div>` }).join('') + '</div>';
     } else {
       const l = d.ratio.slice(0, 8);
-      h += l.length ? l.map((x, i) => `<div class="cb-mr ${x.player === me ? 'me' : ''}"><b class="num cb-mrk">${i + 1}</b>${J.av(x.player)}<span class="cb-mrn"><b>${esc(J.nom(x.player))}</b><em class="num">${en() ? `biggest win +${N(x.mayor)} · ${x.jugadas} bets` : `su mejor premio +${N(x.mayor)} · ${x.jugadas} apuestas`}</em></span><b class="num cb-rt win">×${X(x.mayor_x)}</b></div>`).join('')
+      h += l.length ? `<div class="cb-mrs">${l.map((x, i) => `<div class="cb-mr ${x.player === me ? 'me' : ''}"><b class="num cb-mrk ${i < 3 ? 'm' + (i + 1) : ''}">${i + 1}</b>${J.av(x.player)}<span class="cb-mrn"><b>${esc(J.nom(x.player))}</b><em class="num">${en() ? `biggest win +${N(x.mayor)} · ${x.jugadas} bets` : `su mejor premio +${N(x.mayor)} · ${x.jugadas} apuestas`}</em></span><b class="num cb-rt win">×${X(x.mayor_x)}</b></div>`).join('')}</div>`
         : `<p class="cb-v">${t('Nadie ha ganado todavía')}</p>`;
     }
     html(box, h);
