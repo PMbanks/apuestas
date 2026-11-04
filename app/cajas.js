@@ -1268,7 +1268,9 @@
       const tf = tkFase(ph), key = `${ph.r}|${ph.landed}|${ph.gd != null}|${ph.gdOk}|${tf}`;
       if (key !== REP.key || !root.querySelector('[data-tr],[data-gd],[data-rs]')) {
         // el ticket: al pararse en el suena; al acabar su vuelta, el premio de lo que ha salido
-        if (tf === 'h' && !REP.key.endsWith('|h')) suena('cobrar');
+        // (como al abrir una caja: el Diamante suena a premio, el Dorado un clic)
+        const tkPara = tf === 'h' && !REP.key.endsWith('|h');
+        if (tkPara) suena(b.drops.some((d) => d.round === ph.r && esTk(d.inv) && d.inv.bonus.tipo === 'diamante') ? 'cobrar' : 'clic');
         if (tf === 'ok' && REP.key.endsWith('|s')) { const ds = (D.bats.get(REP.id) || { drops: [] }).drops.filter((d) => d.round === ph.r && esTk(d.inv)); const m = ds.reduce((a, d) => Math.max(a, ORDEN.length - 1 - ORDEN.indexOf(item(d.inv.item).rarity)), 0); suena({ tipo: 'caja-final', rareza: ORDEN[ORDEN.length - 1 - m], vol: 0.7 }) }
         // PM 04-11: "no suena cuando se abren las cajas en battles". Un solo sonido por ronda (no uno por ruleta): al frenar, el del mejor premio de
         // la ronda (con ticket suena el del ticket, mas arriba y al acabar su vuelta); y un solo tic compartido mientras gira (abajo)
@@ -1281,6 +1283,8 @@
         }
         if (ph.r !== REP.rt) { REP.rt = ph.r; REP.tk0 = null }
         REP.key = key; pinta(true);
+        // PM 05-11 (tickets en batallas): si la ruleta del ticket no se ve (en el movil, con 4 o 6 jugadores queda abajo), se acerca sola
+        if (tkPara) { const el = root.querySelector('.bv-reel.tk-on'), r = el && el.getBoundingClientRect(); if (r && (r.top < 56 || r.bottom > innerHeight - 72)) try { el.scrollIntoView({ block: 'center', behavior: quieto() ? 'auto' : 'smooth' }) } catch {} }
       }
       else if (!ph.landed) {
         const k = 1 - Math.pow(1 - Math.min(1, ph.t / SPIN()), 4);
