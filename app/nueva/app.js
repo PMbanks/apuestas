@@ -223,7 +223,7 @@ const img = (src, cls = '') => (src ? `<img class="${cls}" src="${esc(src)}" alt
 const logo = (m, side) => img(side === 'a' ? m.la : m.lb, m.s === 'u' ? 'face' : 'tl');
 const form = (s) => `<span class="fm">${[...s].map((c) => `<b class="${c === 'G' ? 'g' : c === 'E' ? 'e' : ''}">${c}</b>`).join('')}</span>`;
 const board = () => M.filter((m) => (m.status === 'scheduled' || m.live || (m.s === 'r' && m.status === 'live')) && (m.live || Date.parse(m.at) > NOW - (m.s === 'r' ? 8 : 4) * 3600e3) && Date.parse(m.at) < NOW + (m.s === 'u' ? 72 : m.s === 'r' ? 120 : 8) * DAY);
-const inLeague = (m) => S.lg === 'fav' ? sigo(m) : S.lg === 'all' ? true : S.lg === 'top' ? m.live || m.s === 'v' || m.s === 'b' || (m.s === 'r' && (S.f === 'r' || ['race', 'quali', 'sprint'].includes(m.fk))) || (m.s === 'c' ? 'sa'.includes(m.tier || 'x') : m.s === 'u' ? !!m.tag : TOP.has(m.lg)) || whoOn(m.id).length > 0 : m.lg === S.lg;
+const inLeague = (m) => S.lg === 'fav' ? sigo(m) : S.lg === 'all' ? true : S.lg === 'top' ? m.live || m.s === 'v' || m.s === 'b' || (m.s === 'r' && (S.f === 'r' || ['race', 'quali', 'sprint'].includes(m.fk))) || (m.s === 'c' ? 'sa'.includes(m.tier || 'x') : m.s === 'u' ? !!m.tag : TOP.has(m.lg)) || whoOn(m.id).length > 0 || (window.GM_QUIEN ? GM_QUIEN.combosDe(m.id).length > 0 : false) : m.lg === S.lg;
 const filtered = () => board().filter((m) => (S.f === 'all' || m.s === S.f) && inLeague(m)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
 const groups = (list) => { const g = new Map(); for (const m of list) { const k = DK(m.at); if (!g.has(k)) g.set(k, []); g.get(k).push(m) } return [...g.values()].map((ms) => (window.GM_QUIEN ? GM_QUIEN.dia(ms) : ms)) };
 const dayLab = (t) => (today(t) ? `HOY · ${WD(t)}` : `${WD(t)} · ${MO(t)}`);
@@ -334,7 +334,19 @@ function espnHtml(m, d) {
   return h;
 }
 const LANG = { en: 'inglés', es: 'español', pt: 'portugués', fr: 'francés', de: 'alemán', ru: 'ruso', zh: 'chino', ja: 'japonés', ko: 'coreano', tr: 'turco', pl: 'polaco', it: 'italiano', ar: 'árabe', th: 'tailandés', vi: 'vietnamita' };
-const mainTv = (m) => (m.tv || []).find((v) => v.u && v.main && /^(en|es)$/.test(v.l)) || (m.tv || []).find((v) => v.u && /^(en|es)$/.test(v.l)) || (m.tv || []).find((v) => v.u);
+// "Ver en directo" (PM 04-11): UN enlace a la emision OFICIAL de la lista de streams de PandaScore (la guarda el sync en details.tv; nunca
+// otras webs). Primero la principal en español o inglés, luego cualquiera en esos idiomas, luego la principal en otro idioma; a igualdad,
+// español antes que inglés y Twitch/YouTube antes que Kick. Solo https, y solo partidos que no han acabado.
+const tvPts = (v) => (/^(en|es)$/.test(v.l) ? 100 : 0) + (v.main ? 50 : 0) + (v.l === 'es' ? 10 : 0) + (/^(Twitch|YouTube)$/.test(v.n) ? 5 : 0);
+const mainTv = (m) => (m.status === 'final' || m.status === 'canceled' ? null : [...(m.tv || [])].filter((v) => v.u && /^https:\/\//i.test(v.u)).sort((a, b) => tvPts(b) - tvPts(a))[0] || null);
+const tvLang = (v) => (v.l && !/^(en|es)$/.test(v.l) ? ' · ' + (LANG[v.l] || v.l) : '');
+// la pastilla de la lista (filas en vivo de Partidos): el mismo enlace, corto; el clic no abre la ficha
+// en la tarjeta de la tira En directo (que es un boton entero) va como span con role de enlace: un enlace dentro de un boton no vale
+const tvFila = (m, tarjeta) => { const v = (m.s === 'v' || m.s === 'c') && m.live ? mainTv(m) : null; if (!v) return '';
+  const ic = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>', tt = `title="Ver en directo · ${esc(v.n)}${esc(tvLang(v))}"`;
+  return tarjeta ? `<span class="row-tv" role="link" tabindex="0" data-tvu="${esc(v.u)}" ${tt}>${ic}<span>Ver en directo</span></span>` : `<a class="row-tv" href="${esc(v.u)}" target="_blank" rel="noopener" ${tt}>${ic}<span>Ver</span></a>` };
+document.addEventListener('click', (e) => { const t = e.target.closest && e.target.closest('[data-tvu]'); if (!t) return; e.preventDefault(); e.stopPropagation(); window.open(t.dataset.tvu, '_blank', 'noopener') }, true);
+document.addEventListener('keydown', (e) => { const t = e.target.closest && e.target.closest('[data-tvu]'); if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.stopPropagation(); window.open(t.dataset.tvu, '_blank', 'noopener') } }, true);
 const tvHtml = (tv, m) => {
   const link = (v) => (v.u ? `<a class="tv" href="${esc(v.u)}" target="_blank" rel="noopener">${esc(v.n)}${v.l && !/^(en|es)$/.test(v.l) ? ' · ' + esc(LANG[v.l] || v.l) : ''} ↗</a>` : `<span class="tv">${esc(v.n)}</span>`);
   const col = (ls, t) => { const x = tv.filter((v) => ls.includes(v.l)); return x.length ? `<div><span class="lab">${t}</span>${x.map(link).join('')}</div>` : '' };
@@ -829,7 +841,7 @@ function vivoCard(m) {
   const sc = String(m.score || '0:0'), [g, ...resto] = sc.split(/\s+/), det = resto.join(' ').replace(/^[·(]\s*|\)$/g, ''), ws = whoOn(m.id), tot = ws.reduce((a, w) => a + w.stake, 0);
   const lado = (s) => `<span class="lvc-t ${s}">${logo(m, s)}<b>${esc(s === 'a' ? m.a : m.b)}</b>${vN(m, s)}</span>`;
   return `<button class="lvc" data-vivo="${m.id}" style="--sc:${SPC[m.s]}">
-    <span class="lvc-h"><i class="lvc-dot"></i><em>EN VIVO</em><img class="lvc-sp" src="${SP[m.s][1]}" alt=""><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt="" loading="lazy"><span class="lvc-lg">${esc(corto(L[m.lg]?.[0] || ''))}</span></span>
+    <span class="lvc-h"><i class="lvc-dot"></i><em>EN VIVO</em><img class="lvc-sp" src="${SP[m.s][1]}" alt=""><img class="tl" src="${esc(L[m.lg]?.[1] || '')}" alt="" loading="lazy"><span class="lvc-lg">${esc(corto(L[m.lg]?.[0] || ''))}</span>${tvFila(m, true)}</span>
     <span class="lvc-m">${lado('a')}<span class="lvc-sc">${m.vivo ? vL(m) || '<strong>·</strong>' : `<strong>${esc(g)}</strong>${det ? `<small>${esc(det)}</small>` : m.s === 'v' || m.s === 'c' ? '<small>mapas</small>' : ''}`}</span>${lado('b')}</span>
     <span class="lvc-w">${window.GM_QUIEN && GM_QUIEN.hay(m.id) ? GM_QUIEN.vivoPie(m) : ws.length ? `<span class="lvc-avs">${ws.slice(0, 5).map((w) => av(w.f, 'sm')).join('')}</span><span>${ws.length} ${ws.length === 1 ? 'apuesta' : 'apuestas'} · ${N(tot)}${coin()} en juego</span>` : '<span class="lvc-nadie">Nadie ha apostado</span>'}<span class="lvc-ir">Ver partido ›</span></span>
   </button>`;
@@ -903,7 +915,7 @@ function partidos() {
       h += `<div class="row fc ${S.foc === m.id ? 'on' : ''} ${m.live && m.vivo?.k === 'e' ? 'cv' : ''} ${m.live ? 'envivo' : ''} ${qn.cls}" data-foc="${m.id}" style="--i:${Math.min(ri++, 14)}">
         <span class="llw" title="${esc(L[m.lg][0])} · ${SP[m.s][0]}"><img class="ll" src="${esc(L[m.lg][1])}" alt="" loading="lazy">${m.s === 'c' || m.s === 'v' ? `<img class="lls" src="${SP[m.s][1]}" alt="">` : ''}</span>
         <span class="tms"><span class="tm">${logo(m, 'a')}<span>${esc(m.a)}</span>${esFav(favK(m.s, m.a)) || esFav('pa:' + m.id) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${dailyTag(m)}${vNf(m, 'a')}</span><span class="tm">${logo(m, 'b')}<span>${esc(m.b)}</span>${esFav(favK(m.s, m.b)) ? `<i class="fav-i">${IC_FAV}</i>` : ''}${vNf(m, 'b')}</span>${m.vivo?.k === 'e' ? vL(m) : ''}</span>
-        <span class="t">${tiempoFila(m)}</span>
+        <span class="t">${tiempoFila(m)}${tvFila(m)}</span>
         ${qn.movil}
         <span class="who">${window.GM_QUIEN ? qn.who : [...new Set(whoOn(m.id).map((x) => x.f))].map((k) => av(k, 'sm')).join('')}</span>
         ${window.GM_F1 && GM_F1.es(m) ? GM_F1.cuotasFila(m, open) : ['1', 'X', '2'].map((p) => oddBtn(m, p, open)).join('')}
@@ -926,7 +938,7 @@ function ficha(m) {
     ${window.GM_ACTIVOS ? GM_ACTIVOS.arriba(m) : ''}
     <div class="d-meta"><span class="d-sp"><img src="${SP[m.s][1]}" alt="">${SP[m.s][0]}</span><img src="${esc(L[m.lg][1])}" alt="">${esc(L[m.lg][0])}${m.stage ? ' · ' + esc(m.stage) : ''}</div>
     ${m.tour ? `<button class="d-brk" data-act="bracket"><svg viewBox="0 0 24 24"><path d="M4 5h5v5H4zM4 14h5v5H4zM9 7.5h3v9H9M12 12h3M15 9.5h5v5h-5z"/></svg>Ver bracket</button>` : ''}
-    ${mainTv(m) ? `<a class="d-ver" href="${esc(mainTv(m).u)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>${m.live ? 'Verlo en directo' : 'Dónde verlo'} · ${esc(mainTv(m).n)}${mainTv(m).l ? ' en ' + esc(LANG[mainTv(m).l] || mainTv(m).l) : ''}</a>` : ''}
+    ${mainTv(m) ? `<a class="d-ver" href="${esc(mainTv(m).u)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>${m.live ? 'Ver en directo' : 'Emisión oficial'} · ${esc(mainTv(m).n)}${mainTv(m).l ? ' en ' + esc(LANG[mainTv(m).l] || mainTv(m).l) : ''}</a>` : ''}
     <div class="d-cd">${m.live ? `En vivo · ${esc(m.score || '')}` : `${WD(m.at)} ${DD(m.at)} ${MO(m.at)} · ${HM(m.at)} · empieza en ${CD(m.at)}`}${m.venue ? ' · ' + esc(m.venue) : ''}</div>
     <div class="d-vs"><button class="d-side" data-side="a" title="Ver ficha">${logo(m, 'a')}<h3>${esc(m.a)}</h3><small>Ver ficha</small></button><span class="x">vs</span><button class="d-side" data-side="b" title="Ver ficha">${logo(m, 'b')}<h3>${esc(m.b)}</h3><small>Ver ficha</small></button></div>
     <div class="d-favs">${favBtn(favEq(m, 'a'))}${favBtn(favPa(m), 'Seguir el partido')}${favBtn(favEq(m, 'b'))}</div>
@@ -956,8 +968,8 @@ function ficha(m) {
   if (rts.length) h += `<div class="d-retos">${retosHtml(rts, '')}</div>`;
   const ws = whoOn(m.id);
   h += `<div class="d-fr"><span class="lab">Amigos en este partido</span>${[...F].sort((a, b) => (b.me - a.me)).map((f) => {
-    const x = ws.filter((y) => y.f === f.id);
-    const st = !x.length ? `<span class="st">aún no ha apostado</span>` : x.map((y) => (y.p ? `<span class="st rev">${esc(pn(m, y.p))} ${O(y.o)} · ${N(y.stake)}${coin()}</span>` : `<span class="st">${LOCK}${N(y.stake)} · se ve a las ${HM(m.at)}</span>`)).join(' ');
+    const x = ws.filter((y) => y.f === f.id), cx = window.GM_QUIEN ? GM_QUIEN.comboSt(m, f.id) : [];
+    const st = !x.length && !cx.length ? `<span class="st">aún no ha apostado</span>` : x.map((y) => (y.p ? `<span class="st rev">${esc(pn(m, y.p))} ${O(y.o)} · ${N(y.stake)}${coin()}</span>` : `<span class="st">${LOCK}${N(y.stake)} · se ve a las ${HM(m.at)}</span>`)).concat(cx).join(' ');
     return `<div class="ifr">${av(f.id)}<span class="nm">${esc(f.n)}</span>${st}</div>` }).join('')}</div></section>`;
   return h;
 }
@@ -2077,6 +2089,7 @@ async function savePerfil(k, v) {
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lang]'); if (!b || !window.GM_LANG) return; GM_LANG.set(b.dataset.lang); location.reload(); }, true);
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lga]'); if (!b) return; const n = document.querySelector('[data-lgs]'); n?.scrollBy({ left: +b.dataset.lga * n.clientWidth * 0.8, behavior: 'smooth' }) });
 document.addEventListener('click', async (e) => {
+  if (e.target.closest('a.row-tv')) return;   // el enlace a la emision oficial: que siga su camino sin abrir la ficha
   if (S.onl && !e.target.closest('.onl')) { S.onl = false; pintaOnline() }
   if (S.pmenu && !e.target.closest('[data-act=pmenu]')) { S.pmenu = false; document.querySelector('.pm-hd.abre')?.classList.remove('abre') }
   const t = e.target.closest('[data-hp],[data-pft],[data-jugmas],[data-abf],[data-abpg],[data-eqv],[data-eqtab],[data-eqpg],[data-vivo],[data-fav],[data-nov],[data-ct],[data-ft],[data-tclaim],[data-bsp],[data-bp],[data-side],[data-bm],[data-dv],[data-dtv],[data-mt],[data-mp],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;

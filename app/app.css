@@ -2380,3 +2380,12 @@ html[data-moneda="vp"] .cn{background-image:url(img/monedas/vp.png)}
 
 /* db/067: "N del mismo partido" junto a "Combinada de N"; en movil no cabe en la linea de arriba (se cortaba) y cada pata ya dice su partido */
 @media (max-width:560px){.lab.ell .mp-tag{display:none}}
+
+/* Ver en directo (PM 04-11): la emision oficial, en la lista de Partidos y en las tarjetas de En directo (solo esports en vivo) */
+.row-tv{display:inline-flex;align-items:center;flex:none;gap:5px;padding:4px 9px 4px 7px;border-radius:999px;background:rgba(145,70,255,.18);color:#c9a8ff;font:700 10px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;cursor:pointer}
+.row-tv:hover{background:rgba(145,70,255,.32);color:#e3d3ff}
+.row-tv svg{width:9px;height:9px;fill:currentColor}
+.row .t .row-tv{margin-top:5px;padding:3px 8px 3px 6px}
+.lvc-h .row-tv{margin-left:auto}
+.lvc-h em{white-space:nowrap}
+.lvc-h .lvc-dot{flex:none}
