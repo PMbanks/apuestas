@@ -302,3 +302,22 @@ html.sin-anim .bjm-seat.activa .bjm-hw{transform:none}
   .bjm-pd{width:100%}
   .bjm-lev{flex:1 1 auto;text-align:center}
 }
+
+/* PM 04-11: levantarse de la mesa (boton de abajo o tocando tu asiento) y una mesa mas fluida */
+.bjm-luz{position:absolute;inset:0;z-index:8;pointer-events:none;opacity:0;background:radial-gradient(70% 60% at 50% 70%,rgba(255,220,133,.22),rgba(242,193,78,.08) 55%,transparent 80%);will-change:opacity}
+.bjm-chip{margin-top:7px;padding:6px 12px;border-radius:999px;background:rgba(13,15,19,.72);font:700 11px/1 var(--sans);letter-spacing:.03em;color:var(--ink);white-space:nowrap;animation:bjm-chip .22s var(--ease) both}
+.bjm-chip:hover{background:rgba(13,15,19,.9);color:var(--acc2)}
+.bjm-chip[hidden]{display:none}
+@keyframes bjm-chip{from{opacity:0;transform:translateY(-4px)}}
+.bjm-seat.ido .bjm-nm{font:500 10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:rgba(244,242,236,.35)}
+.bjm-seat.ido .bjm-who{cursor:pointer}
+.bjm-seat.ido .bjm-hw,.bjm-seat.ido .bjm-res{opacity:.55;transition:opacity .4s}
+.bjm-salir{display:flex;align-items:center;gap:14px;min-width:0}
+.bjm-salir p{display:flex;flex-direction:column;gap:2px;min-width:0}
+.bjm-salir p b{font:700 13px var(--sans);color:var(--acc2)}
+.bjm-salir p span{font:12px var(--mono);color:var(--mute)}
+.bjm-sv{font:12px var(--mono);color:var(--mute);white-space:nowrap}.bjm-sv b{color:var(--soft);font-weight:500}
+.bjm-lev.q{background:none;box-shadow:none;color:var(--soft);text-decoration:underline;text-underline-offset:3px;padding-left:4px;padding-right:4px}
+.bjm .pulsado{transform:scale(.97);filter:brightness(.9)}
+@media (max-width:700px){.bjm-salir{flex:1 1 auto;flex-wrap:wrap;gap:8px 12px}.bjm-salir .bjm-lev:not(.q){flex:1 1 auto}}
+@media (max-width:700px){.bjm-pd{flex-wrap:wrap;row-gap:10px}.bjm-salir{flex:1 1 100%;flex-wrap:nowrap;justify-content:space-between}.bjm-salir p{flex:1 1 auto}.bjm-salir .bjm-lev.q{flex:none}}

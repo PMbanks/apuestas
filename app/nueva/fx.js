@@ -160,11 +160,88 @@ const SON = {
       tono(t + i * 0.16, 'sawtooth', nota(n), nota(n) * 0.96, 0.32, 0.2, { filtro: 'lowpass', fq: 700, ataque: 0.01 });
     });
     tono(t + 0.55, 'sine', 90, 45, 0.5, 0.45);
+  },
+  /* PM 04-11 (ruleta): "que los sonidos esten mejores" */
+  /* ficha de casino: dos golpes secos de arcilla y un cuerpo grave */
+  ficha(t) {
+    [0, 0.05].forEach((d, i) => {
+      soplo(t + d, 0.04, i ? 0.32 : 0.5, 'bandpass', 3600 - i * 500, 2400, 3.5, { ataque: 0.0008 });
+      tono(t + d, 'triangle', 2300 - i * 280, 1700 - i * 200, 0.035, i ? 0.12 : 0.18, { ataque: 0.0008 });
+    });
+    tono(t, 'sine', 380, 240, 0.07, 0.14, { ataque: 0.002 });
+  },
+  /* la mano lanza la bola: un zumbido corto que sube */
+  lanza(t) {
+    soplo(t, 0.5, 0.32, 'bandpass', 900, 3400, 1.6, { ataque: 0.02, pico: 0.1 });
+    tono(t, 'sine', 700, 1400, 0.28, 0.04, { ataque: 0.01 });
+  },
+  /* la bola golpea un traste al bajar: clic metalico muy corto */
+  traste(t) {
+    const j = 1 + (Math.random() - 0.5) * 0.12;
+    tono(t, 'sine', 3400 * j, 2700 * j, 0.022, 0.2, { ataque: 0.0006 });
+    tono(t, 'triangle', 5200 * j, 4600 * j, 0.012, 0.06, { ataque: 0.0006 });
+    soplo(t, 0.014, 0.14, 'highpass', 5200, 5200, 0.7, { ataque: 0.0006 });
+  },
+  /* la bola cae: rebota en los trastes cada vez mas junto y se mete en la casilla con un golpe seco */
+  bolaCae(t) {
+    let x = 0, sep = 0.12, v = 0.4;
+    for (let i = 0; i < 6; i++) {
+      const j = 1 + (Math.random() - 0.5) * 0.1;
+      tono(t + x, 'sine', (3000 - i * 150) * j, (2400 - i * 120) * j, 0.03, v, { ataque: 0.0006 });
+      soplo(t + x, 0.02, v * 0.42, 'bandpass', 4300, 3100, 3, { ataque: 0.0006 });
+      x += sep; sep *= 0.7; v *= 0.8;
+    }
+    soplo(t + x + 0.01, 0.08, 0.45, 'lowpass', 1500, 380, 0.9, { ataque: 0.001 });
+    tono(t + x + 0.01, 'sine', 230, 130, 0.14, 0.4, { ataque: 0.001 });
+    tono(t + x + 0.1, 'triangle', 1980, 1900, 0.06, 0.06, { ataque: 0.002 });
+  },
+  /* monedas que caen (acompana a gana) */
+  monedas(t) {
+    for (let i = 0; i < 9; i++) {
+      const d = 0.05 + i * 0.065 + Math.random() * 0.03, f = 2600 + Math.random() * 1400;
+      tono(t + d, 'sine', f, f * 0.995, 0.16, 0.06, { ataque: 0.001 });
+      tono(t + d, 'sine', f * 2.76, f * 2.75, 0.07, 0.025, { ataque: 0.001 });
+    }
   }
 };
 
 /* limite de frecuencia por sonido (ms) para que llamadas rapidas no saturen */
-const MIN_MS = { tick: 40, casilla: 60, gema: 90, bola: 150, giro: 200, publico: 600, campana: 300, explosion: 250, gana: 300, pierde: 300 };
+const MIN_MS = { tick: 40, casilla: 60, gema: 90, bola: 150, giro: 200, publico: 600, campana: 300, explosion: 250, gana: 300, pierde: 300,
+  ficha: 60, lanza: 300, traste: 45, bolaCae: 400, monedas: 300 };
+
+/* la bola rodando por la pista: ruido filtrado que suena mas fuerte y mas agudo cuanto mas corre. rueda() da { vel(0..1), para() } */
+function rueda() {
+  const nada = { vel() {}, para() {} };
+  if (!listo()) return nada;
+  try {
+    const src = ctx.createBufferSource(); src.buffer = ruido; src.loop = true;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.2; bp.frequency.value = 1100;
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 380;
+    const am = ctx.createGain(); am.gain.value = 0.75;
+    const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 14; lg.gain.value = 0.25;
+    const g = ctx.createGain(); g.gain.value = 0.0001;
+    lfo.connect(lg); lg.connect(am.gain);
+    src.connect(bp); bp.connect(hp); hp.connect(am); am.connect(g); g.connect(master);
+    const t0 = ctx.currentTime; src.start(t0, Math.random() * 1.5); lfo.start(t0);
+    let vivo = true;
+    return {
+      vel(v) {
+        if (!vivo) return;
+        v = Math.max(0, Math.min(1, +v || 0));
+        const t = ctx.currentTime;
+        g.gain.setTargetAtTime(activo ? 0.015 + 0.34 * v * v : 0.0001, t, 0.07);
+        bp.frequency.setTargetAtTime(650 + 2300 * v, t, 0.09);
+        lfo.frequency.setTargetAtTime(7 + 30 * v, t, 0.12);
+      },
+      para(fade = 0.12) {
+        if (!vivo) return; vivo = false;
+        const t = ctx.currentTime;
+        g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0.0001, t, fade / 3);
+        try { src.stop(t + fade + 0.1); lfo.stop(t + fade + 0.1); } catch (e) {}
+      }
+    };
+  } catch (e) { return nada; }
+}
 const ultimo = {};
 
 function galope() {
@@ -324,6 +401,7 @@ function gana_(importe, o = {}) {
       }
     }
     sonido('gana');
+    sonido('monedas');
   } catch (e) { console.warn('fx gana', e); }
 }
 
@@ -339,6 +417,7 @@ function pierde_(importe, o = {}) {
       if (c.r) {
         f.style.left = c.r.left + 'px'; f.style.top = c.r.top + 'px';
         f.style.width = c.r.width + 'px'; f.style.height = c.r.height + 'px';
+        try { f.style.borderRadius = getComputedStyle(el).borderRadius; } catch (e) {}
       } else { f.style.inset = '0'; }
       document.body.appendChild(f);
       setTimeout(() => f.remove(), 750);
@@ -398,12 +477,12 @@ function boton(container) {
 }
 
 const API = {
-  sonido, gana: gana_, pierde: pierde_, giro, boton,
+  sonido, gana: gana_, pierde: pierde_, giro, boton, rueda,
   activo: () => activo,
   silenciar: v => fijar(!v, true)
 };
 try { window.GMFX = API; } catch (e) {}
 
-export { sonido, gana_ as gana, pierde_ as pierde, giro, boton };
+export { sonido, gana_ as gana, pierde_ as pierde, giro, boton, rueda };
 export const activoSonido = () => activo;
 export default API;
