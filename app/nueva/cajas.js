@@ -412,6 +412,7 @@
     pendiente = false;
     if (S.tab !== 'inventario' && S.sel.size) { S.sel.clear(); S.ancla = null }   // la seleccion se queda en el inventario: al salir se limpia
     root.innerHTML = vista();
+    root.classList.toggle('cj-nv-on', S.tab === 'batallas' && !S.bat && !!S.nueva);   // crear batalla: cabecera mas baja (cajas.css)
     // los botones que piden confirmacion (cancelar, salir, vender) se ponen en rojo mientras esperan el segundo toque,
     // tambien el de la batalla abierta
     ponFeed();
@@ -973,29 +974,59 @@
       ${nums.map((i) => (i < 0 ? '<span>…</span>' : `<button class="${i === p ? 'on' : ''}" data-cj="pag" data-v="${i}">${i + 1}</button>`)).join('')}
       <button class="cj-pg next" data-cj="pag" data-v="${p + 1}" ${p >= H.pags - 1 ? 'disabled' : ''} aria-label="Siguiente"></button></nav>`;
   }
+  // Crear batalla (PM 04-11: "para crear se tiene que scrollear mucho"): arriba el modo y la regla en una fila; debajo, a la izquierda,
+  // las cajas con buscador, categorias y paginas (18 por pagina, 9 en el movil) y, a la derecha, la batalla con lo que cuesta y Crear,
+  // siempre a la vista (en el movil es una barra pegada abajo).
+  const enNv = () => !!(window.GM_LANG && GM_LANG.get() === 'en');
+  const LN = (es, eng) => (enNv() ? eng : es);
+  const sinTilde = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const nvPorPag = () => (!window.matchMedia ? 18 : window.matchMedia('(max-width:860px)').matches ? 9 : window.matchMedia('(max-width:1179px)').matches ? 16 : 18);   // 3, 4 o 6 columnas
+  // las cajas de la pagina de ahora: por categoria (nv.g, vacio = todas) y por lo que se busca (con busqueda se mira en todas)
+  function nvLista(nv) {
+    const q = sinTilde(nv.q).trim();
+    return (D.cases || []).filter((c) => (q ? sinTilde(c.name).includes(q) : !nv.g || grupoDe(c) === nv.g));
+  }
+  function nvPick(nv) {
+    const lista = nvLista(nv), per = nvPorPag(), pags = Math.max(1, Math.ceil(lista.length / per)), p = (nv.p = Math.max(0, Math.min(nv.p || 0, pags - 1)));
+    const n = nv.cases.length, vivos = gruposVivos();
+    const pk = (c) => { const k = nv.cases.filter((x) => x === c.id).length; return `<button class="cj-pk ${k ? 'on' : ''}" data-cj="add" data-v="${esc(c.id)}" ${n >= 10 ? 'disabled' : ''} title="${esc(c.name)}">
+      <span class="cj-pk-img">${pic(c.image, 128)}${k ? `<i>${k}</i>` : ''}</span><span class="cj-pk-n" data-notr>${esc(c.name)}</span><span class="cj-pk-p">${N(c.price)}${coin()}</span></button>` };
+    const chips = vivos.length > 1 ? `<nav class="nv-grp" aria-label="${LN('Categorías', 'Categories')}">${[['', LN('Todas', 'All')], ...vivos].map(([k, t]) => `<button class="${(nv.g || '') === k && !nv.q ? 'on' : ''}" data-cj="ngrp" data-v="${k}">${t}</button>`).join('')}</nav>` : '';
+    const nums = [];
+    for (let i = 0; i < pags; i++) if (i === 0 || i === pags - 1 || Math.abs(i - p) <= 1) nums.push(i); else if (nums[nums.length - 1] !== -1) nums.push(-1);
+    const pg = pags > 1 ? `<nav class="cj-pager nv-pager" aria-label="${LN('Páginas', 'Pages')}">
+      <button class="cj-pg prev" data-cj="npag" data-v="${p - 1}" ${p === 0 ? 'disabled' : ''} aria-label="${LN('Anterior', 'Previous')}"></button>
+      ${nums.map((i) => (i < 0 ? '<span>…</span>' : `<button class="${i === p ? 'on' : ''}" data-cj="npag" data-v="${i}">${i + 1}</button>`)).join('')}
+      <button class="cj-pg next" data-cj="npag" data-v="${p + 1}" ${p >= pags - 1 ? 'disabled' : ''} aria-label="${LN('Siguiente', 'Next')}"></button></nav>` : '';
+    return `<div class="nv-z" data-nvz>${chips}${lista.length ? `<div class="cj-pick nv-grid">${lista.slice(p * per, (p + 1) * per).map(pk).join('')}</div>` : `<p class="hint nv-vacio">${LN('Ninguna caja se llama así', 'No box has that name')}</p>`}${pg}</div>`;
+  }
+  const nvRepintaPick = () => {
+    const z = root && root.querySelector('[data-nvz]'); if (!z || !S.nueva) return;
+    const t = document.createElement('div'); t.innerHTML = nvPick(S.nueva); const nuevo = t.firstElementChild; traduce(nuevo); z.replaceWith(nuevo);
+  };
   function vNueva() {
     const nv = S.nueva, tam = tamDe(nv), n = nv.cases.length, cz = loca(nv);
     const cuesta = nv.cases.reduce((a, id) => a + (caja(id).price || 0), 0), falta = cuesta > ctx.saldo;
-    const dos = gruposVivos().length > 1;
-    const pk = (c) => { const k = nv.cases.filter((x) => x === c.id).length; return `<button class="cj-pk ${k ? 'on' : ''}" data-cj="add" data-v="${esc(c.id)}" ${n >= 10 ? 'disabled' : ''} title="${esc(c.name)}">
-      <span class="cj-pk-img">${pic(c.image, 128)}${k ? `<i>${k}</i>` : ''}</span><span class="cj-pk-n" data-notr>${esc(c.name)}</span><span class="cj-pk-p">${N(c.price)}${coin()}</span></button>` };
-    const elegir = dos ? GRUPOS.map(([k, t]) => { const l = D.cases.filter((c) => grupoDe(c) === k); return l.length ? `<h4 class="cj-pk-h">${t}</h4><div class="cj-pick">${l.map(pk).join('')}</div>` : '' }).join('') : `<div class="cj-pick">${D.cases.map(pk).join('')}</div>`;
     // un punto por jugador, agrupados por equipo
     const puntos = (m) => { const eq = m.split('v'); return `<span class="cj-mode-d ${eq.length > 2 ? 'multi' : ''}">${eq.map((k) => `<span>${'<i></i>'.repeat(+k || 1)}</span>`).join(eq.length === 2 ? '<em>vs</em>' : '')}</span>` };
-    return `<button class="cj-back" data-cj="nueva-x">Batallas</button>
-    <section class="cj-new">
-      <header class="cj-new-h"><h2>Nueva batalla</h2><p class="cj-lead">Cada uno abre las mismas cajas y el lado ganador se lleva todas las skins.</p></header>
-      <div class="cj-modes">${FORMATOS.map(([m, t, sub]) => `<button class="cj-mode ${nv.mode === m ? 'on' : ''}" data-cj="modo" data-v="${m}">${puntos(m)}<b>${t}</b><small>${sub}</small></button>`).join('')}</div>
-      <div class="cj-regla ${cz ? 'crazy' : ''}">${seg('regla', [['normal', 'Normal'], ['crazy', 'Crazy']], cz ? 'crazy' : 'normal', 'sm')}
-        <p class="cj-regla-t">${cz ? 'Crazy: gana el lado que saque menos valor.' : 'Normal: gana el lado que saque más valor.'}</p></div>
-      <header class="cj-sec-h"><h3>Cajas</h3><span class="cj-sec-s">Toca una caja para añadir una ronda</span></header>
-      ${elegir}
-      <header class="cj-sec-h"><h3>Rondas</h3><span class="cj-sec-s">${n} de 10</span></header>
-      <div class="cj-rounds">${n ? nv.cases.map((id, i) => `<button class="cj-rnd" data-cj="quita" data-v="${i}" title="Quitar">${pic(caja(id).image, 128)}<span>${i + 1}</span></button>`).join('') : '<span class="hint">Aún sin cajas. Hasta 10 rondas.</span>'}</div>
-      <footer class="cj-new-go">
-        ${n ? `<p class="cj-new-sum"><span class="lab">Cada jugador paga</span><b class="num">${N(cuesta)}</b>${coin()}<em>bote de ${N(cuesta * tam)}</em></p>` : ''}
-        ${n ? `<button class="go" data-cj="crear" ${falta ? 'disabled' : ''}><span>${falta ? 'Sin saldo' : 'Crear por'}</span><b>${N(cuesta)}</b>${coin()}</button>` : ''}
-      </footer>
+    const SUBEN = { 'cara a cara': 'head to head', 'por parejas': 'in pairs', jugadores: 'players', 'tres parejas': 'three pairs', 'por tríos': 'teams of three' };
+    const modos = FORMATOS.map(([m, t, sub]) => { const tt = esc(`${t} ${LN(sub, SUBEN[sub] || sub)}`); return `<button class="nv-mode ${nv.mode === m ? 'on' : ''}" data-cj="modo" data-v="${m}" title="${tt}" aria-label="${tt}">${puntos(m)}<b>${t}</b></button>` }).join('');
+    const rondas = n ? nv.cases.map((id, i) => `<button class="cj-rnd" data-cj="quita" data-v="${i}" title="${LN('Quitar', 'Remove')}">${pic(caja(id).image, 128)}<span>${i + 1}</span></button>`).join('')
+      : `<span class="hint nv-sin">${LN('Toca una caja para añadir una ronda (hasta 10).', 'Tap a box to add a round (up to 10).')}</span>`;
+    return `<section class="cj-new nvx">
+      <header class="nv-h"><button class="cj-back" data-cj="nueva-x">Batallas</button><h2>Nueva batalla</h2><p class="cj-lead">Cada uno abre las mismas cajas y el lado ganador se lleva todas las skins.</p></header>
+      <div class="nv-top"><div class="nv-modes" role="group">${modos}</div>
+        <div class="cj-regla ${cz ? 'crazy' : ''}">${seg('regla', [['normal', 'Normal'], ['crazy', 'Crazy']], cz ? 'crazy' : 'normal', 'sm')}
+          <p class="cj-regla-t">${cz ? 'Crazy: gana el lado que saque menos valor.' : 'Normal: gana el lado que saque más valor.'}</p></div></div>
+      <div class="nv-body">
+        <div class="nv-pick"><input class="nv-q" type="search" data-nv-q value="${esc(nv.q || '')}" placeholder="${LN('Buscar una caja', 'Search a box')}" autocomplete="off" aria-label="${LN('Buscar una caja', 'Search a box')}">${nvPick(nv)}</div>
+        <footer class="cj-new-go nv-go">
+          <div class="nv-sel"><span class="lab">${LN('Tu batalla', 'Your battle')}</span><span class="nv-n">${n} ${n === 1 ? LN('ronda', 'round') : LN('rondas', 'rounds')}<em> ${LN('de 10', 'of 10')}</em></span></div>
+          <div class="cj-rounds nv-rounds">${rondas}</div>
+          ${n ? `<p class="cj-new-sum"><span class="lab">Cada jugador paga</span><b class="num">${N(cuesta)}</b>${coin()}<em>bote de ${N(cuesta * tam)}</em></p>` : ''}
+          <button class="go" data-cj="crear" ${!n || falta ? 'disabled' : ''}><span>${!n ? LN('Elige una caja', 'Pick a box') : falta ? 'Sin saldo' : 'Crear por'}</span>${n && !falta ? `<b>${N(cuesta)}</b>${coin()}` : ''}</button>
+        </footer>
+      </div>
     </section>`;
   }
 
@@ -1232,11 +1263,28 @@
         // el ticket: al pararse en el suena; al acabar su vuelta, el premio de lo que ha salido
         if (tf === 'h' && !REP.key.endsWith('|h')) suena('cobrar');
         if (tf === 'ok' && REP.key.endsWith('|s')) { const ds = (D.bats.get(REP.id) || { drops: [] }).drops.filter((d) => d.round === ph.r && esTk(d.inv)); const m = ds.reduce((a, d) => Math.max(a, ORDEN.length - 1 - ORDEN.indexOf(item(d.inv.item).rarity)), 0); suena({ tipo: 'caja-final', rareza: ORDEN[ORDEN.length - 1 - m], vol: 0.7 }) }
+        // PM 04-11: "no suena cuando se abren las cajas en battles". Un solo sonido por ronda (no uno por ruleta): al frenar, el del mejor premio de
+        // la ronda (con ticket suena el del ticket, mas arriba y al acabar su vuelta); y un solo tic compartido mientras gira (abajo)
+        if (ph.landed && REP.land !== ph.r) {
+          REP.land = ph.r;
+          if (!conTk(b, ph.r)) {
+            const rs = b.drops.filter((d) => d.round === ph.r).map((d) => ORDEN.indexOf(item(d.inv.bonus && d.inv.bonus.orig ? d.inv.bonus.orig.item : d.inv.item).rarity)).filter((i) => i >= 0);
+            if (rs.length) suena({ tipo: 'caja-final', rareza: ORDEN[Math.min(...rs)], vol: 0.8 });
+          }
+        }
+        if (ph.r !== REP.rt) { REP.rt = ph.r; REP.tk0 = null }
         REP.key = key; pinta(true);
       }
       else if (!ph.landed) {
         const k = 1 - Math.pow(1 - Math.min(1, ph.t / SPIN()), 4);
         root.querySelectorAll('[data-tr]').forEach((tr) => { tr.style.transform = `translateY(${(-(+tr.dataset.fin) * k).toFixed(1)}px)` });
+        // un tic cada vez que una carta pasa por la raya (de la primera ruleta, que las demas giran igual); en Rapido y Ultra, mas espaciados
+        const t0 = root.querySelector('[data-tr]');
+        if (t0 && t0.firstElementChild) {
+          const paso = t0.firstElementChild.offsetHeight + (parseFloat(getComputedStyle(t0).rowGap) || 0), idx = paso ? Math.floor((+t0.dataset.fin * k) / paso) : 0, ahora = performance.now();
+          if (REP.tk0 != null && idx !== REP.tk0 && ahora - (REP.tkT || 0) > (+S.vel ? 55 : 40)) { REP.tkT = ahora; suena({ tipo: 'caja-tic', vol: 0.7 }) }
+          REP.tk0 = idx;
+        }
       }
       else if (tf === 's') {
         // solo las ruletas con ticket vuelven a girar; con un tic cada vez que pasa una carta
@@ -1372,10 +1420,12 @@
         if (l && sc && l.getBoundingClientRect().top < sc.getBoundingClientRect().top) l.scrollIntoView({ block: 'start' });
         await cargaHechas(); return pinta();
       }
-      case 'nueva': S.nueva = { mode: '1v1', regla: 'normal', cases: [] }; pinta(); return arriba();
+      case 'nueva': S.nueva = { mode: '1v1', regla: 'normal', cases: [], q: '', g: grupoAbierto(gruposVivos()), p: 0 }; pinta(); return arriba();
       case 'nueva-x': S.nueva = null; pinta(); return arriba();
       case 'modo': if (FORMATOS.some((f) => f[0] === v)) S.nueva.mode = v; return pinta();
       case 'regla': S.nueva.regla = v === 'crazy' ? 'crazy' : 'normal'; return pinta();
+      case 'ngrp': S.nueva.g = v; S.nueva.q = ''; S.nueva.p = 0; { const q = root.querySelector('[data-nv-q]'); if (q) q.value = '' } return nvRepintaPick();
+      case 'npag': S.nueva.p = Math.max(0, +v || 0); nvRepintaPick(); { const z = root.querySelector('[data-nvz]'), sc = root.closest('.scr'); if (z && sc && z.getBoundingClientRect().top < sc.getBoundingClientRect().top) z.scrollIntoView({ block: 'start' }) } return;
       case 'add': if (S.nueva.cases.length < 10) S.nueva.cases.push(v); return pinta();
       case 'quita': S.nueva.cases.splice(+v, 1); return pinta();
       case 'crear': {
@@ -1405,6 +1455,13 @@
     }
   }
   document.addEventListener('click', onClick);
+  document.addEventListener('input', (e) => {
+    const q = e.target && e.target.matches && e.target.matches('[data-nv-q]') ? e.target : null;
+    if (!q || !S.nueva || !root || !root.contains(q)) return;
+    S.nueva.q = q.value; S.nueva.p = 0; nvRepintaPick();
+  });
+  // al girar el movil o cambiar el ancho cambia cuantas cajas caben en una pagina
+  try { for (const q of ['(max-width:860px)', '(max-width:1179px)']) window.matchMedia(q).addEventListener('change', () => { if (S.nueva && root && root.isConnected && S.tab === 'batallas' && !S.bat) nvRepintaPick() }) } catch {}
 
   window.GM_CAJAS = {
     html: () => '<div data-cajas></div>',
