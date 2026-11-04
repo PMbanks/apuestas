@@ -10,6 +10,7 @@
 .avj-x i{font-style:normal;color:var(--mute)}
 .avj-x .num{font-family:var(--mono);font-weight:500;color:var(--acc)}
 .avj-x .cn{vertical-align:-2px;margin-left:3px}
+.avj-ver{flex:none;margin-left:2px;padding:3px 10px;border-radius:999px;background:rgba(242,193,78,.16);font:700 12px var(--sans);color:var(--acc)}
 @media (max-width:700px){
   .avj{top:calc(124px + env(safe-area-inset-top,0px));right:auto;left:50%;transform:translateX(-50%);align-items:center}
   .avj-t{transform:translateY(-8px)}

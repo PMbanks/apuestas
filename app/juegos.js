@@ -153,7 +153,7 @@
     if ((S.busy && root.dataset.j === S.juego) || (f && root.contains(f) && f.matches('input'))) { pend = true; return }
     pend = false;
     root.dataset.j = S.juego;
-    root.innerHTML = `<nav class="jg-tabs">${tabs()}</nav>${S.err ? `<p class="jg-err">${esc(S.err)}</p>` : vista()}`;
+    root.innerHTML = `<nav class="jg-tabs">${tabs()}</nav>${window.GM_ESPECTAR ? GM_ESPECTAR.html('juegos') : ''}${S.err ? `<p class="jg-err">${esc(S.err)}</p>` : vista()}`;   // En directo: espectar.js
     if (window.GM_LANG) GM_LANG.traduce(root);
     refs = {};
     const nav = root.querySelector('.jg-tabs'), on = nav && nav.querySelector('.on');

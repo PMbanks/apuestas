@@ -12,6 +12,7 @@
   const CANAL = 'cajas-vivo', G = 46, TOTAL = 54, MAX_FILAS = 3, MAX_TARJETAS = 3;
   const TK = { oro: ['Ticket Dorado', '#f5c542'], diamante: ['Ticket de Diamante', '#7fe3ff'] };
   const RAR = { esp: ['Especial', '#e4ae39'], cov: ['Encubierto', '#eb4b4b'], cla: ['Clasificado', '#d32ce6'], res: ['Restringido', '#8847ff'], mil: ['Grado militar', '#4b69ff'] };
+  const RAR_EN = { esp: 'Special', cov: 'Covert', cla: 'Classified', res: 'Restricted', mil: 'Mil-Spec' };
   const IMG_OK = /^https:\/\/(community\.akamai\.steamstatic\.com|pmbanks\.github\.io)\//;
   const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const N = (x) => String(Math.round(+x || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, document.documentElement.lang === 'en' ? ',' : '.');
@@ -70,44 +71,63 @@
     return contenedor;
   }
   // una vuelta de la tira: de la carta 'desde' (0: el principio) a la G, con desvio (sin desvio si para en un ticket)
-  function vuelta(fila, cartas, dur, desde, desvio) {
+  function vuelta(fila, cartas, dur, desde, desvio, q) {
     fila.innerHTML = `<div class="cv-strip ${fila.dataset.tk ? 'tk-on tk-' + fila.dataset.tk : ''}"><div class="cv-track">${cartas.map(carta).join('')}</div><i class="cv-mark"></i></div>`;
     const tira = fila.firstElementChild, pista = tira.firstElementChild, k = pista.children[G], k0 = pista.children[desde], w = tira.clientWidth;
-    if (!w || quieto()) { pista.style.transform = `translateX(${-(k.offsetLeft + k.offsetWidth / 2 - w / 2)}px)`; k.classList.add('gana'); return Promise.resolve() }
+    if (!w || q || quieto()) { pista.style.transform = `translateX(${-(k.offsetLeft + k.offsetWidth / 2 - w / 2)}px)`; k.classList.add('gana'); return Promise.resolve() }
     const x0 = desde ? k0.offsetLeft + k0.offsetWidth / 2 - w / 2 : 0, dx = k.offsetLeft + k.offsetWidth / 2 - w / 2 + (desvio ? (Math.random() - 0.5) * k.offsetWidth * 0.5 : 0);
     return pista.animate([{ transform: `translateX(${-x0}px)` }, { transform: `translateX(${-dx}px)` }], { duration: dur, easing: 'cubic-bezier(.08,.6,.12,1)', fill: 'forwards' }).finished.then(() => k.classList.add('gana'), () => k.classList.add('gana'));
   }
-  async function gira(fila, p, it, dur) {
-    if (!it.t) return vuelta(fila, Array.from({ length: TOTAL }, (_, i) => (i === G ? it : aleatoria(p.pool))), dur, 0, true);
+  // q: sin giro (quien llega tarde a mirar ve ya donde paro)
+  async function gira(fila, p, it, dur, q) {
+    if (!it.t) return vuelta(fila, Array.from({ length: TOTAL }, (_, i) => (i === G ? it : aleatoria(p.pool))), dur, 0, true, q);
     // con ticket: para en el ticket, espera y vuelve a girar solo esta fila con lo de su monton
     fila.dataset.tk = it.t;
-    await vuelta(fila, Array.from({ length: TOTAL }, (_, i) => (i === G ? { tk: it.t } : aleatoria(p.pool))), dur, 0, false);
-    if (!fila.isConnected) return;
-    fila.firstElementChild.classList.add('tk-pop');
-    await new Promise((ok) => setTimeout(ok, quieto() ? 0 : 900));
-    if (!fila.isConnected) return;
+    if (!q) {
+      await vuelta(fila, Array.from({ length: TOTAL }, (_, i) => (i === G ? { tk: it.t } : aleatoria(p.pool))), dur, 0, false);
+      if (!fila.isConnected) return;
+      fila.firstElementChild.classList.add('tk-pop');
+      await new Promise((ok) => setTimeout(ok, quieto() ? 0 : 900));
+      if (!fila.isConnected) return;
+    }
     const tp = it.tp && it.tp.length ? it.tp : p.pool;
-    await vuelta(fila, Array.from({ length: TOTAL }, (_, i) => (i === G ? it : i === 3 ? { tk: it.t } : aleatoria(tp))), Math.round(dur * 0.7), 3, true);
+    await vuelta(fila, Array.from({ length: TOTAL }, (_, i) => (i === G ? it : i === 3 ? { tk: it.t } : aleatoria(tp))), Math.round(dur * 0.7), 3, true, q);
   }
+  // las tiras de una apertura dentro de 'host' (la tarjeta flotante o la pantalla de Ver de espectar.js): giran y al parar sale lo que se
+  // lleva. Devuelve el mejor objeto (o nada si 'host' ya no esta). o = { filas, quieto, dur }
+  function tiras(host, p, o) {
+    const filas = p.items.slice(0, (o && o.filas) || MAX_FILAS), q = !!(o && o.quieto);
+    host.innerHTML = `${filas.map(() => '<div class="cv-row"></div>').join('')}<p class="cv-res" hidden></p>`;
+    const dur = (o && o.dur) || 4200;
+    return Promise.all(filas.map((it, i) => gira(host.querySelectorAll('.cv-row')[i], p, it, dur + i * 260, q))).then(() => {
+      if (!host.isConnected) return null;
+      const mejor = p.items.reduce((a, x) => (x.v > a.v ? x : a), p.items[0]), total = p.items.reduce((a, x) => a + x.v, 0), varias = p.items.length > 1;
+      const res = host.querySelector('.cv-res');
+      res.style.setProperty('--c', RAR[mejor.r][1]);
+      // ya en el idioma: dentro de la vista de Ver (espectar.js, data-notr) el traductor general no entra
+      const ing = document.documentElement.lang === 'en';
+      res.innerHTML = `<span class="lab">${varias ? (ing ? 'Takes' : 'Se lleva') : esc(ing ? RAR_EN[mejor.r] : RAR[mejor.r][0])}</span> <b data-notr>${varias ? (ing ? `${p.items.length} items` : `${p.items.length} cosas`) : esc(mejor.n)}</b> <span class="num">${N(varias ? total : mejor.v)}<span class="cn"></span></span>`;
+      res.hidden = false;
+      if (window.GM_LANG) GM_LANG.traduce(res);
+      return mejor;
+    });
+  }
+  // de quien es (id de jugador de app.js) para el boton Ver
+  const clave = (uid) => { try { const f = F.find((x) => x.uid === uid); return f ? f.id : '' } catch { return '' } };
   function tarjeta(p) {
     const caja = sitio();
     while (caja.children.length >= MAX_TARJETAS) caja.firstElementChild.remove();
     const el = document.createElement('div');
-    const filas = p.items.slice(0, MAX_FILAS);
     el.className = 'cv-card';
-    el.innerHTML = `<p class="cv-h"><b>${esc(p.nombre)}</b> <span data-t>está abriendo</span> <em data-notr>${esc(p.caja)}</em><button type="button" class="cv-x" aria-label="Cerrar">×</button></p>
-      ${filas.map(() => '<div class="cv-row"></div>').join('')}<p class="cv-res" hidden></p>`;
+    // Ver (espectar.js, PM 05-11): abre la pantalla de mirar sus aperturas en directo; la tarjeta se va
+    const k = window.GM_ESPECTAR ? clave(p.quien) : '';
+    el.innerHTML = `<p class="cv-h"><b>${esc(p.nombre)}</b> <span data-t>está abriendo</span> <em data-notr>${esc(p.caja)}</em>${k ? `<button type="button" class="cv-ver" data-esp-ver="${esc(k)}">Ver</button>` : ''}<button type="button" class="cv-x" aria-label="Cerrar">×</button></p>
+      <div class="cv-tiras"></div>`;
     caja.appendChild(el);
     if (window.GM_LANG) GM_LANG.traduce(el);
     el.querySelector('.cv-x').addEventListener('click', () => el.remove());
-    const dur = 4200;
-    Promise.all(filas.map((it, i) => gira(el.querySelectorAll('.cv-row')[i], p, it, dur + i * 260))).then(() => {
-      if (!el.isConnected) return;
-      const mejor = p.items.reduce((a, x) => (x.v > a.v ? x : a), p.items[0]), total = p.items.reduce((a, x) => a + x.v, 0), varias = p.items.length > 1;
-      const res = el.querySelector('.cv-res');
-      res.style.setProperty('--c', RAR[mejor.r][1]);
-      res.innerHTML = `<span class="lab">${varias ? 'Se lleva' : esc(RAR[mejor.r][0])}</span> <b data-notr>${varias ? `${p.items.length} cosas` : esc(mejor.n)}</b> <span class="num">${N(varias ? total : mejor.v)}<span class="cn"></span></span>`;
-      res.hidden = false;
+    tiras(el.querySelector('.cv-tiras'), p).then((mejor) => {
+      if (!mejor || !el.isConnected) return;
       el.querySelector('[data-t]').textContent = 'ha abierto';
       if (window.GM_LANG) GM_LANG.traduce(el);
       window.dispatchEvent(new CustomEvent('gm:sonido', { detail: { tipo: 'caja-final', rareza: mejor.r, vol: 0.45 } }));
@@ -123,6 +143,9 @@
 .cv-h{display:flex;align-items:baseline;gap:6px;margin-bottom:10px;font:500 13px var(--sans);color:var(--mute);white-space:nowrap}
 .cv-h b{font:700 14px var(--sans);color:var(--ink)}
 .cv-h em{font-style:normal;color:var(--soft);overflow:hidden;text-overflow:ellipsis}
+.cv-ver{margin-left:auto;flex:none;height:26px;padding:0 12px;border-radius:999px;background:rgba(242,193,78,.14);font:700 12px/26px var(--sans);color:var(--acc)}
+.cv-ver:hover{background:rgba(242,193,78,.24)}
+.cv-ver+.cv-x{margin-left:4px}
 .cv-x{margin-left:auto;flex:none;width:24px;height:24px;border-radius:50%;font:400 18px/1 var(--sans);text-align:center;color:var(--dim)}
 .cv-x:hover{color:var(--ink);background:rgba(255,255,255,.06)}
 .cv-row+.cv-row{margin-top:8px}
@@ -154,5 +177,5 @@
 html.sin-anim .cv-card,html.sin-anim .cv-res{animation:none}`;
   document.head.appendChild(css);
 
-  window.GM_CAJAS_VIVO = { recibe, estado: () => ({ canal: !!canal }) };
+  window.GM_CAJAS_VIVO = { recibe, estado: () => ({ canal: !!canal }), limpia, tiras, RAR };
 })();
