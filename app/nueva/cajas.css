@@ -194,7 +194,7 @@ button.cj-it:hover .cj-it-img{box-shadow:inset 0 -3px 0 var(--c),0 12px 28px rgb
 .cj-fd-q{display:flex;gap:5px;max-width:100%;margin-top:6px;font:500 12px var(--sans);color:var(--mute);white-space:nowrap}
 .cj-fd-q i{overflow:hidden;text-overflow:ellipsis;font-style:normal;font-weight:700;color:var(--soft)}
 @media (hover:hover){.cj-fd:hover .cj-fd-tip{opacity:1;transform:none}}
-.cj-fd.ver .cj-fd-tip,.cj-fd:focus-visible .cj-fd-tip{opacity:1;transform:none}
+.cj-fd.ver .cj-fd-tip{opacity:1;transform:none}
 .cj-fd.nuevo .cj-fd-img::before{content:"";position:absolute;inset:-14%;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--c) 75%,transparent),transparent);animation:cj-fd-luz 2.4s ease-out forwards}
 .cj-fd.nuevo .cj-fd-v{animation:cj-fd-val 2.4s ease-out}
 @keyframes cj-fd-luz{from{opacity:1}to{opacity:0}}

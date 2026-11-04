@@ -586,7 +586,7 @@
   const fdObjetivo = () => (!D.st ? [] : FD.modo === 'best' ? (D.mejores || []).slice(0, FD_N) : (D.buenos || D.st.feed).slice(0, FD_N).reverse());
   function fdTile(i) {
     const x = item(i.item), n = nombre(x), c = caja(i.case), top = n.top || (esLujo(x.id) || catDe(c) === 'lujo' ? c.name || '' : '');
-    return `<div class="cj-fd" data-id="${esc(i.id)}" style="--c:${color(x.rarity)}" tabindex="0"><span class="cj-fd-img">${pic(x.image, 256)}</span>
+    return `<div class="cj-fd" data-id="${esc(i.id)}" style="--c:${color(x.rarity)}"><span class="cj-fd-img">${pic(x.image, 256)}</span>
         <span class="cj-fd-n" data-notr>${top ? `<em>${esc(top)}</em>` : ''}${x.rarity === 'esp' && n.top ? '★ ' : ''}${esc(n.main)}</span>
         <span class="cj-fd-b">${av(i.by, 'sm')}<span class="cj-fd-v">${N(i.value)}${coin()}</span></span>
         <span class="cj-fd-tip">${c.image ? `<span class="cj-fd-ti">${pic(c.image, 256)}</span>` : ''}${c.name ? `<span class="lab">${i.battle ? 'En batalla' : 'Salió de'}</span><b data-notr>${esc(c.name)}</b>` : ''}<span class="cj-fd-q"><span>Lo abrió</span><i data-notr>${esc(jug(i.by).n)}</i></span></span></div>`;
@@ -598,14 +598,21 @@
     FD.el.innerHTML = FD.list.map(fdTile).join('');
     traduce(FD.el); fdAlFinal();
   }
-  // tocar (movil) o pasar el raton (PC, por CSS) ensena de que caja salio y quien la abrio
+  // pasar el raton (PC, por CSS) o tocar (movil) ensena de que caja salio y quien la abrio.
+  // PM 04-11 "sigue bugeado lo del drop, aun me sale en la pantalla el drop de la caja": antes un clic (PC) o un toque dejaba la tarjeta
+  // puesta hasta tocar otra cosa (deslizar la pagina no la quitaba). Ahora en PC el clic no deja nada; en movil se va sola a los 3 s,
+  // al deslizar (la pagina o la tira) y al tocar fuera.
+  const fdRaton = () => { try { return matchMedia('(hover: hover) and (pointer: fine)').matches } catch { return false } };
+  function fdCierra() { clearTimeout(FD.tv); if (FD.el) FD.el.querySelectorAll('.cj-fd.ver').forEach((x) => x.classList.remove('ver')) }
   function fdToque(e) {
     const k = e.target.closest('.cj-fd'); if (!k) return;
     const on = !k.classList.contains('ver');
-    FD.el.querySelectorAll('.cj-fd.ver').forEach((x) => x.classList.remove('ver'));
-    k.classList.toggle('ver', on);
+    fdCierra();
+    if (!on || (fdRaton() && e.pointerType !== 'touch')) return;
+    k.classList.add('ver'); FD.tv = setTimeout(fdCierra, 3000);
   }
-  document.addEventListener('click', (e) => { if (FD.el && !FD.el.contains(e.target)) FD.el.querySelectorAll('.cj-fd.ver').forEach((x) => x.classList.remove('ver')) });
+  document.addEventListener('click', (e) => { if (FD.el && !FD.el.contains(e.target)) fdCierra() });
+  window.addEventListener('scroll', () => { if (FD.el && FD.el.querySelector('.cj-fd.ver')) fdCierra() }, { capture: true, passive: true });
   function vFeed() {
     const hay = D.st && ((D.buenos || D.st.feed).length || (D.mejores || []).length); if (!hay) return '';
     return `<section class="cj-feed-s ${FD.modo}"><header class="cj-sec-h"><h3>${FD.modo === 'best' ? 'Los mejores drops' : 'Lo último que ha salido'}</h3>${seg('fdmodo', [['latest', 'Últimos'], ['best', 'Mejores']], FD.modo, 'sm cj-fd-modo')}</header><div data-cjfeed></div></section>`;
