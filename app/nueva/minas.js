@@ -76,6 +76,8 @@
 
   /* ---------- datos ---------- */
   const partida = () => D && D.partida;
+  // Ver en directo (espectar.js, PM 04-11): cada paso de la partida sale a los amigos que miran. Las minas sin abrir no van (aqui tampoco se saben)
+  function cuenta() { try { const p = partida(); if (p) window.dispatchEvent(new CustomEvent('gm:espectar', { detail: { j: 'minas', p } })) } catch {} }
   const enJuego = () => !!(partida() && partida().estado === 'curso');
   async function carga() {
     if (!J.ctx) return;
@@ -88,7 +90,7 @@
     D = d; S.saldo = d.saldo;
     const p = d.partida;
     // una partida ya acabada solo se ensena destapada si se acabo aqui (en esta visita); si no, tablero limpio
-    if (p && p.estado === 'curso') { S.finVisto = null; if (S.visto !== p.id) { S.visto = p.id; S.abiertasV = new Set(p.abiertas) } }
+    if (p && p.estado === 'curso') { S.finVisto = null; if (S.visto !== p.id) { S.visto = p.id; S.abiertasV = new Set(p.abiertas) } cuenta() }
     else if (!(antes && p && antes.id === p.id) && S.finVisto !== (p && p.id)) S.finVisto = null;
     pinta();
   }
@@ -190,7 +192,7 @@
     try {
       const r = await J.rpc('minas_empezar', { p_stake: stake.v, p_minas: S.m });
       S.saldo = r.saldo; S.finVisto = null; S.visto = r.partida.id;
-      D = { ...D, partida: r.partida }; suena('ficha');
+      D = { ...D, partida: r.partida }; suena('ficha'); cuenta();
       const bd = el.querySelector('[data-board]'); bd.classList.remove('nueva'); void bd.offsetWidth; bd.classList.add('nueva');
       if (J.ctx.refresh) J.ctx.refresh();
     } catch (e) { const m = msgErr(e, 'db/073'); aviso(m); J.toast(esc(m)) }
@@ -203,7 +205,7 @@
     try { r = await J.rpc('minas_abrir', { p_casilla: i }) } catch (e) { const m = msgErr(e, 'db/073'); aviso(m); J.toast(esc(m)) }
     S.pend = null; S.ocupa = false;
     if (!r) { pinta(); return }
-    D = { ...D, partida: r.partida }; S.saldo = r.saldo;
+    D = { ...D, partida: r.partida }; S.saldo = r.saldo; cuenta();
     const msg = el.querySelector('[data-msg]');
     if (r.mina) {
       S.finVisto = r.partida.id; fx('sonido', 'explosion');
@@ -224,7 +226,7 @@
     S.ocupa = true; boton();
     try {
       const r = await J.rpc('minas_cobrar');
-      D = { ...D, partida: r.partida }; S.saldo = r.saldo; S.finVisto = r.partida.id;
+      D = { ...D, partida: r.partida }; S.saldo = r.saldo; S.finVisto = r.partida.id; cuenta();
       S.ocupa = false; pinta(); gana(r.partida);
       const msg = el.querySelector('[data-msg]');
       txt(msg, en() ? `Cashed out at ×${X(r.partida.mult)} · +${N(r.partida.pago)}` : `Te retiras en ×${X(r.partida.mult)} · +${N(r.partida.pago)}`); msg.className = 'mn-msg win';
@@ -253,5 +255,6 @@
     },
     para() { S.on = false; if (S.ult) S.ult.para() },
     ocupado: () => S.ocupa,
+    svg: { GEMA, BOMBA },      // espectar.js pinta el tablero de quien mira con los mismos dibujos
   };
 })();

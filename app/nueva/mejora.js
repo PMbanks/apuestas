@@ -391,6 +391,13 @@
     });
   }
 
+  // Ver en directo (espectar.js, PM 04-11): la tirada sale a los amigos que miran (la rueda, la zona verde, lo que quiere y si lo gana)
+  function cuenta(f, r, t) {
+    try {
+      const n = nombre(t), im = (String(pic(t.image, 256)).match(/src="([^"]+)"/) || [])[1] || '';
+      window.dispatchEvent(new CustomEvent('gm:espectar', { detail: { j: 'mejora', f, r, t, n: [n.top, n.main].filter(Boolean).join(' | '), img: im.replace(/&amp;/g, '&') } }));
+    } catch {}
+  }
   async function mejorar() {
     const c = ctx(); if (!c || M.ocupado || M.fase === 'gira' || falta()) return;
     // antes de pedir la mejora se vuelve a leer el inventario: lo que ya no esta (vendido, gastado en otra pestana) sale de lo puesto
@@ -409,12 +416,14 @@
     // lo puesto ya no esta: se quita de la lista y de lo marcado
     M.inv = (M.inv || []).filter((i) => !M.sel.has(i.id)); M.sel.clear(); M.vb = 0;
     M.res = r; M.fase = 'gira'; M.ocupado = false;
+    cuenta('gira', r, t);
     // la aguja empieza desde arriba, asi la vuelta entera se ve
     M.ang = M.ang % 360;
     pinta();
     await gira(+r.roll);
     M.fase = 'fin';
     pinta();
+    cuenta('fin', r, t);
     const w = el && el.querySelector('.mj-wheel');
     // el numero que sale (+ al ganar, que sube; menos al perder, que baja) iba en el centro de la rueda y tapaba "Has ganado":
     // ahora sale en el borde de arriba o de abajo de la rueda y se aleja del texto

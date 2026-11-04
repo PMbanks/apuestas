@@ -152,9 +152,12 @@
   const CHEV = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6l6 6-6 6"/></svg>';
   const orden = () => [...OTROS.entries()].sort((a, b) => b[1].desde - a[1].desde);
   const frase = (q) => `<span>${KS[q].t}</span>`;
+  // si su partida se puede mirar (minas o cajas, espectar.js), la fila abre la vista en vez de llevar a la pantalla
+  const OJO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const mirable = (k, q) => (q === 'minas' || q === 'cajas') && g(() => GM_ESPECTAR.vivo(k), false);
   function fila([k, v]) {
-    const kd = KS[v.q];
-    return `<button type="button" class="avt-r" data-scr="${kd.scr}" data-avt-ir="${v.q}">${g(() => av(k, 'sm'), '')}<span class="avt-t"><b data-notr>${esc(nombre(k))}</b> ${frase(v.q)}</span><em>${hace(v.desde)}</em>${CHEV}</button>`;
+    const kd = KS[v.q], ver = mirable(k, v.q);
+    return `<button type="button" class="avt-r" ${ver ? `data-esp-ver="${esc(k)}"` : `data-scr="${kd.scr}" data-avt-ir="${v.q}"`}>${g(() => av(k, 'sm'), '')}<span class="avt-t"><b data-notr>${esc(nombre(k))}</b> ${frase(v.q)}</span><em>${hace(v.desde)}</em>${ver ? `<span class="esp-ojo">${OJO}<span>Ver</span></span>` : CHEV}</button>`;
   }
   function contenido() {
     const xs = orden(); if (!xs.length) return '';
@@ -164,7 +167,7 @@
   // se llama desde inicio.js (colAmigos); el hueco siempre esta, pero sin gente no ocupa nada
   const html = () => `<div class="avt-w ${OTROS.size ? 'hay' : ''}" data-avt-w><div class="avt-i">${contenido()}</div></div>`;
   function pinta() {
-    const sig = orden().map(([k, v]) => k + v.q + hace(v.desde)).join('|') + g(() => GM_LANG.get(), '');
+    const sig = orden().map(([k, v]) => k + v.q + hace(v.desde) + mirable(k, v.q)).join('|') + g(() => GM_LANG.get(), '');
     if (sig === SIG) return; SIG = sig;
     document.querySelectorAll('[data-avt-w]').forEach((w) => {
       const i = w.firstElementChild; if (!i) return;
@@ -273,6 +276,7 @@
 
   window.GM_ACTIVIDAD = {
     html, seccion, ahora: () => orden().map(([k, v]) => ({ k, q: v.q, desde: v.desde })),
+    repinta: () => pinta(),        // espectar.js: cuando alguien empieza o deja de poderse mirar
     // SOLO PRUEBAS: finge lo que diria presence. estado = [{ k, q, desde? }, ...] (los demas jugadores); [] lo vacia.
     // Pasa por el mismo camino que lo real (validacion, avisos, tira, puntos), salvo que no es la primera foto.
     _sim(estado) { procesa((estado || []).map((x) => ({ k: x.k, q: x.q, desde: x.desde == null ? Date.now() : x.desde })), false); return this.ahora() },

@@ -432,7 +432,8 @@
   }
   function vista() {
     const tabs = [['abrir', 'Abrir'], ['inventario', 'Inventario'], ['batallas', 'Batallas'], ['mejorar', 'Mejorar']], dot = hayAviso();   // Mejorar: mejora.js (db/071)
-    const cab = `<nav class="cj-tabs">${tabs.map(([k, n]) => `<button class="cj-tab ${S.tab === k ? 'on' : ''}" data-cj="tab" data-v="${k}">${n}${k === 'batallas' && dot ? '<i class="cj-dot"></i>' : ''}</button>`).join('')}</nav>`;
+    const cab = `<nav class="cj-tabs">${tabs.map(([k, n]) => `<button class="cj-tab ${S.tab === k ? 'on' : ''}" data-cj="tab" data-v="${k}">${n}${k === 'batallas' && dot ? '<i class="cj-dot"></i>' : ''}</button>`).join('')}</nav>`
+      + (window.GM_ESPECTAR ? GM_ESPECTAR.html('cajas') : '');   // En directo: mirar a quien abre cajas o usa Mejorar (espectar.js)
     if (!D.st || !D.cases) return cab + `<p class="hint cj-c">${D.err ? esc(D.err) : 'Cargando…'}</p>`;
     if (S.tab === 'mejorar') return cab + '<div data-mejora></div>';
     return cab + (S.tab === 'abrir' ? vAbrir() : S.tab === 'inventario' ? vInv() : S.bat ? vBat() : S.nueva ? vNueva() : vBatallas());

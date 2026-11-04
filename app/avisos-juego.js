@@ -47,7 +47,10 @@
     el.type = 'button'; el.className = 'avj-t'; el.dataset.notr = '1';
     const cara = g(() => String(av(f.id, 'sm')).replace(/ data-prof="[^"]*"/, ''), '');
     el.innerHTML = `${cara}<span class="avj-x"><b>${esc(f.n)}</b> ${en() ? 'is playing' : 'está jugando'} <b>${esc(nom)}</b>${r.stake > 0 ? ` <i>·</i> <b class="num">${N(r.stake)}</b><span class="cn"></span>` : ''}</span>`;
-    el.addEventListener('click', () => { quita(el); ir(r.juego) });
+    // Minas es de uno solo: tocar el aviso abre la vista para mirar su partida en directo (espectar.js); el resto lleva al juego
+    const ver = r.juego === 'minas' && !!window.GM_ESPECTAR;
+    if (ver) el.insertAdjacentHTML('beforeend', `<span class="avj-ver">${en() ? 'Watch' : 'Ver'}</span>`);
+    el.addEventListener('click', () => { quita(el); if (ver) GM_ESPECTAR.abre(f.id); else ir(r.juego) });
     h.appendChild(el);
     while (h.querySelectorAll('.avj-t:not(.fuera)').length > MAX) { const v = h.querySelector('.avj-t:not(.fuera)'); v.classList.add('fuera'); quita(v) }
     void el.offsetWidth; el.classList.add('on');

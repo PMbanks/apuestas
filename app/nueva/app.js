@@ -2378,7 +2378,7 @@ const onlineHtml = () => {
   const ks = [...new Set([MEK, ...ONLINE])].filter((k) => F.some((f) => f.id === k)).sort((a, b) => (ONT[a] || ENTRADA) - (ONT[b] || ENTRADA));
   const [k0, ...resto] = ks;
   return `<span class="onl-l"><i></i>En línea</span><span class="onl-a" data-prof="${k0}" title="${esc(fr(k0).n)}">${av(k0, 'sm')}</span>${resto.length ? `<button class="onl-mas" data-act="onl" aria-label="Quién más está">+${resto.length}</button>` : ''}
-    <span class="onl-pop"><span class="lab">En línea ahora · ${ks.length}</span>${ks.map((k) => `<button class="onl-r" data-prof="${k}">${av(k, 'sm')}<b>${esc(fr(k).n)}</b><small>${durOn(Date.now() - (ONT[k] || ENTRADA))}</small></button>`).join('')}</span>` };
+    <span class="onl-pop"><span class="lab">En línea ahora · ${ks.length}</span>${ks.map((k) => `<button class="onl-r" data-prof="${k}">${av(k, 'sm')}<b>${esc(fr(k).n)}</b><small>${durOn(Date.now() - (ONT[k] || ENTRADA))}</small>${window.GM_ESPECTAR ? GM_ESPECTAR.marca(k) : ''}</button>`).join('')}</span>` };
 const pintaOnline = () => document.querySelectorAll('[data-onl]').forEach((e) => { e.innerHTML = onlineHtml(); e.classList.toggle('abre', !!S.onl); if (window.GM_LANG) GM_LANG.traduce(e) });
 function live() {
   if (chan) return;
