@@ -52,6 +52,11 @@
     }
     h.classList.toggle('abre', ABIERTA);
     h.setAttribute('aria-hidden', String(!ABIERTA));
+    // Antes se montaba el HTML entero en cada repintado (con rwProximo(), ~2,5 ms) solo para descubrir que era igual. Ahora primero una
+    // firma barata de lo que cambia la hoja; la cuenta atras de Recompensas solo se mira con la hoja abierta (al abrirla la firma cambia y se rehace).
+    const c = h.querySelector('.mas-c'), px = ABIERTA && !av.rw ? g(() => rwProximo(), null) : null;
+    const k0 = [S.scr, av.nov, av.rw, av.res, ABIERTA, g(() => MERCADO_MANT, false), px ? px.cuando + '/' + !!px.aprox : '', g(() => GM_LANG.get(), '')].join('|');
+    if (c.dataset.k0 === k0 && c.firstElementChild) return;
     const tiles = MAS.map((k) => { const mant = k === 'mercado' && g(() => MERCADO_MANT, false);
       return `<button type="button" class="mas-t ${S.scr === k ? 'on' : ''} ${mant ? 'mas-mant' : ''}" data-scr="${k}">${ico(SCREENS[k][2])}<span>${SCREENS[k][0]}</span>${mant ? '<small title="mantenimiento"></small>' : ''}</button>` }).join('');
     const fila = (attr, ic, n, extra) => `<button type="button" class="mas-r" ${attr}><span class="mas-ri">${ic}</span><span class="mas-rn">${n}</span>${extra}${ico(P_IR, 'mas-ch')}</button>`;
@@ -59,10 +64,11 @@
       <h2 class="lab">Avisos</h2><div class="mas-l">
         ${fila('data-scr="feed"', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${P_FEED}</svg>`, 'Feed', '')}
         ${fila('data-act="nvp"', IC_NUEVO, 'Novedades', av.nov ? `<b class="mas-bd az">${av.nov}</b>` : '')}
-        ${fila('data-act="rw"', IC_GIFT, 'Recompensas', av.rw ? `<b class="mas-bd">${av.rw}</b>` : ((x) => (x ? `<i class="mas-cd" data-rwcd="${x.cuando}"${x.aprox ? '' : ' data-rwfin'}></i>` : ''))(g(() => rwProximo(), null)))}
+        ${fila('data-act="rw"', IC_GIFT, 'Recompensas', av.rw ? `<b class="mas-bd">${av.rw}</b>` : ((x) => (x ? `<i class="mas-cd" data-rwcd="${x.cuando}"${x.aprox ? '' : ' data-rwfin'}></i>` : ''))(px))}
         ${fila('data-mas-res', IC_BELL, 'Resultados', av.res ? '<b class="mas-bd ve">Nuevos</b>' : '')}
       </div>`;
-    const c = h.querySelector('.mas-c'), k = html + g(() => GM_LANG.get(), '');
+    const k = html + g(() => GM_LANG.get(), '');
+    c.dataset.k0 = k0;
     if (c.dataset.k !== k) { c.dataset.k = k; c.innerHTML = html; tr(h); g(() => rwTic()) }   // la cuenta atras de Recompensas se rellena sola cada segundo
   }
   function abre(v) {
@@ -95,7 +101,9 @@
   const vigila = () => { if (pend) return; pend = true; queueMicrotask(() => { pend = false; try { pinta() } catch (e) { if (!vigila.av) { vigila.av = 1; console.warn('menu.js', e) } } }) };
   // app.js repinta la cabecera (y antes la barra) en cada render; la campanita de ganado.js cambia de clase sin render
   const top = document.getElementById('top');
-  if (top) new MutationObserver(vigila).observe(top, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+  // la cuenta atras de la paga (<b data-cdpay>) cambia de texto cada segundo y no afecta al menu: esos cambios no cuentan
+  const importa = (rs) => rs.some((r) => !(r.target.nodeType === 1 && r.target.closest('[data-cdpay]')));
+  if (top) new MutationObserver((rs) => { if (importa(rs)) vigila() }).observe(top, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
   const app = document.getElementById('app');
   if (app) new MutationObserver(vigila).observe(app, { attributes: true, attributeFilter: ['hidden'] });
   // la hoja va encima de la barra de abajo, que crece con el boleto y tus apuestas en vivo

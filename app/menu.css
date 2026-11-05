@@ -15,34 +15,6 @@
 .nv small{margin-left:auto;font:500 10px var(--mono);letter-spacing:.04em;color:var(--dim);white-space:nowrap}
 #nav .nv-mas{display:none}
 
-/* burbuja del chat: abajo a la derecha; en PC con lo ultimo que te han escrito al lado */
-#chatb{position:fixed;right:28px;bottom:28px;z-index:50;display:flex;align-items:center;gap:12px;pointer-events:none;transition:bottom .25s var(--ease),opacity .2s}
-#chatb>*{pointer-events:auto}
-.chb-b{position:relative;flex:none;display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:var(--acc);color:#16110a;box-shadow:0 14px 34px rgba(0,0,0,.5),0 0 0 6px rgba(242,193,78,.12);transition:transform .15s var(--ease),filter .15s}
-.chb-b:hover{transform:translateY(-2px);filter:brightness(1.05)}
-.chb-b svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.chb-b b{position:absolute;top:-4px;right:-4px;display:grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:#ef5b5b;color:#fff;font:600 12px/1 var(--mono);box-shadow:0 0 0 3px var(--bg)}
-.chb-t{display:flex;align-items:center;gap:10px;max-width:290px;padding:10px 14px 10px 10px;border-radius:16px 16px 4px 16px;background:#2d333e;box-shadow:0 12px 30px rgba(0,0,0,.4);text-align:left;animation:chbEntra .3s var(--ease),chbSale .4s ease-in 6.1s forwards;transition:background .15s}
-.chb-t:hover{background:#343b47}
-.chb-t .av{width:30px;height:30px;font-size:11px}
-.chb-t>span{display:grid;min-width:0}
-.chb-t b{font:600 12px var(--sans);color:var(--ink)}
-.chb-t small{font:13px/1.35 var(--sans);color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-@keyframes chbEntra{from{opacity:0;transform:translateX(10px)}}
-@keyframes chbSale{to{opacity:0;transform:translateX(10px)}}
-html.sin-anim .chb-t{animation:none}
-/* con el boleto abajo a la derecha (boleto.js), la burbuja sube encima; con el boleto abierto, se quita */
-@media (min-width:861px){
-  body.blt-hay #chatb{bottom:106px}
-  body.blt-abierto #chatb{opacity:0;pointer-events:none}
-  body.blt-abierto #chatb>*{pointer-events:none}
-  /* que el final de cada pantalla se pueda subir por encima de la burbuja */
-  body.chb-on .p-board,body.chb-on .det{padding-bottom:110px}
-  body.chb-on.blt-hay .p-board,body.chb-on.blt-hay .det{padding-bottom:190px}
-  body.chb-on .cv-dock{bottom:108px}
-  body.chb-on.blt-hay .cv-dock{bottom:186px}
-}
-body.chb-on #view:not([data-vista=partidos])::after{content:"";display:block;height:92px}
 
 /* la tira "N en directo" (solo movil) y la hoja de Más (solo movil) */
 #livebar,#mas-h{display:none}
@@ -107,19 +79,6 @@ body.chb-on #view:not([data-vista=partidos])::after{content:"";display:block;hei
   .mas-bd.az{background:#8fa3ff;color:#0b1030}
   .mas-bd.ve{background:rgba(43,212,125,.18);color:var(--win);font:700 11px/1 var(--sans)}
   .mas-ch{flex:none;width:18px;height:18px;fill:none;stroke:var(--dim);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-
-  /* burbuja: encima de la barra de abajo (y de lo que lleve dentro: boleto, tus apuestas en vivo) */
-  #chatb{right:16px;bottom:calc(var(--rail-h,64px) + 14px)}
-  .chb-t{max-width:calc(100vw - 112px);padding:8px 12px 8px 8px}
-  .chb-t small{max-width:calc(100vw - 190px)}
-  .chb-b{width:56px;height:56px;background:#2d333e;color:var(--ink);box-shadow:0 10px 28px rgba(0,0,0,.5)}
-  .chb-b svg{width:25px;height:25px;stroke-width:1.7}
-  .chb-b b{top:-3px;right:-3px;min-width:22px;height:22px;background:var(--acc);color:#16110a;font-size:11px}
-  body.mas-abierta #chatb{opacity:0;pointer-events:none}
-  body.mas-abierta #chatb>*{pointer-events:none}
-  body.chb-on .p-board{padding-bottom:96px}
-  body.chb-on .cv-dock{bottom:calc(var(--rail-h,64px) + 84px)}
-  body.chb-on #view:not([data-vista=partidos])::after{height:80px}
 }
 @media (max-width:440px){
   .top .mo-btn,.top .aj-btn{width:34px;height:34px}
@@ -175,9 +134,6 @@ html.sin-anim .pm-hd.anima .pm-menu,html.sin-anim .pm-tt svg{animation:none;tran
 .p-board.solo-jug .jug{margin-top:12px}
 .p-board.solo-jug .jug>.day{display:none}
 @media (max-width:860px){.jug>.day b{font-size:26px;white-space:nowrap}.jug>.day span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}}
-/* con el menu del titulo abierto, la burbuja no lo tapa */
-body.pm-abre #chatb{opacity:0;pointer-events:none}
-body.pm-abre #chatb>*{pointer-events:none}
 .nv.nv-mant.on{color:var(--ink)}
 /* movil estrecho: "Already played" y su etiqueta caben en una linea */
 .pm-tt{min-width:0;flex:0 1 auto}.pm-tt span{min-width:0;overflow:hidden;text-overflow:ellipsis}
@@ -222,11 +178,4 @@ body.pm-abre #chatb>*{pointer-events:none}
   .jug-mi small{order:-1;flex:1;min-width:0;font-size:12px}
   .jug-mi b{font-size:19px}
   .jug-x{grid-column:1/-1}
-}
-/* burbuja del chat en movil: al bajar se encoge a una lengueta en el borde, con el numero de no leidos a la vista */
-@media (max-width:860px){
-  #chatb{transition:bottom .25s var(--ease),opacity .2s,transform .25s var(--ease)}
-  body.chb-min #chatb{transform:translateX(52px)}
-  body.chb-min .chb-b{opacity:.85;box-shadow:0 6px 16px rgba(0,0,0,.45)}
-  body.chb-min .chb-b b{right:auto;left:-1px;top:-9px}
 }

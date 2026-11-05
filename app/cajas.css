@@ -375,7 +375,6 @@ button.cj-seat:hover{background:rgba(242,193,78,.16);color:var(--acc)}
 .cj-new-sum em{font:12px var(--mono);font-style:normal;color:var(--dim)}
 .cj-new-go .go{min-width:280px;height:58px}
 
-
 /* ----- cancelar, salir y confirmar (PM 30-10: "el boton de cancelar lo quiero rojo y bonito") ----- */
 .cj-danger{display:inline-flex;align-items:center;justify-content:center;gap:9px;height:42px;padding:0 20px;border-radius:999px;background:rgba(235,75,75,.13);
   font:700 12px var(--disp);letter-spacing:.14em;text-transform:uppercase;color:#ff8080;white-space:nowrap;transition:background .15s,color .15s,box-shadow .2s,transform .15s}
@@ -864,9 +863,6 @@ html.cj-pintando,html.cj-pintando *{-webkit-user-select:none;user-select:none;cu
   .cj-bar-l .chip{white-space:nowrap}
   .cj-bar-b{flex:1 1 auto;min-width:0;justify-content:flex-end}
   .cj-bar .go{max-width:100%}
-  /* el boton redondo del chat va fijo en la esquina y taparia "Vender por": mientras hay seleccion se esconde (igual que con la hoja de Mas abierta) */
-  body.cj-bar-on #chatb{opacity:0;pointer-events:none}
-  body.cj-bar-on #chatb>*{pointer-events:none}
   .cj-bar .go.armado{white-space:normal;line-height:1.2;font-size:11px;letter-spacing:.04em;height:auto;min-height:48px;padding:8px 14px;text-align:center}
 }
 

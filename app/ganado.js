@@ -222,7 +222,8 @@
     if (ganas.length || TARJ || malas.some((x) => x.res === 'lost')) tarjeta(ganas, malas, lejos);   // PM 01-11: tambien al perder, no solo al ganar
     else lineas(malas);
   }
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) { revisa(); programa() } });
+  // con la pestana oculta se pausan los latidos de la campanita (CSS: html.gnd-oculto)
+  document.addEventListener('visibilitychange', () => { document.documentElement.classList.toggle('gnd-oculto', document.hidden); if (!document.hidden) { revisa(); programa() } });
   window.addEventListener('focus', () => { if (TARJ && !TARJ.t) arrancaReloj() });
 
   /* ---------- la tarjeta ---------- */
@@ -508,9 +509,11 @@
 .gnd-ic{position:relative;display:grid;font-style:normal}
 .gnd-ic svg{width:16px;height:16px}
 .gnd-pt{display:none;position:absolute;top:-3px;right:-3px;width:8px;height:8px;border-radius:50%;background:var(--win);box-shadow:0 0 0 2px var(--bg)}
-.gnd-b.hay .gnd-pt{display:block;animation:gndLate 2.2s ease-out infinite}
+.gnd-b.hay .gnd-pt{display:block}
+.gnd-b.hay .gnd-ic::before{content:"";position:absolute;top:-12px;right:-12px;width:26px;height:26px;border-radius:50%;background:var(--win);opacity:0;pointer-events:none;animation:gndLate 2.2s ease-out infinite}
 .gnd-b.hay .gnd-ic svg{animation:gndTilin 3.2s ease-in-out infinite;transform-origin:50% 12%}
-@keyframes gndLate{0%{box-shadow:0 0 0 2px var(--bg),0 0 0 2px rgba(43,212,125,.55)}70%,100%{box-shadow:0 0 0 2px var(--bg),0 0 0 9px rgba(43,212,125,0)}}
+/* el latido del punto: antes animaba box-shadow (repinta cada fotograma); ahora un disco que solo cambia transform y opacity (lo hace la tarjeta grafica) */
+@keyframes gndLate{0%{transform:scale(.4615);opacity:.55}70%,100%{transform:scale(1);opacity:0}}
 @keyframes gndTilin{0%,80%,100%{transform:rotate(0)}84%{transform:rotate(14deg)}88%{transform:rotate(-12deg)}92%{transform:rotate(8deg)}96%{transform:rotate(-4deg)}}
 @media (max-width:1300px){.gnd-b .gnd-bl{display:none}.gnd-b{padding:7px;margin-left:-10px}}
 @media (max-width:860px){.gnd-b{margin-left:-6px}}
@@ -661,7 +664,8 @@
   .gnd-bar{left:22px;right:22px}
   .gnd-pr.nuevo::before{left:-10px}
 }
-html.sin-anim .gnd-ov,html.sin-anim .gnd-c,html.sin-anim .gnd-c::before,html.sin-anim .gnd-moneda,html.sin-anim .gnd-tl,html.sin-anim .gnd-b.hay .gnd-pt,html.sin-anim .gnd-b.hay .gnd-ic svg{animation:none}
+html.sin-anim .gnd-ov,html.sin-anim .gnd-c,html.sin-anim .gnd-c::before,html.sin-anim .gnd-moneda,html.sin-anim .gnd-tl,html.sin-anim .gnd-b.hay .gnd-ic::before,html.sin-anim .gnd-b.hay .gnd-ic svg{animation:none}
+html.gnd-oculto .gnd-b.hay .gnd-ic::before,html.gnd-oculto .gnd-b.hay .gnd-ic svg{animation-play-state:paused}
 html.sin-anim .gnd-bar::after{animation-name:gndBarra}`;
   document.head.appendChild(css);
 })();

@@ -2,7 +2,7 @@
 // Se engancha de dos maneras, sin tocar los otros modulos:
 //   1. Eventos: window.dispatchEvent(new CustomEvent('gm:sonido', { detail: 'cobrar' })) (ver SONIDOS-EVENTOS.md).
 //   2. El DOM, donde se puede: la ruleta de las cajas (tic y golpe final), el crash (subida y explosion), el aviso de
-//      arriba (#toast: cobros y fallos), los resultados de los juegos, los mensajes nuevos del chat y los botones principales.
+//      arriba (#toast: cobros y fallos), los resultados de los juegos y los botones principales (el aviso de mensaje nuevo del chat se quito con el chat, 05-11).
 // El audio no arranca hasta la primera pulsacion o toque (los navegadores no lo dejan antes). El silencio (en Ajustes) se
 // recuerda. En reposo no hay ningun bucle: solo observadores, y un bucle corto mientras gira una ruleta.
 'use strict';
@@ -166,9 +166,14 @@
       suena('caja-final', { rareza: ORDEN[mejor] });
     });
     if (quieto()) return;
+    // getComputedStyle se pide UNA vez (el objeto es "vivo" y siempre da el valor actual) y la X se saca del texto "matrix(a,b,c,d,tx,ty)" sin crear un DOMMatrix por fotograma
+    const cs = getComputedStyle(pista); let mAntes = null, txAntes = 0;
+    const equis = (m) => { if (!m || m === 'none') return 0; if (m.startsWith('matrix(')) { const v = +m.slice(7, -1).split(',')[4]; if (v === v) return v } return new DOMMatrix(m).m41 };
     (function marco() {
       if (!activo || !pista.isConnected) return;
-      const m = getComputedStyle(pista).transform, tx = m && m !== 'none' ? new DOMMatrix(m).m41 : 0, i = Math.floor((-tx + w / 2) / paso);
+      const m = cs.transform;
+      if (m !== mAntes) { mAntes = m; txAntes = equis(m) }
+      const tx = txAntes, i = Math.floor((-tx + w / 2) / paso);
       if (i !== idx) { const t = performance.now(); idx = i; if (t - ultimoTic > 32) { ultimoTic = t; suena('caja-tic') } }
       requestAnimationFrame(marco);
     })();
@@ -204,29 +209,11 @@
     suena(win ? 'cobrar' : 'perder');
   }
 
-  /* ---------- chat: un mensaje nuevo de otro suena ---------- */
-  let vistos = null;
-  const claveMsg = (m) => (m.querySelector('.nm')?.textContent || '') + '|' + (m.querySelector('time')?.textContent || '') + '|' + (m.querySelector('p')?.textContent || (m.textContent || '').slice(0, 80));
-  function revisaChat() {
-    const lista = document.querySelector('[data-chat]'); if (!lista) return;
-    const msgs = [...lista.querySelectorAll('.msg')], claves = msgs.map(claveMsg);
-    if (!vistos) { vistos = new Set(claves); return }                   // la primera vez que se ve el chat no suena
-    const ultimo = msgs[msgs.length - 1], k = claves[claves.length - 1];
-    const nuevo = ultimo && !vistos.has(k);
-    const yo = (document.querySelector('.rail-me b')?.textContent || '').trim();
-    claves.forEach((c) => vistos.add(c));
-    if (vistos.size > 400) vistos = new Set(claves);
-    if (nuevo && (ultimo.querySelector('.nm')?.textContent || '').trim() !== yo) suena(/^\[sticker:/.test(ultimo.querySelector('p')?.textContent || '') ? 'sticker' : 'chat');
-  }
-
   /* ---------- un solo observador, barato: solo mira lo que se anade y las clases ---------- */
-  let pendienteChat = false;
-  function programaChat() { if (pendienteChat) return; pendienteChat = true; requestAnimationFrame(() => { pendienteChat = false; revisaChat() }) }
   function ve(n) {
     if (n.nodeType !== 1) return;
     if (n.matches('.cj-spin') || n.querySelector('.cj-spin')) { const e = n.matches('.cj-spin') ? n : n.querySelector('.cj-spin'); setTimeout(() => siguePista(e), 30) }
     if (n.matches('[data-mult]') || n.querySelector('[data-mult]')) revisaMult(n.matches('[data-mult]') ? n : n.querySelector('[data-mult]'));
-    if (n.matches('.msg, [data-chat]') || n.querySelector('.msg, [data-chat]')) programaChat();
     if (n.matches('.jg-res, .jg-msg') || n.querySelector('.jg-res, .jg-msg')) for (const r of (n.matches('.jg-res, .jg-msg') ? [n] : n.querySelectorAll('.jg-res, .jg-msg'))) revisaResultado(r);
   }
   new MutationObserver((rs) => {
@@ -245,5 +232,4 @@
 
 
   window.GM_SONIDOS = { suena, silencia, alterna, silenciado: () => mudo };
-  revisaChat();       // si el chat ya esta pintado, se anotan sus mensajes para que no suenen como nuevos
 })();
