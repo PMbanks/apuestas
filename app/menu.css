@@ -34,8 +34,8 @@ html.sin-anim .chb-t{animation:none}
 /* con el boleto abajo a la derecha (boleto.js), la burbuja sube encima; con el boleto abierto, se quita */
 @media (min-width:861px){
   body.blt-hay #chatb{bottom:106px}
-  body:has(#blt.abierto) #chatb{opacity:0;pointer-events:none}
-  body:has(#blt.abierto) #chatb>*{pointer-events:none}
+  body.blt-abierto #chatb{opacity:0;pointer-events:none}
+  body.blt-abierto #chatb>*{pointer-events:none}
   /* que el final de cada pantalla se pueda subir por encima de la burbuja */
   body.chb-on .p-board,body.chb-on .det{padding-bottom:110px}
   body.chb-on.blt-hay .p-board,body.chb-on.blt-hay .det{padding-bottom:190px}
@@ -176,8 +176,8 @@ html.sin-anim .pm-hd.anima .pm-menu,html.sin-anim .pm-tt svg{animation:none;tran
 .p-board.solo-jug .jug>.day{display:none}
 @media (max-width:860px){.jug>.day b{font-size:26px;white-space:nowrap}.jug>.day span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}}
 /* con el menu del titulo abierto, la burbuja no lo tapa */
-body:has(.pm-hd.abre) #chatb{opacity:0;pointer-events:none}
-body:has(.pm-hd.abre) #chatb>*{pointer-events:none}
+body.pm-abre #chatb{opacity:0;pointer-events:none}
+body.pm-abre #chatb>*{pointer-events:none}
 .nv.nv-mant.on{color:var(--ink)}
 /* movil estrecho: "Already played" y su etiqueta caben en una linea */
 .pm-tt{min-width:0;flex:0 1 auto}.pm-tt span{min-width:0;overflow:hidden;text-overflow:ellipsis}

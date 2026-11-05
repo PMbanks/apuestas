@@ -2090,6 +2090,10 @@ function render() {
   vw.dataset.vista = S.scr;
   avisaMira();
   if (S.scr === 'cajas' && window.GM_CAJAS) GM_CAJAS.montar(vw, cajasCtx(), cambia);
+  // la burbuja del chat se aparta con el menu del titulo abierto o la barra de vender de Cajas (menu.css y cajas.css; antes con body:has(),
+  // que hacia recalcular los estilos de toda la pagina a cada cambio del DOM)
+  document.body.classList.toggle('pm-abre', !!vw.querySelector('.pm-hd.abre'));
+  document.body.classList.toggle('cj-bar-on', S.scr === 'cajas' && !!vw.querySelector('.cj-bar:not([hidden])'));
   if (S.scr === 'juegos' && window.GM_JUEGOS) GM_JUEGOS.montar(vw, jgCtx(), cambia);
   if (S.scr === 'mercado' && window.GM_MERCADO && !MERCADO_MANT) GM_MERCADO.montar(vw, mkCtx(), cambia);
   if (cambia) { vw.classList.remove('entra'); void vw.offsetWidth; vw.classList.add('entra'); clearTimeout(render.ent); render.ent = setTimeout(() => vw.classList.remove('entra'), 1400) }
@@ -2153,7 +2157,7 @@ document.addEventListener('click', (e) => { const b = e.target.closest('[data-lg
 document.addEventListener('click', async (e) => {
   if (e.target.closest('a.row-tv')) return;   // el enlace a la emision oficial: que siga su camino sin abrir la ficha
   if (S.onl && !e.target.closest('.onl')) { S.onl = false; pintaOnline() }
-  if (S.pmenu && !e.target.closest('[data-act=pmenu]')) { S.pmenu = false; document.querySelector('.pm-hd.abre')?.classList.remove('abre') }
+  if (S.pmenu && !e.target.closest('[data-act=pmenu]')) { S.pmenu = false; document.querySelector('.pm-hd.abre')?.classList.remove('abre'); document.body.classList.remove('pm-abre') }
   const t = e.target.closest('[data-hp],[data-pft],[data-jugmas],[data-abf],[data-abpg],[data-eqv],[data-eqtab],[data-eqpg],[data-vivo],[data-fav],[data-nov],[data-ft],[data-tclaim],[data-bsp],[data-bp],[data-side],[data-bm],[data-dv],[data-dtv],[data-mt],[data-mp],[data-rx],[data-rxo],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
   const d = t.dataset;
   if (d.side && t.matches('[data-side]')) { S.shTodos = false; S.side = d.side; document.querySelector('.det')?.scrollTo?.(0, 0); return render() }

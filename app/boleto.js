@@ -342,6 +342,7 @@
     document.body.classList.toggle('blt-hay', ver);
     if (!ver) { if (B.abierto && !B.items.length) B.abierto = false; return }
     r.classList.toggle('abierto', B.abierto); r.classList.toggle('comb', comb());
+    document.body.classList.toggle('blt-abierto', B.abierto);   // menu.css aparta la burbuja del chat (antes body:has(#blt.abierto), que recalculaba toda la pagina)
     const det = document.querySelector('.det.open');
     r.classList.toggle('sobre', !!det && getComputedStyle(det).position === 'fixed');
     const foco = document.activeElement && r.contains(document.activeElement) && document.activeElement.matches('input') ? document.activeElement : null;

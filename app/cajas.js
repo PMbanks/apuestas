@@ -49,20 +49,20 @@
   // '1v1v1v1' -> '4 jugadores'; los de equipos se quedan como estan
   const fmtTxt = (m) => (libre({ mode: m }) ? `${eqDe({ mode: m })} jugadores` : m);
   // Giro Dorado (db/075): lo decide la base; aqui solo se ensena. La prueba gratis lo imita con la misma probabilidad
-  const GD_PCT = 4, GD_DUR = [1800, 1000, 550], GD_HOLD = [650, 380, 200];
+  const GD_PCT = 6, GD_DUR = [1800, 1000, 550], GD_HOLD = [650, 380, 200];
   // Tickets (db/081, PM 04-11): la tira para en un ticket en vez de en un objeto, espera y vuelve a girar SOLO esa linea con lo que puede
   // salir de esa caja. Dorado: entre lo malo y lo medianamente bueno. Diamante (mas raro): solo lo bueno. Lo decide la base; aqui se ensena.
   // Sin db/081 cargada la base sigue mandando el Giro Dorado viejo ({orig, up, down, won}) y se ensena como antes.
   const TK = { oro: { n: 'Ticket Dorado', c: '#f5c542' }, diamante: { n: 'Ticket de Diamante', c: '#7fe3ff' } };
   const TK_HOLD = [1100, 600, 300], TK_DUR = [3800, 1500, 750];          // parado en el ticket y la vuelta de esa linea (Normal, Rapido, Ultra)
   const TKB_HOLD = [1000, 500, 280], TKB_SPIN = [2600, 1100, 600];       // lo mismo en las batallas
-  const TK_DEF = { oro: 4, diamante: 0.2, sube: 40 };                    // la prueba gratis si la base aun no contesta cs_giro_info
+  const TK_DEF = { oro: 6, diamante: 0.2, sube: 40 };                    // la prueba gratis si la base aun no contesta cs_giro_info
 
   /* ---------- estado ---------- */
   let ctx = null, root = null;
-  const S = { tab: 'abrir', cat: GRUPOS.some((g) => g[0] === lee('cj-cat')) ? lee('cj-cat') : 'cs2', caja: null, n: 1, rapido: lee('cj-rapido') === '1', vel: ['0', '1', '2'].includes(lee('cj-vel')) ? lee('cj-vel') : lee('cj-rapido') === '1' ? '1' : '0', auto: false, tiras: null, tirasK: '', tirasC: null, fase: 'idle', prueba: false, quien: null, sel: new Set(), ancla: null, anclaOn: true, bat: null, nueva: null, res: null, sure: null, rep: null, espTodo: null,
+  const S = { tab: 'abrir', cat: GRUPOS.some((g) => g[0] === lee('cj-cat')) ? lee('cj-cat') : 'cs2', caja: null, n: 1, rapido: lee('cj-rapido') === '1', vel: ['0', '1', '2'].includes(lee('cj-vel')) ? lee('cj-vel') : lee('cj-rapido') === '1' ? '1' : '0', auto: false, tiras: null, tirasK: '', tirasC: null, fase: 'idle', prueba: false, quien: null, sel: new Set(), ancla: null, anclaOn: true, bat: null, nueva: null, res: null, sure: null, rep: null, abre: null, espTodo: null,
     orden: ['valor', 'nuevas', 'rareza'].includes(lee('cj-orden')) ? lee('cj-orden') : 'valor', fR: null, fC: null, invN: INV_PASO, pag: 0 };
-  const D = { buenos: null, cases: null, caja: new Map(), items: new Map(), st: null, bats: new Map(), err: null, hechas: null, cajasDe: new Map() };
+  const D = { buenos: null, cases: null, caja: new Map(), items: new Map(), st: null, bats: new Map(), err: null, hechas: null, cajasDe: new Map(), origen: new Map() };
   let anim = null, pendiente = false, cargando = null, otraVez = false, ultima = 0, ocupado = false;
 
   /* ---------- utilidades ---------- */
@@ -166,23 +166,63 @@
 
   /* ---------- datos ---------- */
   async function rpc(fn, args) { const { data, error } = await ctx.db.rpc(fn, args); if (error) throw error; return data }
+  // PM 05-11 "tarda mucho en cargar boxes": lo que casi no cambia (la lista de cajas, lo que trae cada una y los datos de cada skin)
+  // se guarda en este aparato con la version de la app, se pinta al momento y se vuelve a pedir por detras una vez por carga de la pagina.
+  const VER = (document.querySelector('meta[name=gm-ver]') || {}).content || '0';
+  const memo = {
+    lee(st, k) { try { const x = JSON.parse(st.getItem('cj-c:' + k) || 'null'); return x && x.v === VER ? x.d : null } catch { return null } },
+    pon(st, k, d) {
+      const pon = () => st.setItem('cj-c:' + k, JSON.stringify({ v: VER, d }));
+      try { pon() } catch { try { for (const x of Object.keys(st)) if (x.startsWith('cj-c:')) st.removeItem(x); pon() } catch {} }
+    },
+  };
+  const LS = (() => { try { return localStorage } catch { return null } })(), SS = (() => { try { return sessionStorage } catch { return null } })();
+  // los datos de cada skin que ya se han pedido (cs_items_info), para no esperarlos en la siguiente visita
+  const ITM = new Map(Object.entries((LS && memo.lee(LS, 'items')) || {}));
+  for (const [k, it] of ITM) if (!D.items.has(k)) D.items.set(k, it);
+  let itmT = 0;
+  const guardaItems = () => { clearTimeout(itmT); itmT = setTimeout(() => { if (!LS) return; const o = {}; for (const [k, v] of [...ITM].slice(-1500)) o[k] = v; memo.pon(LS, 'items', o) }, 1500) };
   async function asegura(ids) {
     const faltan = [...new Set(ids)].filter((id) => id && !D.items.has(id));
-    for (let i = 0; i < faltan.length; i += 200) for (const it of (await rpc('cs_items_info', { p_ids: faltan.slice(i, i + 200) })) || []) D.items.set(it.id, it);
+    const trozos = []; for (let i = 0; i < faltan.length; i += 200) trozos.push(faltan.slice(i, i + 200));
+    const res = await Promise.all(trozos.map((t) => rpc('cs_items_info', { p_ids: t })));
+    for (const l of res) for (const it of l || []) { D.items.set(it.id, it); ITM.delete(it.id); ITM.set(it.id, it) }
+    if (faltan.length) guardaItems();
   }
-  async function cargaCaja(id) {
-    if (D.caja.has(id)) return D.caja.get(id);
-    const c = await rpc('cs_case', { p_case: id });
+  // lo que trae una caja (cs_case) y sus tickets (cs_giro_info, db/081; sin 081 no hay y se sigue como antes), las dos a la vez.
+  // Una sola peticion por caja aunque la pidan dos sitios a la vez (abrirla y la recarga de la app)
+  const CJP = new Map(), CJ_REV = new Set();
+  function prepCaja(c) {
     for (const it of c.items) D.items.set(it.id, it);
     c.por = {}; for (const it of c.items) (c.por[it.rarity] = c.por[it.rarity] || []).push(it);
-    // las probabilidades de los tickets en esta caja (db/081); sin 081 no hay y se sigue como antes
-    try { c.giro = await rpc('cs_giro_info', { p_case: id }) } catch { c.giro = null }
-    D.caja.set(id, c);
     return c;
+  }
+  async function pideCaja(id) {
+    const [c, g] = await Promise.all([rpc('cs_case', { p_case: id }), rpc('cs_giro_info', { p_case: id }).catch(() => null)]);
+    if (SS) memo.pon(SS, 'caja:' + id, { c, g });
+    c.giro = g; return prepCaja(c);
+  }
+  function cargaCaja(id) {
+    if (D.caja.has(id)) return Promise.resolve(D.caja.get(id));
+    if (CJP.has(id)) return CJP.get(id);
+    // ya vista en esta sesion: al momento, y se pide otra vez por detras por si ha cambiado (precios, tickets)
+    const g = SS && memo.lee(SS, 'caja:' + id);
+    if (g && g.c && g.c.items) {
+      const c = prepCaja(g.c); c.giro = g.g; D.caja.set(id, c);
+      if (!CJ_REV.has(id)) {
+        CJ_REV.add(id);
+        pideCaja(id).then((n) => { if (JSON.stringify([n.items, n.giro, n.price]) === JSON.stringify([c.items, c.giro, c.price])) return; D.caja.set(id, n); if (S.caja === id) pinta() }, () => {});
+      }
+      return Promise.resolve(c);
+    }
+    const p = pideCaja(id).then((c) => { D.caja.set(id, c); CJ_REV.add(id); return c });
+    CJP.set(id, p);
+    const fin = () => CJP.delete(id); p.then(fin, fin);
+    return p;
   }
   async function cargaBat(id) {
     const b = await rpc('cs_battle', { p_id: id });
-    for (const cid of new Set(b.cases)) await cargaCaja(cid);
+    await Promise.all([...new Set(b.cases)].map(cargaCaja));
     await asegura(b.drops.flatMap((d) => [d.inv.item, ...(d.inv.bonus ? ['orig', 'up', 'down'].map((k) => d.inv.bonus[k] && d.inv.bonus[k].item) : [])]));
     D.bats.set(id, b);
     return b;
@@ -225,6 +265,19 @@
       return (data || []).map((r) => ({ id: r.id, item: r.item_id, value: r.value, case: r.case_id, battle: r.battle_id, by: r.opened_by || r.player, at: r.created_at }));
     } catch { return null }
   }
+  // PM 05-11: "cuando es una caja o un upgrade que salga upgrade o la caja del csgo, porque ahora sale owned by chris". Lo que no viene de
+  // una caja ni de una batalla (case_id y battle_id vacios) casi siempre sale de Mejorar: cs_upgrades.inv_id dice cual (los jugadores
+  // pueden leerla, db/071) y trae la probabilidad y lo puesto, de donde sale el multiplicador. Solo se pide lo que aun no se sabe.
+  async function origenes(l) {
+    const ids = [...new Set(l.filter((i) => i && i.id && !i.case && !i.battle && !D.origen.has(i.id)).map((i) => i.id))];
+    if (!ids.length) return;
+    try {
+      const { data, error } = await ctx.db.from('cs_upgrades').select('inv_id,chance,stake_value,target_value').in('inv_id', ids.slice(0, 150));
+      if (error) throw error;
+      for (const id of ids.slice(0, 150)) D.origen.set(id, null);
+      for (const u of data || []) D.origen.set(u.inv_id, { tipo: 'mejora', chance: +u.chance, mult: u.stake_value > 0 ? u.target_value / u.stake_value : null });
+    } catch {}
+  }
   async function cargaMias(quien) {
     try {
       const { data, error } = await ctx.db.from('cs_owned').select('id,case_id,source,created_at').eq('player', quien).eq('status', 'own').order('created_at', { ascending: true });
@@ -232,23 +285,29 @@
       D.cajasDe.set(quien, data || []);
     } catch { D.cajasDe.set(quien, []) }
   }
+  // PM 01-11 "si, abrelas": Lujo abierta otra vez con las 16 cajas nuevas (db/046). Cosmeticos sigue fuera (Mercado en mantenimiento)
+  const sinCos = (l) => (l || []).filter((c) => catDe(c) !== 'cosmeticos');
+  let casesYa = false;   // pedida a la base en esta carga de la pagina (la guardada en el aparato puede estar vieja)
   async function cargar(fuerza) {
     if (!ctx) return;
     if (cargando) { if (fuerza) otraVez = true; return cargando }
     if (!fuerza && Date.now() - ultima < 1500) return;
     cargando = (async () => {
       try {
-        // PM 01-11 "si, abrelas": Lujo abierta otra vez con las 16 cajas nuevas (db/046). Cosmeticos sigue fuera (Mercado en mantenimiento)
-        if (!D.cases) D.cases = ((await rpc('cs_cases')) || []).filter((c) => catDe(c) !== 'cosmeticos');
-        const st = await rpc('cs_state', { p_player: S.quien || ctx.me });
-        const [bu, mj] = await Promise.all([cargaBuenos(), cargaMejores()]);
-        await asegura([...st.inv, ...st.feed, ...(bu || []), ...(mj || [])].map((i) => i.item));
+        // PM 05-11 "tarda mucho en cargar": antes iba todo en fila (cajas, estado, drops, skins, cajas sin abrir: 3,5 s en el movil).
+        // Ahora todo a la vez, y la lista de cajas sale en cuanto se sabe (de este aparato si ya se vio), sin esperar al resto.
+        if (!D.cases && LS) { const c = memo.lee(LS, 'cases'); if (c && c.length) { D.cases = c; if (!D.st) pinta() } }
+        const pCases = casesYa ? null : rpc('cs_cases').then((l) => {
+          const n = sinCos(l); casesYa = true;
+          if (LS) memo.pon(LS, 'cases', n);
+          const distinta = !D.cases || JSON.stringify(n) !== JSON.stringify(D.cases);
+          if (distinta) { D.cases = n; if (!D.st) pinta() }
+        }, (e) => { if (!D.cases) throw e });
+        const [, st, bu, mj] = await Promise.all([pCases, rpc('cs_state', { p_player: S.quien || ctx.me }), cargaBuenos(), cargaMejores(),
+          cargaMias(ctx.me), S.quien && S.quien !== ctx.me ? cargaMias(S.quien) : null, S.caja ? cargaCaja(S.caja).catch(() => null) : null,
+          S.bat ? cargaBat(S.bat) : S.tab === 'batallas' ? cargaHechas() : null]);
+        await Promise.all([asegura([...st.inv, ...st.feed, ...(bu || []), ...(mj || [])].map((i) => i.item)), origenes([...(bu || []), ...(mj || []), ...st.feed, ...st.inv])]);
         D.st = st; D.buenos = bu; D.mejores = mj || D.mejores || []; D.err = null;
-        await cargaMias(ctx.me);
-        if (S.quien && S.quien !== ctx.me) await cargaMias(S.quien);
-        if (S.caja) await cargaCaja(S.caja);
-        if (S.bat) await cargaBat(S.bat);
-        else if (S.tab === 'batallas') await cargaHechas();
       } catch (e) { D.err = msgErr(e) }
       ultima = Date.now(); cargando = null;
       pinta();
@@ -294,6 +353,7 @@
     const h = barraHtml();
     b.hidden = !h;
     if (b.dataset.h !== h) { b.dataset.h = h; b.innerHTML = h; armados(b); traduce(b) }
+    barraOn();
   }
   function cambioSel() { S.sure = null; pintaBarra() }
   let barraRaf = 0;
@@ -406,19 +466,61 @@
   document.addEventListener('dragstart', (e) => { if (enRejilla(e)) e.preventDefault() });
 
   /* ---------- pintar ---------- */
+  // cambia(a, b): deja a (lo que se ve) igual que b (lo nuevo, sin colgar) tocando solo lo que es distinto. Dos nodos son "el mismo" si son
+  // la misma etiqueta con la misma primera clase y los mismos data-cj, data-v y data-id. Las tiras de la ruleta (las mueve el codigo y
+  // les deja animaciones puestas) se hacen siempre nuevas, como antes. La tira de drops (FD.el) se queda en su hueco.
+  const clave = (n) => (n.nodeType !== 1 ? '#' + n.nodeType : `${n.tagName}|${n.classList[0] || ''}|${n.getAttribute('data-cj') || ''}|${n.getAttribute('data-v') || ''}|${n.getAttribute('data-id') || ''}`);
+  const siempreNueva = (n) => n.nodeType === 1 && (n.classList.contains('cj-strip') || n.classList.contains('gd'));
+  function mismo(a, b) {
+    if (a === FD.el) return b.nodeType === 1 && b.hasAttribute('data-cjfeed');
+    if (siempreNueva(a) || siempreNueva(b)) return false;
+    return clave(a) === clave(b);
+  }
+  function cambia(a, b) {
+    let o = a.firstChild, n = b.firstChild;
+    while (n) {
+      const sig = n.nextSibling;
+      if (o && mismo(o, n)) { iguala(o, n); o = o.nextSibling }
+      else {
+        // ¿esta un poco mas alla? (algo que se ha quitado delante): fuera lo de en medio
+        let m = o && o.nextSibling, k = 0;
+        while (m && k < 6 && !mismo(m, n)) { m = m.nextSibling; k++ }
+        if (m && mismo(m, n)) { while (o !== m) { const x = o.nextSibling; a.removeChild(o); o = x } iguala(o, n); o = o.nextSibling }
+        else a.insertBefore(n, o);
+      }
+      n = sig;
+    }
+    while (o) { const x = o.nextSibling; a.removeChild(o); o = x }
+  }
+  function iguala(o, n) {
+    if (o === FD.el) return;
+    if (o.nodeType !== 1) { if (o.nodeValue !== n.nodeValue) o.nodeValue = n.nodeValue; return }
+    const oa = o.attributes, na = n.attributes;
+    // una imagen que no carga se esconde con style (onerror): eso se queda
+    for (let i = oa.length - 1; i >= 0; i--) { const x = oa[i].name; if (!n.hasAttribute(x) && !(x === 'style' && o.tagName === 'IMG')) o.removeAttribute(x) }
+    for (let i = 0; i < na.length; i++) { const x = na[i]; if (o.getAttribute(x.name) !== x.value) o.setAttribute(x.name, x.value) }
+    if (o.firstChild || n.firstChild) cambia(o, n);
+  }
+  // con la barra de vender a la vista, el boton redondo del chat se aparta (antes con body:has(), que recalculaba toda la pagina a cada cambio)
+  const barraOn = () => document.body.classList.toggle('cj-bar-on', !!(root && root.isConnected && root.querySelector('.cj-bar:not([hidden])')));
   function pinta(forzar) {
     if (!root) return;
     if ((anim || P.act) && !forzar) { pendiente = true; return }
     pendiente = false;
     if (S.tab !== 'inventario' && S.sel.size) { S.sel.clear(); S.ancla = null }   // la seleccion se queda en el inventario: al salir se limpia
-    root.innerHTML = vista();
+    // PM 05-11 "quiero verlo fluido": antes cada repintado (cada recarga, cada toque, cada movimiento de dinero de cualquiera) tiraba la
+    // pantalla entera y la volvia a hacer: cientos de cartas e imagenes otra vez. Ahora se compara con lo que ya hay y solo se toca lo que
+    // cambia (cambia). Mejorar (mejora.js pinta dentro) y una batalla abierta (su repeticion mueve las ruletas a mano) se rehacen enteras.
+    const html = vista(), entera = !root.firstChild || S.tab === 'mejorar' || (S.tab === 'batallas' && !!S.bat);
+    if (entera) { root.innerHTML = html; traduce(root) }
+    else { const t = document.createElement('template'); t.innerHTML = html; traduce(t.content); cambia(root, t.content) }
     root.classList.toggle('cj-nv-on', S.tab === 'batallas' && !S.bat && !!S.nueva);   // crear batalla: cabecera mas baja (cajas.css)
     // los botones que piden confirmacion (cancelar, salir, vender) se ponen en rojo mientras esperan el segundo toque,
     // tambien el de la batalla abierta
     ponFeed();
     armados(root);
     indexa();
-    traduce(root);
+    barraOn();
     if (S.tab === 'mejorar' && window.GM_MEJORA) GM_MEJORA.montar(root.querySelector('[data-mejora]'), window.GM_CAJAS.util);
     if (!anim && S.tab === 'batallas' && S.bat && !S.rep) {
       const b = D.bats.get(S.bat);
@@ -434,7 +536,8 @@
     const tabs = [['abrir', 'Abrir'], ['inventario', 'Inventario'], ['batallas', 'Batallas'], ['mejorar', 'Mejorar']], dot = hayAviso();   // Mejorar: mejora.js (db/071)
     const cab = `<nav class="cj-tabs">${tabs.map(([k, n]) => `<button class="cj-tab ${S.tab === k ? 'on' : ''}" data-cj="tab" data-v="${k}">${n}${k === 'batallas' && dot ? '<i class="cj-dot"></i>' : ''}</button>`).join('')}</nav>`
       + (window.GM_ESPECTAR ? GM_ESPECTAR.html('cajas') : '');   // En directo: mirar a quien abre cajas o usa Mejorar (espectar.js)
-    if (!D.st || !D.cases) return cab + `<p class="hint cj-c">${D.err ? esc(D.err) : 'Cargando…'}</p>`;
+    // la lista de cajas sale ya con D.cases (puede venir de este aparato); lo demas espera al estado (cs_state)
+    if (!D.cases || (!D.st && S.tab !== 'abrir')) return cab + `<p class="hint cj-c">${D.err ? esc(D.err) : 'Cargando…'}</p>`;
     if (S.tab === 'mejorar') return cab + '<div data-mejora></div>';
     return cab + (S.tab === 'abrir' ? vAbrir() : S.tab === 'inventario' ? vInv() : S.bat ? vBat() : S.nueva ? vNueva() : vBatallas());
   }
@@ -510,7 +613,7 @@
     if (!info) return `<section class="ca" style="--g:${brillo(c)}">${cab}<p class="hint cj-c">Cargando lo que trae…</p></section>`;
     const esperaSrv = ocupado && !anim, busy = !!anim || ocupado, total = c.price * S.n, falta = ctx.saldo < total, tuyas = mias(c.id), off = busy || S.auto ? 'disabled' : '';
     const go = S.auto ? '<button class="go ca-go ca-stop" data-cj="parar"><i></i><span>Parar</span></button>'
-      : `<button class="go ca-go" data-cj="abrir" ${falta || busy ? 'disabled' : ''}>${esperaSrv ? '<span>Abriendo…</span>' : `<span>${falta ? 'Sin saldo' : 'Abrir por'}</span><b>${N(total)}</b>${coin()}`}</button>`;
+      : `<button class="go ca-go ${esperaSrv && S.abre === 'pago' ? 'abriendo' : ''}" data-cj="abrir" ${falta || busy ? 'disabled' : ''}>${esperaSrv && S.abre === 'pago' ? '<span>Abriendo…</span>' : `<span>${falta ? 'Sin saldo' : 'Abrir por'}</span><b>${N(total)}</b>${coin()}`}</button>`;
     const barra = `<div class="ca-bar">
       <button class="ca-try" data-cj="prueba" ${off}>Prueba gratis</button>
       <div class="ca-ns" role="group" aria-label="Cuántas">${[1, 2, 3, 4, 5].map((n) => `<button class="${S.n === n ? 'on' : ''}" data-cj="n" data-v="${n}" ${off}>${n}</button>`).join('')}</div>
@@ -518,7 +621,7 @@
       ${seg('vel', [['0', 'Normal'], ['1', 'Rápido'], ['2', 'Ultra']], S.vel, 'sm ca-vel')}
       <button class="cj-fast ca-auto ${S.auto ? 'on' : ''}" data-cj="auto" aria-pressed="${S.auto}" ${busy || S.auto || falta ? 'disabled' : ''}><i></i><span>Giro automático</span></button>
     </div>
-    ${tuyas.length ? `<button class="go ghost ca-mia" data-cj="abrirMia" data-v="${tuyas[0].id}" ${busy ? 'disabled' : ''}><span>${tuyas.length === 1 ? 'Abrir la tuya' : 'Abrir una tuya'}</span>${tuyas.length > 1 ? `<b>×${tuyas.length}</b>` : ''}</button>` : ''}
+    ${tuyas.length ? `<button class="go ghost ca-mia ${esperaSrv && S.abre === tuyas[0].id ? 'abriendo' : ''}" data-cj="abrirMia" data-v="${tuyas[0].id}" ${busy ? 'disabled' : ''}>${esperaSrv && S.abre === tuyas[0].id ? '<span>Abriendo…</span>' : `<span>${tuyas.length === 1 ? 'Abrir la tuya' : 'Abrir una tuya'}</span>${tuyas.length > 1 ? `<b>×${tuyas.length}</b>` : ''}`}</button>` : ''}
     ${falta && !tuyas.length && !S.auto ? `<p class="hint ca-hint">Tienes ${N(ctx.saldo)}. La paga del lunes se reclama en Recompensas.</p>` : ''}`;
     return `<section class="ca" style="--g:${brillo(c)}">${cab}${vEscena(c, info)}${vResultado(c)}${barra}</section>${vContenido(info)}`;
   }
@@ -590,7 +693,18 @@
     return `<div class="cj-fd" data-id="${esc(i.id)}" style="--c:${color(x.rarity)}"><span class="cj-fd-img">${pic(x.image, 256)}</span>
         <span class="cj-fd-n" data-notr>${top ? `<em>${esc(top)}</em>` : ''}${x.rarity === 'esp' && n.top ? '★ ' : ''}${esc(n.main)}</span>
         <span class="cj-fd-b">${av(i.by, 'sm')}<span class="cj-fd-v">${N(i.value)}${coin()}</span></span>
-        <span class="cj-fd-tip">${c.image ? `<span class="cj-fd-ti">${pic(c.image, 256)}</span>` : ''}${c.name ? `<span class="lab">${i.battle ? 'En batalla' : 'Salió de'}</span><b data-notr>${esc(c.name)}</b>` : ''}<span class="cj-fd-q"><span>Lo abrió</span><i data-notr>${esc(jug(i.by).n)}</i></span></span></div>`;
+        <span class="cj-fd-tip">${fdOrigen(i, c)}</span></div>`;
+  }
+  // de donde salio: la caja (suelta o en batalla) o Mejorar, con su rueda, el multiplicador y la probabilidad
+  function fdOrigen(i, c) {
+    const o = !i.case && !i.battle ? D.origen.get(i.id) : null, quien = `<i data-notr>${esc(jug(i.by).n)}</i>`;
+    if (c.name || c.image) return `${c.image ? `<span class="cj-fd-ti">${pic(c.image, 256)}</span>` : ''}${c.name ? `<span class="lab">${i.battle ? 'En batalla' : 'Salió de'}</span><b data-notr>${esc(c.name)}</b>` : ''}<span class="cj-fd-q"><span>Lo abrió</span>${quien}</span>`;
+    if (o && o.tipo === 'mejora') {
+      const p = Math.max(0, Math.min(1, o.chance || 0)), C = 2 * Math.PI * 15;
+      return `<span class="cj-fd-ti cj-fd-mj"><svg viewBox="0 0 40 40" aria-hidden="true"><circle class="r" cx="20" cy="20" r="15"/><circle class="a" cx="20" cy="20" r="15" stroke-dasharray="${(C * p).toFixed(2)} ${C.toFixed(2)}" transform="rotate(-90 20 20)"/></svg></span>
+        <span class="lab">Mejora</span><b class="cj-fd-mjx"><span class="num">${o.mult ? '×' + (o.mult >= 10 ? o.mult.toFixed(1) : o.mult.toFixed(2)).replace('.', ',') : ''}</span><em class="num">${pctTxt(p)}</em></b><span class="cj-fd-q"><span>Lo mejoró</span>${quien}</span>`;
+    }
+    return `<span class="cj-fd-q"><span>Lo consiguió</span>${quien}</span>`;
   }
   // Ultimos: al final (lo nuevo entra por la derecha); Mejores: al principio (el mas caro a la izquierda)
   function fdAlFinal() { const e = FD.el; if (e && e.isConnected) e.scrollLeft = FD.modo === 'best' ? 0 : e.scrollWidth - e.clientWidth + FD.sx }
@@ -620,7 +734,9 @@
   }
   // despues de cada repintado: la tira de siempre en su hueco (y en el sitio del scroll en el que estaba)
   function ponFeed() {
-    const h = root && root.querySelector('[data-cjfeed]'); if (!h) return;
+    const h = root && root.querySelector('[data-cjfeed]');
+    // sin hueco nuevo la tira sigue donde estaba (el repintado ya no la saca); si se ha vaciado (Ultimos <-> Mejores) se vuelve a llenar
+    if (!h) { if (FD.el && FD.el.isConnected && !FD.list.length) fdLlena(fdObjetivo()); return }
     if (!FD.el) {
       FD.el = document.createElement('div'); FD.el.className = 'cj-feed';
       FD.el.addEventListener('click', fdToque);
@@ -730,13 +846,13 @@
     return `${fila}${tuyas}${head}${herramientas}${filtros}
       ${filtrado ? `<p class="cj-count"><span>${cuantas(vis.length, vis)}</span><span class="num">${N(vis.reduce((a, i) => a + i.value, 0))}${coin()}</span><button class="chip" data-cj="sinfiltro">Quitar filtros</button></p>` : ''}
       ${atajos}
-      <div class="cj-grid cj-inv">${ver.map((i) => { const ok = vendible(i); return tile(item(i.item), { top: caja(i.case).name, meta: metaDe(i), valor: i.value, on: S.sel.has(i.id), bloq: mio && !ok, boton: mio && ok ? `data-cj="sel" data-v="${i.id}"` : '' }) }).join('')}</div>
+      <div class="cj-grid cj-inv">${ver.map((i) => { const ok = vendible(i); return tile(item(i.item), { top: caja(i.case).name || (!i.case && !i.battle && D.origen.get(i.id) ? 'Mejora' : ''), meta: metaDe(i), valor: i.value, on: S.sel.has(i.id), bloq: mio && !ok, boton: mio && ok ? `data-cj="sel" data-v="${i.id}"` : '' }) }).join('')}</div>
       ${vis.length > ver.length ? `<div class="cj-more"><button class="chip" data-cj="mas">Ver ${Math.min(INV_PASO, vis.length - ver.length)} más</button></div>` : ''}
       ${mio ? `<div class="cj-bar" data-selbar ${S.sel.size ? '' : 'hidden'}>${S.sel.size ? barraHtml() : ''}</div>` : ''}`;
   }
 
   /* ----- Giro Dorado (db/075) ----- */
-  // PM 03-11: un giro extra de premio dentro de las cajas. A veces (4 %), despues de frenar la tira, salta el Giro Dorado: dos objetos de
+  // PM 03-11: un giro extra de premio dentro de las cajas. A veces (lo que diga settings giro_dorado_pct en la base; 6 desde el 05-11), despues de frenar la tira, salta el Giro Dorado: dos objetos de
   // verdad de la misma caja, uno que vale mas (Sube) y otro que vale menos (Baja; si no hay nada mas barato, quedarse con lo que salio),
   // al 50 %. Lo decide la base al abrir la caja y lo guarda en cs_inv.bonus ({orig, up, down, won}); aqui solo se ensena: un selector
   // dorado que salta de uno a otro cada vez mas despacio y para en el que toco. Respeta la velocidad (Normal, Rapido, Ultra) y Saltar.
@@ -1010,7 +1126,8 @@
   }
   const nvRepintaPick = () => {
     const z = root && root.querySelector('[data-nvz]'); if (!z || !S.nueva) return;
-    const t = document.createElement('div'); t.innerHTML = nvPick(S.nueva); const nuevo = t.firstElementChild; traduce(nuevo); z.replaceWith(nuevo);
+    // como pinta(): solo cambia lo distinto (las categorias y las cajas que siguen en la pagina no se rehacen)
+    const t = document.createElement('template'); t.innerHTML = nvPick(S.nueva); traduce(t.content); iguala(z, t.content.firstElementChild);
   };
   function vNueva() {
     const nv = S.nueva, tam = tamDe(nv), n = nv.cases.length, cz = loca(nv);
@@ -1160,7 +1277,8 @@
   function gira(strip, t, dur) {
     const track = strip.firstElementChild, ini = track.children[INI], k = track.children[G], kw = k.offsetWidth;
     // al parar: la ganadora crece y brilla con el color de su rareza y el resto se apaga
-    const fin = () => { k.classList.add('gana'); strip.classList.add('fin') };
+    // (PM 05-11 "quiero verlo fluido": las 54 cartas se apagaban con transicion a la vez; las que quedan fuera de la tira lo hacen sin ella)
+    const fin = () => { const cs = track.children; for (let i = 0; i < cs.length; i++) if (Math.abs(i - G) > 8) cs[i].style.transition = 'none'; k.classList.add('gana'); strip.classList.add('fin') };
     if (!strip.isConnected || !kw) { fin(); return Promise.resolve() }
     const x0 = -(ini.offsetLeft + ini.offsetWidth / 2), x1 = -(k.offsetLeft + kw / 2 + t.j * kw);
     const a = track.animate([{ transform: `translateX(${x0}px)` }, { transform: `translateX(${x1}px)` }], { duration: dur, easing: 'cubic-bezier(.08,.6,.12,1)', fill: 'forwards' });
@@ -1187,14 +1305,16 @@
     });
     else {
       if (!mia && c.price * n > ctx.saldo) { avisa('No tienes saldo suficiente'); return false }
-      ocupado = true;
-      root.querySelectorAll('[data-cj=abrir],[data-cj=abrirMia],[data-cj=prueba],[data-cj=auto],[data-cj=n]').forEach((b) => { b.disabled = true });
-      // mientras contesta el servidor, el boton lo dice (si no, parece que no ha hecho nada)
-      const b0 = root.querySelector(mia ? `[data-cj=abrirMia][data-v="${mia}"]` : '.ca-go[data-cj=abrir]');
-      if (b0) { b0.classList.add('abriendo'); b0.innerHTML = '<span>Abriendo…</span>'; traduce(b0) }
+      // PM 05-11 "a veces cuando le doy a open otra vez como que se bugea": mientras contestaba el servidor seguian ahi el premio anterior
+      // y sus tiras paradas (hasta 1 s en el movil), y las recargas de la app rehacian la pantalla a medias. Ahora, al tocar, todo vuelve
+      // a reposo al momento (tiras con la caja en medio, sin la tarjeta del premio) y el boton dice Abriendo; ese estado esta en la vista
+      // (ocupado, S.abre), asi que un repintado mientras tanto lo deja igual.
+      ocupado = true; S.abre = mia || 'pago';
+      S.res = null; S.sure = null; S.prueba = false; S.fase = 'idle'; S.tirasK = '';
+      pinta(true);
       let r;
-      try { r = mia ? await rpc('cs_open_owned', { p_id: mia }) : await rpc('cs_open', { p_case: c.id, p_n: n }) } catch (e) { ocupado = false; pinta(); avisa(esc(msgErr(e))); return false }
-      ocupado = false;
+      try { r = mia ? await rpc('cs_open_owned', { p_id: mia }) : await rpc('cs_open', { p_case: c.id, p_n: n }) } catch (e) { ocupado = false; S.abre = null; pinta(); avisa(esc(msgErr(e))); return false }
+      ocupado = false; S.abre = null;
       items = r.items;
       try { const f = (x) => ({ r: x.rarity, i: src(x.image, 256), l: esLujo(x.id) ? 1 : 0 }); window.dispatchEvent(new CustomEvent('gm:caja-abierta', { detail: { quien: ctx.me, nombre: jug(ctx.me).n, caja: c.id, cajaNombre: c.name, items: r.items.map((i) => ({ ...f(item(i.item)), n: item(i.item).name, v: i.value, ...(esTk(i) ? { t: i.bonus.tipo, tp: montonTk(info, i.bonus).sort(() => Math.random() - 0.5).slice(0, 16).map(f) } : {}) })), pool: Array.from({ length: 24 }, () => f(relleno(info))) } })) } catch {}   // en directo (cajas-vivo.js)
       if (mia) D.cajasDe.set(ctx.me, mias().filter((o) => o.id !== mia));
@@ -1467,6 +1587,11 @@
     }
   }
   document.addEventListener('click', onClick);
+  // lo que trae una caja se empieza a pedir al apoyar el dedo o al dejar el raton encima un momento: al abrirla ya suele estar
+  let preT = 0;
+  const preCaja = (b) => { if (b && ctx && root && root.contains(b) && b.dataset.v) cargaCaja(b.dataset.v).catch(() => {}) };
+  document.addEventListener('pointerdown', (e) => preCaja(e.target.closest && e.target.closest('[data-cj=caja]')), { passive: true });
+  document.addEventListener('mouseover', (e) => { clearTimeout(preT); const b = e.target.closest && e.target.closest('[data-cj=caja]'); if (b) preT = setTimeout(() => preCaja(b), 140) }, { passive: true });
   document.addEventListener('input', (e) => {
     const q = e.target && e.target.matches && e.target.matches('[data-nv-q]') ? e.target : null;
     if (!q || !S.nueva || !root || !root.contains(q)) return;
