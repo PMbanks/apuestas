@@ -18,7 +18,7 @@
   const lang = () => g(() => GM_LANG.get(), 'es') === 'en' ? 'en' : 'es';
   const avisa = (m) => g(() => toast(m));
   const VAPID = g(() => window.APP_CONFIG.vapid, '') || '';
-  const PANTALLAS = ['inicio', 'partidos', 'apuestas', 'colegas', 'liga', 'directo', 'cajas', 'chat', 'monedero', 'juegos', 'ajustes', 'novedades'];
+  const PANTALLAS = ['inicio', 'partidos', 'apuestas', 'colegas', 'liga', 'directo', 'cajas', 'feed', 'monedero', 'juegos', 'ajustes', 'novedades'];
 
   /* ---------- el aparato ---------- */
   const UA = g(() => navigator.userAgent, '') || '';
@@ -38,7 +38,6 @@
     ['apuestas', 'Apuestas', 'Una apuesta tuya o una combinada se resuelve'],
     ['ranking', 'Ranking', 'Te quitan el puesto 1 del ranking de ratio'],
     ['paga', 'Paga y premios', 'La paga del lunes, el bote, los premios de la semana y la ruleta global'],
-    ['chat', 'Chat', 'Alguien te menciona con @tunombre'],
   ];
   const TODOS = { retos: true, apuestas: true, ranking: true, paga: true, chat: true };
 
@@ -244,6 +243,7 @@
 
   /* ---------- tocar un aviso: llevar a su pantalla ---------- */
   function ir(p) {
+    if (p === 'chat') p = 'feed';   // avisos viejos que llevaban al chat
     if (!PANTALLAS.includes(p)) p = 'inicio';
     g(() => { S.scr = p; S.sheet = false; S.nvp = false; document.getElementById('view').scrollTop = 0; render() });
   }

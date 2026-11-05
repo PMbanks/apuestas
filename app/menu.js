@@ -1,12 +1,12 @@
 // Menu A "Cinco botones y Más" (PM, 01-11, modelos/m1101/menu/a.html).
 // - Monedero sale del menu: icono junto al engranaje de Ajustes (lo pinta app.js en la cabecera, .mo-btn).
-// - Chat sale del menu: burbuja abajo a la derecha con los no leidos; en PC, con la vista previa del ultimo mensaje.
+// - 05-11: el chat general se quita (sin burbuja ni fila Chat). El Feed es una pantalla propia: fila en la hoja de Mas.
 // - Movil: la barra de abajo lleva Inicio, Partidos, Apuestas, Todos y Más. Más abre una hoja con Liga, Cajas, Juegos y
 //   Mercado y los avisos que antes eran pastillas arriba (Novedades, Recompensas, Resultados). "N en directo" va en una
 //   tira bajo la cabecera y lleva a Directo.
-// - PC: el menu lateral sigue (sin Monedero ni Chat) y las pastillas de arriba tambien.
-// Va aparte, como inicio.js: usa lo global de app.js (S, M, SP, SCREENS, MERCADO_MANT, CHAT, lastSeen, MEK, av, fr, esc,
-// unread, novSinVer, rwPend, IC_GIFT, IC_BELL, IC_NUEVO) y repinta lo suyo cada vez que app.js repinta la cabecera.
+// - PC: el menu lateral sigue (con Feed, sin Monedero) y las pastillas de arriba tambien.
+// Va aparte, como inicio.js: usa lo global de app.js (S, M, SP, SCREENS, MERCADO_MANT, F,
+// novSinVer, rwPend, IC_GIFT, IC_BELL, IC_NUEVO) y repinta lo suyo cada vez que app.js repinta la cabecera.
 'use strict';
 (function () {
   const g = (f, d) => { try { return f() } catch { return d } };
@@ -14,7 +14,7 @@
   const ico = (p, cls) => `<svg viewBox="0 0 24 24"${cls ? ` class="${cls}"` : ''} aria-hidden="true">${p}</svg>`;
   const P_MAS = '<circle cx="5.5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18.5" cy="12" r="1.2"/>';
   const P_IR = '<path d="M9.5 6l6 6-6 6"/>';
-  const P_CHAT = '<path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 17h-8l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 5 5z"/>';
+  const P_FEED = '<path d="M3.5 12h4l2.5-6.5 4 13 2.5-6.5h4"/>';
   const movil = () => matchMedia('(max-width:860px)').matches;
   const tr = (el) => { if (window.GM_LANG) GM_LANG.traduce(el) };
   const listo = () => { const a = document.getElementById('app'); return a && !a.hidden && g(() => typeof S === 'object' && Array.isArray(M) && F.length > 0, false) };
@@ -25,8 +25,7 @@
     const nov = g(() => novSinVer(), 0);
     const rw = g(() => rwCuenta(), 0);   // lo mismo que el boton de arriba (con la paga del lunes, 04-11)
     const res = !!document.querySelector('#top .gnd-b.hay');
-    const chat = g(() => unread(), 0);   // mensajes del chat sin leer: punto en Más y fila Chat en la hoja
-    return { nov, rw, res, chat, hay: !!(nov || rw || res || chat) };
+    return { nov, rw, res, hay: !!(nov || rw || res) };
   };
 
   /* ---------- boton Más de la barra de abajo (solo movil) ---------- */
@@ -34,7 +33,7 @@
     const nav = document.getElementById('nav'); if (!nav) return;
     let b = nav.querySelector('.nv-mas');
     if (!b) { b = document.createElement('button'); b.type = 'button'; b.className = 'nv nv-mas'; b.dataset.mas = '1'; nav.appendChild(b) }
-    const on = ABIERTA || MAS.includes(S.scr) || S.scr === 'novedades', k = `${on}|${av.hay}|${g(() => GM_LANG.get(), '')}`;
+    const on = ABIERTA || MAS.includes(S.scr) || S.scr === 'novedades' || S.scr === 'feed', k = `${on}|${av.hay}|${g(() => GM_LANG.get(), '')}`;
     if (b.dataset.k === k) return;
     b.dataset.k = k;
     b.classList.toggle('on', on);
@@ -58,7 +57,7 @@
     const fila = (attr, ic, n, extra) => `<button type="button" class="mas-r" ${attr}><span class="mas-ri">${ic}</span><span class="mas-rn">${n}</span>${extra}${ico(P_IR, 'mas-ch')}</button>`;
     const html = `<h2 class="lab">Más secciones</h2><div class="mas-ts">${tiles}</div>
       <h2 class="lab">Avisos</h2><div class="mas-l">
-        ${fila('data-scr="chat"', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">${P_CHAT}</svg>`, 'Chat', av.chat ? `<b class="mas-bd">${av.chat > 99 ? '99+' : av.chat}</b>` : '')}
+        ${fila('data-scr="feed"', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${P_FEED}</svg>`, 'Feed', '')}
         ${fila('data-act="nvp"', IC_NUEVO, 'Novedades', av.nov ? `<b class="mas-bd az">${av.nov}</b>` : '')}
         ${fila('data-act="rw"', IC_GIFT, 'Recompensas', av.rw ? `<b class="mas-bd">${av.rw}</b>` : ((x) => (x ? `<i class="mas-cd" data-rwcd="${x.cuando}"${x.aprox ? '' : ' data-rwfin'}></i>` : ''))(g(() => rwProximo(), null)))}
         ${fila('data-mas-res', IC_BELL, 'Resultados', av.res ? '<b class="mas-bd ve">Nuevos</b>' : '')}
@@ -85,47 +84,12 @@
     if (el.dataset.k !== k) { el.dataset.k = k; el.innerHTML = html; tr(el) }
   }
 
-  /* ---------- burbuja del chat ---------- */
-  // aviso de mensaje nuevo (PM, 01-11): cuando llega uno de otro y no estas en el chat, sale una pastilla con quien y el principio
-  // del mensaje junto a la burbuja (tambien en movil, encima de la barra) y se va sola a los 6 s; el contador de la burbuja se queda
-  let AV_VISTO = null, AVISO = null, avT = 0;
-  const AV_MS = 6500;
-  function nuevoMensaje() {
-    const m = CHAT.reduce((a, c) => (c.k && c.k !== MEK && c.id > a ? c.id : a), 0);
-    if (AV_VISTO == null) { AV_VISTO = m; return }
-    if (S.scr === 'chat') { AVISO = null; AV_VISTO = Math.max(AV_VISTO, m); return }
-    if (m > AV_VISTO) {
-      AV_VISTO = m; AVISO = { id: m, hasta: Date.now() + AV_MS };
-      document.body.classList.remove('chb-min');   // en movil la burbuja se encoge al bajar: vuelve para que se vea
-      clearTimeout(avT); avT = setTimeout(vigila, AV_MS + 60);
-    }
-  }
-  const resumen = (c) => (c.txt ? [c.txt, true] : c.img ? ['Foto', false] : c.aud ? ['Nota de voz', false] : c.bet ? ['Apuesta', false] : c.poll ? ['Encuesta', false] : ['', false]);
-  function burbuja() {
-    let el = document.getElementById('chatb');
-    if (!el) { el = document.createElement('div'); el.id = 'chatb'; document.body.appendChild(el) }
-    g(nuevoMensaje);
-    const ver = S.scr !== 'chat';
-    document.body.classList.toggle('chb-on', ver);
-    el.hidden = !ver;
-    if (!ver) return;
-    const un = g(() => unread(), 0);
-    const ult = un && AVISO && Date.now() < AVISO.hasta ? CHAT.find((c) => c.id === AVISO.id) : null;
-    let teaser = '';
-    if (ult) {
-      const [txt, suyo] = resumen(ult), a = av(ult.k).replace(/ data-prof="[^"]*"/, '').replace(/ title="[^"]*"/, '');
-      teaser = `<button type="button" class="chb-t" data-scr="chat" tabindex="-1">${a}<span><b data-notr>${esc(fr(ult.k).n)}</b><small${suyo ? ' data-notr' : ''}>${esc(txt.length > 90 ? txt.slice(0, 88) + '…' : txt)}</small></span></button>`;
-    }
-    const html = `${teaser}<button type="button" class="chb-b" data-scr="chat" aria-label="Abrir el chat" title="Chat">${ico(P_CHAT)}${un ? `<b>${un > 99 ? '99+' : un}</b>` : ''}</button>`, k = html + g(() => GM_LANG.get(), '');
-    if (el.dataset.k !== k) { el.dataset.k = k; el.innerHTML = html; tr(el) }
-  }
-
   /* ---------- montaje ---------- */
   function pinta() {
-    if (!listo()) { const c = document.getElementById('chatb'); if (c) c.hidden = true; document.body.classList.remove('chb-on'); return }
+    if (!listo()) return;
     if (ABIERTA && !movil()) { ABIERTA = false; document.body.classList.remove('mas-abierta') }
     const av = avisos();
-    g(() => masBoton(av)); g(() => tira()); g(() => burbuja()); g(() => hoja(av));
+    g(() => masBoton(av)); g(() => tira()); g(() => hoja(av));
   }
   let pend = false;
   const vigila = () => { if (pend) return; pend = true; queueMicrotask(() => { pend = false; try { pinta() } catch (e) { if (!vigila.av) { vigila.av = 1; console.warn('menu.js', e) } } }) };
@@ -134,7 +98,7 @@
   if (top) new MutationObserver(vigila).observe(top, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
   const app = document.getElementById('app');
   if (app) new MutationObserver(vigila).observe(app, { attributes: true, attributeFilter: ['hidden'] });
-  // la burbuja y la hoja van encima de la barra de abajo, que crece con el boleto y tus apuestas en vivo
+  // la hoja va encima de la barra de abajo, que crece con el boleto y tus apuestas en vivo
   const rail = document.querySelector('#app .rail');
   const alto = () => { if (rail) document.documentElement.style.setProperty('--rail-h', (movil() ? rail.offsetHeight : 0) + 'px') };
   if (rail && window.ResizeObserver) new ResizeObserver(alto).observe(rail);
@@ -166,19 +130,6 @@
     const pb = hd.closest('[data-keep=pb]'), sc = pb && pb.scrollHeight > pb.clientHeight + 1 ? pb : document.getElementById('view');
     sc.scrollBy({ top: Math.min(falta, hd.getBoundingClientRect().top - (sc.getBoundingClientRect().top + 8)), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }
-  // Detalles (01-11): en movil la burbuja tapaba la columna de cuotas al bajar por Partidos. Al bajar se encoge a una lengueta
-  // pegada al borde (con su numero de no leidos) y vuelve al subir, al llegar arriba o al cambiar de pantalla
-  const ult = new WeakMap(); let bajado = 0, pantalla = '';
-  const encoge = (v) => { const h = document.body.classList; if (h.contains('chb-min') !== v) h.toggle('chb-min', v) };
-  document.addEventListener('scroll', (e) => {
-    if (!movil()) return encoge(false);
-    const el = e.target, t = el && el.scrollTop; if (typeof t !== 'number' || !(el.id === 'view' || (el.dataset && el.dataset.keep))) return;
-    const a = ult.get(el) ?? t, d = t - a; ult.set(el, t);
-    if (t < 24 || d < -10) { bajado = 0; return encoge(false) }
-    if (d > 0) { bajado += d; if (bajado > 60) encoge(true) }
-  }, true);
-  const vigilaPantalla = () => { const s = g(() => S.scr, ''); if (s !== pantalla) { pantalla = s; bajado = 0; encoge(false) } };
-  new MutationObserver(vigilaPantalla).observe(document.getElementById('view') || document.body, { childList: true });
   vigila();
   window.GM_MENU = { abre, pinta, pmVer };
 })();

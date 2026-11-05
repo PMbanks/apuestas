@@ -10,7 +10,7 @@ const SP = { f: ['Fútbol', 'img/futbol.svg'], v: ['Valorant', 'img/valorant.svg
   r: ['Fórmula 1', 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" fill="#e10600"/><text x="32" y="41" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-style="italic" font-size="26" text-anchor="middle" fill="#fff">F1</text></svg>')] };   // NBA (nba.js, db/039) y F1 (f1.js, db/052)
 const DEP = ['f', 'v', 'c', 'u', 'b', 'r'];
 const KIND = { paga: 'Paga del lunes', apuesta: 'Apuesta', premio: 'Premio', devolucion: 'Devolución', ajuste: 'Ajuste', diario: 'Premio diario', rescate: 'Rescate', bote: 'Bote de la semana', tiempo: 'Tiempo en la app', trato: 'Trato entre amigos', mercado: 'Mercado', jackpot: 'Jackpot', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta', bote_gana: 'Bote ganado', caja: 'Caja de CS2', venta: 'Venta de skin', batalla: 'Batalla de cajas', ruleta_semana: 'Ruleta de premios', ruleta_global: 'Ruleta global', premio_semana: 'Premio de la semana', moneda: 'Cara o cruz', crash: 'Crash', ruleta: 'Ruleta', blackjack: 'Blackjack', plinko: 'Plinko', minas: 'Minas', carrera: 'Carrera de caballos', cashout: 'Cash out', pred_apuesta: 'Predicción rápida', pred_premio: 'Predicción acertada', pred_devol: 'Predicción devuelta', mejora: 'Mejora' };
-let TIEMPO = null, CLAIM = null, PAGA = null, BOTE = null, REACT = new Map(), POLLS = new Map(), CAMPEON = null;
+let TIEMPO = null, CLAIM = null, PAGA = null, BOTE = null, REACT = new Map(), CAMPEON = null;
 
 /* ---------- estado ---------- */
 let NOW = Date.now(), PAY = 0, WEEK0 = 0;
@@ -55,7 +55,7 @@ async function load() {
   const [st, ms, ch, ex, wh, ti, , rm] = await Promise.all([
     db.rpc('get_state'),
     db.from('matches').select(COLS).gte('starts_at', from).lte('starts_at', to).neq('status', 'canceled').order('starts_at').limit(3000),
-    db.from('chat').select('*').order('id', { ascending: false }).limit(150),
+    db.from('chat').select('*').is('player', null).order('id', { ascending: false }).limit(150),   // 05-11: solo los avisos de la app (sin jugador): salen en el Feed y en Inicio. Los mensajes de la gente siguen en la base, sin leerse
     db.rpc('get_extras'),
     db.from('wheel_spins').select('player,week,prize,label,amount,created_at').order('id', { ascending: false }).limit(40),
     db.rpc('time_status'),
@@ -172,7 +172,6 @@ function build(st, rows, chat, ex) {
   // primera tanda de ideas (db/009): premio diario, rescate, bote, reacciones, encuestas
   CLAIM = ex?.claim || null; BOTE = ex?.bote || null;
   REACT = new Map(); for (const r of ex?.reactions || []) { const k = uk.get(r.p); if (!k) continue; const t = REACT.get(r.t) || {}; (t[r.e] = t[r.e] || []).push(k); REACT.set(r.t, t) }
-  POLLS = new Map((ex?.polls || []).map((q) => [q.id, { q: q.q, o: q.o || [], v: Object.fromEntries(Object.entries(q.v || {}).map(([u, o]) => [uk.get(u), o]).filter(([k]) => k)) }]));
   const reg = ex?.regalos || {}; for (const f of F) f.recibido += reg[f.uid] || 0;
   // campeon del mes pasado: el que mas gano con sus apuestas resueltas ese mes; lleva corona todo el mes
   { const d = new Date(NOW), ini = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1), fin = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1), tot = {};
@@ -962,7 +961,7 @@ function ficha(m) {
       <button class="go" data-act="bet" data-go ${st < 1 ? 'disabled' : ''}>Apostar ${N(st)}</button>`;
   }
   const mineHere = myBetsOn(m.id);
-  if (mineHere.length) h += `<div class="d-mine"><span class="lab">Tus apuestas aquí</span>${mineHere.map((b) => `<div class="dm" data-bet="${b.id}"><strong>${esc(pn(m, b.p))} <em>${O(b.o)}</em></strong><span>${N(b.stake)} → <b>${N(b.stake * b.o)}${coin()}</b></span><button class="x-share" data-share="${b.id}">Al chat</button>${cancelBtn(b)}</div>`).join('')}</div>`;
+  if (mineHere.length) h += `<div class="d-mine"><span class="lab">Tus apuestas aquí</span>${mineHere.map((b) => `<div class="dm" data-bet="${b.id}"><strong>${esc(pn(m, b.p))} <em>${O(b.o)}</em></strong><span>${N(b.stake)} → <b>${N(b.stake * b.o)}${coin()}</b></span>${cancelBtn(b)}</div>`).join('')}</div>`;
   h += `<div id="espn-box" class="espn" data-m="${m.id}">${m.espn ? ESPN_HTML.get(m.id) || (window.GM_FP && (m.s === 'f' || m.s === 'b') ? GM_FP.esqueleto(m) : '<p class="hint">Cargando datos de ESPN…</p>') : tvHtml(m.tv || [], m)}</div>`;
   const rts = CH.filter((c) => c.m === m.id);
   if (rts.length) h += `<div class="d-retos">${retosHtml(rts, '')}</div>`;
@@ -1334,30 +1333,15 @@ function liga() {
 }
 
 /* ---------- Chat ---------- */
-const IC_IMG = '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="3.5"/><circle cx="9" cy="10" r="1.8"/><path d="M20.5 15.5l-4.5-4.5-8.5 8.5"/></svg>';
-const IC_SEND = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>';
 const sysTxt = (t) => esc(t).replace(/ (ganó|\+)\s?([\d.]+)/, ' $1 <b class="up">$2</b>').replace(/ (perdió|recupera) ([\d.]+)/, ' $1 <b>$2</b>');
 const EMO = ['👍', '😂', '🔥', '💀', '🤡', '😭'];
 const IC_RX = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9.2 9.8h.01M14.8 9.8h.01"/></svg>';
 const rxHtml = (t) => { const r = REACT.get(t) || {}, hay = EMO.filter((e) => r[e]?.length);
   return `<div class="rx">${hay.map((e) => `<button class="rx-c ${r[e].includes(MEK) ? 'mio' : ''}" data-rx="${t}|${e}" title="${esc(r[e].map((k) => fr(k).n).join(', '))}">${e}<i>${r[e].length}</i></button>`).join('')}<button class="rx-add" data-rxo="${t}" aria-label="Reaccionar">${IC_RX}</button>${S.rx === t ? `<span class="rx-pick">${EMO.map((e) => `<button data-rx="${t}|${e}">${e}</button>`).join('')}</span>` : ''}</div>` };
-// encuesta y apuesta compartida dentro del chat
-const pollHtml = (id) => { const q = POLLS.get(id); if (!q) return ''; const tot = Object.keys(q.v).length, mio = q.v[MEK];
-  return `<div class="poll"><b class="pq">${esc(q.q)}</b>${q.o.map((o, i) => { const who = Object.entries(q.v).filter(([, v]) => v === i).map(([k]) => k), pc = tot ? Math.round((who.length / tot) * 100) : 0;
-    return `<button class="po ${mio === i ? 'mio' : ''}" data-vote="${id}|${i}"><span class="pb" style="width:${pc}%"></span><span class="pt">${esc(o)}</span><span class="pw">${who.map((k) => av(k, 'sm')).join('')}</span><em>${pc}%</em></button>` }).join('')}<small>${tot} ${tot === 1 ? 'voto' : 'votos'}${mio == null ? ' · toca una para votar' : ' · puedes cambiar tu voto'}</small></div>` };
-const betShare = (id) => { const b = ALL.find((x) => x.id === id), m = b && byId(b.m); if (!m) return '<p class="hint">Esa apuesta ya no está.</p>';
-  const est = b.st === 'won' ? `<b class="ok">Acertada ▲ ${N(b.pay)}${coin()}</b>` : b.st === 'lost' ? `<b class="ko">Fallada ▼ ${N(b.stake)}${coin()}</b>` : `<b>${m.live ? 'En vivo' : 'Faltan ' + CD(m.at)}</b>`;
-  return `<div class="bshare" data-goto="${m.id}"><div class="bs-m">${logo(m, 'a')}<span>${esc(m.a)} <i>vs</i> ${esc(m.b)}</span>${logo(m, 'b')}</div><div class="bs-p"><strong>${b.p ? esc(pn(m, b.p)) : 'Oculta hasta empezar'}</strong>${b.p ? `<em>${O(b.o)}</em>` : ''}<span>${N(b.stake)} → ${b.p ? N(b.stake * b.o) : '?'}${coin()}</span>${est}</div></div>` };
-const msgRow = (c) => (!c.k
-  ? `<div class="sys"><span class="dot"></span><span>${sysTxt(c.txt)}</span><time>${c.t}</time></div>`
-  : `<div class="msg">${av(c.k)}<div style="min-width:0"><div class="hd"><span class="nm">${esc(fr(c.k).n)}</span><time>${c.t}</time></div>${c.txt ? `<p>${esc(c.txt)}</p>` : ''}${c.img ? `<img class="pic" src="${esc(c.img)}" alt="" loading="lazy">` : ''}${c.poll ? pollHtml(c.poll) : ''}${c.bet ? betShare(c.bet) : ''}${rxHtml('c:' + c.id)}${c.aud ? `<div class="voz"><audio controls preload="none" src="${esc(c.aud)}"></audio>${c.secs ? `<span>${Math.floor(c.secs / 60)}:${String(c.secs % 60).padStart(2, '0')}</span>` : ''}</div>` : ''}</div></div>`);
-// PM, 30-10: que en el chat ponga el dia: una raya con el dia cada vez que cambia
+// PM, 30-10: una raya con el dia cada vez que cambia (la usa el Feed)
 const diaChat = (t) => (DK(t) === DK(NOW) ? 'Hoy' : DK(t) === DK(NOW - DAY) ? 'Ayer' : `${WD(t)} ${DD(t)} ${MO(t)}`);
-const conDias = (lista) => { let k = ''; return lista.map((c) => { const d = DK(c.at), sep = d !== k ? `<div class="ch-dia"><span>${diaChat(c.at)}</span></div>` : ''; k = d; return sep + msgRow(c) }).join('') };
-let lastSeen = 0; try { lastSeen = +localStorage.getItem('apuestas-chat-visto') || 0 } catch {}
-const unread = () => CHAT.filter((c) => c.id > lastSeen && c.k && c.k !== MEK).length;
 // PM, 30-10: "la feed de lo que abrimos y todo eso que no son mensajes, en otro lugar dentro de chat, no en el medio,
-// que se llame Feed". Chat solo con lo que escribe la gente; Feed con avisos, apuestas de todos, resultados, ruleta, cajas y batallas
+// que se llame Feed". Feed con avisos, apuestas de todos, resultados, ruleta, cajas y batallas. 05-11: "quita el chat general": el Feed es pantalla propia
 const RAR_C = { esp: '#e4ae39', cov: '#eb4b4b', cla: '#d32ce6', res: '#8847ff', mil: '#4b69ff' };
 // los resultados de apuestas ya salen de las apuestas: esos avisos no se repiten
 const avisoRepe = (t) => /^.+ (ganó|perdió) [\d.]+ con .+ · /.test(t || '') || /^.+ recupera [\d.]+: .+ no se ha jugado$/.test(t || '');
@@ -1379,7 +1363,7 @@ async function cargaFeed() {
       FEED_CS = { inv: inv.data || [], bats: bt.data || [], items: new Map(((it.data) || []).map((x) => [x.id, x])) };
     } catch { FEED_CS = FEED_CS || { inv: [], bats: [], items: new Map() } }
     FEED_T = Date.now(); cargandoFeed = null;
-    if (S.scr === 'chat' && S.ct === 'feed') render();
+    if (S.scr === 'feed') render();
   })();
   return cargandoFeed;
 }
@@ -1434,8 +1418,6 @@ function feedItems() {
   }
   return out.filter((x) => isFinite(x.at)).sort((a, b) => b.at - a.at);
 }
-let feedVisto = 0; try { feedVisto = +localStorage.getItem('apuestas-feed-visto') || 0 } catch {}
-const feedNuevo = () => { const ult = Math.max(0, ...CHAT.filter((c) => !c.k).map((c) => c.at), ...ALL.filter((b) => b.k !== MEK).map((b) => Date.parse(b.set || b.at) || 0)); return ult > feedVisto };
 function feedHtml() {
   if (!FEED_CS || Date.now() - FEED_T > 6e4) setTimeout(cargaFeed, 0);
   const tipos = [['todo', 'Todo'], ['apuestas', 'Apuestas'], ['cajas', 'Cajas'], ['premios', 'Ruleta semanal'], ['aviso', 'Avisos']];
@@ -1445,15 +1427,9 @@ function feedHtml() {
   return `<nav class="fd-fil">${tipos.filter(([t]) => t === 'todo' || todo.some((x) => x.t === t)).map(([t, nm]) => `<button class="chip ${ft === t ? 'on' : ''}" data-ft="${t}">${nm}</button>`).join('')}</nav>
     <div class="fd-list">${h || `<p class="hint">${FEED_CS ? 'Todavía no ha pasado nada por aquí.' : 'Cargando…'}</p>`}${xs.length > n ? `<button class="q hst-mas" data-act="fd-mas">Ver más</button>` : ''}</div>`;
 }
-function chat() {
+function feed() {
   const live = M.filter((m) => m.live && whoOn(m.id).length)[0];
-  const fd = S.ct === 'feed';
-  if (fd) { feedVisto = Date.now(); try { localStorage.setItem('apuestas-feed-visto', feedVisto) } catch {} }
-  else { const maxId = Math.max(0, ...CHAT.map((c) => c.id)); if (maxId > lastSeen) { lastSeen = maxId; try { localStorage.setItem('apuestas-chat-visto', maxId) } catch {} } }
-  const un = fd ? unread() : 0;
-  const tabs = `<nav class="ch-tabs"><button class="${fd ? '' : 'on'}" data-ct="chat">Chat${un ? `<i>${un}</i>` : ''}</button><button class="${fd ? 'on' : ''}" data-ct="feed">Feed${!fd && feedNuevo() ? '<i class="nv-pt"></i>' : ''}</button></nav>`;
-  return `<div class="c-wrap ${live ? '' : 'solo'}"><section class="c-main">${tabs}${fd ? `<div class="fd-wrap" data-keep="fd">${feedHtml()}</div>` : `<div class="chat"><div class="ch-list" data-chat>${window.GM_CHAT ? GM_CHAT.lista() : conDias(CHAT.filter((c) => c.k)) || '<p class="hint">Escribe el primero.</p>'}</div>
-    ${S.pollForm ? `<div class="poll-f"><input type="text" id="poll-q" maxlength="140" placeholder="La pregunta" autocomplete="off">${[0, 1, 2, 3].map((i) => `<input type="text" id="poll-o${i}" maxlength="40" placeholder="Opción ${i + 1}${i > 1 ? ' (si quieres)' : ''}" autocomplete="off">`).join('')}<div class="poll-b"><button class="q" data-act="poll-x">Cancelar</button><button class="go-s" data-act="poll-ok">Crear encuesta</button></div></div>` : ''}<div class="ch-in"><button class="ic" data-act="img" aria-label="Mandar foto">${IC_IMG}</button><button class="ic" data-act="poll" aria-label="Encuesta">${IC_POLL}</button><button class="ic mic ${REC ? 'on' : ''}" data-act="mic" aria-label="${REC ? 'Parar y enviar' : 'Nota de voz'}">${IC_MIC}</button>${REC ? `<span class="rec" data-rec>${recTxt()}</span><button class="q rec-x" data-act="mic-x">Cancelar</button>` : ''}<input type="text" id="msg" data-msg placeholder="Escribe a tus amigos" maxlength="500" autocomplete="off"><button class="send" data-act="send" aria-label="Enviar">${IC_SEND}</button><input type="file" id="pic" accept="image/*" data-file hidden></div></div>`}</section>
+  return `<div class="c-wrap ${live ? '' : 'solo'}"><section class="c-main"><div class="fd-wrap" data-keep="fd">${feedHtml()}</div></section>
     ${live ? `<aside class="c-side">
       ${live ? `<section><span class="lab">En juego ahora</span><div class="live-m" data-goto="${live.id}" style="cursor:pointer"><div>${logo(live, 'a')}${esc(live.a)}${vN(live, 'a')}</div><b>${live.vivo ? vL(live) || '·' : esc(live.score || '')}</b><div>${logo(live, 'b')}${esc(live.b)}${vN(live, 'b')}</div></div></section>
       ${window.GM_ACTIVOS && GM_ACTIVOS.retos(live.id) ? `<section class="ac ac-top"><span class="lab">Retos de este partido</span><div class="ac-lista">${GM_ACTIVOS.retos(live.id)}</div></section>` : ''}
@@ -1978,7 +1954,7 @@ const novVistas = () => { try { return JSON.parse(localStorage.getItem('gm-nov-v
 const novSinVer = () => { const v = novVistas(); return (NOVS || []).filter((x) => !v.includes(x.id)).length };
 const novCuando = (x) => { const t = Date.parse((x.fecha || '') + 'T12:00:00Z'); return isFinite(t) ? `${WD(t)} ${DD(t)} ${MO(t)}${x.hora ? ' · ' + x.hora : ''}` : '' };
 const novDia = (f) => { const t = Date.parse(f + 'T12:00:00Z'); return isFinite(t) ? (DK(t) === DK(NOW) ? 'Hoy' : DK(t) === DK(NOW - DAY) ? 'Ayer' : `${WD(t)} ${DD(t)} ${MO(t)}`) : '' };
-const NOV_IR = { inicio: 'Ir a Inicio', partidos: 'Ir a Partidos', apuestas: 'Ver mis apuestas', colegas: 'Ver las apuestas de todos', liga: 'Ir a la Liga', cajas: 'Ir a Cajas', chat: 'Ir al Chat', monedero: 'Ir al Monedero', juegos: 'Ir a Juegos', directo: 'Ver el directo', recompensas: 'Abrir Recompensas', ajustes: 'Abrir Ajustes' };
+const NOV_IR = { inicio: 'Ir a Inicio', partidos: 'Ir a Partidos', apuestas: 'Ver mis apuestas', colegas: 'Ver las apuestas de todos', liga: 'Ir a la Liga', cajas: 'Ir a Cajas', monedero: 'Ir al Monedero', juegos: 'Ir a Juegos', directo: 'Ver el directo', recompensas: 'Abrir Recompensas', ajustes: 'Abrir Ajustes' };
 const novArte = (x, grande) => { const ims = (Array.isArray(x.img) ? x.img : x.img ? [x.img] : []).slice(0, 3);
   return `<div class="nov-art n${ims.length} ${grande ? 'g' : ''}">${ims.map((p, i) => `<img src="${esc(novImg(p))}" alt="" loading="lazy" style="--k:${i}" onerror="this.style.display='none'">`).join('') || `<span class="nov-ic">${STAR}</span>`}</div>` };
 const novT = (x, k) => esc((window.GM_LANG && GM_LANG.get() === 'en' && x[k + '_en']) || x[k] || '');
@@ -2024,7 +2000,7 @@ const SCREENS = {
   liga: ['Liga', '', '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"/>'],
   directo: ['Directo', '', '<circle cx="12" cy="12" r="3"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14"/>'],
   cajas: ['Cajas', '', '<path d="M3.8 8.2 12 4.2l8.2 4v7.6L12 19.8l-8.2-4z"/><path d="M3.8 8.2 12 12.2l8.2-4M12 12.2v7.6M7.9 6.2l8.2 4"/>'],
-  chat: ['Chat', '', '<path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 17h-8l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 5 5z"/>'],
+  feed: ['Feed', '', '<path d="M3.5 12h4l2.5-6.5 4 13 2.5-6.5h4"/>'],
   monedero: ['Monedero', '', '<path d="M4.5 8V7a2 2 0 0 1 2-2H17v3"/><rect x="4" y="8" width="16.5" height="11" rx="2.5"/><circle cx="16" cy="13.5" r="1.3"/>'],
   novedades: ['Novedades', '', '<path d="M12 3.5l1.9 5.2 5.3.3-4.2 3.3 1.5 5.2L12 14.5l-4.5 3 1.5-5.2-4.2-3.3 5.3-.3z"/><path d="M19 3v3M17.5 4.5h3M5 17v3M3.5 18.5h3"/>'],
   juegos: ['Juegos', '', '<rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r=".6"/><circle cx="15" cy="9" r=".6"/><circle cx="12" cy="12" r=".6"/><circle cx="9" cy="15" r=".6"/><circle cx="15" cy="15" r=".6"/>'],
@@ -2037,7 +2013,7 @@ const mkCtx = () => ({ db, me: ME, meKey: MEK, jugadores: F.map((f) => ({ id: f.
 // PM 30-10: el Mercado no esta terminado, en mantenimiento hasta que diga (el modulo y la base siguen ahi)
 const MERCADO_MANT = true;
 const mercado = () => (MERCADO_MANT ? `<div class="pad mant"><svg viewBox="0 0 24 24">${SCREENS.mercado[2]}</svg><b>En mantenimiento</b><p>El Mercado está casi listo. Intercambios, ventas, contratos y jackpot llegan pronto.</p></div>` : window.GM_MERCADO ? GM_MERCADO.html(mkCtx()) : '');
-const R = { inicio: () => (window.GM_INICIO ? GM_INICIO.html() : ''), ajustes, novedades, juegos, mercado, directo, partidos, apuestas, colegas, liga, chat, monedero, perfil, cajas: () => (window.GM_CAJAS ? GM_CAJAS.html() : '') };
+const R = { inicio: () => (window.GM_INICIO ? GM_INICIO.html() : ''), ajustes, novedades, juegos, mercado, directo, partidos, apuestas, colegas, liga, feed, monedero, perfil, cajas: () => (window.GM_CAJAS ? GM_CAJAS.html() : '') };
 const cajasCtx = () => ({ db, me: ME, jugadores: F.map((f) => ({ id: f.uid, n: f.n, color: f.id, ini: f.ini, photo: !!f.photo })), saldo: me().s, toast, refresh });
 const photoCss = () => { if (window.GM_AVATARES) GM_AVATARES.aplica(); document.getElementById('phs').textContent = F.filter((f) => f.photo).map((f) => `.av.${f.id}.ph{background-image:url("${encodeURI(f.photo)}")}`).join('') };
 // PM, 30-10: "si estas en una apuesta en directo ahora mismo, que salga toda la info en cualquier lado, encima del perfil,
@@ -2094,11 +2070,10 @@ function render() {
   if (!loaded) return;
   NOW = Date.now();
   const msg = document.querySelector('[data-msg]'), borrador = msg ? { v: msg.value, f: document.activeElement === msg, a: msg.selectionStart } : null;
-  const cajas = [...document.querySelectorAll('#view input[id^="poll-"]')].map((e) => [e.id, e.value, document.activeElement === e]);
   const keep = {}; document.querySelectorAll('[data-keep]').forEach((e) => (keep[e.dataset.keep] = e.scrollTop));
-  // PM, 01-11 (menu A): Chat y Monedero salen del menu (burbuja abajo e icono junto a Ajustes, ver menu.js). En movil la barra
-  // lleva Inicio, Partidos, Apuestas, Todos y Más; Liga, Cajas, Juegos y Mercado (nv-x) van en la hoja de Más
-  document.getElementById('nav').innerHTML = Object.entries(SCREENS).filter(([k]) => !['directo', 'novedades', 'ajustes', 'chat', 'monedero'].includes(k)).map(([k, [n, , ic]]) => `<button class="nv ${S.scr === k ? 'on' : ''} ${['liga', 'cajas', 'juegos', 'mercado'].includes(k) ? 'nv-x' : ''} ${k === 'mercado' && MERCADO_MANT ? 'nv-mant' : ''}" data-scr="${k}"><svg viewBox="0 0 24 24">${ic}</svg><span class="nl">${n}</span><span class="ns">${n.replace('Mis apuestas', 'Apuestas').replace('Apuestas de todos', 'Todos')}</span>${k === 'mercado' && MERCADO_MANT ? '<small>mantenimiento</small>' : ''}</button>`).join('');
+  // PM, 01-11 (menu A): Monedero sale del menu (icono junto a Ajustes, ver menu.js). 05-11: sin chat; el Feed va en la hoja de Mas (movil) y en el menu lateral (PC). En movil la barra
+  // lleva Inicio, Partidos, Apuestas, Todos y Más; Liga, Cajas, Feed, Juegos y Mercado (nv-x) van en la hoja de Más
+  document.getElementById('nav').innerHTML = Object.entries(SCREENS).filter(([k]) => !['directo', 'novedades', 'ajustes', 'monedero'].includes(k)).map(([k, [n, , ic]]) => `<button class="nv ${S.scr === k ? 'on' : ''} ${['liga', 'cajas', 'feed', 'juegos', 'mercado'].includes(k) ? 'nv-x' : ''} ${k === 'mercado' && MERCADO_MANT ? 'nv-mant' : ''}" data-scr="${k}"><svg viewBox="0 0 24 24">${ic}</svg><span class="nl">${n}</span><span class="ns">${n.replace('Mis apuestas', 'Apuestas').replace('Apuestas de todos', 'Todos')}</span>${k === 'mercado' && MERCADO_MANT ? '<small>mantenimiento</small>' : ''}</button>`).join('');
   const rank = [...F].sort((a, b) => b.s - a.s);
   document.getElementById('me').innerHTML = `${av(MEK, 'xl')}<b>${esc(me().n)}</b><em>${NS(me().s)} · ${rank.indexOf(me()) + 1}º de ${F.length}</em>`;
   document.getElementById('me').dataset.prof = MEK;
@@ -2122,9 +2097,7 @@ function render() {
   if (S.scr === 'partidos') { lgFlechas(); lvFlechas(); fillEspn(); fillSheet(); fillBracket() }
   document.querySelectorAll('[data-keep]').forEach((e) => { if (keep[e.dataset.keep]) e.scrollTop = keep[e.dataset.keep] });
   if (window.GM_LANG) GM_LANG.traduce(document.getElementById('app'));
-  for (const [id, v, f] of cajas) { const e = document.getElementById(id); if (e) { e.value = v; if (f) e.focus() } }
   const msg2 = document.querySelector('[data-msg]'); if (msg2 && borrador) { msg2.value = borrador.v; if (borrador.f) { msg2.focus(); try { msg2.setSelectionRange(borrador.a, borrador.a) } catch {} } }
-  document.querySelectorAll('[data-chat]').forEach((e) => { e.scrollTop = e.scrollHeight; e.querySelectorAll('img').forEach((i) => i.addEventListener('load', () => (e.scrollTop = e.scrollHeight), { once: true })) });
 }
 function updStake() {
   const m = S.sel && byId(S.sel.m); if (!m) return; const st = stakeNow(), o = po(m, S.sel.p);
@@ -2168,44 +2141,6 @@ async function upload(blob, name) {
   if (error) throw error;
   return db.storage.from('fotos').getPublicUrl(path).data.publicUrl;
 }
-const IC_POLL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 19.5V11M12 19.5V5M19 19.5v-6"/></svg>';
-const IC_MIC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.5"/></svg>';
-let REC = null;
-const recTxt = () => { const s = REC ? Math.floor((Date.now() - REC.t0) / 1000) : 0; return `Grabando ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` };
-async function micEmpieza() {
-  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) return toast('Este navegador no deja grabar audio');
-  let st; try { st = await navigator.mediaDevices.getUserMedia({ audio: true }) } catch { return toast('No hay micrófono o no has dado permiso') }
-  const tipo = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'].find((t) => MediaRecorder.isTypeSupported(t)) || '';
-  const mr = new MediaRecorder(st, tipo ? { mimeType: tipo } : undefined), trozos = [];
-  mr.ondataavailable = (e) => e.data.size && trozos.push(e.data);
-  REC = { mr, st, trozos, t0: Date.now(), cancel: false, iv: setInterval(() => { document.querySelectorAll('[data-rec]').forEach((e) => (e.textContent = recTxt())); if (Date.now() - REC.t0 > 120000) micPara() }, 500) };
-  mr.onstop = async () => {
-    const r = REC; REC = null; clearInterval(r.iv); r.st.getTracks().forEach((t) => t.stop()); render();
-    if (r.cancel || !r.trozos.length) return;
-    const secs = Math.max(1, Math.round((Date.now() - r.t0) / 1000)), blob = new Blob(r.trozos, { type: (mr.mimeType || 'audio/webm').split(';')[0] });
-    if (window.GM_CHAT) return GM_CHAT.envia({ audio: true, blob, secs });
-    try {
-      toast('Enviando nota de voz…');
-      const ext = /mp4/.test(blob.type) ? 'm4a' : /ogg/.test(blob.type) ? 'ogg' : 'webm', path = `${ME}/voz-${Date.now()}.${ext}`;
-      const { error } = await db.storage.from('fotos').upload(path, blob, { contentType: blob.type, cacheControl: '31536000' }); if (error) throw error;
-      const audio_url = db.storage.from('fotos').getPublicUrl(path).data.publicUrl;
-      const { error: e2 } = await db.from('chat').insert({ player: ME, body: '', audio_url, audio_secs: Math.min(secs, 300) }); if (e2) throw e2;
-      await refresh();
-    } catch (e) { toast(errMsg(e)) }
-  };
-  mr.start(); render();
-}
-function micPara(cancel) { if (!REC) return; REC.cancel = !!cancel; try { REC.mr.stop() } catch {} }
-async function sendMsg(file) {
-  if (window.GM_CHAT) return GM_CHAT.envia(file);   // mensajes.js: sale al instante en pantalla y no espera a recargar todo
-  const el = document.querySelector('[data-msg]'), txt = el ? el.value.trim() : '';
-  if (!txt && !file) return;
-  try {
-    let image_url = null; if (file) { toast('Subiendo foto…'); image_url = await upload(await shrink(file, 1280, false), 'chat') }
-    const { error } = await db.from('chat').insert({ player: ME, body: txt, image_url }); if (error) throw error;
-    if (el) el.value = ''; await refresh(); document.querySelector('[data-msg]')?.focus();
-  } catch (e) { toast(errMsg(e)) }
-}
 async function setPhoto(file) {
   try { toast('Subiendo foto…'); const url = await upload(await shrink(file, 256, true), 'perfil'); const { error } = await db.rpc('update_profile', { p_photo: url }); if (error) throw error; toast('Foto de perfil cambiada'); if (window.GM_AVATARES) GM_AVATARES.quita(); await refresh() } catch (e) { toast(errMsg(e)) }
 }
@@ -2219,7 +2154,7 @@ document.addEventListener('click', async (e) => {
   if (e.target.closest('a.row-tv')) return;   // el enlace a la emision oficial: que siga su camino sin abrir la ficha
   if (S.onl && !e.target.closest('.onl')) { S.onl = false; pintaOnline() }
   if (S.pmenu && !e.target.closest('[data-act=pmenu]')) { S.pmenu = false; document.querySelector('.pm-hd.abre')?.classList.remove('abre') }
-  const t = e.target.closest('[data-hp],[data-pft],[data-jugmas],[data-abf],[data-abpg],[data-eqv],[data-eqtab],[data-eqpg],[data-vivo],[data-fav],[data-nov],[data-ct],[data-ft],[data-tclaim],[data-bsp],[data-bp],[data-side],[data-bm],[data-dv],[data-dtv],[data-mt],[data-mp],[data-rx],[data-rxo],[data-vote],[data-share],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
+  const t = e.target.closest('[data-hp],[data-pft],[data-jugmas],[data-abf],[data-abpg],[data-eqv],[data-eqtab],[data-eqpg],[data-vivo],[data-fav],[data-nov],[data-ft],[data-tclaim],[data-bsp],[data-bp],[data-side],[data-bm],[data-dv],[data-dtv],[data-mt],[data-mp],[data-rx],[data-rxo],[data-sumo],[data-cancel],[data-calc],[data-retar],[data-rto],[data-rpick],[data-rstake],[data-accept],[data-decline],[data-retirar],[data-daily],[data-scr],[data-f],[data-lg],[data-pick],[data-stake],[data-act],[data-foc],[data-bf],[data-vis],[data-pf],[data-goto],[data-prof]'); if (!t || t.disabled) return;
   const d = t.dataset;
   if (d.side && t.matches('[data-side]')) { S.shTodos = false; S.side = d.side; document.querySelector('.det')?.scrollTo?.(0, 0); return render() }
   if (d.act === 'sheet-back') { S.side = null; return render() }
@@ -2244,8 +2179,6 @@ document.addEventListener('click', async (e) => {
   if (d.bm) { const g = (byId(S.foc)?.tour || '').split(':')[0], mid = `ps:${g}:${d.bm}`; if (byId(mid) && mid !== S.foc) { S.foc = mid; S.brk = false; return render() } return }
   if (d.rxo !== undefined && t.matches('[data-rxo]')) { S.rx = S.rx === d.rxo ? null : d.rxo; return render() }
   if (d.rx) { const [tg, em] = d.rx.split('|'); S.rx = null; const { error } = await db.rpc('react', { p_target: tg, p_emoji: em }); if (error) return toast(errMsg(error)); return refresh() }
-  if (d.vote) { const [pid, o] = d.vote.split('|'); const { error } = await db.rpc('vote_poll', { p_poll: +pid, p_opt: +o }); if (error) return toast(errMsg(error)); return refresh() }
-  if (d.share) { const { error } = await db.from('chat').insert({ player: ME, body: '', bet_id: +d.share }); if (error) return toast(errMsg(error)); toast('Apuesta mandada al chat'); return refresh() }
   if (d.sumo) { const [mid, pk] = d.sumo.split('|'); S.scr = 'partidos'; S.foc = mid; S.sheet = true; S.side = null; S.sel = { m: mid, p: pk }; location.hash = 'partidos'; render(); return toast('Elige cuánto y dale a Apostar') }
   if (d.act === 'onl') { S.onl = !S.onl; return pintaOnline() }
   if (d.fav) {
@@ -2258,7 +2191,6 @@ document.addEventListener('click', async (e) => {
     return;
   }
   if (d.nov) { S.nvp = false; if (d.nov === 'recompensas') { S.rew = true; return render() } S.scr = d.nov; S.sheet = false; document.getElementById('view').scrollTop = 0; return render() }
-  if (d.ct) { S.ct = d.ct; return render() }
   if (d.ft) { S.ft = d.ft; S.fdN = 60; return render() }
   if (d.act === 'fd-mas') { S.fdN = (S.fdN || 60) + 60; return render() }
   if (d.pft) { S.pft = d.pft; return render() }
@@ -2284,10 +2216,6 @@ document.addEventListener('click', async (e) => {
   if (d.act === 'claimweek') { const { data, error } = await db.rpc('claim_week'); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} de la paga del lunes`); return refresh() }
   if (d.act === 'claim') { const { data, error } = await db.rpc('claim_daily'); if (error) return toast(errMsg(error)); toast(`+${N(data)}${coin()} del premio diario`); return refresh() }
   if (d.act === 'rescue') { const { data, error } = await db.rpc('claim_rescue'); if (error) return toast(errMsg(error)); toast(`Rescate: +${N(data)}${coin()}`); return refresh() }
-  if (d.act === 'poll') { S.pollForm = !S.pollForm; render(); if (S.pollForm) document.getElementById('poll-q')?.focus(); return }
-  if (d.act === 'poll-x') { S.pollForm = false; return render() }
-  if (d.act === 'poll-ok') { const q = document.getElementById('poll-q')?.value || '', o = [0, 1, 2, 3].map((i) => document.getElementById('poll-o' + i)?.value || '');
-    const { error } = await db.rpc('create_poll', { p_question: q, p_options: o }); if (error) return toast(errMsg(error)); S.pollForm = false; return refresh() }
   if (d.cancel) {
     e.stopPropagation();
     if (S.sure !== 'b' + d.cancel) { S.sure = 'b' + d.cancel; render(); setTimeout(() => { if (S.sure === 'b' + d.cancel) { S.sure = null; render() } }, 3500); return }
@@ -2320,10 +2248,6 @@ document.addEventListener('click', async (e) => {
   else if (d.pick) { S.side = null; const [m, p] = d.pick.split('|'); S.sel = isSel(byId(m), p) ? null : { m, p }; if (S.foc !== m) { S.foc = m; S.sheet = true } }
   else if (d.stake) { S.stake = d.stake === 'all' ? me().s : +d.stake; return updStake() }
   else if (d.act === 'bet') return placeBet();
-  else if (d.act === 'send') return sendMsg();
-  else if (d.act === 'img') return document.getElementById('pic').click();
-  else if (d.act === 'mic') return REC ? micPara(false) : micEmpieza();
-  else if (d.act === 'mic-x') return micPara(true);
   else if (d.act === 'hist-all') S.histAll = true;
   else if (d.act === 'photo') return document.getElementById('foto').click();
   else if (d.act === 'nophoto') { const { error } = await db.rpc('update_profile', { p_photo: '' }); if (error) return toast(errMsg(error)); toast('Foto quitada'); if (window.GM_AVATARES) GM_AVATARES.quitaAjuste(); return refresh() }
@@ -2347,10 +2271,9 @@ document.addEventListener('input', (e) => { if (!e.target.matches('[data-in]')) 
 document.addEventListener('change', (e) => {
   const f = e.target.files && e.target.files[0];
   if (e.target.matches('[data-foto]') && f && /^image\//.test(f.type)) return setPhoto(f);
-  if (e.target.matches('[data-file]') && f && /^image\//.test(f.type)) return sendMsg(f);
   if (e.target.matches('[data-pedit]')) { const v = e.target.value.trim(); if (v) savePerfil(e.target.dataset.pedit, v) }
 });
-document.addEventListener('keydown', (e) => { if (e.target.matches('[data-msg]') && e.key === 'Enter') sendMsg(); if (e.target.matches('[data-pedit]') && e.key === 'Enter') e.target.blur() });
+document.addEventListener('keydown', (e) => { if (e.target.matches('[data-pedit]') && e.key === 'Enter') e.target.blur() });
 
 /* ---------- entrar ---------- */
 function showLogin() { if (window.GM_LANG) GM_LANG.traduce(document.getElementById('login')); document.getElementById('boot').hidden = true; document.getElementById('app').hidden = true; document.getElementById('login').hidden = false; setTimeout(() => document.getElementById('user').focus(), 50) }
@@ -2383,7 +2306,7 @@ const pintaOnline = () => document.querySelectorAll('[data-onl]').forEach((e) =>
 function live() {
   if (chan) return;
   let to; const soon = () => { if (window.GM_JUEGOS && GM_JUEGOS.ocupado()) return; clearTimeout(to); to = setTimeout(refresh, 700) };
-  chan = db.channel('vivo', { config: { presence: { key: String(ME) } } }).on('presence', { event: 'sync' }, () => { const ps = Object.values(chan.presenceState()).flat(); ONLINE = new Set(ps.map((x) => x.k)); ONT = {}; for (const x of ps) if (x.k && (!ONT[x.k] || (x.t && x.t < ONT[x.k]))) ONT[x.k] = x.t || Date.now(); MIRA = {}; for (const x of ps) if (x.v) MIRA[x.k] = x.v; pintaOnline(); if (S.scr === 'directo') render() }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pulse' }, soon).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat' }, (pl) => (window.GM_CHAT ? GM_CHAT.entra(pl.new) : soon())).subscribe(async (st) => { if (st === 'SUBSCRIBED' && window.GM_CHAT) GM_CHAT.alDia(); if (st === 'SUBSCRIBED') try { MIRA_YO = undefined; avisaMira(); if (MIRA_YO === undefined || MIRA_YO === null) await chan.track({ k: MEK, v: null, t: ENTRADA }) } catch {} });
+  chan = db.channel('vivo', { config: { presence: { key: String(ME) } } }).on('presence', { event: 'sync' }, () => { const ps = Object.values(chan.presenceState()).flat(); ONLINE = new Set(ps.map((x) => x.k)); ONT = {}; for (const x of ps) if (x.k && (!ONT[x.k] || (x.t && x.t < ONT[x.k]))) ONT[x.k] = x.t || Date.now(); MIRA = {}; for (const x of ps) if (x.v) MIRA[x.k] = x.v; pintaOnline(); if (S.scr === 'directo') render() }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pulse' }, soon).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat' }, (pl) => { if (!(pl.new && pl.new.player)) soon() }).subscribe(async (st) => { if (st === 'SUBSCRIBED') try { MIRA_YO = undefined; avisaMira(); if (MIRA_YO === undefined || MIRA_YO === null) await chan.track({ k: MEK, v: null, t: ENTRADA }) } catch {} });
   // cuenta atras cada minuto y datos frescos cada 5, solo con la pantalla visible
   let ticks = 0;
   setInterval(() => { if (document.hidden) return; ticks++; if (ticks % 5 === 0) return refresh(); if (!document.activeElement?.matches('input,textarea')) render() }, 60000);
