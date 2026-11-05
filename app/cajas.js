@@ -51,12 +51,12 @@
   // Giro Dorado (db/075): lo decide la base; aqui solo se ensena. La prueba gratis lo imita con la misma probabilidad
   const GD_PCT = 6, GD_DUR = [1800, 1000, 550], GD_HOLD = [650, 380, 200];
   // Tickets (db/081, PM 04-11): la tira para en un ticket en vez de en un objeto, espera y vuelve a girar SOLO esa linea con lo que puede
-  // salir de esa caja. Dorado: entre lo malo y lo medianamente bueno. Diamante (mas raro): solo lo bueno. Lo decide la base; aqui se ensena.
+  // salir de esa caja. Dorado (db/085): mitad algo muy bueno, mitad algo malo. Diamante (1 %): solo lo bueno. Lo decide la base; aqui se ensena.
   // Sin db/081 cargada la base sigue mandando el Giro Dorado viejo ({orig, up, down, won}) y se ensena como antes.
   const TK = { oro: { n: 'Ticket Dorado', c: '#f5c542' }, diamante: { n: 'Ticket de Diamante', c: '#7fe3ff' } };
   const TK_HOLD = [1100, 600, 300], TK_DUR = [3800, 1500, 750];          // parado en el ticket y la vuelta de esa linea (Normal, Rapido, Ultra)
   const TKB_HOLD = [1000, 500, 280], TKB_SPIN = [2600, 1100, 600];       // lo mismo en las batallas
-  const TK_DEF = { oro: 6, diamante: 0.2, sube: 40 };                    // la prueba gratis si la base aun no contesta cs_giro_info
+  const TK_DEF = { oro: 6, diamante: 1, sube: 50 };                    // la prueba gratis si la base aun no contesta cs_giro_info
 
   /* ---------- estado ---------- */
   let ctx = null, root = null;
@@ -669,7 +669,7 @@
     }
     filas.sort((a, b) => (b.v || 0) - (a.v || 0));
     // los tickets de esta caja (db/081): con que probabilidad sale cada uno
-    const g = info.giro, tks = g && (+g.oro > 0 || +g.diamante > 0) ? `<div class="ca-tks">${[['oro', g.oro, 'Vuelve a girar entre lo malo y lo medianamente bueno'], ['diamante', g.diamante, 'Vuelve a girar solo con lo bueno']].filter((x) => +x[1] > 0)
+    const g = info.giro, tks = g && (+g.oro > 0 || +g.diamante > 0) ? `<div class="ca-tks">${[['oro', g.oro, 'Vuelve a girar: mitad algo muy bueno, mitad algo malo'], ['diamante', g.diamante, 'Vuelve a girar solo con lo bueno']].filter((x) => +x[1] > 0)
       .map(([k, p, t]) => `<span class="ca-tk tk-${k}" style="--tk:${TK[k].c}">${tkSvg(k)}<span class="ca-tk-n"><b>${TK[k].n}</b><span class="num">${pctTxt(+p / 100)}</span></span><em>${t}</em></span>`).join('')}</div>` : '';
     return `<section class="cj-cont ca-cont"><header class="cj-sec-h"><h3>Contenido de la caja</h3></header>${tks}<div class="ca-grid">${filas.map((f) => {
       const x = f.it, n = nombre(x);
@@ -924,7 +924,7 @@
 
   /* ----- Tickets: Ticket Dorado y Ticket de Diamante (db/081) ----- */
   // bonus = {tipo: 'oro'|'diamante', lado: 'malo'|'medio'|'bueno', desde, hasta}; desde/hasta: entre que valores medios va lo que pasa por
-  // la tira al volver a girar (el Dorado: lo malo y lo medianamente bueno; el Diamante: solo lo bueno). Lo que sale ya viene en la pieza.
+  // la tira al volver a girar (el Dorado: todo lo de la caja, para en lo muy bueno o en lo malo; el Diamante: solo lo bueno). Lo que sale ya viene en la pieza.
   function esTk(i) { return !!(i && i.bonus && TK[i.bonus.tipo]) }
   // lo que vale de media un objeto si sale (igual que cs_ev de db/081): el desgaste como en el juego y StatTrak el 10 %
   function evDe(it) {
@@ -998,11 +998,11 @@
   function tkFalso(info) {
     const g = info.giro || TK_DEF, r = Math.random() * 100, P = (caja(info.id).price || info.price || 1);
     let tipo = null, bo = null;
-    if (r < +g.oro) { tipo = 'oro'; bo = { tipo, lado: Math.random() * 100 < +g.sube ? 'medio' : 'malo', desde: 0, hasta: g.hasta != null ? +g.hasta : Math.floor(3 * P) } }
+    if (r < +g.oro) { tipo = 'oro'; bo = { tipo, lado: Math.random() * 100 < +g.sube ? 'bueno' : 'malo', desde: 0, hasta: null } }   // db/085: mitad muy bueno, mitad malo
     else if (r - g.oro < +g.diamante) { tipo = 'diamante'; bo = { tipo, lado: 'bueno', desde: g.desde != null ? +g.desde : Math.ceil(1.5 * P), hasta: null } }
     if (!bo) return null;
     const tk = conTickets(info), todos = info.items.filter((it) => !tk || it.tickets != null).map((it) => ({ it, e: evDe(it) }));
-    let l = bo.lado === 'malo' ? todos.filter((o) => o.e < P) : bo.lado === 'medio' ? todos.filter((o) => o.e >= P && o.e <= bo.hasta) : todos.filter((o) => o.e >= bo.desde);
+    let l = bo.lado === 'malo' ? todos.filter((o) => o.e < P) : bo.lado === 'medio' ? todos.filter((o) => o.e >= P && o.e <= bo.hasta) : todos.filter((o) => o.e >= (bo.tipo === 'oro' ? (g.desde != null ? +g.desde : Math.ceil(1.5 * P)) : bo.desde));
     if (!l.length) { const s = todos.slice().sort((a, b) => a.e - b.e); l = [bo.lado === 'malo' ? s[0] : bo.lado === 'medio' ? s.find((o) => o.e >= P) || s[s.length - 1] : s[s.length - 1]] }
     const tot = l.reduce((a, o) => a + qDe(info, o.it), 0); let x = Math.random() * tot, pick = l[l.length - 1].it;
     for (const o of l) { x -= qDe(info, o.it); if (x < 0) { pick = o.it; break } }

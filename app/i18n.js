@@ -27,7 +27,7 @@
     'Giro Dorado': 'Golden Spin', 'Sube': 'Up', 'Baja': 'Down', 'Se queda': 'Stays',
     // Tickets de las cajas (04-11, cajas.js y cajas-vivo.js, db/081)
     'Ticket Dorado': 'Golden Ticket', 'Ticket de Diamante': 'Diamond Ticket', 'Giro extra': 'Extra spin',
-    'Vuelve a girar entre lo malo y lo medianamente bueno': 'Spins again between the bad and the fairly good', 'Vuelve a girar solo con lo bueno': 'Spins again with only the good stuff',
+    'Vuelve a girar: mitad algo muy bueno, mitad algo malo': 'Spins again: half something great, half something bad', 'Vuelve a girar solo con lo bueno': 'Spins again with only the good stuff',
     // Mejorar (03-11, mejora.js, db/071): la pestana y el movimiento del monedero; el resto de la pantalla ya se pinta en su idioma
     'Mejorar': 'Upgrader', 'Mejora': 'Upgrade',
     // Combinada con varias del mismo partido (02-11, boleto.js, db/067)
