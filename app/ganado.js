@@ -483,7 +483,7 @@
       if (a === 'panel') PANEL ? cierraPanel() : abrePanel();
       else if (a === 'cerrar-p') cierraPanel();
       else if (a === 'linea') { b.remove(); abrePanel() }
-      else if (a === 'feed') { cierraPanel(); try { S.scr = 'chat'; S.ct = 'feed'; S.nvp = false; S.rew = false; document.getElementById('view').scrollTop = 0; render() } catch {} }
+      else if (a === 'feed') { cierraPanel(); try { S.scr = 'feed'; S.nvp = false; S.rew = false; document.getElementById('view').scrollTop = 0; render() } catch {} }
       return;
     }
     if (PANEL && (t.closest('#gnd-p [data-scr], #gnd-p [data-prof]') || t.closest('[data-act=rw], [data-act=nvp]'))) cierraPanel();
