@@ -37,14 +37,14 @@ html.sin-anim .esp-dot,html.sin-anim .esp-vivo i{animation:none}
 .avt-r .esp-ojo{height:28px}
 
 /* la vista */
-.esp{position:fixed;inset:0;z-index:76;display:grid;place-items:center;padding:24px}
+.espv{position:fixed;inset:0;z-index:76;display:grid;place-items:center;padding:24px}
 .esp-fondo{position:absolute;inset:0;background:rgba(5,7,10,.7);animation:espf .18s ease-out}
 .esp-hoja{position:relative;display:flex;flex-direction:column;width:min(620px,100%);max-height:calc(100vh - 48px);border-radius:28px;outline:0;overflow:hidden;
   background:radial-gradient(120% 30% at 50% 0%,rgba(255,93,93,.08),transparent 62%),var(--bg2);box-shadow:0 34px 90px rgba(0,0,0,.65);animation:esph .24s var(--ease)}
-.esp.sale .esp-hoja{animation:esps .14s ease-in forwards}.esp.sale .esp-fondo{animation:espg .14s ease-in forwards}
+.espv.sale .esp-hoja{animation:esps .14s ease-in forwards}.espv.sale .esp-fondo{animation:espg .14s ease-in forwards}
 @keyframes espf{from{opacity:0}}@keyframes espg{to{opacity:0}}
 @keyframes esph{from{opacity:0;transform:translateY(14px) scale(.985)}}@keyframes esps{to{opacity:0;transform:translateY(8px)}}
-html.sin-anim .esp *{animation:none!important}
+html.sin-anim .espv *{animation:none!important}
 
 .esp-bar{display:flex;align-items:center;gap:14px;flex:none;padding:18px 16px 10px 24px}
 .esp-bar>.av{flex:none;width:48px;height:48px;font-size:16px}
@@ -109,7 +109,7 @@ html.sin-anim .esp *{animation:none!important}
 .esp-cj .cv-res .num{margin-left:6px}
 
 @media (max-width:700px){
-  .esp{padding:0;place-items:stretch}
+  .espv{padding:0;place-items:stretch}
   .esp-hoja{width:100%;max-height:none;height:100%;border-radius:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
   .esp-bar{padding:14px 10px 8px 16px;gap:12px}
   .esp-bar>.av{width:42px;height:42px}

@@ -1,7 +1,7 @@
 // Minas (PM 03-11, db/073). Tablero de 5x5: eliges cuantas minas (1 a 24) y cuanto pones; cada casilla buena sube el multiplicador
 // y te puedes retirar cuando quieras; una mina se lleva lo apostado. Las minas las decide la base al empezar y quedan cerradas con un
 // hash; cada casilla se abre con una llamada (minas_abrir), asi que el navegador no sabe donde estan hasta que acaba la partida.
-// Multiplicador tras k buenas con m minas = 0,97 x C(25,k) / C(25-m,k) (la misma formula que minas_mult en la base), tope x1000.
+// Multiplicador tras k buenas con m minas = 0,95 x C(25,k) / C(25-m,k) (la misma formula que minas_mult en la base; 0,95 desde db/084, PM 05-11), tope x1000.
 // juegos.js deja un hueco [data-jx-hueco] en la pestana Minas y llama a GM_MINAS.montar(hueco, ctx, { rank }).
 'use strict';
 (function () {
@@ -21,7 +21,7 @@
   const S = { on: false, ocupa: false, saldo: null, ultima: 0, m: Math.min(24, Math.max(1, parseInt(lee('mn-minas'), 10) || 3)), visto: null, abiertasV: new Set(), finVisto: null, verif: {}, tR: 0 };
   const saldo = () => (S.saldo != null ? S.saldo : J.ctx ? J.ctx.saldo : 0);
   const visible = () => !!(el && el.isConnected && !document.hidden);
-  const mult = (m, k) => { if (k <= 0) return 1; let v = 1; for (let i = 0; i < k; i++) v = v * (25 - i) / (25 - m - i); return Math.min(1000, Math.floor(0.97 * v * 100 + 1e-9) / 100) };
+  const mult = (m, k) => { if (k <= 0) return 1; let v = 1; for (let i = 0; i < k; i++) v = v * (25 - i) / (25 - m - i); return Math.min(1000, Math.floor(0.95 * v * 100 + 1e-9) / 100) };
 
   /* ---------- dibujos propios: gema tallada y bomba con mecha ---------- */
   const GEMA = `<svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="mn-g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b6ffe0"/><stop offset=".55" stop-color="#2bd47d"/><stop offset="1" stop-color="#0d7a48"/></linearGradient><linearGradient id="mn-g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7dffc4"/><stop offset="1" stop-color="#169a5b"/></linearGradient></defs>

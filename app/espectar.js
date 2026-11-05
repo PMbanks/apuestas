@@ -217,7 +217,7 @@
     V.k = k; V.s = -1; V.j = ''; V.mn = null; V.fue = false; V.ultFoco = foco; V.hist = hist;
     if (!V.hist) { try { history.pushState({ gmesp: 1 }, ''); V.hist = true } catch { V.hist = false } }
     const el = document.createElement('div');
-    el.className = 'esp'; el.setAttribute('data-notr', '');
+    el.className = 'espv'; el.setAttribute('data-notr', '');
     el.innerHTML = `<div class="esp-fondo" data-esp-x></div>
       <section class="esp-hoja" role="dialog" aria-modal="true" aria-labelledby="esp-tt" tabindex="-1">
         <header class="esp-bar">${cara(k, 'xl')}<div class="esp-q"><span class="esp-vivo" data-esp-vivo><i></i>${L('En directo', 'Live')}</span>
