@@ -189,6 +189,13 @@ button.cj-it:hover .cj-it-img{box-shadow:inset 0 -3px 0 var(--c),0 12px 28px rgb
 .cj-fd-tip>*{flex:none}
 .cj-fd-ti{display:block;width:68%;aspect-ratio:4/3;margin-bottom:4px}
 .cj-fd-ti img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 12px rgba(0,0,0,.5))}
+/* lo que salio de Mejorar (mejora.js): su rueda en pequeno, con la zona verde de la probabilidad, el multiplicador y el % */
+.cj-fd-mj{display:grid;place-items:center}
+.cj-fd-mj svg{width:auto;height:100%;max-height:72px;overflow:visible}
+.cj-fd-mj .r{fill:#171a21;stroke:rgba(255,255,255,.08);stroke-width:5}
+.cj-fd-mj .a{fill:none;stroke:#3fdc8e;stroke-width:5;stroke-linecap:round;filter:drop-shadow(0 0 4px rgba(93,242,163,.55))}
+.cj-fd-tip b.cj-fd-mjx{display:flex;align-items:baseline;gap:8px;font:700 16px/1.2 var(--mono)}
+.cj-fd-mjx em{font:500 12px var(--mono);font-style:normal;color:#5df2a3}
 .cj-fd-tip .lab{font-size:10px;color:var(--mute)}
 .cj-fd-tip b{display:-webkit-box;max-width:100%;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;font:700 14px/1.2 var(--sans);color:var(--ink);text-wrap:balance}
 .cj-fd-q{display:flex;gap:5px;max-width:100%;margin-top:6px;font:500 12px var(--sans);color:var(--mute);white-space:nowrap}
@@ -858,8 +865,8 @@ html.cj-pintando,html.cj-pintando *{-webkit-user-select:none;user-select:none;cu
   .cj-bar-b{flex:1 1 auto;min-width:0;justify-content:flex-end}
   .cj-bar .go{max-width:100%}
   /* el boton redondo del chat va fijo en la esquina y taparia "Vender por": mientras hay seleccion se esconde (igual que con la hoja de Mas abierta) */
-  body:has(.cj-bar:not([hidden])) #chatb{opacity:0;pointer-events:none}
-  body:has(.cj-bar:not([hidden])) #chatb>*{pointer-events:none}
+  body.cj-bar-on #chatb{opacity:0;pointer-events:none}
+  body.cj-bar-on #chatb>*{pointer-events:none}
   .cj-bar .go.armado{white-space:normal;line-height:1.2;font-size:11px;letter-spacing:.04em;height:auto;min-height:48px;padding:8px 14px;text-align:center}
 }
 
@@ -1185,3 +1192,7 @@ html.sin-anim .ca .cj-strip.tk-gira::after,html.sin-anim .ca .cj-strip.tk-pop::a
   .nv-go .cj-new-sum{display:none}
   .nv-go .go{height:46px}
 }
+
+/* PM 05-11 "quiero verlo fluido": las cartas que no se ven (lista de cajas y lo que trae una caja) no se calculan ni se pintan
+   hasta que se acercan a la pantalla. Se ven igual: ninguna pinta nada fuera de su caja (.cj-case ya recorta con overflow:hidden; en .ca-c la sombra de la foto queda dentro). */
+.cj-case,.ca-c{content-visibility:auto;contain-intrinsic-size:auto 240px}
