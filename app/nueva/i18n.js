@@ -238,7 +238,7 @@
     'La temporada, semana a semana': 'The season, week by week',
     'Tu dinero, la paga del lunes y cada movimiento': 'Your money, the Monday payday and every transaction',
     // entrar
-    'Usuario': 'Username', 'Contraseña': 'Password', 'Entrar': 'Log in', 'Usuario o contraseña incorrectos': 'Wrong username or password',
+    'Usuario': 'Username', 'Contraseña': 'Password', 'Entrar': 'Log in', 'Usuario o contraseña incorrectos': 'Wrong username or password', 'Esta cuenta no tiene acceso': 'This account has no access',
     // partidos
     'Fútbol': 'Football', 'Todo': 'All', 'Principales': 'Top', 'Todas': 'All', 'Cobro con': 'Payout with', 'nada': 'none',
     'cuotas reales de DraftKings o calculadas · se congelan al apostar': 'real DraftKings odds or our own · locked when you bet',

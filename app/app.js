@@ -661,7 +661,7 @@ function brLineas(box) {
 
 /* directo (PM, 30-10: "un boton de live para ver como va el partido; ahora juegan en Valorant y no se ve nada") */
 const IC_OJO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>';
-const viendo = (mid) => Object.entries(MIRA).filter(([, v]) => v === mid).map(([k]) => k);
+const viendo = (mid) => Object.entries(MIRA).filter(([k, v]) => v === mid && F.some((f) => f.id === k)).map(([k]) => k);   // db/086: solo jugadores que la app conoce
 const embedDe = (v) => { if (!v?.e) return null; let u = v.e; const j = u.includes('?') ? '&' : '?';
   if (/player\.twitch\.tv/.test(u)) u += `${j}parent=pmbanks.github.io&parent=localhost&parent=127.0.0.1&muted=true`;
   else if (/youtube\.com\/embed/.test(u)) u += `${j}autoplay=1&mute=1`;
@@ -2115,7 +2115,7 @@ function updStake() {
 let tt;
 function toast(html) { const t = document.getElementById('toast'); t.innerHTML = html; if (window.GM_LANG) GM_LANG.traduce(t); t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 2800) }
 const errMsg = (e) => esc((e && (e.message || e.error_description)) || 'Algo ha fallado').replace(/^.*?: /, (x) => (x.length < 30 ? '' : x));
-async function refresh() { try { await loadSeguro(); render() } catch (e) { toast(errMsg(e)) } }
+async function refresh() { try { await loadSeguro(); render() } catch (e) { if (sinAcceso(e)) return fueraDeLaApp(); toast(errMsg(e)) } }
 let busy = false;
 async function placeBet() {
   const m = S.sel && byId(S.sel.m); if (!m || !isOpen(m) || busy) return;
@@ -2281,6 +2281,15 @@ document.addEventListener('keydown', (e) => { if (e.target.matches('[data-pedit]
 
 /* ---------- entrar ---------- */
 function showLogin() { if (window.GM_LANG) GM_LANG.traduce(document.getElementById('login')); document.getElementById('boot').hidden = true; document.getElementById('app').hidden = true; document.getElementById('login').hidden = false; setTimeout(() => document.getElementById('user').focus(), 50) }
+// PM, 08-11: cuentas sacadas de la app (db/086, players.excluido). Supabase las tiene baneadas ("User is banned" al entrar o al
+// renovar) y la base contesta "Esta cuenta no tiene acceso" a todo: se cierra la sesion en este aparato y se dice eso, sin mas
+const SIN_ACCESO = 'Esta cuenta no tiene acceso';
+const sinAcceso = (e) => /user.?is.?banned|user_banned|no tiene acceso/i.test(`${e?.message || ''} ${e?.code || ''} ${e?.error_description || ''}`);
+async function fueraDeLaApp() {
+  try { await db.auth.signOut({ scope: 'local' }) } catch {}
+  showLogin(); document.getElementById('login-err').textContent = SIN_ACCESO;
+  if (window.GM_LANG) GM_LANG.traduce(document.getElementById('login'));
+}
 function showApp() { document.getElementById('boot').hidden = true; document.getElementById('login').hidden = true; document.getElementById('app').hidden = false }
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -2288,7 +2297,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   const err = document.getElementById('login-err'), go = document.getElementById('login-go'); err.textContent = ''; go.disabled = true;
   const { error } = await db.auth.signInWithPassword({ email: u.includes('@') ? u : u + DOMAIN, password: p });
   go.disabled = false;
-  if (error) { err.textContent = 'Usuario o contraseña incorrectos'; return }
+  if (error) { err.textContent = sinAcceso(error) ? SIN_ACCESO : 'Usuario o contraseña incorrectos'; return }
   start();
 });
 const IC_GIFT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M3 9h18M12 9v11M12 9c-1.5-3.5-6-4-6-1.5S10 9 12 9zm0 0c1.5-3.5 6-4 6-1.5S14 9 12 9z"/></svg>';
@@ -2341,11 +2350,13 @@ async function start() {
   let { data: { session } } = await db.auth.getSession();
   for (let i = 0; !session && i < 3 && haySesionGuardada(); i++) {
     const r = await db.auth.refreshSession(); session = r.data?.session;
+    if (!session && r.error && sinAcceso(r.error)) return fueraDeLaApp();
     if (!session && r.error && sesionMuerta(r.error)) break;
     if (!session) await new Promise((ok) => setTimeout(ok, 1500 * (i + 1)));
   }
   if (!session) return showLogin();
   try { await loadSeguro() } catch (e) {
+    if (sinAcceso(e)) return fueraDeLaApp();
     if (sesionMuerta(e)) return showLogin();
     toast(errMsg(e)); setTimeout(start, 6000); return
   }
